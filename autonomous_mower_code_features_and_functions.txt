@@ -1,0 +1,136 @@
+main.py:
+
+Initializes hardware components, control systems, navigation systems, obstacle detection systems, and user interfaces.
+Main loop updates sensor data, localization, path planning, robot movement, and obstacle detection.
+
+direction_controller.py:
+
+obstacle_detected(): Checks if an obstacle is detected on the left or right side of the robot.
+choose_turn_direction(left_obstacle, right_obstacle): Determines the direction to turn based on obstacle detection.
+control_direction(): Main function to control the robot direction based on sensor input.
+
+speed_controller.py:
+
+accelerate_to_target_speed(target_left_speed, target_right_speed): Accelerates the motors to the target speed.
+decelerate_to_target_speed(target_left_speed, target_right_speed): Decelerates the motors to the target speed.
+
+trajectory_controller.py:
+
+TrajectoryController class:
+calculate_trajectory(): Calculates the trajectory based on the current position, target position, and obstacle data.
+check_for_obstacles(obstacles): Checks if there are any obstacles within the minimum safe distance.
+find_new_angle(angle_to_target, obstacles): Finds a new angle to avoid obstacles.
+follow_trajectory(angle_to_target, distance_to_target): Adjusts the robot's speed and direction to follow the calculated trajectory.
+execute(): Main loop for the trajectory controller, continuously calculates and follows the trajectory.
+
+init.py (control_system):
+
+Imports and exposes TrajectoryController, SpeedController, and DirectionController classes.
+
+motor_controller.py:
+
+init_motor_controller(): Initializes the motor controller by setting up GPIO pins.
+set_motor_speed(left_speed, right_speed): Sets the speed of the left and right motors.
+set_motor_direction(direction): Sets the direction of the motors, accepting 'forward', 'backward', 'left', or 'right'.
+stop_motors(): Stops the motors.
+cleanup(): Stops the motors and cleans up GPIO.
+
+relay_controller.py:
+
+init_relay_controller(): Initializes the relay controller by setting up GPIO pins.
+toggle_mower_blades(): Toggles the mower blades connected to GPIO 6.
+toggle_speed_controller(): Toggles the speed controller connected to GPIO 5.
+set_speed_controller(state): Sets the speed controller connected to GPIO 5, accepting 'on' or 'off'.
+set_mower_blades(state): Sets the mower blades connected to GPIO 6, accepting 'on' or 'off'.
+
+sensor_interface.py:
+
+init_hall_effect_sensors(): Initializes hall effect sensors by setting up GPIO pins.
+init_sensors(): Initializes all sensors.
+read_bme280(): Reads BME280 sensor data.
+read_gps(): Reads GPS data.
+read_vl53l0x_left(): Reads VL53L0X left sensor data.
+read_vl53l0x_right(): Reads VL53L0X right sensor data.
+read_mpu9250_compass(): Reads MPU9250 compass data.
+read_mpu9250_gyro(): Reads MPU9250 gyro data.
+read_ina3221(): Reads INA3221 power monitor data.
+read_hall_effect_sensors(): Reads hall effect sensor states.
+
+init.py:
+
+Initializes the hardware interface by importing MotorController, RelayController, and SensorInterface classes.
+
+gps_interface.py:
+
+Class GPSInterface:
+init(self, port='/dev/serial0', baud_rate=9600, timeout=1): Initializes the GPSInterface class with the provided port, baud rate, and timeout.
+read_gps_data(): Reads raw GPS data and returns a dictionary containing the parsed data.
+close(): Closes the serial connection to the GPS module.
+
+localization.py:
+
+gps_to_meters(): Convert the difference between two GPS coordinates (latitude and longitude) to meters.
+estimate_position(): Estimate the robot's current position using GPS data and update the global position variables.
+parse_gpgga(): Parse NMEA0183 GPGGA string and return latitude, longitude, and altitude.
+estimate_orientation(): Estimate the robot's current orientation using compass data and update the global orientation variable.
+get_current_position(): Return the robot's current position as a tuple (latitude, longitude, altitude).
+get_current_orientation(): Return the robot's current orientation (heading).
+update(): Update the robot's position and orientation.
+
+path_planning.py:
+
+set_user_polygon(): Set the user-defined polygon for path planning.
+generate_grid(): Generate a grid representing the environment with obstacles marked.
+plan_path(): Plan a path from a start point to a goal point using the A* algorithm while avoiding obstacles.
+
+init.py:
+
+Initialize the navigation system by importing the necessary modules: GPSInterface, Localization, and Navigation.
+
+avoidance_algorithm.py:
+
+AvoidanceAlgorithm class:
+init(): Initialize the obstacle avoidance algorithm with ToF sensor and camera processing instances.
+_tof_avoidance_thread(): Run the Time of Flight obstacle avoidance in a separate thread.
+check_camera_obstacles(): Check for obstacles using the camera and update the obstacle_detected attribute.
+run_avoidance(): Continuously run the avoidance algorithm using data from ToF sensors and the camera.
+
+camera_processing.py:
+
+Class: CameraProcessor
+init: Initializes the CameraProcessor with resolution and framerate.
+capture_frame: Captures a frame from the camera.
+detect_obstacles: Detects obstacles in the given frame.
+process_frame: Captures a frame and detects obstacles in it.
+close: Releases the camera resources.
+
+tof_processing.py:
+
+Class: ObstacleAvoidance
+init: Initializes the ObstacleAvoidance object.
+_update_obstacle_status: Updates the obstacle status based on the VL53L0X sensor readings.
+avoid_obstacles: Continuously checks for obstacles and updates their status.
+
+obstacle_detection/init.py:
+
+Imports and initializes the obstacle detection system.
+
+test_control_system.py:
+
+Imports and initializes DirectionController, SpeedController, and TrajectoryController objects for testing the control system.
+
+test_hardware_interface.py, test_navigation_system.py, test_obstacle_detection.py, test_user_interface.py:
+
+These files are placeholders for testing the corresponding subsystems. They currently have TODOs for adding imports, constants, variables, and functions.
+tests/init.py:
+
+Imports and initializes the tests for the control system, navigation system, hardware interface, obstacle detection, and user interface.
+
+user_interface/init.py and user_interface/mobile_app/init.py:
+
+Empty init files for the user interface and mobile app packages.
+
+user_interface/web_interface/init.py:
+
+Empty init file for the Web User Interface package.
+
