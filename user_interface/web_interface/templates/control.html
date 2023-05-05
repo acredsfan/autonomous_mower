@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Control</h1>
+    <button onclick="move('forward')">Move Forward</button>
+    <button onclick="move('backward')">Move Backward</button>
+    <button onclick="move('left')">Turn Left</button>
+    <button onclick="move('right')">Turn Right</button>
+    <button onclick="startMowing()">Start Mowing</button>
+    <button onclick="stopMowing()">Stop Mowing</button>
+    <img src="{{ live_view_url }}" alt="Live view from Pi camera">
+
+    <script>
+        function move(direction) {
+            // Make an AJAX call to your Flask route for controlling the mower's movement
+        }
+
+        function startMowing() {
+            // Make an AJAX call to your Flask route for starting the mower
+        }
+
+        function stopMowing() {
+            // Make an AJAX call to your Flask route for stopping the mower
+        }
+    </script>
+{% endblock %}

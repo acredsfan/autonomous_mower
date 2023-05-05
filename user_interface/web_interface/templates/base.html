@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Mower Web UI</title>
+    <!-- Add your preferred CSS framework here (e.g., Bootstrap, Tailwind CSS) -->
+</head>
+<body>
+    <nav>
+        <!-- Add your navigation menu with links to the different pages -->
+        <a href="{{ url_for('status') }}">Status</a>
+        <a href="{{ url_for('control') }}">Control</a>
+        <a href="{{ url_for('area') }}">Mowing Area</a>
+        <a href="{{ url_for('settings') }}">Settings</a>
+    </nav>
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+</body>
+</html>
+

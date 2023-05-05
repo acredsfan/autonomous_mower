@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Settings</h1>
+    <form id="settings-form">
+        <label for="mow-days">Mowing days:</label>
+        <select id="mow-days" multiple>
+            <!-- Add options for each day of the week -->
+        </select>
+        <label for="mow-hours">Mowing hours:</label>
+        <input type="text" id="mow-hours" placeholder="e.g., 9-17">
+        <!-- Add other settings inputs here -->
+        <button type="submit">Save Settings</button>
+    </form>
+    <script>
+        document.getElementById('settings-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            const mowDays = document.getElementById('mow-days').value;
+            const mowHours = document.getElementById('mow-hours').value;
+            // Get other settings inputs here
+
+            // Make an AJAX call to your Flask route for saving the settings
+            saveSettings(mowDays, mowHours);
+        });
+
+        function saveSettings(mowDays, mowHours) {
+            // Implement this function to send the settings data to the server
+        }
+    </script>
+{% endblock %}
