@@ -91,3 +91,24 @@ def read_hall_effect_sensors():
     sensor_2_state = GPIO.input(HALL_EFFECT_SENSOR_2)
 
     return sensor_1_state, sensor_2_state
+
+def ideal_mowing_conditions():
+    # Check for high humidity
+    bme280_data = read_bme280()
+    if bme280_data["humidity"] > 90:
+        return False
+
+    # Check for high temperature
+    if bme280_data['temperature'] > 30:
+        return False
+
+    # Check for low temperature
+    if bme280_data['temperature'] < 1:
+        return False
+
+    # Check for low pressure
+    if bme280_data['pressure'] < 1000:
+        return False
+
+    # Return True if all conditions are met
+    return True

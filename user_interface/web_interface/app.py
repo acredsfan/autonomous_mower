@@ -59,7 +59,8 @@ def move():
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
-    toggle_mower_blades()
+    global mowing_requested
+    mowing_requested = True
     return jsonify({'message': 'Mower started.'})
 
 

@@ -12,10 +12,14 @@ from shapely.geometry import Polygon, Point
 import cv2
 import networkx
 import rtree
+import json
+
+with open("config.json") as f:
+    config = json.load(f)
 
 # Constants
-GRID_SIZE = (100, 100)  # Grid size for path planning
-OBSTACLE_MARGIN = 2  # Margin around obstacles to account for robot size and path safety
+GRID_SIZE = (config['GRID_L'],config['GRID_W'])  # Grid size for path planning
+OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']  # Margin around obstacles to account for robot size and path safety
 
 # Global variables
 user_polygon = None
