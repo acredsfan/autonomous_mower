@@ -12,15 +12,34 @@
 
     <script>
         function move(direction) {
-            // Make an AJAX call to your Flask route for controlling the mower's movement
+            fetch('/move', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ direction: direction }),
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch((error) => console.error('Error:', error));
         }
 
         function startMowing() {
-            // Make an AJAX call to your Flask route for starting the mower
+            fetch('/start-mowing', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch((error) => console.error('Error:', error));
         }
 
         function stopMowing() {
-            // Make an AJAX call to your Flask route for stopping the mower
+            fetch('/stop-mowing', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch((error) => console.error('Error:', error));
         }
     </script>
 {% endblock %}

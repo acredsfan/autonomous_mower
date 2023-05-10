@@ -5,5 +5,5 @@
     <p>Sensor data: {{ sensor_data }}</p>
     <p>Mowing status: {{ mowing_status }}</p>
     <p>Next scheduled mow: {{ next_scheduled_mow }}</p>
-    <img src="{{ live_view_url }}" alt="Live view from Pi camera">
+    <img src="{{ PiMowBot.local:5000 }}" alt="Live view from Pi camera">
 {% endblock %}

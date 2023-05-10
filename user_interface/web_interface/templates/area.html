@@ -4,64 +4,79 @@
     <h1>Mowing Area</h1>
     <div id="map"></div>
     <script>
-        // Add your Google Maps JavaScript API key
-        const apiKey = 'YOUR_API_KEY';
-
-        function initMap() {
-            const center = { lat: 39.039547, lng: -84.228918 };
-            const map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 17,
-                center: center
-            });
-
-            // Add the polygon drawing tool
-            const drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: google.maps.drawing.OverlayType.POLYGON,
-                drawingControl: true,
-                drawingControlOptions:
-                {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                },
-                polygonOptions: {
-                    editable: true,
-                    draggable: true
-                }
-            });
-
-            // Add the polygon to the map
-            drawingManager.setMap(map);
-
-            // Add an event listener for when the polygon is drawn
-            google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
-            // Save the polygon to the server using a Flask route
-            const coordinates = event.overlay.getPath().getArray().map(coord => {
-                return { lat: coord.lat(), lng: coord.lng() };
-            });
-
-            // Make an AJAX call to your Flask route for saving the mowing area
-            saveMowingArea(coordinates);
+        // Load the configuration file
+        $.getJSON('config.json', function(config) {
+            const apiKey = config.googleMapsApiKey;
+    
+            function initMap() {
+                const center = { lat: 39.039547, lng: -84.228918 };
+                const map = new google.maps.Map(document.getElementById("map"), {
+                    zoom: 17,
+                    center: center
+                });
+    
+                // Add the polygon drawing tool
+                const drawingManager = new google.maps.drawing.DrawingManager({
+                    drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                    drawingControl: true,
+                    drawingControlOptions:
+                    {
+                        position: google.maps.ControlPosition.TOP_CENTER,
+                        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                    },
+                    polygonOptions: {
+                        editable: true,
+                        draggable: true
+                    }
+                });
+    
+                // Add the polygon to the map
+                drawingManager.setMap(map);
+    
+                // Add an event listener for when the polygon is drawn
+                google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
+                    // Save the polygon to the server using a Flask route
+                    const coordinates = event.overlay.getPath().getArray().map(coord => {
+                        return { lat: coord.lat(), lng: coord.lng() };
+                    });
+    
+                    // Make an AJAX call to your Flask route for saving the mowing area
+                    saveMowingArea(coordinates);
+                });
+            }
+    
+            function saveMowingArea(coordinates) {
+                // Make an AJAX POST request to the server to save the mowing area
+                $.ajax({
+                    url: '/save-mowing-area',
+                    type: 'POST',
+                    data: JSON.stringify(coordinates),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('Mowing area saved:', response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error saving mowing area:', error);
+                    }
+                });
+            }
+    
+            function loadScript() {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing`;
+                script.defer = true;
+                document.head.appendChild(script);
+            }
+    
+            window.addEventListener('load', loadScript);
         });
-    }
-
-    function saveMowingArea(coordinates) {
-        // Implement this function to send the polygon data to the server
-    }
-
-    function loadScript() {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing`;
-        script.defer = true;
-        document.head.appendChild(script);
-    }
-
-    window.addEventListener('load', loadScript);
-</script>
-<style>
-    /* Set the dimensions of the map container */
-    #map {
-        width: 100%;
-        height: 600px;
-    }
-</style>
+    </script>
+    <style>
+        /* Set the dimensions of the map container */
+        #map {
+            width: 100%;
+            height: 600px;
+        }
+    </style>
 {% endblock %}

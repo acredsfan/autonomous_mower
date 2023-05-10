@@ -7,9 +7,13 @@ import threading
 from tof_processing import ObstacleAvoidance as ToFAvoidance
 from camera_processing import CameraProcessor
 from motor_controller import init_motor_controller, set_motor_speed, set_motor_direction, stop_motors, cleanup
+import json
+
+with open("config.json") as f:
+    config = json.load(f)
 
 # Constants
-CAMERA_OBSTACLE_THRESHOLD = 1000  # Minimum area to consider an obstacle from the camera
+CAMERA_OBSTACLE_THRESHOLD = config['CAMERA_OBSTACLE_THRESHOLD'] # Minimum area to consider an obstacle from the camera
 MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:

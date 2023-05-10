@@ -30,7 +30,7 @@ function stopMowing() {
 }
 
 function saveMowingArea(coordinates) {
-    fetch('url_to_your_flask_route', {
+    fetch('/area', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -65,4 +65,3 @@ function saveSettings(mowDays, mowHours) {
     .then(data => console.log(data))
     .catch((error) => console.error('Error:', error));
 }
-

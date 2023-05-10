@@ -13,7 +13,8 @@
         <a href="{{ url_for('control') }}">Control</a>
         <a href="{{ url_for('area') }}">Mowing Area</a>
         <a href="{{ url_for('settings') }}">Settings</a>
-    </nav>
+        <a href="{{ url_for('camera_stream') }}">Camera Stream</a> 
+        </nav>
     <main>
         {% block content %}
         {% endblock %}
@@ -23,4 +24,3 @@
     </main>
 </body>
 </html>
-

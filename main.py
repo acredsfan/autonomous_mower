@@ -4,6 +4,7 @@ from navigation_system import localization, path_planning, gps_interface
 from obstacle_detection import camera_processing, tof_processing, avoidance_algorithm
 from user_interface import web_interface, mobile_app
 import time
+import datetime
 
 def main():
     # Initialize hardware components
@@ -29,8 +30,37 @@ def main():
     web_interface.init_web_interface()
     mobile_app.init_mobile_app()
 
+    mowing_requested = False
+
     # Main loop
     while True:
+        # Check if ideal mowing conditions are met
+        if not sensor_interface.ideal_mowing_conditions():
+            # Stop the mower blades
+            relay_controller.set_mower_blades("off")
+            # Wait for ideal conditions
+            time.sleep(60)
+            continue
+
+        # Check if today is a mowing day
+        now = datetime.datetime.now()
+        weekday = now.weekday()
+        if str(weekday) in mow_days:
+            # Check if it's the scheduled mowing time
+            current_time = now.strftime("%H:%M")
+            if current_time == mow_hours or mowing_requested:
+                # Start the mower blades
+                relay_controller.set_mower_blades("on")
+            else:
+                # Stop the mower blades
+                relay_controller.set_mower_blades("off")
+        else:
+            # Stop the mower blades
+            relay_controller.set_mower_blades("off")
+
+        # Check for adverse weather conditions
+        weather_conditions = sensor_interface.get_weather_conditions()
+
         # Update sensor data
         sensor_interface.update_sensor_data()
 
