@@ -7,7 +7,7 @@ import time
 import board
 import adafruit_bme280
 import adafruit_vl53l0x
-import mpu9250_i2c
+import FaBo9Axis_MPU9250
 from INA3221 import INA3221
 import RPi.GPIO as GPIO
 import serial
