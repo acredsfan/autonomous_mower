@@ -4,7 +4,6 @@
 #IMPORTS
 import smbus
 import time
-from gps import GPS
 from BME280 import BME280
 from VL53L0X import VL53L0X
 from MPU9250 import MPU9250
@@ -15,7 +14,7 @@ from gps_interface import GPSInterface
 
 # Global variables
 bus = smbus.SMBus(1)
-gps_serial = None
+#gps_serial = None
 bme280 = BME280(bus)
 vl53l0x_left = VL53L0X(0x2a)
 vl53l0x_right = VL53L0X(0x29)
@@ -34,11 +33,11 @@ class SensorInterface:
 
     def init_sensors():
         """Initialize all sensors."""
-        global gps_serial  # Use the global GPS serial object
+        #global gps_serial  # Use the global GPS serial object
 
         # Initialize GPS
-        gps_serial = GPSInterface()  # Adjust the port and baud rate if needed
-        gps_serial.flush()
+        #gps_serial = GPSInterface()  # Adjust the port and baud rate if needed
+        #gps_serial.flush()
 
         # Initialize BME280
         bme280.begin()
@@ -60,13 +59,13 @@ class SensorInterface:
         """Read BME280 sensor data."""
         return bme280.read_all()
 
-    def read_gps():
-        """Read GPS data."""
-        if gps_serial is None:
-            raise Exception("GPS module not initialized")
+    #def read_gps():
+    #    """Read GPS data."""
+    #    if gps_serial is None:
+    #        raise Exception("GPS module not initialized")
 
-        gps_data = gps_serial.read_gps_data()
-        return gps_data
+    #    gps_data = gps_serial.read_gps_data()
+    #    return gps_data
 
     def read_vl53l0x_left():
         """Read VL53L0X left sensor data."""
