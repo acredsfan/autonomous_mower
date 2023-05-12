@@ -3,3 +3,5 @@ RPi.GPIO
 pyserial
 numpy
 adafruit-circuitpython-bme280
+adafruit-circuitpython-vl53l0x
+imusensor
