@@ -10,4 +10,5 @@ __all__ = [
     'MotorController',
     'RelayController',
     'SensorInterface',
+    'mpu9250_i2c'
 ]
