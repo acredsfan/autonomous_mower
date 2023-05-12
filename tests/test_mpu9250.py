@@ -1,28 +1,22 @@
+
+import os
+import sys
 import time
-from mpu9250_jmdev.registers import *
-from mpu9250_jmdev.mpu_9250 import MPU9250
+import smbus
 
-mpu = MPU9250(
-    address_ak=AK8963_ADDRESS, 
-    address_mpu_master=MPU9050_ADDRESS_69, # In 0x68 Address
-    address_mpu_slave=None, 
-    bus=1,
-    gfs=GFS_1000, 
-    afs=AFS_8G, 
-    mfs=AK8963_BIT_16, 
-    mode=AK8963_MODE_C100HZ)
+from imusensor.MPU9250 import MPU9250
 
-mpu.calibrate() # Calibrate sensors
-mpu.configure() # Apply the settings to the registers.
+address = 0x69
+bus = smbus.SMBus(1)
+imu = MPU9250.MPU9250(bus, address)
+imu.begin()
 
 while True:
+	imu.readSensor()
+	imu.computeOrientation()
 
-    print("|.....MPU9250 in 0x69 Address.....|")
-    print("Accelerometer", mpu.readAccelerometerMaster())
-    print("Gyroscope", mpu.readGyroscopeMaster())
-    print("Magnetometer", mpu.readMagnetometerMaster())
-    print("Temperature", mpu.readTemperatureMaster())
-    print("\n")
-
-    time.sleep(1)
-
+	print ("Accel x: {0} ; Accel y : {1} ; Accel z : {2}".format(imu.AccelVals[0], imu.AccelVals[1], imu.AccelVals[2]))
+	print ("Gyro x: {0} ; Gyro y : {1} ; Gyro z : {2}".format(imu.GyroVals[0], imu.GyroVals[1], imu.GyroVals[2]))
+	print ("Mag x: {0} ; Mag y : {1} ; Mag z : {2}".format(imu.MagVals[0], imu.MagVals[1], imu.MagVals[2]))
+	print ("roll: {0} ; pitch : {1} ; yaw : {2}".format(imu.roll, imu.pitch, imu.yaw))
+	time.sleep(0.1)
