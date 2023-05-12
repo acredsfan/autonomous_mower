@@ -115,7 +115,7 @@ def AK8963_conv():
     return m_x,m_y,m_z
 
 # MPU6050 Registers
-MPU6050_ADDR = 0x68
+MPU6050_ADDR = 0x69
 PWR_MGMT_1   = 0x6B
 SMPLRT_DIV   = 0x19
 CONFIG       = 0x1A
