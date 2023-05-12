@@ -2,3 +2,4 @@ smbus
 RPi.GPIO
 pyserial
 numpy
+gps
