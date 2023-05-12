@@ -4,9 +4,10 @@
 #IMPORTS
 import smbus
 import time
-from BME280 import BME280
-from VL53L0X import VL53L0X
-from MPU9250 import MPU9250
+import board
+import adafruit_bme280
+import adafruit_vl53l0x
+import adafruit_mpu9250
 from INA3221 import INA3221
 import RPi.GPIO as GPIO
 import serial
@@ -15,13 +16,16 @@ from gps_interface import GPSInterface
 # Global variables
 bus = smbus.SMBus(1)
 #gps_serial = None
-bme280 = BME280(bus)
-vl53l0x_left = VL53L0X(0x2a)
-vl53l0x_right = VL53L0X(0x29)
-mpu9250 = MPU9250(bus)
+i2c = board.I2C()   # uses board.SCL and board.SDA
+bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
+vl53l0x_left = adafruit_vl53l0x.VL53L0X(i2c_address=0x2a)
+vl53l0x_right = adafruit_vl53l0x.VL53L0X(i2c_address=0x29)
+mpu9250 = adafruit_mpu9250.MPU9250()
 ina3221 = INA3221(bus)
 HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
 HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
+# change this to match the location's pressure (hPa) at sea level
+bme280.sea_level_pressure = 1013.25
 
 class SensorInterface:
 
@@ -57,7 +61,11 @@ class SensorInterface:
 
     def read_bme280():
         """Read BME280 sensor data."""
-        return bme280.read_all()
+        return {
+            'temperature': bme280.temperature,
+            'humidity': bme280.relative_humidity,
+            'pressure': bme280.pressure
+        }
 
     #def read_gps():
     #    """Read GPS data."""
@@ -69,11 +77,11 @@ class SensorInterface:
 
     def read_vl53l0x_left():
         """Read VL53L0X left sensor data."""
-        return vl53l0x_left.read_distance()
+        return vl53l0x_left.range
 
     def read_vl53l0x_right():
         """Read VL53L0X right sensor data."""
-        return vl53l0x_right.read_distance()
+        return vl53l0x_right.range
 
     def read_mpu9250_compass():
         """Read MPU9250 compass data."""
@@ -95,8 +103,8 @@ class SensorInterface:
 
     def ideal_mowing_conditions():
         # Check for high humidity
-        bme280_data = read_bme280()
-        if bme280_data["humidity"] > 90:
+        bme280_data = SensorInterface.read_bme280()
+        if bme280_data['humidity'] > 90:
             return False
 
         # Check for high temperature
