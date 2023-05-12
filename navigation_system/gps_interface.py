@@ -1,36 +1,30 @@
-# This module is responsible for interfacing with the Neo-8M GPS Module and processing the GPS data. 
-# It will include functions to initialize the GPS module, read the raw GPS data (latitude, longitude, altitude, and possibly other relevant data), 
-# and convert the data into a format that can be used by the other modules in the navigation system, 
-# such as converting latitude and longitude into a local coordinate system (e.g., meters from a reference point).
-
-# gps_interface.py
 import serial
-from gps import GPS
+from gpsd import gpsd
 
 class GPSInterface:
     def __init__(self, port='/dev/serial0', baud_rate=9600, timeout=1):
-        self.serial = serial.Serial(port, baud_rate, timeout=timeout)
+        self.serial = serial.Serial(port, baud_rate, timeout)
         self.serial.flush()
-        self.gps = GPS()
+        self.gpsd = gpsd.GPSD(port=port, baudrate=baud_rate, timeout=timeout)
 
     def read_gps_data(self):
-        raw_data = self.serial.readline().decode('utf-8', errors='ignore').strip()
-        if raw_data:
-            self.gps.update(raw_data)
-
-        return {
-            'latitude': self.gps.latitude,
-            'longitude': self.gps.longitude,
-            'altitude': self.gps.altitude,
-            'speed': self.gps.speed,
-            'timestamp': self.gps.timestamp,
-            'satellites': self.gps.satellites,
-            'quality': self.gps.fix_quality,
-            'pdop': self.gps.pdop,
-            'hdop': self.gps.hdop,
-            'vdop': self.gps.vdop,
-            'raw_data': raw_data
-        }
+        data = self.gpsd.next()
+        if data['class'] == 'TPV':
+            return {
+                'latitude': data['lat'],
+                'longitude': data['lon'],
+                'altitude': data['alt'],
+                'speed': data['speed'],
+                'timestamp': data['time'],
+                'satellites': data['satellites'],
+                'quality': data['fix'],
+                'pdop': data['pdop'],
+                'hdop': data['hdop'],
+                'vdop': data['vdop'],
+            }
+        else:
+            return None
 
     def close(self):
-        self.serial.close()
+        self.gpsd.close()
+

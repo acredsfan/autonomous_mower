@@ -2,4 +2,5 @@ smbus
 RPi.GPIO
 pyserial
 numpy
-gps
+gpsd
+gpsd-clients
