@@ -8,7 +8,7 @@ import board
 import adafruit_bme280
 import adafruit_vl53l0x
 import FaBo9Axis_MPU9250
-from INA3221 import INA3221
+from barbudor_ina3221.lite import INA3221
 import RPi.GPIO as GPIO
 import serial
 from gps_interface import GPSInterface
