@@ -12,11 +12,12 @@ mpu = MPU9250(
     mfs=AK8963_BIT_16, 
     mode=AK8963_MODE_C100HZ)
 
+mpu.calibrate() # Calibrate sensors
 mpu.configure() # Apply the settings to the registers.
 
 while True:
 
-    print("|.....MPU9250 in 0x68 Address.....|")
+    print("|.....MPU9250 in 0x69 Address.....|")
     print("Accelerometer", mpu.readAccelerometerMaster())
     print("Gyroscope", mpu.readGyroscopeMaster())
     print("Magnetometer", mpu.readMagnetometerMaster())
