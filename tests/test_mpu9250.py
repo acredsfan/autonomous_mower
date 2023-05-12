@@ -10,7 +10,6 @@ try:
     while True:
         accel = mpu9250.readAccel()
         print(" ax = " , ( accel['x'] ))
-        print(" ax = " , ( accel['x'] ))
         print(" ay = " , ( accel['y'] ))
         print(" az = " , ( accel['z'] ))
 
