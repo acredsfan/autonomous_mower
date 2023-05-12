@@ -1,19 +1,27 @@
-
 import time
-import board
-from mpu9250 import MPU9250
+from mpu9250_jmdev.registers import *
+from mpu9250_jmdev.mpu_9250 import MPU9250
 
-i2c = board.I2C()
-sensor = MPU9250(i2c)
+mpu = MPU9250(
+    address_ak=AK8963_ADDRESS, 
+    address_mpu_master=MPU9050_ADDRESS_68, # In 0x68 Address
+    address_mpu_slave=None, 
+    bus=1,
+    gfs=GFS_1000, 
+    afs=AFS_8G, 
+    mfs=AK8963_BIT_16, 
+    mode=AK8963_MODE_C100HZ)
 
-#Get the address of the MPU9250
-print("MPU9250 detected at: ", [hex(i) for i in sensor.whoami])
+mpu.configure() # Apply the settings to the registers.
 
 while True:
-    print(sensor.acceleration)
-    print(sensor.gyro)
-    print(sensor.magnetic)
-    print(sensor.temperature)
 
-    time.sleep_ms(1000)
+    print("|.....MPU9250 in 0x68 Address.....|")
+    print("Accelerometer", mpu.readAccelerometerMaster())
+    print("Gyroscope", mpu.readGyroscopeMaster())
+    print("Magnetometer", mpu.readMagnetometerMaster())
+    print("Temperature", mpu.readTemperatureMaster())
+    print("\n")
+
+    time.sleep(1)
 
