@@ -2,5 +2,4 @@ smbus
 RPi.GPIO
 pyserial
 numpy
-gpsd
-gpsd-clients
+adafruit-circuitpython-bme280
