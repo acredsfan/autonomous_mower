@@ -7,7 +7,7 @@ import smbus
 from imusensor.MPU9250 import MPU9250
 
 address = 0x69
-bus = smbus.SMBus(1)
+bus=smbus.SMBus(0)
 imu = MPU9250.MPU9250(bus, address)
 imu.begin()
 
