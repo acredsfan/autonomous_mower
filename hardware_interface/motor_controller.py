@@ -19,66 +19,67 @@ GPIO.setwarnings(False)
 #FUNCTIONS
 
 #init_motor_controller
-#initializes the motor controller
-def init_motor_controller():
-    GPIO.setup(LEFT_PWMI_PIN, GPIO.OUT)
-    GPIO.setup(LEFT_IN1_PIN, GPIO.OUT)
-    GPIO.setup(LEFT_IN2_PIN, GPIO.OUT)
-    GPIO.setup(RIGHT_PWMI_PIN, GPIO.OUT)
-    GPIO.setup(RIGHT_IN3_PIN, GPIO.OUT)
-    GPIO.setup(RIGHT_IN4_PIN, GPIO.OUT)
+class MotorController:
+    #initializes the motor controller
+    def init_motor_controller():
+        GPIO.setup(LEFT_PWMI_PIN, GPIO.OUT)
+        GPIO.setup(LEFT_IN1_PIN, GPIO.OUT)
+        GPIO.setup(LEFT_IN2_PIN, GPIO.OUT)
+        GPIO.setup(RIGHT_PWMI_PIN, GPIO.OUT)
+        GPIO.setup(RIGHT_IN3_PIN, GPIO.OUT)
+        GPIO.setup(RIGHT_IN4_PIN, GPIO.OUT)
 
-    global left_motor
-    global right_motor
-    left_motor = GPIO.PWM(LEFT_PWMI_PIN, 100)
-    right_motor = GPIO.PWM(RIGHT_PWMI_PIN, 100)
+        global left_motor
+        global right_motor
+        left_motor = GPIO.PWM(LEFT_PWMI_PIN, 100)
+        right_motor = GPIO.PWM(RIGHT_PWMI_PIN, 100)
 
-    left_motor.start(0)
-    right_motor.start(0)
+        left_motor.start(0)
+        right_motor.start(0)
 
 
-#set_motor_speed
-#sets the speed of the motor
-def set_motor_speed(left_speed, right_speed):
-    left_motor.ChangeDutyCycle(left_speed)
-    right_motor.ChangeDutyCycle(right_speed)
+    #set_motor_speed
+    #sets the speed of the motor
+    def set_motor_speed(left_speed, right_speed):
+        left_motor.ChangeDutyCycle(left_speed)
+        right_motor.ChangeDutyCycle(right_speed)
 
-#set_motor_direction
-#sets the direction of the motor
-def set_motor_direction(direction):
-    if direction == "forward":
-        GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
-        GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
-        GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
-        GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
-    elif direction == "backward":
+    #set_motor_direction
+    #sets the direction of the motor
+    def set_motor_direction(direction):
+        if direction == "forward":
+            GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
+            GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
+            GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
+            GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
+        elif direction == "backward":
+            GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
+            GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
+            GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
+            GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
+        elif direction == "left":
+            GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
+            GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
+            GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
+            GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
+        elif direction == "right":
+            GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
+            GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
+            GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
+            GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
+        else:
+            print("Invalid direction. Please use 'forward', 'backward', 'left', or 'right'.")
+
+    #stop_motors
+    #stops the motors
+    def stop_motors():
+        set_motor_speed(0)
         GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-        GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
-        GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-        GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
-    elif direction == "left":
-        GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-        GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
-        GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
-        GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
-    elif direction == "right":
-        GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
         GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
         GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-        GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
-    else:
-        print("Invalid direction. Please use 'forward', 'backward', 'left', or 'right'.")
+        GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
 
-#stop_motors
-#stops the motors
-def stop_motors():
-    set_motor_speed(0)
-    GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-    GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
-    GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-    GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
-
-def cleanup():
-    left_motor.stop()
-    right_motor.stop()
-    GPIO.cleanup()
+    def cleanup():
+        left_motor.stop()
+        right_motor.stop()
+        GPIO.cleanup()

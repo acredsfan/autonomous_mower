@@ -16,33 +16,34 @@ DECELERATION_RATE = 3  # Decrease in motor speed per loop iteration
 # Time interval between loop iterations
 TIME_INTERVAL = 0.1
 
-# Function to accelerate the motors to the target speed
-def accelerate_to_target_speed(target_left_speed, target_right_speed):
-    current_left_speed, current_right_speed = MIN_SPEED, MIN_SPEED
-    motor_controller.set_motor_speed(current_left_speed, current_right_speed)
-
-    while current_left_speed < target_left_speed or current_right_speed < target_right_speed:
-        if current_left_speed < target_left_speed:
-            current_left_speed = min(current_left_speed + ACCELERATION_RATE, target_left_speed)
-
-        if current_right_speed < target_right_speed:
-            current_right_speed = min(current_right_speed + ACCELERATION_RATE, target_right_speed)
-
+class SpeedController:
+    # Function to accelerate the motors to the target speed
+    def accelerate_to_target_speed(target_left_speed, target_right_speed):
+        current_left_speed, current_right_speed = MIN_SPEED, MIN_SPEED
         motor_controller.set_motor_speed(current_left_speed, current_right_speed)
-        time.sleep(TIME_INTERVAL)
 
-# Function to decelerate the motors to the target speed
-def decelerate_to_target_speed(target_left_speed, target_right_speed):
-    current_left_speed, current_right_speed = motor_controller.get_motor_speed()
+        while current_left_speed < target_left_speed or current_right_speed < target_right_speed:
+            if current_left_speed < target_left_speed:
+                current_left_speed = min(current_left_speed + ACCELERATION_RATE, target_left_speed)
 
-    while current_left_speed > target_left_speed or current_right_speed > target_right_speed:
-        if current_left_speed > target_left_speed:
-            current_left_speed = max(current_left_speed - DECELERATION_RATE, target_left_speed)
+            if current_right_speed < target_right_speed:
+                current_right_speed = min(current_right_speed + ACCELERATION_RATE, target_right_speed)
 
-        if current_right_speed > target_right_speed:
-            current_right_speed = max(current_right_speed - DECELERATION_RATE, target_right_speed)
+            motor_controller.set_motor_speed(current_left_speed, current_right_speed)
+            time.sleep(TIME_INTERVAL)
 
-        motor_controller.set_motor_speed(current_left_speed, current_right_speed)
-        time.sleep(TIME_INTERVAL)
+    # Function to decelerate the motors to the target speed
+    def decelerate_to_target_speed(target_left_speed, target_right_speed):
+        current_left_speed, current_right_speed = motor_controller.get_motor_speed()
 
-# Function to set the speed of the motors with smooth acceleration and deceleration
+        while current_left_speed > target_left_speed or current_right_speed > target_right_speed:
+            if current_left_speed > target_left_speed:
+                current_left_speed = max(current_left_speed - DECELERATION_RATE, target_left_speed)
+
+            if current_right_speed > target_right_speed:
+                current_right_speed = max(current_right_speed - DECELERATION_RATE, target_right_speed)
+
+            motor_controller.set_motor_speed(current_left_speed, current_right_speed)
+            time.sleep(TIME_INTERVAL)
+
+    # Function to set the speed of the motors with smooth acceleration and deceleration

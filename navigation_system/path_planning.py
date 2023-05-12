@@ -24,50 +24,51 @@ OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']  # Margin around obstacles
 # Global variables
 user_polygon = None
 
-def set_user_polygon(polygon_coordinates):
-    global user_polygon
-    user_polygon = Polygon(polygon_coordinates)
+class PathPlanning:
+    def set_user_polygon(polygon_coordinates):
+        global user_polygon
+        user_polygon = Polygon(polygon_coordinates)
 
-def generate_grid(obstacles):
-    grid = np.zeros(GRID_SIZE, dtype=np.uint8)
+    def generate_grid(obstacles):
+        grid = np.zeros(GRID_SIZE, dtype=np.uint8)
 
-    # Mark the obstacles on the grid
-    for obstacle in obstacles:
-        # Add margins around the obstacles
-        obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
-        minx, miny, maxx, maxy = obstacle_expanded.bounds
-        for x in range(int(minx), int(maxx) + 1):
-            for y in range(int(miny), int(maxy) + 1):
-                point = Point(x, y)
-                if obstacle_expanded.contains(point):
-                    grid[x, y] = 1
+        # Mark the obstacles on the grid
+        for obstacle in obstacles:
+            # Add margins around the obstacles
+            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
+            minx, miny, maxx, maxy = obstacle_expanded.bounds
+            for x in range(int(minx), int(maxx) + 1):
+                for y in range(int(miny), int(maxy) + 1):
+                    point = Point(x, y)
+                    if obstacle_expanded.contains(point):
+                        grid[x, y] = 1
 
-    return grid
+        return grid
 
-def plan_path(start, goal, obstacles):
-    if not user_polygon:
-        raise Exception("User polygon not set")
+    def plan_path(start, goal, obstacles):
+        if not user_polygon:
+            raise Exception("User polygon not set")
 
-    grid_data = generate_grid(obstacles)
-    grid = Grid(matrix=grid_data)
+        grid_data = generate_grid(obstacles)
+        grid = Grid(matrix=grid_data)
 
-    finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
-    start_node = grid.node(*start)
-    end_node = grid.node(*goal)
+        finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
+        start_node = grid.node(*start)
+        end_node = grid.node(*goal)
 
-    path, _ = finder.find_path(start_node, end_node, grid)
+        path, _ = finder.find_path(start_node, end_node, grid)
 
-    return path
+        return path
 
-# Example usage
-if __name__ == "__main__":
-    # Set user polygon
-    set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
+    # Example usage
+    if __name__ == "__main__":
+        # Set user polygon
+        set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
 
-    # Test path planning
-    start = (10, 10)
-    goal = (90, 90)
-    obstacles = [Polygon([(30, 30), (30, 60), (60, 60), (60, 30)])]
+        # Test path planning
+        start = (10, 10)
+        goal = (90, 90)
+        obstacles = [Polygon([(30, 30), (30, 60), (60, 60), (60, 30)])]
 
-    path = plan_path(start, goal, obstacles)
-    print(path)
+        path = plan_path(start, goal, obstacles)
+        print(path)
