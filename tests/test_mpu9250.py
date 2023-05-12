@@ -35,3 +35,6 @@ def main():
 		print ("Mag x: {0} ; Mag y : {1} ; Mag z : {2}".format(mag[0], mag[1], mag[2]))
 		print ("roll: {0} ; pitch : {1} ; yaw : {2}".format(roll, pitch, yaw))
 		time.sleep(0.1)
+
+if __name__ == "__main__":
+	main()
