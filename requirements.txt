@@ -1,0 +1,4 @@
+smbus
+PRi.GPIO
+pyserial
+numpy
