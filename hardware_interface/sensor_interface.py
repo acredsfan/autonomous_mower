@@ -5,7 +5,7 @@
 import smbus
 import time
 import board
-import adafruit_bme280
+from adafruit_bme280 import basic as adafruit_bme280
 import adafruit_vl53l0x
 import FaBo9Axis_MPU9250
 from barbudor_ina3221.lite import INA3221
