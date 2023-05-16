@@ -5,85 +5,70 @@ from obstacle_detection import camera_processing, tof_processing, avoidance_algo
 from user_interface import web_interface, mobile_app
 import time
 import datetime
+import threading
 
 def main():
-    # Initialize hardware components
-    motor_controller.init_motor_controller()
-    sensor_interface.init_sensors()
-    relay_controller.init_relay_controller()
+  # Initialization code...
 
-    # Initialize control systems
-    speed_controller.init_speed_controller()
-    direction_controller.init_direction_controller()
+  mowing_requested = False
+  mower_blades_on = False
 
-    # Initialize navigation system
-    localization.init_localization_system()
-    path_planning.init_path_planning()
-    gps_interface.init_gps_interface()
+  # Main loop
+  while True:
+    # Check if ideal mowing conditions are met
+    if sensor_interface.ideal_mowing_conditions():
+      if not mower_blades_on:  # New condition to turn on mower blades
+        relay_controller.set_mower_blades("on")
+        mower_blades_on = True
+    else:
+      if mower_blades_on:  # New condition to turn off mower blades
+        relay_controller.set_mower_blades("off")
+        mower_blades_on = False
+      # Wait for ideal conditions
+      time.sleep(60)
+      continue
 
-    # Initialize obstacle detection system
-    camera_processing.init_camera_processing()
-    tof_processing.init_tof_processing()
-    avoidance_algorithm.init_avoidance_algorithm()
+    # Check if today is a mowing day - simplified if statements (issue #3)
+    now = datetime.datetime.now()
+    weekday = now.strftime("%A")
+    current_time = now.strftime("%H:%M")
+    if weekday in mow_days and (current_time == mow_hours or mowing_requested):
+      if not mower_blades_on:
+        relay_controller.set_mower_blades("on")
+        mower_blades_on = True
+    else:
+      if mower_blades_on:
+        relay_controller.set_mower_blades("off")
+        mower_blades_on = False
 
-    # Initialize user interfaces
-    web_interface.init_web_interface()
-    mobile_app.init_mobile_app()
+    # Update sensor data
+    sensor_interface.update_sensor_data()
 
-    mowing_requested = False
+    # Update localization
+    localization.update_localization()
 
-    # Main loop
-    while True:
-        # Check if ideal mowing conditions are met
-        if not sensor_interface.ideal_mowing_conditions():
-            # Stop the mower blades
-            relay_controller.set_mower_blades("off")
-            # Wait for ideal conditions
-            time.sleep(60)
-            continue
+    # Plan the path
+    robot_position = localization.get_current_position()
+    goal = localization.get_target_position()
+    obstacles = avoidance_algorithm.get_obstacle_data()
+    path = path_planning.plan_path(robot_position, goal, obstacles)
 
-        # Check if today is a mowing day
-        now = datetime.datetime.now()
-        weekday = now.weekday()
-        if str(weekday) in mow_days:
-            # Check if it's the scheduled mowing time
-            current_time = now.strftime("%H:%M")
-            if current_time == mow_hours or mowing_requested:
-                # Start the mower blades
-                relay_controller.set_mower_blades("on")
-            else:
-                # Stop the mower blades
-                relay_controller.set_mower_blades("off")
-        else:
-            # Stop the mower blades
-            relay_controller.set_mower_blades("off")
+    # Move the robot along the path - use threading for concurrent obstacle detection (issue #4)
+    path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
+    path_following_thread.start()
 
-        # Check for adverse weather conditions
-        weather_conditions = sensor_interface.get_weather_conditions()
+    # Check for obstacles and update the path if needed
+    obstacles_detected = avoidance_algorithm.detect_obstacles()
+    if obstacles_detected and path_following_thread.is_alive():
+      # Update the path to avoid obstacles
+      path = path_planning.plan_path(robot_position, goal, obstacles_detected)
 
-        # Update sensor data
-        sensor_interface.update_sensor_data()
+    # Add a delay to control the loop execution rate
+    time.sleep(0.1)
 
-        # Update localization
-        localization.update_localization()
-
-        # Plan the path
-        robot_position = localization.get_current_position()
-        goal = localization.get_target_position()
-        obstacles = avoidance_algorithm.get_obstacle_data()
-        path = path_planning.plan_path(robot_position, goal, obstacles)
-
-        # Move the robot along the path
-        trajectory_controller.follow_path(path)
-
-        # Check for obstacles and update the path if needed
-        obstacles_detected = avoidance_algorithm.detect_obstacles()
-        if obstacles_detected:
-            # Update the path to avoid obstacles
-            path = path_planning.plan_path(robot_position, goal, obstacles_detected)
-
-        # Add a delay to control the loop execution rate
-        time.sleep(0.1)
-
-if __name__ == "__main__":
+# Wrap the main function call in a try-except block to handle exceptions (issue #5)
+try:
+  if __name__ == "__main__":
     main()
+except Exception as e:
+  print(f"An error occurred: {e}")

@@ -6,3 +6,4 @@ adafruit-circuitpython-bme280
 adafruit-circuitpython-vl53l0x
 FaBo9Axis_MPU9250
 easydict
+barbudor-circuitpython-ina3221
