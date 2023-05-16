@@ -7,6 +7,10 @@ import time
 import datetime
 import threading
 
+# Initialize mow_days and mow_hours with default values at the beginning of your script
+mow_days = ["Monday", "Wednesday", "Friday"]  # Mow on these days by default
+mow_hours = "08:00"  # Mow at this time by default
+
 def main():
   # Initialization code...
 
@@ -54,8 +58,9 @@ def main():
     path = path_planning.plan_path(robot_position, goal, obstacles)
 
     # Move the robot along the path - use threading for concurrent obstacle detection (issue #4)
-    path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
-    path_following_thread.start()
+    if not path_following_thread.is_alive():
+      path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
+      path_following_thread.start()
 
     # Check for obstacles and update the path if needed
     obstacles_detected = avoidance_algorithm.detect_obstacles()
