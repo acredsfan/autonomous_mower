@@ -9,11 +9,19 @@ i2c = busio.I2C(board.SCL, board.SDA)
 
 # Set the GPIO pin number connected to the right sensor's XSHUT pin
 right_xshut_pin = 23
+left_xshut_pin = 22
 
 # Set up the GPIO pin
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BCM)
 GPIO.setup(right_xshut_pin, GPIO.OUT)
+GPIO.setup(left_xshut_pin, GPIO.OUT)
+
+# Reset and initialize the left sensor
+GPIO.output(right_xshut_pin, GPIO.LOW)
+time.sleep(0.1)
+tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
+tof_right.set_address(0x2a)  # Set the I2C address of the right sensor
 
 # Reset and initialize the right sensor
 GPIO.output(right_xshut_pin, GPIO.LOW)
