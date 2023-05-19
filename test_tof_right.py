@@ -19,7 +19,7 @@ GPIO.setup(right_xshut_pin, GPIO.OUT)
 GPIO.output(right_xshut_pin, GPIO.LOW)
 time.sleep(0.1)
 tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_right.set_address(0x2A)  # Set the I2C address of the right sensor
+tof_right.set_address(0x29)  # Set the I2C address of the right sensor
 
 # Enable the right sensor
 GPIO.output(right_xshut_pin, GPIO.HIGH)
