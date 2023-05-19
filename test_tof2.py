@@ -68,3 +68,6 @@ def read_tof():
     print("Distance right:", distance_right)
 
     return distance_left, distance_right
+
+print("Distance left:", read_tof(distance_left))
+print("Distance right:", read_tof(distance_right))
