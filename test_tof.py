@@ -52,14 +52,24 @@ print("Enabling both sensors")
 GPIO.output(right_xshut_pin, GPIO.HIGH)
 time.sleep(0.1)
 
-print(tof_left.range, tof_right.range)
-
 print("ToF sensors set up")
+print("Starting continuous mode for both sensors")
+tof_left.start_continuous()
+tof_right.start_continuous()
+
 print("Reading ToF sensors")
 def read_tof():
+    # Wait until data is ready for the left sensor
+    while not tof_left.data_ready:
+        time.sleep(0.01)  # Wait for 10 ms
+
     # Read distance data from left sensor
     tof_left_measurement = tof_left.range
     distance_left = tof_left_measurement if tof_left_measurement > 0 else 65535
+
+    # Wait until data is ready for the right sensor
+    while not tof_right.data_ready:
+        time.sleep(0.01)  # Wait for 10 ms
 
     # Read distance data from right sensor
     tof_right_measurement = tof_right.range
@@ -74,3 +84,7 @@ def read_tof():
 distances = read_tof()  # Call the function without any arguments
 print("Distance left:", distances[0])  # Print the left distance
 print("Distance right:", distances[1])  # Print the right distance
+
+# Stop the continuous mode when done
+tof_left.stop_continuous()
+tof_right.stop_continuous()
