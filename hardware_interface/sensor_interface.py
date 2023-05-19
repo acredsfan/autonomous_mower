@@ -24,9 +24,12 @@ class SensorInterface:
         self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
         self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
         self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
-        self.mpu9250_master = FaBo9Axis_MPU9250.MPU9250(tca9548a_num=0, tca9548a_addr=0x70)
-        self.mpu9250_slave = FaBo9Axis_MPU9250.MPU9250(tca9548a_num=1, tca9548a_addr=0x70)
-        self.ina3221 = INA3221(tca9548a_num=3, tca9548a_addr=0x70)
+        self.select_mux_channel(0)
+        self.mpu9250_master = FaBo9Axis_MPU9250.MPU9250(self.i2c)
+        self.select_mux_channel(1)
+        self.mpu9250_slave = FaBo9Axis_MPU9250.MPU9250(self.i2c)
+        self.select_mux_channel(3)
+        self.ina3221 = INA3221(self.i2c)
         self.HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
         self.HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
         # change this to match the location's pressure (hPa) at sea level
