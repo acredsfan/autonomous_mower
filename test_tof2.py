@@ -18,20 +18,18 @@ if timing < 20000:
     timing = 20000
 print("Timing %d ms" % (timing/1000))
 
-for count in range(1, 101):
+for count in range(1, 10):
     # Get distance from VL53L0X  on TCA9548A bus 1
     distance_right_mm = vl53l0x_right.get_distance()
     # convert distance to inches and print
     if distance_right_mm > 0:
-        distance_right_inch = distance_right_mm * 0.0393701
-        print("Right ToF Distance = %.1f inches" % distance_right_inch)
+        print("Right ToF Distance = %.1f mm" % distance_right_inch)
 
     # Get distance from VL53L0X  on TCA9548A bus 2
     distance_left_mm = vl53l0x_left.get_distance()
     # convert distance to inches and print
     if distance_left_mm > 0:
-        distance_left_inch = distance_left_mm * 0.0393701
-        print("Left ToF Distance = %.1f inches" % distance_left_inch)
+        print("Left ToF Distance = %.1f mm" % distance_left_inch)
 
     time.sleep(timing/1000000.00)
 
