@@ -30,10 +30,10 @@ def initialize_sensor(xshut_pin, i2c, address):
     return sensor
 
 # Initialize the right sensor (address 0x29)
-tof_right = initialize_sensor(right_xshut_pin, i2c, 0x29)
+tof_right = initialize_sensor(right_xshut_pin, i2c, 0x30)
 
 # Initialize the left sensor (address 0x2A)
-tof_left = initialize_sensor(left_xshut_pin, i2c, 0x2A)
+tof_left = initialize_sensor(left_xshut_pin, i2c, 0x31)
 
 # Start continuous mode for both sensors
 print("Starting continuous mode for both sensors...")
