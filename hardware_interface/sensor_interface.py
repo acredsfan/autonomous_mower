@@ -11,6 +11,7 @@ import FaBo9Axis_MPU9250
 from barbudor_ina3221.lite import INA3221
 import RPi.GPIO as GPIO
 import serial
+import busio
 #from gps_interface import GPSInterface
 
 # Global variables
