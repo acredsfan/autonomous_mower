@@ -63,10 +63,6 @@ def read_tof():
     tof_right_measurement = tof_right.range
     distance_right = tof_right_measurement if tof_right_measurement > 0 else 65535
 
-    # Print distance data
-    print("Distance left:", distance_left)
-    print("Distance right:", distance_right)
-
     return distance_left, distance_right
 
 distances = read_tof()  # Call the function without any arguments
