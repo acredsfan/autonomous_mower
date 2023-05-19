@@ -1,7 +1,8 @@
-from hardware_interface.sensor_interface import SensorInterface
-import time
 import sys
 sys.path.append('/home/pi/autonomous_mower')
+
+from hardware_interface.sensor_interface import SensorInterface
+import time
 
 def test_bme280():
     sensor_interface = SensorInterface()
