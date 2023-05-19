@@ -1,70 +1,69 @@
-print("Starting ToF sensor thread")
-
 import time
-print("time imported")
-import board
-print("board imported")
-import busio
-print("busio imported")
-import adafruit_vl53l0x
-print("adafruit_vl53l0x imported")
+import VL53L0X
 import RPi.GPIO as GPIO
-print("RPi.GPIO imported")
 
-print("Setting up I2C bus")
-# Set up I2C bus
-i2c = busio.I2C(board.SCL, board.SDA)
+# GPIO for Sensor 1 shutdown pin
+sensor1_shutdown = 22
+# GPIO for Sensor 2 shutdown pin
+sensor2_shutdown = 23
 
-# Set the GPIO pin numbers connected to the XSHUT pins of the left and right sensors
-print("Setting up GPIO pins")
-left_xshut_pin = 22  # GPIO pin connected to the left sensor's XSHUT pin
-right_xshut_pin = 23  # GPIO pin connected to the right sensor's XSHUT pin
+GPIO.setwarnings(False)
 
-print("Setting up GPIO pins")
+# Setup GPIO for shutdown pins on each VL53L0X
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(sensor1_shutdown, GPIO.OUT)
+GPIO.setup(sensor2_shutdown, GPIO.OUT)
 
-# Set up the GPIO pins
-if not GPIO.getmode():
-    GPIO.setmode(GPIO.BCM)
-GPIO.setup(left_xshut_pin, GPIO.OUT)
-GPIO.setup(right_xshut_pin, GPIO.OUT)
+# Set all shutdown pins low to turn off each VL53L0X
+GPIO.output(sensor1_shutdown, GPIO.LOW)
+GPIO.output(sensor2_shutdown, GPIO.LOW)
 
-print("Resetting Left Sensor")
-# Reset the left sensor
-GPIO.output(left_xshut_pin, GPIO.LOW)
-GPIO.output(right_xshut_pin, GPIO.HIGH)
-time.sleep(0.1)
+# Keep all low for 500 ms or so to make sure they reset
+time.sleep(0.50)
 
-print("Initializing left sensor")
-# Initialize the left sensor
-tof_left = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_left.set_address(0x29)  # Set the I2C address of the left sensor
+# Create one object per VL53L0X passing the address to give to
+# each.
+tof = VL53L0X.VL53L0X(i2c_address=0x2B)
+tof1 = VL53L0X.VL53L0X(i2c_address=0x2D)
+tof.open()
+tof1.open()
 
-print("Resetting right sensor and initializing")
-# Reset and initialize the right sensor
-GPIO.output(left_xshut_pin, GPIO.HIGH)
-GPIO.output(right_xshut_pin, GPIO.LOW)
-time.sleep(0.1)
-tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_right.set_address(0x2A)  # Set the I2C address of the right sensor
+# Set shutdown pin high for the first VL53L0X then 
+# call to start ranging 
+GPIO.output(sensor1_shutdown, GPIO.HIGH)
+time.sleep(0.50)
+tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
-print("Enabling both sensors")
-# Enable both sensors
-GPIO.output(right_xshut_pin, GPIO.HIGH)
-time.sleep(0.1)
+# Set shutdown pin high for the second VL53L0X then 
+# call to start ranging 
+GPIO.output(sensor2_shutdown, GPIO.HIGH)
+time.sleep(0.50)
+tof1.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
-print("ToF sensors set up")
-print("Reading ToF sensors")
-def read_tof():
-    # Read distance data from left sensor
-    tof_left_measurement = tof_left.range
-    distance_left = tof_left_measurement if tof_left_measurement > 0 else 65535
+timing = tof.get_timing()
+if timing < 20000:
+    timing = 20000
+print("Timing %d ms" % (timing/1000))
 
-    # Read distance data from right sensor
-    tof_right_measurement = tof_right.range
-    distance_right = tof_right_measurement if tof_right_measurement > 0 else 65535
+for count in range(1,101):
+    distance = tof.get_distance()
+    if distance > 0:
+        print("sensor %d - %d mm, %d cm, iteration %d" % (1, distance, (distance/10), count))
+    else:
+        print("%d - Error" % 1)
 
-    return distance_left, distance_right
+    distance = tof1.get_distance()
+    if distance > 0:
+        print("sensor %d - %d mm, %d cm, iteration %d" % (2, distance, (distance/10), count))
+    else:
+        print("%d - Error" % 2)
 
-distances = read_tof()  # Call the function without any arguments
-print("Distance left:", distances[0])  # Print the left distance
-print("Distance right:", distances[1])  # Print the right distance
+    time.sleep(timing/1000000.00)
+
+tof1.stop_ranging()
+GPIO.output(sensor2_shutdown, GPIO.LOW)
+tof.stop_ranging()
+GPIO.output(sensor1_shutdown, GPIO.LOW)
+
+tof.close()
+tof1.close()
