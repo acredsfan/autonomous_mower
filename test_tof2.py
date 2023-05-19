@@ -69,5 +69,6 @@ def read_tof():
 
     return distance_left, distance_right
 
-print("Distance left:", read_tof(distance_left))
-print("Distance right:", read_tof(distance_right))
+distances = read_tof()  # Call the function without any arguments
+print("Distance left:", distances[0])  # Print the left distance
+print("Distance right:", distances[1])  # Print the right distance
