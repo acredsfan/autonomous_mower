@@ -60,16 +60,21 @@ tof_right.start_continuous()
 print("Reading ToF sensors")
 def read_tof():
     # Wait until data is ready for the left sensor
+    print("Waiting for left sensor data...")
     while not tof_left.data_ready:
+        print("Left sensor data not ready")
         time.sleep(0.01)  # Wait for 10 ms
+    print("Left sensor data ready")
 
     # Read distance data from left sensor
     tof_left_measurement = tof_left.range
     distance_left = tof_left_measurement if tof_left_measurement > 0 else 65535
 
-    # Wait until data is ready for the right sensor
+    print("Waiting for right sensor data...")
     while not tof_right.data_ready:
+        print("Right sensor data not ready")
         time.sleep(0.01)  # Wait for 10 ms
+    print("Right sensor data ready")
 
     # Read distance data from right sensor
     tof_right_measurement = tof_right.range
