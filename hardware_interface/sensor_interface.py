@@ -22,8 +22,8 @@ class SensorInterface:
         self.i2c = board.I2C()  # uses board.SCL and board.SDA
         self.select_mux_channel(2)
         self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
-        self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
-        self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
+        self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
+        self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
         self.mpu9250_master = FaBo9Axis_MPU9250.MPU9250(tca9548a_num=0, tca9548a_addr=0x70)
         self.mpu9250_slave = FaBo9Axis_MPU9250.MPU9250(tca9548a_num=1, tca9548a_addr=0x70)
         self.ina3221 = INA3221(tca9548a_num=3, tca9548a_addr=0x70)
