@@ -23,13 +23,13 @@ for count in range(1, 10):
     distance_right_mm = vl53l0x_right.get_distance()
     # convert distance to inches and print
     if distance_right_mm > 0:
-        print("Right ToF Distance = %.1f mm" % distance_right_inch)
+        print("Right ToF Distance = %.1f mm" % distance_right_mm)
 
     # Get distance from VL53L0X  on TCA9548A bus 2
     distance_left_mm = vl53l0x_left.get_distance()
     # convert distance to inches and print
     if distance_left_mm > 0:
-        print("Left ToF Distance = %.1f mm" % distance_left_inch)
+        print("Left ToF Distance = %.1f mm" % distance_left_mm)
 
     time.sleep(timing/1000000.00)
 
