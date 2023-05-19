@@ -2,6 +2,7 @@ import sys
 import time
 import adafruit_vl53l0x
 import busio
+import board
 
 print("Imports successful, initializing VL53L0X sensors")
 vl53l0x_left = adafruit_vl53l0x.VL53L0X(i2c=busio.I2C(board.SCL, board.SDA), address=0x29)
