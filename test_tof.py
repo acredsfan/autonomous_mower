@@ -52,6 +52,8 @@ print("Enabling both sensors")
 GPIO.output(right_xshut_pin, GPIO.HIGH)
 time.sleep(0.1)
 
+print(tof_left.range, tof_right.range)
+
 print("ToF sensors set up")
 print("Reading ToF sensors")
 def read_tof():
