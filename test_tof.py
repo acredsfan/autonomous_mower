@@ -1,62 +1,74 @@
+print("Starting ToF sensor thread")
+
 import time
+print("time imported")
 import board
-from digitalio import DigitalInOut
-from adafruit_vl53l0x import VL53L0X
+print("board imported")
+import busio
+print("busio imported")
+import adafruit_vl53l0x
+print("adafruit_vl53l0x imported")
+import RPi.GPIO as GPIO
+print("RPi.GPIO imported")
 
-# declare the singleton variable for the default I2C bus
-i2c = board.I2C()  # uses board.SCL and board.SDA
-# i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
+print("Setting up I2C bus")
+# Set up I2C bus
+i2c = busio.I2C(board.SCL, board.SDA)
 
-# declare the digital output pins connected to the "SHDN" pin on each VL53L0X sensor
-xshut = [
-    DigitalInOut(board.D15),
-    DigitalInOut(board.D16),
-    # add more VL53L0X sensors by defining their SHDN pins here
-]
+# Set the GPIO pin numbers connected to the XSHUT pins of the left and right sensors
+print("Setting up GPIO pins")
+left_xshut_pin = 22  # GPIO pin connected to the left sensor's XSHUT pin
+right_xshut_pin = 23  # GPIO pin connected to the right sensor's XSHUT pin
 
-for power_pin in xshut:
-    # make sure these pins are a digital output, not a digital input
-    power_pin.switch_to_output(value=False)
-    # These pins are active when Low, meaning:
-    #   if the output signal is LOW, then the VL53L0X sensor is off.
-    #   if the output signal is HIGH, then the VL53L0X sensor is on.
-# all VL53L0X sensors are now off
+print("Setting up GPIO pins")
 
-# initialize a list to be used for the array of VL53L0X sensors
-vl53 = []
+# Set up the GPIO pins
+if not GPIO.getmode():
+    GPIO.setmode(GPIO.BCM)
+GPIO.setup(left_xshut_pin, GPIO.OUT)
+GPIO.setup(right_xshut_pin, GPIO.OUT)
 
-# now change the addresses of the VL53L0X sensors
-for i, power_pin in enumerate(xshut):
-    # turn on the VL53L0X to allow hardware check
-    power_pin.value = True
-    # instantiate the VL53L0X sensor on the I2C bus & insert it into the "vl53" list
-    vl53.insert(i, VL53L0X(i2c))  # also performs VL53L0X hardware check
-    # no need to change the address of the last VL53L0X sensor
-    if i < len(xshut) - 1:
-        # default address is 0x29. Change that to something else
-        vl53[i].set_address(i + 0x30)  # address assigned should NOT be already in use
-# there is a helpful list of pre-designated I2C addresses for various I2C devices at
-# https://learn.adafruit.com/i2c-addresses/the-list
-# According to this list 0x30-0x34 are available, although the list may be incomplete.
-# In the python REPR, you can scan for all I2C devices that are attached and detirmine
-# their addresses using:
-#   >>> import board
-#   >>> i2c = board.I2C()
-#   >>> if i2c.try_lock():
-#   >>>     [hex(x) for x in i2c.scan()]
-#   >>>     i2c.unlock()
+print("Resetting Left Sensor")
+# Reset the left sensor
+GPIO.output(left_xshut_pin, GPIO.LOW)
+GPIO.output(right_xshut_pin, GPIO.HIGH)
+time.sleep(0.1)
 
+print("Initializing left sensor")
+# Initialize the left sensor
+tof_left = adafruit_vl53l0x.VL53L0X(i2c=i2c)
+tof_left.set_address(0x29)  # Set the I2C address of the left sensor
 
-def detect_range(count=5):
-    """take count=5 samples"""
-    while count:
-        for index, sensor in enumerate(vl53):
-            print("Sensor {} Range: {}mm".format(index + 1, sensor.range))
-        time.sleep(1.0)
-        count -= 1
+print("Resetting right sensor and initializing")
+# Reset and initialize the right sensor
+GPIO.output(left_xshut_pin, GPIO.HIGH)
+GPIO.output(right_xshut_pin, GPIO.LOW)
+time.sleep(0.1)
+tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
+tof_right.set_address(0x2A)  # Set the I2C address of the right sensor
 
+print("Enabling both sensors")
+# Enable both sensors
+GPIO.output(right_xshut_pin, GPIO.HIGH)
+time.sleep(0.1)
 
-print(
-    "Multiple VL53L0X sensors' addresses are assigned properly\n"
-    "execute detect_range() to read each sensors range readings"
-)
+print("ToF sensors set up")
+print("Reading ToF sensors")
+def read_tof():
+    # Read distance data from left sensor
+    tof_left_measurement = tof_left.range
+    distance_left = tof_left_measurement if tof_left_measurement > 0 else 65535
+
+    # Read distance data from right sensor
+    tof_right_measurement = tof_right.range
+    distance_right = tof_right_measurement if tof_right_measurement > 0 else 65535
+
+    # Print distance data
+    print("Distance left:", distance_left)
+    print("Distance right:", distance_right)
+
+    return distance_left, distance_right
+
+distances = read_tof()  # Call the function without any arguments
+print("Distance left:", distances[0])  # Print the left distance
+print("Distance right:", distances[1])  # Print the right distance
