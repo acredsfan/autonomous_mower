@@ -37,7 +37,7 @@ time.sleep(0.1)
 print("Initializing left sensor")
 # Initialize the left sensor
 tof_left = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_left.set_address(0x29)  # Set the I2C address of the left sensor
+tof_left.set_address(0x2A)  # Set the I2C address of the left sensor
 
 print("Resetting right sensor and initializing")
 # Reset and initialize the right sensor
@@ -45,7 +45,7 @@ GPIO.output(left_xshut_pin, GPIO.HIGH)
 GPIO.output(right_xshut_pin, GPIO.LOW)
 time.sleep(0.1)
 tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_right.set_address(0x2A)  # Set the I2C address of the right sensor
+tof_right.set_address(0x29)  # Set the I2C address of the right sensor
 
 print("Enabling both sensors")
 # Enable both sensors
