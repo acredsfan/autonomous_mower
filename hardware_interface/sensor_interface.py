@@ -18,8 +18,8 @@ bus = smbus.SMBus(1)
 #gps_serial = None
 i2c = board.I2C()   # uses board.SCL and board.SDA
 bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
-vl53l0x_left = adafruit_vl53l0x.VL53L0X(i2c_address=0x2a)
-vl53l0x_right = adafruit_vl53l0x.VL53L0X(i2c_address=0x29)
+vl53l0x_left = adafruit_vl53l0x.VL53L0X(i2c=busio.I2C(board.SCL, board.SDA), address=0x29)
+vl53l0x_right = adafruit_vl53l0x.VL53L0X(i2c=busio.I2C(board.SCL, board.SDA), address=0x2a)
 mpu9250 = adafruit_mpu9250.MPU9250()
 ina3221 = INA3221(bus)
 HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
