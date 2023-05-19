@@ -5,74 +5,67 @@ import adafruit_vl53l0x
 import RPi.GPIO as GPIO
 
 # Set up I2C bus
+print("Setting up I2C bus...")
 i2c = busio.I2C(board.SCL, board.SDA)
 
-# Set the GPIO pin number connected to the right sensor's XSHUT pin
+# Set the GPIO pin number connected to the sensors' XSHUT pin
 left_xshut_pin = 22
 right_xshut_pin = 23
 
 # Set up the GPIO pin
+print("Setting up GPIO pins...")
 if not GPIO.getmode():
     GPIO.setmode(GPIO.BCM)
 GPIO.setup(right_xshut_pin, GPIO.OUT)
 GPIO.setup(left_xshut_pin, GPIO.OUT)
 
-# Reset both sensors
-GPIO.output(right_xshut_pin, GPIO.LOW)
-GPIO.output(left_xshut_pin, GPIO.LOW)
-time.sleep(0.1)
+def initialize_sensor(xshut_pin, i2c, address):
+    # Reset and initialize sensor
+    GPIO.output(xshut_pin, GPIO.LOW)
+    time.sleep(0.1)
+    GPIO.output(xshut_pin, GPIO.HIGH)
+    time.sleep(0.1)
+    sensor = adafruit_vl53l0x.VL53L0X(i2c=i2c)
+    sensor.set_address(address)
+    return sensor
 
-# Initialize the right sensor
-GPIO.output(right_xshut_pin, GPIO.HIGH)
-time.sleep(0.1)
-tof_right = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_right.set_address(0x29)  # Set the I2C address of the right sensor
+print("Initializing right sensor...")
+tof_right = initialize_sensor(right_xshut_pin, i2c, 0x29)
 
-# Initialize the left sensor
-GPIO.output(left_xshut_pin, GPIO.HIGH)
-time.sleep(0.1)
-tof_left = adafruit_vl53l0x.VL53L0X(i2c=i2c)
-tof_left.set_address(0x2A)  # Set the I2C address of the left sensor
+print("Initializing left sensor...")
+tof_left = initialize_sensor(left_xshut_pin, i2c, 0x2A)
 
 # Start continuous mode
+print("Starting continuous mode for both sensors...")
 tof_right.start_continuous()
 tof_left.start_continuous()
 
-def read_right_tof():
-    # Wait until data is ready for the right sensor
-    while not tof_right.data_ready:
-        print("Right sensor data not ready")
+def read_tof(sensor, sensor_name):
+    # Wait until data is ready for the sensor
+    while not sensor.data_ready:
+        print(f"{sensor_name} sensor data not ready")
         time.sleep(0.01)  # Wait for 10 ms
 
-    # Read distance data from right sensor
-    tof_right_measurement = tof_right.range
-    distance_right = tof_right_measurement if tof_right_measurement > 0 else 65535
+    # Read distance data from sensor
+    tof_measurement = sensor.range
+    distance = tof_measurement if tof_measurement > 0 else 65535
 
     # Print distance data
-    print("Distance right:", distance_right)
+    print(f"Distance {sensor_name}:", distance)
 
-    return distance_right
+    return distance
 
-def read_left_tof():
-    #Wait until data is ready for the left sensor
-    while not tof_left.data_ready:
-        print("Left sensor data not ready")
-        time.sleep(0.01)  # Wait for 10 ms
+print("Reading distance from right sensor...")
+distance_right = read_tof(tof_right, "right")
 
-    # Read distance data from left sensor
-    tof_left_measurement = tof_left.range
-    distance_left = tof_left_measurement if tof_left_measurement > 0 else 65535
+print("Reading distance from left sensor...")
+distance_left = read_tof(tof_left, "left")
 
-    # Print distance data
-    print("Distance left:", distance_left)
-
-    return distance_left
-
-distance = read_right_tof()  # Call the function without any arguments
-print("Distance right:", distance)  # Print the right distance
-distance = read_left_tof()  # Call the function without any arguments
-print("Distance left:", distance)  # Print the left distance
+# Print the distances
+print("Distance right:", distance_right)
+print("Distance left:", distance_left)
 
 # Stop the continuous mode when done
+print("Stopping continuous mode for both sensors...")
 tof_right.stop_continuous()
 tof_left.stop_continuous()
