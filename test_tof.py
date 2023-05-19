@@ -5,7 +5,7 @@ import busio
 import board
 
 print("Imports successful, initializing VL53L0X sensors")
-vl53l0x_left = adafruit_vl53l0x.VL53L0X()
+vl53l0x_left = adafruit_vl53l0x.VL53L0X(i2c)
 print("Left sensor initialized successfully with address 0x29")
 #vl53l0x_right = adafruit_vl53l0x.VL53L0X(i2c=busio.I2C(board.SCL, board.SDA), address=0x2a)
 print("Right sensor initialized successfully with address 0x2a")
