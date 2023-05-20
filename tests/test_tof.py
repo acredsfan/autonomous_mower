@@ -1,5 +1,6 @@
+import sys
+sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface import sensor_interface
-
 
 try:
     while True:
