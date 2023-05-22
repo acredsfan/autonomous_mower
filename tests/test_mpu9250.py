@@ -14,8 +14,6 @@ mpu = MPU9250(
 
 mpu.configure()
 
-print("MPU9250 id: " + hex(mpu.whoami))
-
 while True:
     print("Accelerometer", mpu.readAccelerometerMaster())
     print("Gyroscope", mpu.readGyroscopeMaster())
