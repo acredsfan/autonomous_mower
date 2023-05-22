@@ -7,7 +7,8 @@ import time
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 import VL53L0X
-import FaBo9Axis_MPU9250
+from mpu9250_jmdev.registers import *
+from mpu9250_jmdev.mpu_9250 import MPU9250
 from barbudor_ina3221.lite import INA3221
 import RPi.GPIO as GPIO
 import serial
@@ -22,10 +23,17 @@ class SensorInterface:
         self.i2c = board.I2C()  # uses board.SCL and board.SDA
         self.select_mux_channel(2)
         self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
-        self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
-        self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
-        self.mpu9250_master = FaBo9Axis_MPU9250.MPU9250()
-        self.mpu9250_slave = FaBo9Axis_MPU9250.MPU9250()
+        self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
+        self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
+        self.mpu = MPU9250(
+            address_ak=AK8963_ADDRESS, 
+            address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
+            address_mpu_slave=None, 
+            bus=1,
+            gfs=GFS_1000, 
+            afs=AFS_8G, 
+            mfs=AK8963_BIT_16, 
+            mode=AK8963_MODE_C100HZ)
         self.select_mux_channel(3)
         self.ina3221 = INA3221(self.i2c)
         self.HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
@@ -69,8 +77,7 @@ class SensorInterface:
         print("Timing %d ms" % (timing / 1000))
 
         # Initialize MPU9250
-        self.mpu9250_master.begin()
-        self.mpu9250_slave.begin()
+        self.mpu.configure()  # Apply the settings to the registers.
 
         # Initialize INA3221
         self.ina3221.begin()
@@ -104,11 +111,11 @@ class SensorInterface:
 
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
-        return self.mpu9250_master.read_compass()
+        return self.mpu.readMagnetometerMaster()
 
     def read_mpu9250_gyro(self):
         """Read MPU9250 gyro data."""
-        return self.mpu9250_master.read_gyro()
+        return self.mpu.readGyroscopeMaster()
 
     def read_ina3221(self):
         """Read INA3221 power monitor data."""
