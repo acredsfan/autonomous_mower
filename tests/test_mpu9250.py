@@ -23,5 +23,5 @@ while True:
     print("Accelerometer", mpu.readAccelerometerMaster())
     print("Gyroscope", mpu.readGyroscopeMaster())
     print("Magnetometer", mpu.readMagnetometerMaster())
-    print("Temperature", mpu.readTemperatureMaster())
+    print("Temperature", (mpu.readTemperatureMaster()*1.8)+32)
     time.sleep(1)
