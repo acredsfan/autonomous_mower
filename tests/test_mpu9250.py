@@ -12,6 +12,8 @@ mpu = MPU9250(
     mfs=AK8963_BIT_16, 
     mode=AK8963_MODE_C100HZ)
 
+mpu.reset()
+mpu.calibrateAK8963() # Calibrate AK8963 magnetometer
 mpu.calibrateMPU6500() # Calibrate sensors
 mpu.configure() # Apply the settings to the registers.
 
