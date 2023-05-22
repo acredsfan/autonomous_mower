@@ -2,7 +2,7 @@
 # Sensors included are: bme280, Neo 8-M GPS, 2x VL53L0X, MPU9250 (compass, accelerometer, gyroscope), INA3221 (current sensor), and 2 hall effect sensors.
 
 #IMPORTS
-import smbus
+import smbus2 as smbus
 import time
 import board
 from adafruit_bme280 import basic as adafruit_bme280
