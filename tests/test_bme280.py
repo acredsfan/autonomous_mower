@@ -1,22 +1,26 @@
-import sys
-sys.path.append('/home/pi/autonomous_mower')
+from smbus2 import SMBus, i2c_msg
+from adafruit_bme280 import basic as adafruit_bme280
 
-from hardware_interface.sensor_interface import SensorInterface
-import time
+# Define the I2C bus
+bus = SMBus(1)
 
-def test_bme280():
-    sensor_interface = SensorInterface()
+# Define the I2C address of the TCA9548A I2C multiplexer
+TCA9548A_I2C_ADDR = 0x70
 
-    # Allow some time for sensor to initialize
-    time.sleep(1)
+# Function to switch the I2C channel
+def tca_select(channel):
+    if channel > 7:
+        return
+    bus.write_byte(TCA9548A_I2C_ADDR, 1<<channel)
 
-    # Read and print BME280 data for 10 times
-    for _ in range(10):
-        bme280_data = sensor_interface.read_bme280()
-        print(f"Temperature: {bme280_data['temperature']} C")
-        print(f"Humidity: {bme280_data['humidity']} %")
-        print(f"Pressure: {bme280_data['pressure']} hPa")
-        time.sleep(2)
+# Select the I2C channel
+tca_select(2)
 
-if __name__ == "__main__":
-    test_bme280()
+# Now create BME280 object as usual
+i2c = busio.I2C(board.SCL, board.SDA)
+bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
+
+# Now you can interact with your BME280 as usual
+print("\nTemperature: %0.1f C" % bme280.temperature)
+print("Humidity: %0.1f %%" % bme280.humidity)
+print("Pressure: %0.1f hPa" % bme280.pressure)
