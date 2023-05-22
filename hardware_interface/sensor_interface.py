@@ -63,7 +63,7 @@ class SensorInterface:
         # gps_serial.flush()
 
         # Initialize BME280
-        self.bme280.begin()
+        #self.bme280.begin()
 
         # Initialize VL53L0X sensors
         # Start ranging on TCA9548A bus 1
