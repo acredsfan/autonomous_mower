@@ -5,7 +5,7 @@ from mpu9250_jmdev.mpu_9250 import MPU9250
 # Initialize the MPU9250 sensor
 mpu = MPU9250(
     address_ak=AK8963_ADDRESS, 
-    address_mpu_master=MPU9250_ADDRESS_69, # In 0x69 Address
+    address_mpu_master=0x69 # In 0x69 Address
     bus=1,  # SDA and SCL are connected to GPIO2 and GPIO3 respectively, which correspond to I2C bus 1 on Raspberry Pi
     gfs=GFS_1000, 
     afs=AFS_8G, 
