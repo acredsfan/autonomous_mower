@@ -1,4 +1,5 @@
 from smbus2 import SMBus, i2c_msg
+import busio
 from adafruit_bme280 import basic as adafruit_bme280
 
 # Define the I2C bus
