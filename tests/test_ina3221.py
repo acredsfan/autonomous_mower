@@ -1,5 +1,5 @@
 from smbus2 import SMBus, i2c_msg
-import ina3221
+from barbudor_ina3221.lite import INA3221
 import time
 import busio
 import board
@@ -23,7 +23,7 @@ tca_select(2)
 i2c = busio.I2C(board.SCL, board.SDA)
 
 # Create an INA3221 object
-ina = ina3221.INA3221(i2c)
+ina = INA3221(i2c)
 
 # Infinite loop
 while True:
