@@ -16,7 +16,7 @@ def tca_select(channel):
     bus.write_byte(TCA9548A_I2C_ADDR, 1<<channel)
 
 # Select the I2C channel
-tca_select(2)
+tca_select(3)
 
 # Now create BME280 object as usual
 i2c = busio.I2C(board.SCL, board.SDA)
