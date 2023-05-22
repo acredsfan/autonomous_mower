@@ -20,7 +20,7 @@ class SensorInterface:
         self.MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
         self.bus = smbus.SMBus(1)
         # self.gps_serial = None
-        self.i2c = board.I2C()  # uses board.SCL and board.SDA
+        self.i2c = busio.I2C(board.SCL, board.SDA)
         self.select_mux_channel(3)
         self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
         self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
@@ -80,7 +80,7 @@ class SensorInterface:
         self.mpu.configure()  # Apply the settings to the registers.
 
         # Initialize INA3221
-        self.ina3221.begin()
+        #self.ina3221.begin()
 
         # Initialize hall effect sensors
         self.init_hall_effect_sensors()
