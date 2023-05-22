@@ -8,7 +8,7 @@ from mpu9250_jmdev.mpu_9250 import MPU9250
 mpu = MPU9250(
     address_ak=AK8963_ADDRESS, 
     address_mpu_master=MPU9050_ADDRESS_69,  # In 0x69 Address
-    address_mpu_slave=0x0C,                 # In 0x0C Address
+    address_mpu_slave=MPU9050_ADDRESS_69,   
     bus=1,
     gfs=GFS_1000, 
     afs=AFS_8G, 
