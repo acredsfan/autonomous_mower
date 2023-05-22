@@ -25,10 +25,15 @@ i2c = busio.I2C(board.SCL, board.SDA)
 # Create an INA3221 object
 ina = INA3221(i2c)
 
+ina3221.enable_channel(1)
+#ina3221.enable_channel(2)
+ina3221.enable_channel(3)
+
 # Infinite loop
 while True:
     # Print the voltage from each channel
-    print(ina.voltage(1), ina.voltage(2), ina.voltage(3))
-
+    print("Solar Panel Voltage: ", ina.bus_voltage(1))
+    print("SLA Battery Voltage: ", ina.bus_voltage(3))
+    
     # Sleep for 0.1 seconds
     time.sleep(0.1)
