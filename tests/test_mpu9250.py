@@ -17,6 +17,7 @@ mpu = MPU9250(
 
 # Apply the settings to the registers.
 mpu.configure()
+mpu.calibrate()
 
 # Loop to print sensor data.
 while True:
