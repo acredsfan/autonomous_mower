@@ -3,15 +3,24 @@ import time
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.sensor_interface import SensorInterface
 
-sensor_interface_instance = SensorInterface()
-sensor_interface_instance.init_sensors()
+def main():
+    # Initialize the sensor interface
+    sensor_interface = SensorInterface()
 
-try:
+    # Initialize sensors
+    sensor_interface.init_sensors()
+
     while True:
-        print("tof_left: ", sensor_interface_instance.read_vl53l0x_left())
-        print("tof_right: ", sensor_interface_instance.read_vl53l0x_right())
+        # Read the distance from the left TOF sensor
+        left_distance = sensor_interface.read_vl53l0x_left()
+        print('Left Distance: ', left_distance)
 
-        time.sleep(0.1)
+        # Read the distance from the right TOF sensor
+        right_distance = sensor_interface.read_vl53l0x_right()
+        print('Right Distance: ', right_distance)
 
-except KeyboardInterrupt:
-    sys.exit()
+        # Wait for a second before next reading
+        time.sleep(1)
+
+if __name__ == '__main__':
+    main()
