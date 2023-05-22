@@ -34,7 +34,7 @@ class SensorInterface:
             afs=AFS_8G, 
             mfs=AK8963_BIT_16, 
             mode=AK8963_MODE_C100HZ)
-        self.select_mux_channel(3)
+        self.select_mux_channel(2)
         self.ina3221 = INA3221(self.i2c)
         self.HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
         self.HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
