@@ -24,5 +24,6 @@ bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
 
 temperature_f = bme280.temperature * 9/5 + 32
 print("\nTemperature: %0.1f C" % bme280.temperature)
+print("Temperature: %0.1f F" % temperature_f)
 print("Humidity: %0.1f %%" % bme280.humidity)
 print("Pressure: %0.1f hPa" % bme280.pressure)
