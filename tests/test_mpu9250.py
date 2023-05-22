@@ -7,7 +7,7 @@ from mpu9250_jmdev.mpu_9250 import MPU9250
 # Initialize the MPU9250 module.
 mpu = MPU9250(
     address_ak=AK8963_ADDRESS, 
-    address_mpu_master=MPU9050_ADDRESS_68,  # In 0x68 Address
+    address_mpu_master=MPU9050_ADDRESS_69,  # In 0x69 Address
     address_mpu_slave=None, 
     bus=1,
     gfs=GFS_1000, 
