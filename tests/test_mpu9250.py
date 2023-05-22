@@ -1,30 +1,27 @@
 # MPU6050 9-DoF Example Printout
 
-import FaBo9Axis_MPU9250
 import time
-import sys
+from mpu9250_jmdev.registers import *
+from mpu9250_jmdev.mpu_9250 import MPU9250
 
-mpu9250 = FaBo9Axis_MPU9250.MPU9250()
+# Initialize the MPU9250 module.
+mpu = MPU9250(
+    address_ak=AK8963_ADDRESS, 
+    address_mpu_master=MPU9050_ADDRESS_68,  # In 0x68 Address
+    address_mpu_slave=None, 
+    bus=1,
+    gfs=GFS_1000, 
+    afs=AFS_8G, 
+    mfs=AK8963_BIT_16, 
+    mode=AK8963_MODE_C100HZ)
 
-try:
-    while True:
-        accel = mpu9250.readAccel()
-        print(" ax = " , ( accel['x'] ))
-        print(" ay = " , ( accel['y'] ))
-        print(" az = " , ( accel['z'] ))
+# Apply the settings to the registers.
+mpu.configure()
 
-        gyro = mpu9250.readGyro()
-        print(" gx = " , ( gyro['x'] ))
-        print(" gy = " , ( gyro['y'] ))
-        print(" gz = " , ( gyro['z'] ))
-
-        mag = mpu9250.readMagnet()
-        print(" mx = " , ( mag['x'] ))
-        print(" my = " , ( mag['y'] ))
-        print(" mz = " , ( mag['z'] ))
-        print()
-
-        time.sleep(0.5)
-
-except KeyboardInterrupt:
-    sys.exit()
+# Loop to print sensor data.
+while True:
+    print("Accelerometer", mpu.readAccelerometerMaster())
+    print("Gyroscope", mpu.readGyroscopeMaster())
+    print("Magnetometer", mpu.readMagnetometerMaster())
+    print("Temperature", mpu.readTemperatureMaster())
+    time.sleep(1)
