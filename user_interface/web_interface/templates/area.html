@@ -6,7 +6,7 @@
     <script>
         // Load the configuration file
         $.getJSON('config.json', function(config) {
-            const apiKey = config.googleMapsApiKey;
+            const apiKey = "{{ google_maps_api_key }}";
     
             function initMap() {
                 const center = { lat: 39.039547, lng: -84.228918 };

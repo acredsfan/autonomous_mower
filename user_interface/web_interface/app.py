@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import sys
+import json
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.motor_controller import MotorController
 from hardware_interface.relay_controller import RelayController
@@ -12,6 +13,10 @@ sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:8081"
+
+with open("home/pi/autonomous_mower/config.json") as config_file:
+    config = json.load(config_file)
+    google_maps_api_key = config.get("google_maps_api_key")
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
@@ -38,7 +43,7 @@ def control():
 
 @app.route('/area')
 def area():
-    return render_template('area.html')
+    return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
 
 @app.route('/settings')
