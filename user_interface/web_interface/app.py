@@ -14,7 +14,7 @@ live_view_url = "/static/live_view.jpg"
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
-RelayController.init_relay_controller()
+#RelayController.init_relay_controller()
 
 def init_web_interface():
     # Initialize the web interface
