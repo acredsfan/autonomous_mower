@@ -13,10 +13,7 @@ sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:8081"
-
-with open("/home/pi/autonomous_mower/config.json") as config_file:
-    config = json.load(config_file)
-    google_maps_api_key = config.get("google_maps_api_key")
+google_maps_api_key = "YOUR_API_KEY_HERE"
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()

@@ -4,38 +4,24 @@
     <h1>Mowing Area</h1>
     <div id="map"></div>
     <script>
-        // Load the configuration file
-        $.getJSON('config.json', function(config) {
-            const apiKey = "{{ google_maps_api_key }}";
-            console.log(apiKey);
-    
-            function initMap() {
-                map = new google.maps.Map(document.getElementById('map'), {
-                    center: { lat: 39.039547, lng: -84.228918 },
-                    zoom: 20,
-                    tilt: 0,
-                    mapTypeID: 'satellite',
-                    disableDefaultUI: true
-                });
-                    
-                // Add the polygon drawing tool
-                var drawingManager = new google.maps.drawing.DrawingManager({
-                        drawingMode: google.maps.drawing.OverlayType.POLYGON,
-                        drawingControl: true,
-                        drawingControlOptions: {
-                            position: google.maps.ControlPosition.TOP_CENTER,
-                            drawingModes: ['polygon']
-                        },
-                        polygonOptions: {
-                            editable: true,
-                            draggable: true
-                        }
-                    });
-    
-                // Add the polygon to the map
-                drawingManager.setMap(map);
-    
-                // Add an event listener for when the polygon is drawn
+        function initMap() {
+            const map = new google.maps.Map(document.getElementById('map'), {
+            center: {lat: 39.039547, lng: -84.228918},
+            zoom: 20
+            });
+
+            const drawingManager = new google.maps.drawing.DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [
+                google.maps.drawing.OverlayType.POLYGON
+                ]
+            }
+            });
+            drawingManager.setMap(map);
+             // Add an event listener for when the polygon is drawn
                 google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
                     // Save the polygon to the server using a Flask route
                     const coordinates = event.overlay.getPath().getArray().map(coord => {
