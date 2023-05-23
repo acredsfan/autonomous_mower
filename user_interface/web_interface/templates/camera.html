@@ -3,5 +3,13 @@
 {% block content %}
 <h1>Camera Stream</h1>
 <p>Camera streaming and controls go here.</p>
-<img src="http://PiMowBot.local:8081" alt="Live view from Pi camera">
+
+<!-- include the video.js library -->
+<script src="https://vjs.zencdn.net/7.8.4/video.js"></script>
+
+<!-- set up the video player to receive the GStreamer stream -->
+<video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="480"
+   data-setup='{"techOrder": ["html5"], "sources": [{"type": "application/x-mpegURL", "src": "http://127.0.0.1:5000"}]}'>
+</video>
+
 {% endblock %}
