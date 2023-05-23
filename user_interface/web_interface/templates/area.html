@@ -3,7 +3,10 @@
 {% block content %}
     <h1>Mowing Area</h1>
     <div id="map"></div>
+    <button id="save-area">Save Area</button>
     <script>
+        let coordinates = [];
+
         function initMap() {
             const map = new google.maps.Map(document.getElementById('map'), {
             center: {lat: 39.039547, lng: -84.228918},
