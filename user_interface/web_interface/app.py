@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import sys
 sys.path.append('/home/pi/autonomous_mower')
-from MotorController import init_motor_controller, set_motor_direction, stop_motors
-from RelayController import init_relay_controller, set_mower_blades
+from hardware_interface.motor_controller import MotorController
+from hardware_interface.relay_controller import RelayController
 
 app = Flask(__name__)
 
@@ -13,8 +13,8 @@ next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "/static/live_view.jpg"
 
 # Initialize the motor and relay controllers
-init_motor_controller()
-init_relay_controller()
+MotorController.init_motor_controller()
+RelayController.init_relay_controller()
 
 def init_web_interface():
     # Initialize the web interface
