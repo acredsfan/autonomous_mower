@@ -50,6 +50,10 @@ def area():
 def settings():
     return render_template('settings.html')
 
+@app.route('/camera')
+def camera():
+    return render_template('camera_stream.html')
+
 
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
