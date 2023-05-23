@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify
 import sys
 sys.path.append('/home/pi/autonomous_mower')
-from motor_controller import init_motor_controller, set_motor_direction, stop_motors
-from relay_controller import init_relay_controller, set_mower_blades
+from MotorController import init_motor_controller, set_motor_direction, stop_motors
+from RelayController import init_relay_controller, set_mower_blades
 
 app = Flask(__name__)
 
