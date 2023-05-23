@@ -1,4 +1,5 @@
 # Code for testing the web user interface
+import sys
 sys.path.append('/home/pi/autonomous_mower')
 from user_interface import web_interface
 import time
