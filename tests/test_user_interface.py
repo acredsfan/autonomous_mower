@@ -1,12 +1,17 @@
-# Code for testing the user interface
+# Code for testing the web user interface
+sys.path.append('/home/pi/autonomous_mower')
+from user_interface import web_interface
+import time
 
-#IMPORTS
---TODO: add imports
+def main():
+    # Initialize the web interface
+    web_interface.init_web_interface()
 
-#CONSTANTS
---TODO: add constants
+    # Start the web interface
+    web_interface.start_web_interface()
 
-#VARIABLES
---TODO: add variables
+    # Wait for a second before next reading
+    time.sleep(1)
 
-#FUNCTIONS
+if __name__ == '__main__':
+    main()
