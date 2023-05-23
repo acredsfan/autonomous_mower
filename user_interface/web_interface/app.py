@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
+sys.path.append('/home/pi/autonomous_mower')
 from motor_controller import init_motor_controller, set_motor_direction, stop_motors
-from relay_controller import init_relay_controller, toggle_mower_blades
+from relay_controller import init_relay_controller, set_mower_blades
 
 app = Flask(__name__)
 
@@ -14,6 +15,15 @@ live_view_url = "/static/live_view.jpg"
 init_motor_controller()
 init_relay_controller()
 
+def init_web_interface():
+    # Initialize the web interface
+    # Add code here to initialize the web interface
+    pass
+
+def start_web_interface():
+    # Start the web interface
+    # Add code here to start the web interface
+    pass
 
 @app.route('/')
 def index():
