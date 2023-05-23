@@ -1,5 +1,5 @@
 function move(direction) {
-    fetch('url_to_your_flask_route', {
+    fetch('/move', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -12,7 +12,7 @@ function move(direction) {
 }
 
 function startMowing() {
-    fetch('url_to_your_flask_route', {
+    fetch('/start-mowing', {
         method: 'POST',
     })
     .then(response => response.json())
@@ -21,7 +21,7 @@ function startMowing() {
 }
 
 function stopMowing() {
-    fetch('url_to_your_flask_route', {
+    fetch('stop-mowing', {
         method: 'POST',
     })
     .then(response => response.json())
@@ -30,7 +30,7 @@ function stopMowing() {
 }
 
 function saveMowingArea(coordinates) {
-    fetch('/area', {
+    fetch('/save_mowing_area', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -54,7 +54,7 @@ document.getElementById('settings-form').addEventListener('submit', function (ev
 });
 
 function saveSettings(mowDays, mowHours) {
-    fetch('url_to_your_flask_route', {
+    fetch('save_settings', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
