@@ -10,8 +10,10 @@
         function initMap() {
             const map = new google.maps.Map(document.getElementById('map'), {
             center: {lat: 39.039547, lng: -84.228918},
-            zoom: 20,
-            tilt: 0
+            zoom: 8,
+            tilt: 0,
+            view: 'satellite',
+            disableDefaultUI: true
             });
 
             const drawingManager = new google.maps.drawing.DrawingManager({
