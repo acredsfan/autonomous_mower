@@ -71,7 +71,7 @@ function saveSettings(mowDays, mowHours) {
 function initMap() {
     var map = new google.maps.Map(document.getElementById('map'), {
         zoom: 20,
-        center: {lat: 39.039547, lng: -84.228918}
+        center: {lat: 39.038542, lng: -84.214696}
     });
 
     var drawingManager = new google.maps.drawing.DrawingManager({
