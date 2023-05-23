@@ -55,7 +55,7 @@
 
         function loadScript() {
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${google_maps_api_key}&callback=initMap&libraries=drawing`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
             script.defer = true;
             document.head.appendChild(script);
         }
