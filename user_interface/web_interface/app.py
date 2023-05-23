@@ -3,6 +3,7 @@ import sys
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.motor_controller import MotorController
 from hardware_interface.relay_controller import RelayController
+import subprocess
 
 app = Flask(__name__)
 
@@ -15,6 +16,9 @@ live_view_url = "/static/live_view.jpg"
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
 #RelayController.init_relay_controller()
+
+def start_motion():
+    subprocess.run(['sudo', 'service', 'motion', 'start'], check=True)
 
 def init_web_interface():
     # Initialize the web interface
