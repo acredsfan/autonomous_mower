@@ -5,8 +5,12 @@ sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.motor_controller import MotorController
 from hardware_interface.relay_controller import RelayController
 import subprocess
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
 
 app = Flask(__name__)
+Gst.init(None)
 
 # Replace this with your actual sensor data and other information
 sensor_data = "Sample sensor data"
@@ -14,10 +18,20 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:8081"
 google_maps_api_key = "YOUR_API_KEY_HERE"
+pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency ! rtph264pay ! udpsink host=127.0.0.1 port=5000')
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
 #RelayController.init_relay_controller()
+
+@app.before_first_request
+def start_gstreamer():
+    pipeline.set_state(Gst.State.PLAYING)
+
+
+@app.teardown_appcontext
+def stop_gstreamer(exception=None):
+    pipeline.set_state(Gst.State.NULL)
 
 def start_motion():
     subprocess.run(['sudo', 'service', 'motion', 'start'], check=True)
