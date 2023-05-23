@@ -8,11 +8,12 @@
         let coordinates = [];
 
         function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 8,
-            tilt: 0,
-            view: 'satellite',
-            disableDefaultUI: true
+            const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 8,
+                tilt: 0,
+                view: 'satellite',
+                disableDefaultUI: true
             });
 
             const drawingManager = new google.maps.drawing.DrawingManager({
