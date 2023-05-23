@@ -43,14 +43,16 @@ function saveMowingArea(coordinates) {
 }
 
 
-document.getElementById('settings-form').addEventListener('submit', function (event) {
-    event.preventDefault();
-
-    const mowDays = document.getElementById('mow-days').value;
-    const mowHours = document.getElementById('mow-hours').value;
-    // Get other settings inputs here
-
-    saveSettings(mowDays, mowHours);
+document.addEventListener('DOMContentLoaded', (event) => {
+    document.getElementById('settings-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+    
+        const mowDays = document.getElementById('mow-days').value;
+        const mowHours = document.getElementById('mow-hours').value;
+        // Get other settings inputs here
+    
+        saveSettings(mowDays, mowHours);
+    });
 });
 
 function saveSettings(mowDays, mowHours) {
