@@ -18,7 +18,7 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:8081"
 google_maps_api_key = "YOUR_API_KEY_HERE"
-pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency ! rtph264pay ! udpsink host=127.0.0.1 port=5000')
+pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency ! rtph264pay ! udpsink host=127.0.0.1 port=8081')
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
