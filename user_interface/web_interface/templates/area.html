@@ -10,26 +10,27 @@
             console.log(apiKey);
     
             function initMap() {
-                const center = { lat: 39.039547, lng: -84.228918 };
-                const map = new google.maps.Map(document.getElementById("map"), {
-                    zoom: 17,
-                    center: center
+                map = new google.maps.Map(document.getElementById('map'), {
+                    center: { lat: 39.039547, lng: -84.228918 },
+                    zoom: 20,
+                    tilt: 0,
+                    mapTypeID: 'satellite',
+                    disableDefaultUI: true
                 });
-    
+                    
                 // Add the polygon drawing tool
-                const drawingManager = new google.maps.drawing.DrawingManager({
-                    drawingMode: google.maps.drawing.OverlayType.POLYGON,
-                    drawingControl: true,
-                    drawingControlOptions:
-                    {
-                        position: google.maps.ControlPosition.TOP_CENTER,
-                        drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                    },
-                    polygonOptions: {
-                        editable: true,
-                        draggable: true
-                    }
-                });
+                var drawingManager = new google.maps.drawing.DrawingManager({
+                        drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                        drawingControl: true,
+                        drawingControlOptions: {
+                            position: google.maps.ControlPosition.TOP_CENTER,
+                            drawingModes: ['polygon']
+                        },
+                        polygonOptions: {
+                            editable: true,
+                            draggable: true
+                        }
+                    });
     
                 // Add the polygon to the map
                 drawingManager.setMap(map);
