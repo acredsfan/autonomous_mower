@@ -67,3 +67,40 @@ function saveSettings(mowDays, mowHours) {
     .then(data => console.log(data))
     .catch((error) => console.error('Error:', error));
 }
+
+function initMap() {
+    var map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15,
+        center: {lat: 37.422, lng: -122.084}
+    });
+
+    var drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: google.maps.drawing.OverlayType.POLYGON,
+        drawingControl: true,
+        drawingControlOptions: {
+            position: google.maps.ControlPosition.TOP_CENTER,
+            drawingModes: ['polygon']
+        }
+    });
+    drawingManager.setMap(map);
+
+    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+        var path = polygon.getPath();
+        var coordinates = [];
+        for (var i = 0; i < path.getLength(); i++) {
+            var lat = path.getAt(i).lat();
+            var lng = path.getAt(i).lng();
+            coordinates.push({lat: lat, lng: lng});
+        }
+        console.log(coordinates);
+        // Send coordinates to server
+        // ...
+    });
+}
+
+var submitBtn = document.getElementById('submit-btn');
+submitBtn.addEventListener('click', function() {
+    console.log('Submit button clicked');
+    // Send coordinates to server
+    // ...
+});
