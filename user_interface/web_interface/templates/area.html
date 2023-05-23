@@ -3,26 +3,25 @@
 {% block content %}
     <h1>Mowing Area</h1>
     <div id="map"></div>
-    <button id="confirm-button">Confirm Mowing Area</button>
     <script>
-        let coordinates = []; // Variable to store the coordinates
-
         function initMap() {
             const map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 39.039547, lng: -84.228918 },
-                zoom: 20
+            center: {lat: 39.039547, lng: -84.228918},
+            zoom: 20,
+            tilt: 0
             });
 
             const drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: google.maps.drawing.OverlayType.POLYGON,
-                drawingControl: true,
-                drawingControlOptions: {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-                }
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [
+                google.maps.drawing.OverlayType.POLYGON
+                ]
+            }
             });
             drawingManager.setMap(map);
-
             // Add an event listener for when the polygon is drawn
             google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
                 const polygon = event.overlay;
@@ -30,38 +29,38 @@
                     lat: coord.lat(),
                     lng: coord.lng()
                 }));
-
-                // Enable the confirm button
-                document.getElementById('confirm-button').disabled = false;
-            });
-        }
-
-        function saveMowingArea() {
-            // Make an AJAX POST request to the server to save the mowing area
-            $.ajax({
-                url: '/save-mowing-area',
-                type: 'POST',
-                data: JSON.stringify(coordinates),
-                contentType: 'application/json; charset=utf-8',
-                dataType: 'json',
-                success: function (response) {
-                    console.log('Mowing area saved:', response);
-                },
-                error: function (xhr, status, error) {
-                    console.error('Error saving mowing area:', error);
-                }
-            });
-        }
-
-        function loadScript() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-
-        window.addEventListener('load', loadScript);
-        document.getElementById('confirm-button').addEventListener('click', saveMowingArea);
+    
+                    // Enable the confirm button
+                    document.getElementById('confirm-button').disabled = false;
+                });
+            }
+    
+            function saveMowingArea(coordinates) {
+                // Make an AJAX POST request to the server to save the mowing area
+                $.ajax({
+                    url: '/save-mowing-area',
+                    type: 'POST',
+                    data: JSON.stringify(coordinates),
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    success: function(response) {
+                        console.log('Mowing area saved:', response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error saving mowing area:', error);
+                    }
+                });
+            }
+    
+            function loadScript() {
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
+                script.defer = true;
+                document.head.appendChild(script);
+            }
+                
+            window.addEventListener('load', loadScript);
+            document.getElementById('confirm-button').addEventListener('click', saveMowingArea);
     </script>
     <style>
         /* Set the dimensions of the map container */
