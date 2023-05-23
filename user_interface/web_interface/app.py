@@ -11,7 +11,7 @@ app = Flask(__name__)
 sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-live_view_url = "/static/live_view.jpg"
+live_view_url = "PiMowBot.local:8081"
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
@@ -20,15 +20,6 @@ MotorController.init_motor_controller()
 def start_motion():
     subprocess.run(['sudo', 'service', 'motion', 'start'], check=True)
 
-def init_web_interface():
-    # Initialize the web interface
-    # Add code here to initialize the web interface
-    pass
-
-def start_web_interface():
-    # Start the web interface
-    # Add code here to start the web interface
-    pass
 
 @app.route('/')
 def index():
