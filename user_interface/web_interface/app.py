@@ -54,7 +54,7 @@ def area():
 def settings():
     return render_template('settings.html')
 
-@app.route('/camera')
+@app.route('/camera_stream')
 def camera():
     return render_template('camera_stream.html')
 
