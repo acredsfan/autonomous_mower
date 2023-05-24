@@ -24,10 +24,14 @@ pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultra
 MotorController.init_motor_controller()
 #RelayController.init_relay_controller()
 
-@app.before_first_request
-def start_gstreamer():
-    pipeline.set_state(Gst.State.PLAYING)
+first_request = True
 
+@app.before_request
+def before_request_func():
+    global first_request
+    if first_request:
+        pipeline.set_state(Gst.State.PLAYING)
+        first_request = False
 
 @app.teardown_appcontext
 def stop_gstreamer(exception=None):
