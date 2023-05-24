@@ -100,7 +100,7 @@ function initMap() {
     });
 }
 
-var submitBtn = document.getElementById('Confirm-Button');
+var submitBtn = document.getElementById('confirm-button');
 submitBtn.addEventListener('click', function() {
     console.log('Submit button clicked');
     // Send coordinates to server
