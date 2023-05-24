@@ -7,3 +7,4 @@ adafruit-circuitpython-vl53l0x
 easydict
 barbudor-circuitpython-ina3221
 mpu9250-jmdev
+python-dotenv
