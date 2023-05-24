@@ -13,12 +13,12 @@ MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
 # Right sensor
 right_tof=VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
 right_tof.open()
-right_tof.start_ranging(VL53L0X.AccuracyMode.BETTER)
+right_tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
 # Left sensor
 left_tof=VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
 left_tof.open()
-left_tof.start_ranging(VL53L0X.AccuracyMode.BETTER)
+left_tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
 # Read the sensors
 while True:
