@@ -8,6 +8,8 @@ import subprocess
 import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 Gst.init(None)
@@ -19,6 +21,10 @@ next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:8081"
 google_maps_api_key = "YOUR_API_KEY_HERE"
 pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency ! rtph264pay ! udpsink host=127.0.0.1 port=8081')
+dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
+load_dotenv(dotenv_path)
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
