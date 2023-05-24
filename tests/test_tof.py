@@ -23,10 +23,8 @@ left_tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 # Read the sensors
 while True:
     # Select the right sensor
-    bus.write_byte(MUX_ADDRESS, 1 << 3)
     right_distance = right_tof.get_distance()
     # Select the left sensor
-    bus.write_byte(MUX_ADDRESS, 1 << 2)
     left_distance = left_tof.get_distance()
     # Print the distances
     print(f"Right distance: {right_distance}")
