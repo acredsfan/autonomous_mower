@@ -5,7 +5,7 @@
     <div id="map"></div>
     <button id="confirm-button">Confirm Area</button>
     <script>
-        let coordinates = [];
+        let areaCoordinates = [];  // Renamed from 'coordinates'
 
         function initMap() {
             const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
@@ -40,12 +40,12 @@
                 });
             }
     
-            function saveMowingArea(coordinates) {
+            function saveMowingArea(areaCoordinates) {
                 // Make an AJAX POST request to the server to save the mowing area
                 $.ajax({
                     url: '/save-mowing-area',
                     type: 'POST',
-                    data: JSON.stringify(coordinates),
+                    data: JSON.stringify(areaCoordinates),
                     contentType: 'application/json; charset=utf-8',
                     dataType: 'json',
                     success: function(response) {
@@ -59,7 +59,7 @@
 
             function confirm_button() {
                 document.getElementById('confirm-button').disabled = true;
-                saveMowingArea(coordinates);
+                saveMowingArea(areaCoordinates);
             }
     
             function loadScript() {
