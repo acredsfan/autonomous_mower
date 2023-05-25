@@ -18,7 +18,7 @@ Gst.init(None)
 sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-live_view_url = "PiMowBot.local:5000"
+live_view_url = "192.168.86.247:5002/m3u8s/Bluetits.m3u8"
 
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
