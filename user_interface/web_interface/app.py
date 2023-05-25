@@ -19,11 +19,33 @@ sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:5000"
-google_maps_api_key = "YOUR_API_KEY_HERE"
-pipeline = Gst.parse_launch('libcamera-vid --width 1920 --height 1080 -t 0 -g 30 -b 8000000 -n --inline -o - | gst-launch-1.0 fdsrc fd=0 ! h264parse ! queue ! hlssink2 name=hlsmux max-files=8 playlist-length=4 target-duration=1 playlist-root=https://192.168.86.247:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8 alsasrc ! 'audio/x-raw, format=S32LE, rate=48000, channels=2' ! queue ! audioconvert ! lamemp3enc ! mpegaudioparse ! queue ! hlsmux.audio')
+
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
+# Define the libcamera-vid command
+libcamera_cmd = [
+    "libcamera-vid",
+    "--width", "1920",
+    "--height", "1080",
+    "-t", "0",
+    "-g", "30",
+    "-b", "8000000",
+    "-n",
+    "--inline",
+    "-o", "-"
+]
+
+# Define the GStreamer pipeline
+gst_cmd = [
+    "gst-launch-1.0",
+    "fdsrc", "fd=0",
+    "!", "h264parse",
+    "!", "queue",
+    "!", "hlssink2", "name=hlsmux", "max-files=8", "playlist-length=4", "target-duration=1", "playlist-root=https://192.168.86.247:5002/m3u8s", "location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts", "playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8",
+    "alsasrc", "!", "'audio/x-raw, format=S32LE, rate=48000, channels=2'", "!", "queue", "!", "audioconvert", "!", "lamemp3enc", "!", "mpegaudioparse", "!", "queue", "!", "hlsmux.audio"
+]
 
 
 # Initialize the motor and relay controllers
@@ -36,20 +58,25 @@ first_request = True
 def send_js(path):
     return send_from_directory('static', path)
 
-@app.before_request
 def before_request_func():
     global first_request
     if first_request:
-        pipeline.set_state(Gst.State.PLAYING)
+        # Start the libcamera-vid process
+        libcamera_process = subprocess.Popen(libcamera_cmd, stdout=subprocess.PIPE)
+
+        # Start the GStreamer pipeline, using the output of the libcamera-vid process as input
+        gst_process = subprocess.Popen(gst_cmd, stdin=libcamera_process.stdout)
+
+        # Allow libcamera_process to receive a SIGPIPE if gst_process exits
+        libcamera_process.stdout.close()
+
         first_request = False
 
 @app.teardown_appcontext
 def stop_gstreamer(exception=None):
-    pipeline.set_state(Gst.State.NULL)
-
-def start_motion():
-    subprocess.run(['sudo', 'service', 'motion', 'start'], check=True)
-
+    # This might need to be updated to stop the subprocesses properly
+    libcamera_process.terminate()
+    gst_process.terminate()
 
 @app.route('/')
 def index():
