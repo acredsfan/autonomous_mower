@@ -38,15 +38,12 @@ libcamera_cmd = [
 ]
 
 # Define the GStreamer pipeline
-gst_cmd = [
-    "gst-launch-1.0",
-    "fdsrc", "fd=0",
-    "!", "h264parse",
-    "!", "queue",
-    "!", "hlssink2", "name=hlsmux", "max-files=8", "playlist-length=4", "target-duration=1", "playlist-root=https://192.168.86.247:5002/m3u8s", "location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts", "playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8",
-    "alsasrc", "!", "'audio/x-raw, format=S32LE, rate=48000, channels=2'", "!", "queue", "!", "audioconvert", "!", "lamemp3enc", "!", "mpegaudioparse", "!", "queue", "!", "hlsmux.audio"
-]
+gst_cmd = "gst-launch-1.0 fdsrc fd=0 ! h264parse ! queue ! hlssink2 name=hlsmux max-files=8 playlist-length=4 target-duration=1 playlist-root=https://192.168.86.247:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8 alsasrc ! 'audio/x-raw, format=S32LE, rate=48000, channels=2' ! queue ! audioconvert ! lamemp3enc ! mpegaudioparse ! queue ! hlsmux.audio"
 
+# Initialize the libcamera-vid subprocess
+libcamera_process = None
+# Initialize the GStreamer pipeline
+pipeline = None
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
