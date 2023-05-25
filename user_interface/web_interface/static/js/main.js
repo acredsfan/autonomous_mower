@@ -29,6 +29,7 @@ function stopMowing() {
     .catch((error) => console.error('Error:', error));
 }
 
+
 function saveMowingArea(mowingAreaCoordinates) {
     // Make an AJAX POST request to the server to save the mowing area
     $.ajax({
