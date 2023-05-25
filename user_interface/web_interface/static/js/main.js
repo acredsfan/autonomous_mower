@@ -32,13 +32,28 @@ function stopMowing() {
 const fs = require('fs');
 
 function saveMowingArea(coordinates) {
-    fs.writeFile('user_polygon.json', JSON.stringify(coordinates), (err) => {
-        if (err) {
-            console.error('Error saving mowing area:', err);
-        } else {
-            console.log('Mowing area saved.');
-        }
-    });
+    // Convert the coordinates to a JSON string
+    var data = JSON.stringify(coordinates);
+    
+    // Create a Blob object with the data
+    var blob = new Blob([data], {type: 'application/json'});
+    
+    // Create a URL for the Blob object
+    var url = URL.createObjectURL(blob);
+    
+    // Create a link element
+    var a = document.createElement('a');
+    a.download = 'user_polygon.json';
+    a.href = url;
+    
+    // Append the link to the body
+    document.body.appendChild(a);
+    
+    // Simulate a click on the link
+    a.click();
+    
+    // Remove the link from the body
+    document.body.removeChild(a);
 }
 
 
