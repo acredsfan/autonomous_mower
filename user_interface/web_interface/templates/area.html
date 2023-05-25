@@ -56,6 +56,11 @@
                     }
                 });
             }
+
+            function confirm-button() {
+                document.getElementById('confirm-button').disabled = true;
+                saveMowingArea(coordinates);
+            }
     
             function loadScript() {
                 const script = document.createElement('script');
