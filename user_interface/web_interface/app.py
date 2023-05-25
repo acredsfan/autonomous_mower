@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
@@ -20,7 +20,7 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "PiMowBot.local:5000"
 google_maps_api_key = "YOUR_API_KEY_HERE"
-pipeline = Gst.parse_launch('v4l2src ! videoconvert ! x264enc speed-preset=ultrafast tune=zerolatency ! rtph264pay ! udpsink host=PiMowBot.local port=5000')
+pipeline = Gst.parse_launch('libcamera-vid --width 1920 --height 1080 -t 0 -g 30 -b 8000000 -n --inline -o - | gst-launch-1.0 fdsrc fd=0 ! h264parse ! queue ! hlssink2 name=hlsmux max-files=8 playlist-length=4 target-duration=1 playlist-root=https://192.168.86.247:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8 alsasrc ! 'audio/x-raw, format=S32LE, rate=48000, channels=2' ! queue ! audioconvert ! lamemp3enc ! mpegaudioparse ! queue ! hlsmux.audio')
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
@@ -31,6 +31,10 @@ MotorController.init_motor_controller()
 #RelayController.init_relay_controller()
 
 first_request = True
+
+@app.route('/static/<path:path>')
+def send_js(path):
+    return send_from_directory('static', path)
 
 @app.before_request
 def before_request_func():

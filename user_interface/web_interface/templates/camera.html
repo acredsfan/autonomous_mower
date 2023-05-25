@@ -5,11 +5,11 @@
 <p>Camera streaming and controls go here.</p>
 
 <!-- include the video.js library -->
-<script src="https://vjs.zencdn.net/7.8.4/video.js"></script>
+<script src:"http://192.168.86.247:5000/m3u8s/Bluetits.m3u8"></script>
 
 <!-- set up the video player to receive the GStreamer stream -->
-<video id="video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="480"
-   data-setup='{"techOrder": ["html5"], "sources": [{"type": "application/x-mpegURL", "src": "192.168.86.247:5000"}]}'>
+<video id="video" controls autoplay>
+   <source src="{{ url_for('static', filename='Bluetits.m3u8') }}" type="application/x-mpegURL">
 </video>
 
 {% endblock %}
