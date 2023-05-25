@@ -61,9 +61,9 @@ function saveSettings(mowDays, mowHours) {
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    document.getElementById('settings-form').addEventListener('submit', function (event) {
-        event.preventDefault();
-
+    const form = document.getElementById('settings-form');
+    console.log(form); // Log the form element to check if it exists
+    form.addEventListener('submit', function (event) {
         const mowDays = document.getElementById('mow-days').value;
         const mowHours = document.getElementById('mow-hours').value;
         // Get other settings inputs here
@@ -108,6 +108,7 @@ function initMap() {
     });
 
     const submitBtn = document.getElementById('confirm-button');
+    console.log(submitBtn); // Log the button element to check if it exists
     submitBtn.addEventListener('click', function() {
         console.log('Submit button clicked');
         // Now the click listener has access to the coordinates array
