@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 });
 
 let map;
+let coordinates = [];
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -103,8 +104,8 @@ function initMap() {
             coordinates.push({lat: lat, lng: lng});
         }
         console.log(coordinates);
-        // Send coordinates to server
-        // ...
+        // Save coordinates to server
+        saveMowingArea(coordinates);
     });
 
     const submitBtn = document.getElementById('confirm-button');
