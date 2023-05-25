@@ -55,25 +55,26 @@ first_request = True
 def send_js(path):
     return send_from_directory('static', path)
 
+@app.before_request
 def before_request_func():
-    global first_request
+    global first_request, libcamera_process, pipeline
     if first_request:
         # Start the libcamera-vid process
         libcamera_process = subprocess.Popen(libcamera_cmd, stdout=subprocess.PIPE)
 
         # Start the GStreamer pipeline, using the output of the libcamera-vid process as input
-        gst_process = subprocess.Popen(gst_cmd, stdin=libcamera_process.stdout)
-
-        # Allow libcamera_process to receive a SIGPIPE if gst_process exits
-        libcamera_process.stdout.close()
+        pipeline = Gst.parse_launch(gst_cmd)
+        pipeline.set_state(Gst.State.PLAYING)
 
         first_request = False
 
 @app.teardown_appcontext
 def stop_gstreamer(exception=None):
     # This might need to be updated to stop the subprocesses properly
-    libcamera_process.terminate()
-    gst_process.terminate()
+    if pipeline is not None:
+        pipeline.set_state(Gst.State.NULL)
+    if libcamera_process is not None:
+        libcamera_process.terminate()
 
 @app.route('/')
 def index():
