@@ -3,7 +3,7 @@
 {% block content %}
     <h1>Mowing Area</h1>
     <div id="map"></div>
-    <button id="save-area">Save Area</button>
+    <button id="confirm-button">Confirm Area</button>
     <script>
         let coordinates = [];
 
@@ -70,7 +70,7 @@
             }
                 
             window.addEventListener('load', loadScript);
-            document.getElementById('confirm-button').addEventListener('click', saveMowingArea);
+            document.getElementById('confirm-button').addEventListener('click', confirm_button);
     </script>
     <style>
         /* Set the dimensions of the map container */
