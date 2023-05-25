@@ -32,28 +32,20 @@ function stopMowing() {
 const fs = require('fs');
 
 function saveMowingArea(coordinates) {
-    // Convert the coordinates to a JSON string
-    var data = JSON.stringify(coordinates);
-    
-    // Create a Blob object with the data
-    var blob = new Blob([data], {type: 'application/json'});
-    
-    // Create a URL for the Blob object
-    var url = URL.createObjectURL(blob);
-    
-    // Create a link element
-    var a = document.createElement('a');
-    a.download = 'user_polygon.json';
-    a.href = url;
-    
-    // Append the link to the body
-    document.body.appendChild(a);
-    
-    // Simulate a click on the link
-    a.click();
-    
-    // Remove the link from the body
-    document.body.removeChild(a);
+    // Make an AJAX POST request to the server to save the mowing area
+    $.ajax({
+        url: '/save-mowing-area',
+        type: 'POST',
+        data: JSON.stringify(coordinates),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'json',
+        success: function(response) {
+            console.log('Mowing area saved:', response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Error saving mowing area:', error);
+        }
+    });
 }
 
 

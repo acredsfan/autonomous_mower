@@ -136,11 +136,19 @@ def stop_mowing():
     return jsonify({'message': 'Mower stopped.'})
 
 
-@app.route('/save_mowing_area', methods=['POST'])
+@app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
-    global mowing_area
-    mowing_area = request.json['coordinates']
-    return jsonify(success=True)
+    # Get the data from the request
+    data = request.get_json()
+
+    # Print the data to console for debugging
+    print(data)
+
+    # Save the data to a file
+    with open('user_polygon.json', 'w') as f:
+        json.dump(data, f)
+
+    return jsonify({'message': 'Mowing area saved'})
 
 
 @app.route('/save_settings', methods=['POST'])
