@@ -93,8 +93,6 @@ function initMap() {
 
     drawingManager.setMap(map);
 
-    let coordinates = [];
-
     google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
         const path = polygon.getPath();
         coordinates.length = 0;  // Clear the array
