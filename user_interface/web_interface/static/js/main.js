@@ -29,17 +29,16 @@ function stopMowing() {
     .catch((error) => console.error('Error:', error));
 }
 
+const fs = require('fs');
+
 function saveMowingArea(coordinates) {
-    fetch('/save_mowing_area', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ coordinates: coordinates }),
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
+    fs.writeFile('user_polygon.json', JSON.stringify(coordinates), (err) => {
+        if (err) {
+            console.error('Error saving mowing area:', err);
+        } else {
+            console.log('Mowing area saved.');
+        }
+    });
 }
 
 

@@ -17,6 +17,12 @@ import json
 with open("config.json") as f:
     config = json.load(f)
 
+with open("user_polygon.json") as f:
+    polygon_coordinates = json.load(f)
+
+# Set user polygon
+set_user_polygon(polygon_coordinates)
+
 # Constants
 GRID_SIZE = (config['GRID_L'],config['GRID_W'])  # Grid size for path planning
 OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']  # Margin around obstacles to account for robot size and path safety
