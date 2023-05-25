@@ -21,15 +21,13 @@ function startMowing() {
 }
 
 function stopMowing() {
-    fetch('stop-mowing', {
+    fetch('/stop-mowing', {
         method: 'POST',
     })
     .then(response => response.json())
     .then(data => console.log(data))
     .catch((error) => console.error('Error:', error));
 }
-
-const fs = require('fs');
 
 function saveMowingArea(coordinates) {
     // Make an AJAX POST request to the server to save the mowing area
@@ -48,21 +46,8 @@ function saveMowingArea(coordinates) {
     });
 }
 
-
-document.addEventListener('DOMContentLoaded', (event) => {
-    document.getElementById('settings-form').addEventListener('submit', function (event) {
-        event.preventDefault();
-    
-        const mowDays = document.getElementById('mow-days').value;
-        const mowHours = document.getElementById('mow-hours').value;
-        // Get other settings inputs here
-    
-        saveSettings(mowDays, mowHours);
-    });
-});
-
 function saveSettings(mowDays, mowHours) {
-    fetch('save_settings', {
+    fetch('/save_settings', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -73,6 +58,18 @@ function saveSettings(mowDays, mowHours) {
     .then(data => console.log(data))
     .catch((error) => console.error('Error:', error));
 }
+
+document.addEventListener('DOMContentLoaded', (event) => {
+    document.getElementById('settings-form').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const mowDays = document.getElementById('mow-days').value;
+        const mowHours = document.getElementById('mow-hours').value;
+        // Get other settings inputs here
+
+        saveSettings(mowDays, mowHours);
+    });
+});
 
 function initMap() {
     var map = new google.maps.Map(document.getElementById('map'), {
@@ -90,11 +87,14 @@ function initMap() {
             drawingModes: ['polygon']
         }
     });
+
     drawingManager.setMap(map);
+
+    var coordinates = [];
 
     google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
         var path = polygon.getPath();
-        var coordinates = [];
+        coordinates.length = 0;  // Clear the array
         for (var i = 0; i < path.getLength(); i++) {
             var lat = path.getAt(i).lat();
             var lng = path.getAt(i).lng();
@@ -104,11 +104,11 @@ function initMap() {
         // Send coordinates to server
         // ...
     });
-}
 
-var submitBtn = document.getElementById('confirm-button');
-submitBtn.addEventListener('click', function() {
-    console.log('Submit button clicked');
-    // Send coordinates to server
-    // ...
-});
+    var submitBtn = document.getElementById('confirm-button');
+    submitBtn.addEventListener('click', function() {
+        console.log('Submit button clicked');
+        // Now the click listener has access to the coordinates array
+        saveMowingArea(coordinates);
+    });
+}
