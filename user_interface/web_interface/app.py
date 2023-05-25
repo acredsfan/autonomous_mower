@@ -135,6 +135,15 @@ def stop_mowing():
     stop_motors()
     return jsonify({'message': 'Mower stopped.'})
 
+@app.route('/get-mowing-area', methods=['GET'])
+def get_mowing_area():
+    # Load the coordinates from the file
+    with open('user_polygon.json', 'r') as f:
+        data = json.load(f)
+
+    # Return the coordinates
+    return jsonify(data)
+
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():

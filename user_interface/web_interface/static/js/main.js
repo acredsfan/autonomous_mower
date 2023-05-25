@@ -71,33 +71,35 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 });
 
+let map;
+
 function initMap() {
-    var map = new google.maps.Map(document.getElementById('map'), {
+    map = new google.maps.Map(document.getElementById('map'), {
         zoom: 20,
         tilt: 0,
         view: 'satellite',
         center: {lat: 39.038542, lng: -84.214696}
     });
 
-    var drawingManager = new google.maps.drawing.DrawingManager({
+    const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: google.maps.drawing.OverlayType.POLYGON,
         drawingControl: true,
         drawingControlOptions: {
             position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: ['polygon']
+            drawingModes: [google.maps.drawing.OverlayType.POLYGON]
         }
     });
 
     drawingManager.setMap(map);
 
-    var coordinates = [];
+    let coordinates = [];
 
     google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
-        var path = polygon.getPath();
+        const path = polygon.getPath();
         coordinates.length = 0;  // Clear the array
-        for (var i = 0; i < path.getLength(); i++) {
-            var lat = path.getAt(i).lat();
-            var lng = path.getAt(i).lng();
+        for (let i = 0; i < path.getLength(); i++) {
+            const lat = path.getAt(i).lat();
+            const lng = path.getAt(i).lng();
             coordinates.push({lat: lat, lng: lng});
         }
         console.log(coordinates);
@@ -105,10 +107,58 @@ function initMap() {
         // ...
     });
 
-    var submitBtn = document.getElementById('confirm-button');
+    const submitBtn = document.getElementById('confirm-button');
     submitBtn.addEventListener('click', function() {
         console.log('Submit button clicked');
         // Now the click listener has access to the coordinates array
         saveMowingArea(coordinates);
     });
 }
+
+function getAndDrawMowingArea() {
+    fetch('/get-mowing-area', {
+        method: 'GET',
+    })
+    .then(response => response.json())
+    .then(data => {
+        drawMowingArea(data);
+    })
+    .catch((error) => console.error('Error:', error));
+}
+
+function drawMowingArea(coordinates) {
+    var polygon = new google.maps.Polygon({
+        paths: coordinates,
+        strokeColor: '#FF0000',
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: '#FF0000',
+        fillOpacity: 0.35,
+        editable: true
+    });
+    polygon.setMap(map);
+    google.maps.event.addListener(polygon.getPath(), 'set_at', function() {
+        updateMowingArea(polygon);
+    });
+    google.maps.event.addListener(polygon.getPath(), 'insert_at', function() {
+        updateMowingArea(polygon);
+    });
+}
+
+function updateMowingArea(polygon) {
+    var path = polygon.getPath();
+    coordinates.length = 0;  // Clear the array
+    for (var i = 0; i < path.getLength(); i++) {
+        var lat = path.getAt(i).lat();
+        var lng = path.getAt(i).lng();
+        coordinates.push({lat: lat, lng: lng});
+    }
+    console.log(coordinates);
+    // Save the new coordinates to the server
+    saveMowingArea(coordinates);
+}
+
+window.addEventListener('load', function() {
+    loadScript();
+    getAndDrawMowingArea();
+});
