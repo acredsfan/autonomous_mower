@@ -81,7 +81,6 @@ def set_motor_direction(direction):
 def test_motor_controller():
     init_motor_controller()
     print("Testing motor controller...")
-    time.sleep(5)
     relay_on()
     print("Speed controller on")
     set_motor_speed(100, 100)
