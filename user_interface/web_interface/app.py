@@ -25,17 +25,16 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Define the libcamera-vid command
-libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,format=NV12,width=640,height=480', '!', 'videoconvert', '!', 'vp8enc', '!', 'webmmux', 'streamable=true', 'name=stream', '!', 'tcpserversink', 'host=PiMowBot.local', 'port=80']
+#libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,format=NV12,width=640,height=480', '!', 'videoconvert', '!', 'vp8enc', '!', 'webmmux', 'streamable=true', 'name=stream', '!', 'tcpserversink', 'host=PiMowBot.local', 'port=80']
 
 # Define the GStreamer pipeline
 gst_cmd = (
-    "videotestsrc ! vp8enc ! webmmux streamable=true name=stream "
-    "audiotestsrc ! vorbisenc ! stream. "
-    "stream. ! queue ! multisocketsink name=mss"
+    "libcamerasrc ! videoconvert ! video/x-raw,format=NV12,width=640,height=480 !"
+    " vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=http://localhost/live/ location=/var/www/html/live/"
 )
 
 # Initialize the libcamera-vid subprocess
-libcamera_process = None
+#libcamera_process = None
 # Initialize the GStreamer pipeline
 pipeline = None
 
@@ -54,7 +53,7 @@ def before_request_func():
     global first_request, libcamera_process, pipeline
     if first_request:
         # Start the libcamera-vid process
-        libcamera_process = subprocess.Popen(libcamera_cmd, stdout=subprocess.PIPE)
+        #libcamera_process = subprocess.Popen(libcamera_cmd, stdout=subprocess.PIPE)
 
         # Start the GStreamer pipeline, using the output of the libcamera-vid process as input
         pipeline = Gst.parse_launch(gst_cmd)
@@ -67,8 +66,8 @@ def stop_gstreamer(exception=None):
     # This might need to be updated to stop the subprocesses properly
     if pipeline is not None:
         pipeline.set_state(Gst.State.NULL)
-    if libcamera_process is not None:
-        libcamera_process.terminate()
+    #if libcamera_process is not None:
+    #    libcamera_process.terminate()
 
 @app.route('/')
 def index():
