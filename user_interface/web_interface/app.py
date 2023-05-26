@@ -18,20 +18,18 @@ Gst.init(None)
 sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-live_view_url = "http://PiMowBot.local/live/"
+live_view_url = "https://pimowbot.local:5002/m3u8s/index.m3u8"
 
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Define the libcamera-vid command
-#libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,format=NV12,width=640,height=480', '!', 'videoconvert', '!', 'vp8enc', '!', 'webmmux', 'streamable=true', 'name=stream', '!', 'tcpserversink', 'host=PiMowBot.local', 'port=80']
+libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,width=1280,height=720', 'framerate=60', '!', 'videoconvert', '!', 'videoconvert', '!', 'videoscale', '!', 'autovideosink']
 
 # Define the GStreamer pipeline with libcamera and hlssink2
 gst_cmd = (
-"libcamera-vid ! video/x-raw,format=yuv720p,width=1280,height=720 !"
-" videoconvert ! videoscale ! video/x-raw,width=1280,height=720,framerate=60 !"
-" tee name=t ! queue ! vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=http://localhost/live/ location=/var/www/html/live/ t. ! queue ! fakesink"
+"libcamerasrc ! video/x-raw,width=1280,height=720 ! videoconvert ! videoscale ! queue ! vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=https://pimowbot.local:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/m3u8s/segment_%05d.ts"
 )
 
 # Initialize the libcamera-vid subprocess
