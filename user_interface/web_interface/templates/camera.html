@@ -13,7 +13,7 @@
 <script>
       // create the player and connect to the WebSocket server
       var canvas = document.getElementById('video');
-      var player = new JSMpeg.Player('ws://{{ camera_ip }}:8082/', {canvas: canvas});
+      var player = new JSMpeg.Player('ws://PiMowBot.local:8554/', {canvas: canvas});
 </script>
 
 {% endblock %}
