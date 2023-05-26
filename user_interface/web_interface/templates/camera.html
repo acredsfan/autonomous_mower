@@ -11,9 +11,9 @@
 
 <!-- set up the WebSocket connection and start the player -->
 <script type="text/javascript">
-    var canvas = document.getElementById('video');
-    var ws = new WebSocket('ws://' + window.location.hostname + ':8554/');
-    var player = new jsmpeg(ws, {canvas:canvas});
+   var canvas = document.getElementById('video');
+   var url = 'ws://'+document.location.hostname+':8554/';
+   var player = new JSMpeg.Player(url, {canvas: canvas});
 </script>
 
 {% endblock %}
