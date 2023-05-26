@@ -33,7 +33,7 @@ gst_cmd = (
 )
 
 # Initialize the libcamera-vid subprocess
-#libcamera_process = None
+libcamera_process = None
 # Initialize the GStreamer pipeline
 pipeline = None
 
@@ -65,8 +65,8 @@ def stop_gstreamer(exception=None):
     # This might need to be updated to stop the subprocesses properly
     if pipeline is not None:
         pipeline.set_state(Gst.State.NULL)
-    #if libcamera_process is not None:
-    #    libcamera_process.terminate()
+    if libcamera_process is not None:
+        libcamera_process.terminate()
 
 @app.route('/')
 def index():
