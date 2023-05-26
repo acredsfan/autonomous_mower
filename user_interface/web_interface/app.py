@@ -28,7 +28,7 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "width=720", "framerate=30/1", "!", "jpegenc", "!", "multipartmux", "!", "tcpserversink", "host=0.0.0.0", "port=8080"]
                                   
 # Define the GStreamer pipeline with libcamera and hlssink2
-gst_cmd = ("gst-launch-1.0", "tpcclientsrc", "host=PiMowBot.local", "port=8080", "!", "multipartdemux", "!", "jpegdec", "!", "autovideosink")
+gst_cmd = ("gst-launch-1.0", "tpcclientsrc", "host=PiMowBot.local", "port=8080", "!", "multipartdemux", "!", "hlssink2", "playlist-length=4", "max-files=5", "playlist-root=https://pimowbot.local:5002/m3u8s", "location=/home/pi/autonomous_mower/user_interface/web_interface/static/m3u8s/segment_%05d.ts")
 
 
 # Initialize the libcamera-vid subprocess
