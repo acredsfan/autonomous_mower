@@ -1,9 +1,18 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
-import cv2
-import threading
-import numpy as np
+import sys
+import json
+sys.path.append('/home/pi/autonomous_mower')
+from hardware_interface.motor_controller import MotorController
+from hardware_interface.relay_controller import RelayController
+import subprocess
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
+Gst.init(None)
 
 # Replace this with your actual sensor data and other information
 sensor_data = "Sample sensor data"
@@ -11,25 +20,23 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 live_view_url = "http://pimowbot.local:8080/stream.mjpg"
 
-# Initialize the camera capture
-camera = cv2.VideoCapture(0)
-camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-camera.set(cv2.CAP_PROP_FPS, 30)
+dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
+load_dotenv(dotenv_path)
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-# Initialize the MJPEG streaming thread
-streaming_thread = None
-streaming = False
+# Define the libcamera-vid command
+libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "width=720", "framerate=30/1", "!", "jpegenc", "!", "multipartmux", "!", "tcpserversink", "host=pimowbot.local", "port=8080"]
+                                  
+# Initialize the libcamera-vid subprocess
+libcamera_process = None
+# Initialize the GStreamer pipeline
+pipeline = None
 
-def start_streaming():
-    global streaming
-    while streaming:
-        ret, frame = camera.read()
-        if ret:
-            _, img_encoded = cv2.imencode('.jpg', frame)
-            frame_data = img_encoded.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n\r\n')
+# Initialize the motor and relay controllers
+MotorController.init_motor_controller()
+#RelayController.init_relay_controller()
+
+first_request = True
 
 @app.route('/static/<path:path>')
 def send_js(path):
@@ -39,17 +46,21 @@ def send_js(path):
 def index():
     return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow, live_view_url=live_view_url)
 
+
 @app.route('/status')
 def status():
     return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow, live_view_url=live_view_url)
+
 
 @app.route('/control')
 def control():
     return render_template('control.html', live_view_url=live_view_url)
 
+
 @app.route('/area')
 def area():
-    return render_template('area.html')
+    return render_template('area.html', google_maps_api_key=google_maps_api_key)
+
 
 @app.route('/settings')
 def settings():
@@ -59,35 +70,61 @@ def settings():
 def camera():
     return render_template('camera.html')
 
+
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
 def move():
     direction = request.json.get('direction')
-    # Add code to handle motor movement
+    if direction == 'forward':
+        set_motor_direction('forward')
+    elif direction == 'backward':
+        set_motor_direction('backward')
+    elif direction == 'left':
+        set_motor_direction('left')
+    elif direction == 'right':
+        set_motor_direction('right')
+    else:
+        return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400
     return jsonify({'message': f'Moving {direction}.'})
+
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
-    # Add code to start mowing
+    global mowing_requested
+    mowing_requested = True
     return jsonify({'message': 'Mower started.'})
+
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    # Add code to stop mowing
+    toggle_mower_blades()
+    stop_motors()
     return jsonify({'message': 'Mower stopped.'})
 
 @app.route('/get-mowing-area', methods=['GET'])
 def get_mowing_area():
     # Load the coordinates from the file
-    # Add code to load and return mowing area coordinates
+    with open('user_polygon.json', 'r') as f:
+        data = json.load(f)
+
+    # Return the coordinates
     return jsonify(data)
+
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
     # Get the data from the request
     data = request.get_json()
-    # Add code to save mowing area coordinates
+
+    # Print the data to console for debugging
+    print(data)
+
+    # Save the data to a file
+    with open('user_polygon.json', 'w') as f:
+        json.dump(data, f)
+
     return jsonify({'message': 'Mowing area saved'})
+
 
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
