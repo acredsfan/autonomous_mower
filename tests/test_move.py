@@ -18,7 +18,6 @@ right_motor = None
 relay_controller_state = False
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
 
 # Set up GPIO
 GPIO.setup(SPEED_CONTROLLER_PIN, GPIO.OUT)
