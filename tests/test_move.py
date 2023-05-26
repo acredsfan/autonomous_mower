@@ -4,6 +4,7 @@ import RPi.GPIO as GPIO
 import time
 
 #CONSTANTS
+SPEED_CONTROLLER_PIN = 5
 LEFT_PWMI_PIN = 13
 LEFT_IN1_PIN = 19
 LEFT_IN2_PIN = 26
@@ -11,10 +12,13 @@ RIGHT_PWMI_PIN = 16
 RIGHT_IN3_PIN = 20
 RIGHT_IN4_PIN = 21
 
+#Variables
+left_motor = None
+right_motor = None
+relay_controller_state = False
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
-
-SPEED_CONTROLLER_PIN = 5
 
 # Set up GPIO
 GPIO.setup(SPEED_CONTROLLER_PIN, GPIO.OUT)
@@ -43,8 +47,8 @@ GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
 GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
 GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
 GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
-left_motor.ChangeDutyCycle(100)
-right_motor.ChangeDutyCycle(100)
+left_motor.ChangeDutyCycle(50)
+right_motor.ChangeDutyCycle(50)
 time.sleep(2)
 
 # Move both backward
