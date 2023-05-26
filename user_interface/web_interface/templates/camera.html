@@ -11,8 +11,9 @@
 <video id="video" width="1280" height="720" autoplay></video>
 
 <script>
-    var player = videojs('video');
-    player.play();
+      // create the player and connect to the WebSocket server
+      var canvas = document.getElementById('video');
+      var player = new JSMpeg.Player('ws://{{ camera_ip }}:8082/', {canvas: canvas});
 </script>
 
 {% endblock %}
