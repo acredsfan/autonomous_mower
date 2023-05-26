@@ -9,7 +9,7 @@
 
 <!-- set up the video player to receive the GStreamer stream -->
 <video id="video" class="video-js vjs-default-skin" controls autoplay>
-   <source src="http://pimowbot.local:8080/stream.mjpg" type="video/mjpeg">
+   <source src="{{ url_for('video_feed') }}" type="video/mjpeg">
 </video>
 
 <script>
