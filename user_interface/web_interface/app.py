@@ -25,7 +25,7 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Define the libcamera-vid command
-libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "width=720", "framerate=30/1", "!", "jpegenc", "!", "multipartmux", "!", "tcpserversink", "host=0.0.0.0", "port=8080"]
+libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "width=720", "framerate=30/1", "!", "jpegenc", "!", "multipartmux", "!", "tcpserversink", "host=pimowbot.local", "port=8080"]
                                   
 # Initialize the libcamera-vid subprocess
 libcamera_process = None
