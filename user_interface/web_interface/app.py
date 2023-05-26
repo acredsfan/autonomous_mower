@@ -29,7 +29,7 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Define the GStreamer pipeline with libcamera and hlssink2
 gst_cmd = (
-"libcamer ! video/x-raw,format=yuv720p,width=1280,height=720 !"
+"libcamera-vid ! video/x-raw,format=yuv720p,width=1280,height=720 !"
 " videoconvert ! videoscale ! video/x-raw,width=1280,height=720,framerate=60 !"
 " tee name=t ! queue ! vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=http://localhost/live/ location=/var/www/html/live/ t. ! queue ! fakesink"
 )
