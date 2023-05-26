@@ -137,9 +137,9 @@ def start_libcamera():
                      "!", "videoconvert", 
                      "!", "x264enc", "tune=zerolatency", "bitrate=500", 
                      "!", "rtph264pay", "pt=96", "config-interval=1", 
-                     "!", "udpsink", "host=0.0.0.0", "port=5000", "sync=false"]
+                     "!", "udpsink", "host=0.0.0.0", "port=8554", "sync=false"]
     libcamera_process = subprocess.Popen(libcamera_cmd)
 
 if __name__ == '__main__':
     start_libcamera()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=80, debug=True)
