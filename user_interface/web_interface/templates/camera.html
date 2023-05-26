@@ -2,7 +2,6 @@
 
 {% block content %}
 <h1>Camera Stream</h1>
-<p>Camera streaming and controls go here.</p>
 
 <!-- include the jsmpeg library -->
 <script src="jsmpeg.min.js"></script>
@@ -10,10 +9,11 @@
 <!-- set up the video player to receive the GStreamer stream -->
 <video id="video" width="1280" height="720" autoplay></video>
 
-<script>
-      // create the player and connect to the WebSocket server
-      var canvas = document.getElementById('video');
-      var player = new JSMpeg.Player('ws://PiMowBot.local:8554/', {canvas: canvas});
+<!-- set up the WebSocket connection and start the player -->
+<script type="text/javascript">
+    var canvas = document.getElementById('video');
+    var ws = new WebSocket('ws://' + window.location.hostname + ':8554/');
+    var player = new jsmpeg(ws, {canvas:canvas});
 </script>
 
 {% endblock %}
