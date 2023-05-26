@@ -28,7 +28,6 @@ gst_pipeline = ("rtspsrc location=rtsp://pimowbot.local:8554/stream ! "
                 "rtph264depay ! h264parse ! avdec_h264 ! "
                 "videoconvert ! autovideosink")
 
-
 # Initialize the libcamera-vid subprocess
 libcamera_process = None
 # Initialize the GStreamer pipeline
