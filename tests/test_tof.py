@@ -29,11 +29,18 @@ def read_sensor(channel):
     tof.stop_ranging()
     return distance / 25.4  # Convert to inches
 
-while True:
-    distance_right = read_sensor(TOF_RIGHT_CHANNEL)
-    print(f"Right ToF Sensor Distance: {distance_right} inches")
-    time.sleep(0.1)  # You can adjust this delay as needed
+def main():
+    distance_right = None
+    distance_left = None
 
-    distance_left = read_sensor(TOF_LEFT_CHANNEL)
-    print(f"Left ToF Sensor Distance: {distance_left} inches")
-    time.sleep(0.1)  # You can adjust this delay as needed
+    while True:
+        distance_right = read_sensor(TOF_RIGHT_CHANNEL)
+        print(f"Right ToF Sensor Distance: {distance_right} inches")
+        time.sleep(0.1)  # You can adjust this delay as needed
+
+        distance_left = read_sensor(TOF_LEFT_CHANNEL)
+        print(f"Left ToF Sensor Distance: {distance_left} inches")
+        time.sleep(0.1)  # You can adjust this delay as needed
+
+if __name__ == "__main__":
+    main()
