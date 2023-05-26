@@ -26,9 +26,9 @@ import time
 import VL53L0X
 
 # Create a VL53L0X object for device on TCA9548A bus 1
-tof1 = VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
+tof1 = VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
 # Create a VL53L0X object for device on TCA9548A bus 2
-tof2 = VL53L0X.VL53L0X(tca9548a_num=2, tca9548a_addr=0x70)
+tof2 = VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
 tof1.open()
 tof2.open()
 
