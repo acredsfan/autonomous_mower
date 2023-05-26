@@ -21,7 +21,7 @@ def select_channel(channel):
 def read_sensor(channel):
     select_channel(channel)
     tof = VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
-    tof.sensor.start_ranging(Vl53l0xAccuracyMode.GOOD)
+    tof.start_ranging(Vl53l0xAccuracyMode.BETTER)
     distance = tof.get_distance() # This is in millimeters
     tof.stop_ranging()
     return distance / 25.4  # Convert to inches
