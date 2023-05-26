@@ -6,8 +6,8 @@ from smbus2 import SMBus, i2c_msg
 MUX_ADDRESS = 0x70
 
 # ToF sensor addresses on the multiplexer
-TOF_RIGHT_CHANNEL = 0
-TOF_LEFT_CHANNEL = 1
+TOF_RIGHT_CHANNEL = 4
+TOF_LEFT_CHANNEL = 5
 
 # I2C bus number (usually 1 for Raspberry Pi)
 I2C_BUS = 1
