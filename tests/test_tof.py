@@ -21,7 +21,7 @@ def select_channel(channel):
 def read_sensor(channel):
     select_channel(channel)
     tof = VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
-    success = tof.start_ranging(Vl53l0xAccuracyMode.BETTER)
+    success = tof.start_ranging(vl53l0x.Vl53l0xAccuracyMode.BETTER)
     if not success:
         print("Error starting ranging")
         return None
