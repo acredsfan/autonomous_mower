@@ -29,7 +29,9 @@ libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,width=1280,
 
 # Define the GStreamer pipeline with libcamera and hlssink2
 gst_cmd = (
-"libcamerasrc ! video/x-raw,width=1280,height=720 ! videoconvert ! videoscale ! queue ! vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=https://pimowbot.local:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/m3u8s/segment_%05d.ts"
+    "libcamerasrc ! video/x-raw,width=1280,height=720 ! videoconvert ! videoscale !"
+    " queue ! vp8enc ! webmmux streamable=true name=stream !"
+    " hlssink2 playlist-length=4 max-files=5 playlist-root=https://pimowbot.local:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/m3u8s/segment_%05d.ts"
 )
 
 # Initialize the libcamera-vid subprocess
