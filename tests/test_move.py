@@ -38,6 +38,9 @@ right_motor.start(0)
 
 # Test speed controller
 print("Testing speed controller...")
+wait_time = 10
+GPIO.output(SPEED_CONTROLLER_PIN, GPIO.LOW)
+time.sleep(wait_time)
 GPIO.output(SPEED_CONTROLLER_PIN, GPIO.HIGH)
 print("Speed controller on")
 
