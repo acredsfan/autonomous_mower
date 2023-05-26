@@ -27,7 +27,7 @@ print("Speed controller off")
 
 # Test mower blades
 print("Testing mower blades...")
-GPIO.output(MOWER_BLADES_PIN, GPIO.HIGH)
+GPIO.output(MOWER_BLADES_PIN, GPIO.LOW)
 print("Mower blades on")
 time.sleep(5)
 GPIO.output(MOWER_BLADES_PIN, GPIO.LOW)
