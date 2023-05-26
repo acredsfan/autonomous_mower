@@ -25,6 +25,13 @@ GPIO.setup(RIGHT_PWMI_PIN, GPIO.OUT)
 GPIO.setup(RIGHT_IN3_PIN, GPIO.OUT)
 GPIO.setup(RIGHT_IN4_PIN, GPIO.OUT)
 
+# Set up PWM
+left_motor = GPIO.PWM(LEFT_PWMI_PIN, 100)
+right_motor = GPIO.PWM(RIGHT_PWMI_PIN, 100)
+
+left_motor.start(0)
+right_motor.start(0)
+
 # Test speed controller
 print("Testing speed controller...")
 GPIO.output(SPEED_CONTROLLER_PIN, GPIO.HIGH)
