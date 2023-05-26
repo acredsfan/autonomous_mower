@@ -1,34 +1,35 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
 import json
+import subprocess
+import os
+from dotenv import load_dotenv
+import gi
+
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.motor_controller import MotorController
 from hardware_interface.relay_controller import RelayController
-import subprocess
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
-import os
-from dotenv import load_dotenv
 
 app = Flask(__name__)
 Gst.init(None)
 
-# Replace this with your actual sensor data and other information
 sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-live_view_url = "http://pimowbot.local:8080/stream.mjpg"
+live_view_url = "rtsp://pimowbot.local:8554/stream"
 
-dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
+dotenv_path = os.path.join(os.path.dirname(__file__), 'home', 'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-# Define the libcamera-vid command
-libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "width=720", "framerate=30/1", "!", "jpegenc", "!", "multipartmux", "!", "tcpserversink", "host=pimowbot.local", "port=8080"]
-                                  
-# Initialize the libcamera-vid subprocess
-libcamera_process = None
+# Define the gst-rtsp-server command
+gst_rtsp_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "height=720", "framerate=30/1", "!", "omxh264enc", "!", "rtph264pay", "name=pay0", "pt=96", "!", "udpsink", "host=pimowbot.local", "port=8554"]
+
+# Initialize the gst-rtsp-server subprocess
+gst_rtsp_process = None
 # Initialize the GStreamer pipeline
 pipeline = None
 
