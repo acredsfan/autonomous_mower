@@ -1,36 +1,38 @@
 import time
-from VL53L0X import VL53L0X
-from smbus2 import SMBus, i2c_msg
+import VL53L0X
 
-# I2C multiplexer address
-MUX_ADDRESS = 0x70
+# Create a VL53L0X object for device on TCA9548A bus 1
+tof1 = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
+# Create a VL53L0X object for device on TCA9548A bus 2
+tof2 = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
+tof1.open()
+tof2.open()
 
-# ToF sensor addresses on the multiplexer
-TOF_RIGHT_CHANNEL = 0
-TOF_LEFT_CHANNEL = 1
+# Start ranging on TCA9548A bus 1
+tof1.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+# Start ranging on TCA9548A bus 2
+tof2.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
-# I2C bus number (usually 1 for Raspberry Pi)
-I2C_BUS = 1
+timing = tof1.get_timing()
+if timing < 20000:
+    timing = 20000
+print("Timing %d ms" % (timing/1000))
 
-def select_channel(channel):
-    bus = SMBus(I2C_BUS)
-    msg = i2c_msg.write(MUX_ADDRESS, [1 << channel])
-    bus.i2c_rdwr(msg)
-    bus.close()
+for count in range(1, 101):
+    # Get distance from VL53L0X  on TCA9548A bus 1
+    distance = tof1.get_distance()
+    if distance > 0:
+        print("1: %d mm, %d cm, %d" % (distance, (distance/10), count))
 
-def read_sensor(channel):
-    select_channel(channel)
-    tof = VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
-    tof.start_ranging(Vl53l0xAccuracyMode.BETTER)
-    distance = tof.get_distance() # This is in millimeters
-    tof.stop_ranging()
-    return distance / 25.4  # Convert to inches
+    # Get distance from VL53L0X  on TCA9548A bus 2
+    distance = tof2.get_distance()
+    if distance > 0:
+        print("2: %d mm, %d cm, %d" % (distance, (distance/10), count))
 
-while True:
-    distance_right = read_sensor(TOF_RIGHT_CHANNEL)
-    print(f"Right ToF Sensor Distance: {distance_right} inches")
-    time.sleep(0.1)  # You can adjust this delay as needed
+    time.sleep(timing/1000000.00)
 
-    distance_left = read_sensor(TOF_LEFT_CHANNEL)
-    print(f"Left ToF Sensor Distance: {distance_left} inches")
-    time.sleep(0.1)  # You can adjust this delay as needed
+tof1.stop_ranging()
+tof2.stop_ranging()
+
+tof1.close()
+tof2.close()
