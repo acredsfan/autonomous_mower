@@ -1,48 +1,36 @@
-# Python Code to Test the TOF Sensors
-
-# Import the Libraries
 import time
-import VL53L0X
-import busio
-import board
-import smbus2 as smbus
+from VL53L0X import VL53L0X
+from smbus2 import SMBus, i2c_msg
 
-bus = smbus.SMBus(1)
-i2c = busio.I2C(board.SCL, board.SDA)
+# I2C multiplexer address
+MUX_ADDRESS = 0x70
 
-# Create a VL53L0X object for device on TCA9548A bus 1
-tof_right = VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
-# Create a VL53L0X object for device on TCA9548A bus 2
-#tof_left = VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
+# ToF sensor addresses on the multiplexer
+TOF_RIGHT_CHANNEL = 0
+TOF_LEFT_CHANNEL = 1
 
-tof_right.open()
-#tof_left.open()
+# I2C bus number (usually 1 for Raspberry Pi)
+I2C_BUS = 1
 
-# Start ranging on TCA9548A bus 1
-tof_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-# Start ranging on TCA9548A bus 2
-#tof_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+def select_channel(channel):
+    bus = SMBus(I2C_BUS)
+    msg = i2c_msg.write(MUX_ADDRESS, [1 << channel])
+    bus.i2c_rdwr(msg)
+    bus.close()
 
-timing = tof_right.get_timing()
-if timing < 20000:
-    timing = 20000
-print("Timing %d ms" % (timing/1000))
+def read_sensor(channel):
+    select_channel(channel)
+    tof = VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
+    tof.start_ranging(VL53L0X.BETTER_ACCURACY_MODE)
+    distance = tof.get_distance() # This is in millimeters
+    tof.stop_ranging()
+    return distance / 25.4  # Convert to inches
 
-for count in range(1, 101):
-    # Get distance from VL53L0X  on TCA9548A bus 1
-    distance = tof_right.get_distance()
-    if distance > 0:
-        print("1: %d mm, %d cm, %d" % (distance, (distance/10), count))
+while True:
+    distance_right = read_sensor(TOF_RIGHT_CHANNEL)
+    print(f"Right ToF Sensor Distance: {distance_right} inches")
+    time.sleep(0.1)  # You can adjust this delay as needed
 
-    # Get distance from VL53L0X  on TCA9548A bus 2
-    #distance = tof_left.get_distance()
-    #if distance > 0:
-    #    print("2: %d mm, %d cm, %d" % (distance, (distance/10), count))
-
-    time.sleep(timing/1000000.00)
-
-tof_right.stop_ranging()
-#tof_left.stop_ranging()
-
-tof_right.close()
-#tof_left.close()
+    distance_left = read_sensor(TOF_LEFT_CHANNEL)
+    print(f"Left ToF Sensor Distance: {distance_left} inches")
+    time.sleep(0.1)  # You can adjust this delay as needed
