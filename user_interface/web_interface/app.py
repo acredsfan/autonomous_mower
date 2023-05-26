@@ -54,7 +54,7 @@ def before_request_func():
         #libcamera_process = subprocess.Popen(libcamera_cmd, stdout=subprocess.PIPE)
 
         # Start the GStreamer pipeline, using the output of the libcamera-vid process as input
-        pipeline = Gst.parse_launch(gst_cmd)
+        pipeline = Gst.parse_launch(" ".join(gst_cmd))
         pipeline.set_state(Gst.State.PLAYING)
 
         first_request = False
