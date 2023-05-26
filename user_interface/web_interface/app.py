@@ -1,37 +1,37 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
 import json
-import subprocess
-import os
-from dotenv import load_dotenv
-import gi
-
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
-
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface.motor_controller import MotorController
 from hardware_interface.relay_controller import RelayController
+import subprocess
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 Gst.init(None)
 
+# Replace this with your actual sensor data and other information
 sensor_data = "Sample sensor data"
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-live_view_url = "rtsp://pimowbot.local:8554/stream"
 
-dotenv_path = os.path.join(os.path.dirname(__file__), 'home', 'pi', 'autonomous_mower', '.env')
+dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-# Define the gst-rtsp-server command
-gst_rtsp_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", "colorimetry=bt709", "format=NV12", "width=1280", "height=720", "framerate=30/1", "!", "omxh264enc", "!", "rtph264pay", "name=pay0", "pt=96", "!", "udpsink", "host=pimowbot.local", "port=8554"]
+# Define the gstreamer pipeline for h.264 RTSP streaming
+gst_pipeline = ("rtspsrc location=rtsp://pimowbot.local:8554/stream ! "
+                "rtph264depay ! h264parse ! avdec_h264 ! "
+                "videoconvert ! autovideosink")
 
-# Initialize the gst-rtsp-server subprocess
-gst_rtsp_process = None
+# Initialize the libcamera-vid subprocess
+libcamera_process = None
 # Initialize the GStreamer pipeline
-pipeline = None
+pipeline = Gst.parse_launch(gst_pipeline)
 
 # Initialize the motor and relay controllers
 MotorController.init_motor_controller()
@@ -45,17 +45,17 @@ def send_js(path):
 
 @app.route('/')
 def index():
-    return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow, live_view_url=live_view_url)
+    return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 
 @app.route('/status')
 def status():
-    return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow, live_view_url=live_view_url)
+    return render_template('status.html', sensor_data=sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 
 @app.route('/control')
 def control():
-    return render_template('control.html', live_view_url=live_view_url)
+    return render_template('control.html')
 
 
 @app.route('/area')
@@ -106,34 +106,40 @@ def stop_mowing():
 def get_mowing_area():
     # Load the coordinates from the file
     with open('user_polygon.json', 'r') as f:
-        data = json.load(f)
-
-    # Return the coordinates
-    return jsonify(data)
-
+        coordinates = json.load(f)
+    return jsonify(coordinates)
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
-    # Get the data from the request
-    data = request.get_json()
-
-    # Print the data to console for debugging
-    print(data)
-
-    # Save the data to a file
+    # Save the coordinates to the file
     with open('user_polygon.json', 'w') as f:
-        json.dump(data, f)
+        json.dump(request.json.get('coordinates'), f)
+    return jsonify({'message': 'Area saved.'})
 
-    return jsonify({'message': 'Mowing area saved'})
+def set_motor_direction(direction):
+    # Set the motor direction
+    MotorController.set_direction(direction)
 
+def toggle_mower_blades():
+    # Toggle the mower blades
+    RelayController.toggle_relay()
 
-@app.route('/save_settings', methods=['POST'])
-def save_settings():
-    mow_days = request.form.get('mow_days')
-    mow_hours = request.form.get('mow_hours')
-    # Add code to save the settings
-    return jsonify(success=True)
+def stop_motors():
+    # Stop the motors
+    MotorController.stop_motors()
 
+def start_libcamera():
+    global libcamera_process
+    if libcamera_process is not None:
+        # If the libcamera-vid subprocess is already running, kill it
+        libcamera_process.kill()
+    libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", 
+                     "!", "videoconvert", 
+                     "!", "x264enc", "tune=zerolatency", "bitrate=500", 
+                     "!", "rtph264pay", "pt=96", "config-interval=1", 
+                     "!", "udpsink", "host=0.0.0.0", "port=5000", "sync=false"]
+    libcamera_process = subprocess.Popen(libcamera_cmd)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80, debug=True)
+    start_libcamera()
+    app.run(host='0.0.0.0', port=5000, debug=True)
