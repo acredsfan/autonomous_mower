@@ -23,7 +23,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_m
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
- Define the gstreamer pipeline for h.264 RTSP streaming
+# Define the gstreamer pipeline for h.264 RTSP streaming
 gst_pipeline = ("rtspsrc location=rtsp://pimowbot.local:8554/stream ! "
                 "rtph264depay ! h264parse ! avdec_h264 ! "
                 "videoconvert ! autovideosink")
