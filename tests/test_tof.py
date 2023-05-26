@@ -1,5 +1,5 @@
 import time
-from VL53L0X import VL53L0X
+import VL53L0X
 from smbus2 import SMBus, i2c_msg
 
 # I2C multiplexer address
@@ -20,8 +20,8 @@ def select_channel(channel):
 
 def read_sensor(channel):
     select_channel(channel)
-    tof = VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
-    success = tof.start_ranging(vl53l0x.Vl53l0xAccuracyMode.BETTER)
+    tof = VL53L0X.VL53L0X(i2c_bus=I2C_BUS, i2c_address=0x29)
+    success = tof.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
     if not success:
         print("Error starting ranging")
         return None
