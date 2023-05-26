@@ -5,11 +5,16 @@
 <p>Camera streaming and controls go here.</p>
 
 <!-- include the video.js library -->
-<script src:"http://192.168.86.247:5000/m3u8s/Bluetits.m3u8"></script>
+<script src:"https://vjs.zencdn.net/7.11.4/video.min.js"></script>
 
 <!-- set up the video player to receive the GStreamer stream -->
-<video id="video" controls autoplay>
-   <source src="{{ url_for('static', filename='Bluetits.m3u8') }}" type="application/x-mpegURL">
+<video id="video" class="video-js vjs-default-skin" controls autoplay>
+   <source src="https://PiMowBot.local/m3u8s/Bluetits.m3u8" type="application/x-mpegURL">
 </video>
+
+<script>
+    var player = videojs('video');
+    player.play();
+</script>
 
 {% endblock %}

@@ -25,20 +25,10 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Define the libcamera-vid command
-libcamera_cmd = [
-    "libcamera-vid",
-    "--width", "1920",
-    "--height", "1080",
-    "-t", "0",
-    "-g", "30",
-    "-b", "8000000",
-    "-n",
-    "--inline",
-    "-o", "-"
-]
+libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,format=NV12,width=640,height=480', '!', 'videoconvert', '!', 'vp8enc', '!', 'webmmux', 'streamable=true', 'name=stream', '!', 'tcpserversink', 'host=PiMowBot.local', 'port=80']
 
 # Define the GStreamer pipeline
-gst_cmd = "fdsrc fd=0 ! h264parse ! queue ! hlssink2 name=hlsmux max-files=8 playlist-length=4 target-duration=1 playlist-root=https://192.168.86.247:5002/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8"
+gst_cmd = "fdsrc fd=0 ! webmparse ! queue ! hlssink2 name=hlsmux max-files=8 playlist-length=4 target-duration=1 playlist-root=https://PiMowBot.local/m3u8s location=/home/pi/autonomous_mower/user_interface/web_interface/static/segment_%05d.ts playlist-location=/home/pi/autonomous_mower/user_interface/web_interface/static/Bluetits.m3u8"
 
 # Initialize the libcamera-vid subprocess
 libcamera_process = None
