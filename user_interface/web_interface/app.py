@@ -27,12 +27,13 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 # Define the libcamera-vid command
 #libcamera_cmd = ['gst-launch-1.0', 'libcamerasrc', '!', 'video/x-raw,format=NV12,width=640,height=480', '!', 'videoconvert', '!', 'vp8enc', '!', 'webmmux', 'streamable=true', 'name=stream', '!', 'tcpserversink', 'host=PiMowBot.local', 'port=80']
 
-# Define the GStreamer pipeline
+# Define the GStreamer pipeline with libcamera and hlssink2
 gst_cmd = (
     "libcamerasrc ! video/x-raw,format=NV12,width=640,height=480 !"
     " videoconvert ! videoscale ! video/x-raw,width=640,height=480 !"
-    " vp8enc ! webmmux streamable=true name=stream ! hlssink2 playlist-length=4 max-files=5 playlist-root=http://localhost/live/ location=/var/www/html/live/"
+    " vp8enc ! webmmux streamable=true name=stream ! queue ! hlssink2 playlist-length=4 max-files=5 playlist-root=http://localhost/live/ location=/var/www/html/live/"
 )
+
 
 # Initialize the libcamera-vid subprocess
 #libcamera_process = None
