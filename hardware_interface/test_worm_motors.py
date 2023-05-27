@@ -2,6 +2,7 @@
 
 #IMPORTS
 import worm_motors
+import relay_controller
 import time
 
 #CONSTANTS
@@ -12,6 +13,10 @@ worm_motors = None
 
 # Set up worm motors
 worm_motors = worm_motors.WormMotors()
+
+# Turn on relay controller
+relay_controller.init_relay_controller()
+relay_controller.set_speed_controller(on)
 
 # Test worm motors
 print("Testing worm motors...")
@@ -32,3 +37,7 @@ print("Worm motors off")
 
 # Clean up worm motors
 worm_motors.cleanup()
+
+# Turn off relay controller
+relay_controller.set_speed_controller(off)
+relay_controller.clean_up()

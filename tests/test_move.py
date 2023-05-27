@@ -6,16 +6,13 @@ import time
 #Setup and define speed controller
 #CONSTANTS
 SPEED_CONTROLLER_PIN = 5
-MOWER_BLADES_PIN = 6
 
 #VARIABLES
 relay_controller_state = False
-mower_blades_state = False
 
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SPEED_CONTROLLER_PIN, GPIO.OUT)
-GPIO.setup(MOWER_BLADES_PIN, GPIO.OUT)
 
 def relay_controller_on():
     global relay_controller_state
@@ -102,5 +99,3 @@ set_motor_speed(0, 0)
 set_motor_direction("stop")
 relay_controller_off()
 print("Speed controller off")
-
-
