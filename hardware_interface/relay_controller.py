@@ -5,7 +5,7 @@ import RPi.GPIO as GPIO
 import time
 
 #CONSTANTS
-SPEED_CONTROLLER_PIN = 5
+SPEED_CONTROLLER_PIN = 6
 
 #VARIABLES
 relay_controller_state = False
