@@ -11,9 +11,6 @@ SPEED = 100
 #VARIABLES
 worm_motors = None
 
-# Set up worm motors
-worm_motors = worm_motors.WormMotors()
-
 # Turn on relay controller
 relay_controller.init_relay_controller()
 relay_controller.set_speed_controller(on)
