@@ -10,14 +10,12 @@ SPEED_CONTROLLER_PIN = 5
 #VARIABLES
 relay_controller_state = False
 
+# Set up GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SPEED_CONTROLLER_PIN, GPIO.OUT)
+
 #FUNCTIONS
 class RelayController:
-#init_relay_controller
-    #initializes the relay controller
-    @staticmethod
-    def init_relay_controller():
-        GPIO.setup(SPEED_CONTROLLER_PIN, GPIO.OUT)
-
     #toggle_speed_controller
     #toggles the speed controller connected to GPIO 5
     @staticmethod
