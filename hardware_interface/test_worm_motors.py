@@ -12,7 +12,7 @@ SPEED = 100
 worm_motors = None
 
 # Turn on relay controller
-relay_controller.init_relay_controller()
+#relay_controller.init_relay_controller()
 relay_controller.set_speed_controller(on)
 
 # Test worm motors
