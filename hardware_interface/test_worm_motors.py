@@ -8,33 +8,30 @@ import time
 #CONSTANTS
 SPEED = 100
 
-#VARIABLES
-worm_motors = None
-
 # Turn on relay controller
-#relay_controller.init_relay_controller()
-relay_controller.set_speed_controller(on)
+relay_controller.RelayController.init_relay_controller()
+relay_controller.RelayController.set_speed_controller("on")
 
 # Test worm motors
 print("Testing worm motors...")
-worm_motors.move_mower(forward, SPEED)
+worm_motors.MotorController.move_mower("forward", SPEED)
 print("moving forward")
 time.sleep(2)
-worm_motors.move_mower(backward, SPEED)
+worm_motors.MotorController.move_mower("backward", SPEED)
 print("moving backward")
 time.sleep(2)
-worm_motors.move_mower(left, SPEED)
+worm_motors.MotorController.move_mower("left", SPEED)
 print("moving left")
 time.sleep(2)
-worm_motors.move_mower(right, SPEED)
+worm_motors.MotorController.move_mower("right", SPEED)
 print("moving right")
 time.sleep(2)
-worm_motors.stop_motors()
+worm_motors.MotorController.stop_motors()
 print("Worm motors off")
 
 # Clean up worm motors
-worm_motors.cleanup()
+worm_motors.MotorController.cleanup()
 
 # Turn off relay controller
-relay_controller.set_speed_controller(off)
-relay_controller.clean_up()
+relay_controller.RelayController.set_speed_controller("off")
+relay_controller.RelayController.clean_up()
