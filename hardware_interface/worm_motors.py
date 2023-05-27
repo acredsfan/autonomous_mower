@@ -23,11 +23,13 @@ pwmB.start(0)
 
 class MotorController:
 
+    @staticmethod
     def set_motor_speed(speed):
         # Set the speed of both motors
         pwmA.ChangeDutyCycle(speed)
         pwmB.ChangeDutyCycle(speed)
 
+    @staticmethod
     def set_motor_direction(direction):
         # Set the direction of both motors
         if direction == "forward":
@@ -51,6 +53,7 @@ class MotorController:
             GPIO.output(IN3, GPIO.LOW)
             GPIO.output(IN4, GPIO.HIGH)
 
+    @staticmethod
     def stop_motors():
         # Stop the motors
         GPIO.output(IN1, GPIO.LOW)
@@ -58,9 +61,10 @@ class MotorController:
         GPIO.output(IN3, GPIO.LOW)
         GPIO.output(IN4, GPIO.LOW)
 
+    @staticmethod
     def cleanup():
         # Stop the motors
-        stop_motors()
+        MotorController.stop_motors()
         
         # Stop PWM
         pwmA.stop()
@@ -68,7 +72,8 @@ class MotorController:
         
         GPIO.cleanup()
 
+    @staticmethod
     def move_mower(direction, speed):
         # Set the direction and speed of the motors
-        set_motor_direction(direction)
-        set_motor_speed(speed)
+        MotorController.set_motor_direction(direction)
+        MotorController.set_motor_speed(speed)
