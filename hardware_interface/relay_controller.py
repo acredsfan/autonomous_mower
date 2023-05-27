@@ -42,7 +42,7 @@ class RelayController:
         if state == "on":
             GPIO.output(SPEED_CONTROLLER_PIN, GPIO.HIGH)
             relay_controller_state = True
-        else:
+        elif state == "off":
             GPIO.output(SPEED_CONTROLLER_PIN, GPIO.LOW)
             relay_controller_state = False
 
