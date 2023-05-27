@@ -9,6 +9,7 @@ import time
 SPEED = 100
 
 # Turn on relay controller
+relay_controller.RelayController.init()
 relay_controller.RelayController.set_speed_controller("on")
 
 # Test worm motors
