@@ -68,18 +68,7 @@ class MotorController:
         
         GPIO.cleanup()
 
-    def test_motors():
-        # Test the motors
-        set_motor_direction("forward")
-        set_motor_speed(100)
-        time.sleep(2)
-        set_motor_direction("backward")
-        set_motor_speed(100)
-        time.sleep(2)
-        set_motor_direction("left")
-        set_motor_speed(100)
-        time.sleep(2)
-        set_motor_direction("right")
-        set_motor_speed(100)
-        time.sleep(2)
-        stop_motors()
+    def move_mower(direction, speed):
+        # Set the direction and speed of the motors
+        set_motor_direction(direction)
+        set_motor_speed(speed)
