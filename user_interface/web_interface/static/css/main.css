@@ -78,8 +78,9 @@ input[type="text"], select {
 .status-table td {
     border: 1px solid #228B22; /* ForestGreen border */
     padding: 15px;
-    text-align: left;
+    text-align: center;
     font-size: 18px;
+    text-decoration-color: aqua;
 }
 
 .status-table td:first-child {
