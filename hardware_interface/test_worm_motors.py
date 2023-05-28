@@ -11,8 +11,8 @@ GPIO.setup(13, GPIO.OUT)
 GPIO.setup(16, GPIO.OUT)
 
 # Set up the PWM channels
-pwm_A = GPIO.PWM(13, 50)
-pwm_B = GPIO.PWM(16, 50)
+pwm_A = GPIO.PWM(13, 500)
+pwm_B = GPIO.PWM(16, 500)
 
 def set_speed(speed_A, speed_B):
     try:
