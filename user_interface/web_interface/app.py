@@ -15,7 +15,15 @@ Gst.init(None)
 sensors = sensor_interface.SensorInterface()
 
 # Replace this with your actual sensor data and other information
-sensor_data = {"battery_voltage": sensors.read_ina3221(3), "Solar Panel Voltage": sensors.read_ina3221(1), "battery_current": 0.5, "battery_temperature": 25, "motor_temperature": 30, "motor_current": 1.5, "motor_speed": 100, "motor_direction": "forward", "gps_latitude": 40.7128, "gps_longitude": 74.0060, "gps_altitude": 0, "gps_satellites": 10, "gps_speed": 0, "gps_heading": 0, "gps_time": "2021-05-06 12:00:00"}
+battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
+solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
+speed = {"speed": 0}
+heading = {"heading": 0}
+temperature = {"temperature": 0}
+humidity = {"humidity": 0}
+pressure = {"pressure": 0}
+left_distance = {"left_distance": 0}
+right_distance = {"right_distance": 0}
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 

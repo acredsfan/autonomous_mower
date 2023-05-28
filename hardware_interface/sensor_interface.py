@@ -132,13 +132,14 @@ class SensorInterface:
                 if channel == 3:  # if channel 3 is selected
                     # SLA battery charge level
                     Charge_Level = round((Voltage - 11.5) / (13.5 - 11.5) * 100, 1)  # rounded to 1 decimal place
-                    sensor_data["charge_level"] = Charge_Level  # add Charge_Level to the return dictionary
+                    sensor_data["charge_level"] = f"{Charge_Level}%"  # add Charge_Level to the return dictionary as a percentage
                     
                 return sensor_data
             else:
                 raise ValueError("Invalid INA3221 channel. Please use 1 or 3.")
         except Exception as e:
             print(f"Error during INA3221 read: {e}")
+
 
     def read_hall_effect_sensors(self):
         try:
