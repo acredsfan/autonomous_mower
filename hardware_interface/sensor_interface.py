@@ -124,10 +124,10 @@ class SensorInterface:
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
         try:
-            if channel == 1:
-                return self.ina3221.bus_voltage(1)  # or whatever the correct method for this library is
-            elif channel == 3:
-                return self.ina3221.bus_voltage(3)  # or whatever the correct method for this library is
+            if channel in [1, 3]:
+                bus_voltage = self.ina3221.bus_voltage(channel)
+                shunt_voltage = self.ina3221.shunt_voltage(channel)
+                return {"bus_voltage": bus_voltage, "shunt_voltage": shunt_voltage}
             else:
                 raise ValueError("Invalid INA3221 channel. Please use 1 or 3.")
         except Exception as e:
