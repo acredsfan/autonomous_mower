@@ -82,5 +82,7 @@ class MotorController:
     try:
         move_mower("forward", 50)  # Move forward at 50% speed
         time.sleep(5)  # Run the motors for 5 seconds
-    finally:
+        cleanup()
+
+    except KeyboardInterrupt:
         cleanup()
