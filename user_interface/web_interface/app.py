@@ -120,8 +120,9 @@ def get_mowing_area():
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
     # Save the coordinates to the file
+    coordinates = request.get_json()
     with open('user_polygon.json', 'w') as f:
-        data: JSON.stringify({coordinates: areaCoordinates})
+        json.dump(coordinates, f)
     return jsonify({'message': 'Area saved.'})
 
 def set_motor_direction(direction):
