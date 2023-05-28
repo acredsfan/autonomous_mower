@@ -80,10 +80,11 @@ input[type="text"], select {
     padding: 15px;
     text-align: center;
     font-size: 18px;
-    text-decoration-color: aqua;
 }
 
 .status-table td:first-child {
     font-weight: bold;
     width: 25%;
+    text_align: center;
+    text-decoration-color: aqua;
 }
