@@ -85,6 +85,4 @@ input[type="text"], select {
 .status-table td:first-child {
     font-weight: bold;
     width: 25%;
-    text_align: center;
-    text-decoration-color: aqua;
 }
