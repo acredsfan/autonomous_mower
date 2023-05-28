@@ -163,3 +163,5 @@ window.addEventListener('load', function() {
     loadScript();
     getAndDrawMowingArea();
 });
+
+function 

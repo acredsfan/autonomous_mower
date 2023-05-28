@@ -124,7 +124,7 @@ class SensorInterface:
     def read_ina3221(self):
         """Read INA3221 power monitor data."""
         try:
-            return self.ina3221.read_all()
+            return self.ina3221.bus_voltage(1)
         except Exception as e:
             print(f"Error during INA3221 read: {e}")
 

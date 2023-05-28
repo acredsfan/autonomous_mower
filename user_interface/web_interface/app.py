@@ -2,8 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface.motor_controller import MotorController
-from hardware_interface.relay_controller import RelayController
+from hardware_interface import MotorController, sensor_interface
 import subprocess
 import gi
 gi.require_version('Gst', '1.0')
@@ -15,7 +14,7 @@ app = Flask(__name__)
 Gst.init(None)
 
 # Replace this with your actual sensor data and other information
-sensor_data = "Sample sensor data"
+sensor_data = {"battery_voltage": sensor_interface.INA3221.bus_voltage(3), "Solar Panel Voltage": sensor_interface.INA3221.bus_voltage(1), "battery_current": 0.5, "battery_temperature": 25, "motor_temperature": 30, "motor_current": 1.5, "motor_speed": 100, "motor_direction": "forward", "gps_latitude": 40.7128, "gps_longitude": 74.0060, "gps_altitude": 0, "gps_satellites": 10, "gps_speed": 0, "gps_heading": 0, "gps_time": "2021-05-06 12:00:00"}
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
