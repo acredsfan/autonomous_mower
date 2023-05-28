@@ -9,8 +9,8 @@ import time
 SPEED = 100
 
 # Turn on relay controller
-relay_controller.RelayController.init()
-relay_controller.RelayController.set_speed_controller("on")
+#relay_controller.RelayController.init()
+#relay_controller.RelayController.set_speed_controller("on")
 
 # Test worm motors
 print("Testing worm motors...")
@@ -33,5 +33,5 @@ print("Worm motors off")
 worm_motors.MotorController.cleanup()
 
 # Turn off relay controller
-relay_controller.RelayController.set_speed_controller("off")
-relay_controller.RelayController.clean_up()
+#relay_controller.RelayController.set_speed_controller("off")
+#relay_controller.RelayController.clean_up()
