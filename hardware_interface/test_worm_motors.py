@@ -52,7 +52,7 @@ def cleanup():
 
 # Test the motors
 try:
-    set_speed(50, 50)  # Set speed for both motors to 50%
+    set_speed(100, 100)  # Set speed for both motors to 50%
     set_direction('FORWARD', 'FORWARD')  # Set both motors to move forward
     time.sleep(5)  # Run the motors for 5 seconds
 finally:
