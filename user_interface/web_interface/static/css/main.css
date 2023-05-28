@@ -68,3 +68,21 @@ input[type="text"], select {
     box-sizing: border-box;
     font-size: 18px;
 }
+
+.status-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.status-table td {
+    border: 1px solid #228B22; /* ForestGreen border */
+    padding: 15px;
+    text-align: left;
+    font-size: 18px;
+}
+
+.status-table td:first-child {
+    font-weight: bold;
+    width: 25%;
+}

@@ -2,19 +2,54 @@
 
 {% block content %}
     <h1>Status</h1>
-    <p>Battery Voltage: {{ battery_charge.battery_voltage.bus_voltage }}</p>
-    <p>Battery Shunt Voltage: {{ battery_charge.battery_voltage.shunt_voltage }}</p>
-    <p>Battery Charge Level: {{ battery_charge.battery_voltage.charge_level }}</p>
-    <p>Solar Panel Voltage: {{ solar_status['Solar Panel Voltage'].bus_voltage }}</p>
-    <p>Solar Panel Shunt Voltage: {{ solar_status['Solar Panel Voltage'].shunt_voltage }}</p>
-    <p>Speed: {{ speed.speed }}</p>
-    <p>Heading: {{ heading.heading }}</p>
-    <p>Temperature: {{ temperature.temperature }}</p>
-    <p>Humidity: {{ humidity.humidity }}</p>
-    <p>Pressure: {{ pressure.pressure }}</p>
-    <p>Left Distance: {{ left_distance.left_distance }}</p>
-    <p>Right Distance: {{ right_distance.right_distance }}</p>
-    <p>Mowing status: {{ mowing_status }}</p>
-    <p>Next scheduled mow: {{ next_scheduled_mow }}</p>
+    <table class="status-table">
+        <tr>
+            <td>Battery Status</td>
+            <td>{{ battery_charge.battery_voltage.bus_voltage }} V</td>
+            <td>{{ battery_charge.battery_voltage.shunt_voltage }} A</td>
+            <td>{{ battery_charge.battery_voltage.charge_level }}</td>
+        </tr>
+        <tr>
+            <td>Solar Panel Status</td>
+            <td>{{ solar_status.Solar_Panel_Voltage.bus_voltage }} V</td>
+            <td>{{ solar_status.Solar_Panel_Voltage.shunt_voltage }} A</td>
+        </tr>
+        <tr>
+            <td>Speed</td>
+            <td>{{ speed.speed }} km/h</td>
+        </tr>
+        <tr>
+            <td>Heading</td>
+            <td>{{ heading.heading }} degrees</td>
+        </tr>
+        <tr>
+            <td>Temperature</td>
+            <td>{{ temperature.temperature }} °C</td>
+        </tr>
+        <tr>
+            <td>Humidity</td>
+            <td>{{ humidity.humidity }} %</td>
+        </tr>
+        <tr>
+            <td>Pressure</td>
+            <td>{{ pressure.pressure }} hPa</td>
+        </tr>
+        <tr>
+            <td>Left Distance</td>
+            <td>{{ left_distance.left_distance }} cm</td>
+        </tr>
+        <tr>
+            <td>Right Distance</td>
+            <td>{{ right_distance.right_distance }} cm</td>
+        </tr>
+        <tr>
+            <td>Mowing status</td>
+            <td>{{ mowing_status }}</td>
+        </tr>
+        <tr>
+            <td>Next scheduled mow</td>
+            <td>{{ next_scheduled_mow }}</td>
+        </tr>
+    </table>
     <img src="http://PiMowBot.local:8080" alt="Live view from Pi camera">
 {% endblock %}
