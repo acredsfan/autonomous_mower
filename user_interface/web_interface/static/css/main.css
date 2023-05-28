@@ -86,3 +86,7 @@ input[type="text"], select {
     font-weight: bold;
     width: 25%;
 }
+
+.text-color {
+    color: rgb(0, 247, 255); /* Change the color to your desired color */
+}
