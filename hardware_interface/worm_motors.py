@@ -77,3 +77,11 @@ class MotorController:
         # Set the direction and speed of the motors
         MotorController.set_motor_direction(direction)
         MotorController.set_motor_speed(speed)
+
+    # Test the motors
+    try:
+        move_mower("forward", 50)  # Move forward at 50% speed
+        time.sleep(5)  # Run the motors for 5 seconds
+    finally:
+        cleanup()
+        
