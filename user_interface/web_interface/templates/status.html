@@ -11,8 +11,8 @@
         </tr>
         <tr>
             <td>Solar Panel Status</td>
-            <td>{{ solar_panel_charge.solar_panel_voltage.bus_voltage }} V</td>
-            <td>{{ solar_panel_charge.solar_panel_voltage.shunt_voltage }} A</td>
+            <td>{{ solar_status.Solar_Panel_Voltage.bus_voltage | default('N/A') }} V</td>
+            <td>{{ solar_status.Solar_Panel_Voltage.shunt_voltage | default('N/A') }} A</td>
         </tr>
         <tr>
             <td>Speed</td>
