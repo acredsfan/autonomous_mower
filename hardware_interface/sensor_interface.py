@@ -121,10 +121,15 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during MPU9250 gyro read: {e}")
 
-    def read_ina3221(self):
+    def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
         try:
-            return self.ina3221.bus_voltage()
+            if channel == 1:
+                return self.ina3221.bus_voltage(1)  # or whatever the correct method for this library is
+            elif channel == 3:
+                return self.ina3221.bus_voltage(3)  # or whatever the correct method for this library is
+            else:
+                raise ValueError("Invalid INA3221 channel. Please use 1 or 3.")
         except Exception as e:
             print(f"Error during INA3221 read: {e}")
 
