@@ -1,4 +1,3 @@
-#Script to test Worm Motors
 import RPi.GPIO as GPIO
 import time
 
@@ -10,18 +9,6 @@ GPIO.setup(20, GPIO.OUT)
 GPIO.setup(21, GPIO.OUT)
 GPIO.setup(13, GPIO.OUT)
 GPIO.setup(16, GPIO.OUT)
-
-# Set up the PWM channels
-pwm_A = GPIO.PWM(13, 100)
-pwm_B = GPIO.PWM(16, 100)
-
-def set_speed(speed_A, speed_B):
-    try:
-        # Set the duty cycle for each PWM channel
-        pwm_A.start(speed_A)
-        pwm_B.start(speed_B)
-    except Exception as e:
-        print("An error occurred while setting the speed: ", str(e))
 
 def set_direction(direction_A, direction_B):
     try:
@@ -44,16 +31,15 @@ def set_direction(direction_A, direction_B):
         print("An error occurred while setting the direction: ", str(e))
 
 def cleanup():
-    # Stop the motors
-    pwm_A.stop()
-    pwm_B.stop()
-
     # Reset the GPIO pins
     GPIO.cleanup()
 
+# Enable motors
+GPIO.output(13, GPIO.HIGH)
+GPIO.output(16, GPIO.HIGH)
+
 # Test the motors
 try:
-    set_speed(50, 50)  # Set speed for both motors to 50%
     set_direction('FORWARD', 'FORWARD')  # Set both motors to move forward
     time.sleep(5)  # Run the motors for 5 seconds
 finally:
