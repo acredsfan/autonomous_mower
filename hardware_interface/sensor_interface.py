@@ -30,6 +30,8 @@ class SensorInterface:
                 mode=AK8963_MODE_C100HZ)
             self.select_mux_channel(2)
             self.ina3221 = INA3221(self.i2c)
+            self.ina3221.enable_channel(1)
+            self.ina3221.enable_channel(3)
             self.HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
             self.HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
             # change this to match the location's pressure (hPa) at sea level
