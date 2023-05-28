@@ -2,7 +2,15 @@
 
 {% block content %}
     <h1>Status</h1>
-    <p>Sensor data: {{ sensor_data }}</p>
+    <p>Battery Status: {{ battery_charge }}</p>
+    <p>Solar Panel Status: {{ solar_status }}</p>
+    <p>Speed: {{ speed }}</p>
+    <p>Heading: {{ heading }}</p>
+    <p>Temperature: {{ temperature }}</p>
+    <p>Humidity: {{ humidity }}</p>
+    <p>Pressure: {{ pressure }}</p>
+    <p>Left Distance: {{ left_distance }}</p>
+    <p>Right Distance: {{ right_distance }}</p>
     <p>Mowing status: {{ mowing_status }}</p>
     <p>Next scheduled mow: {{ next_scheduled_mow }}</p>
     <img src="http://PiMowBot.local:8080" alt="Live view from Pi camera">
