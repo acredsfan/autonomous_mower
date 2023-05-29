@@ -156,9 +156,7 @@ def get_sensor_data():
     sensor_data["solar_status"] = sensors.read_ina3221(1)
     sensor_data["speed"] = sensors.read_mpu9250_gyro()
     sensor_data["heading"] = sensors.read_mpu9250_compass()
-    sensor_data["temperature"] = sensors.read_bme280()["temperature"]
-    sensor_data["humidity"] = sensors.read_bme280()["humidity"]
-    sensor_data["pressure"] = sensors.read_bme280()["pressure"]
+    sensor_data["temperature"] = sensors.read_bme280()
     sensor_data["left_distance"] = sensors.read_vl53l0x_left()
     sensor_data["right_distance"] = sensors.read_vl53l0x_right()
     return sensor_data
