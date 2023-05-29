@@ -39,7 +39,7 @@ class MotorController:
             GPIO.output(IN3, GPIO.LOW)
             GPIO.output(IN4, GPIO.HIGH)
         elif direction == "backward":
-            GPIO.output(IN1, GPIO.HIGH)
+            GPIO.output(IN1, GPIO.LOW)
             GPIO.output(IN2, GPIO.LOW)
             GPIO.output(IN3, GPIO.HIGH)
             GPIO.output(IN4, GPIO.LOW)
