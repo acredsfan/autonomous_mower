@@ -83,7 +83,7 @@ class MotorController:
 try:
     #GPIO.cleanup()
     #GPIO.setmode(GPIO.BCM)
-    MotorController.move_mower("right", 100, 100)  # Move forward at 50% speed
+    MotorController.move_mower("backward", 100, 100)  # Move forward at 50% speed
     time.sleep(5)  # Run the motors for 5 seconds
     MotorController.cleanup()
 
