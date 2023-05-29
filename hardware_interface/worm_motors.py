@@ -3,6 +3,7 @@ import time
 
 # Set up GPIO mode
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
 # Define GPIO pins connected to the L298N
 IN1, IN2 = 19, 26
@@ -24,10 +25,10 @@ pwmB.start(0)
 class MotorController:
 
     @staticmethod
-    def set_motor_speed(speed):
+    def set_motor_speed(left_speed, right_speed):
         # Set the speed of both motors
-        pwmA.ChangeDutyCycle(speed)
-        pwmB.ChangeDutyCycle(speed)
+        pwmA.ChangeDutyCycle(left_speed)
+        pwmB.ChangeDutyCycle(right_speed)
 
     @staticmethod
     def set_motor_direction(direction):

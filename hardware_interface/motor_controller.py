@@ -1,85 +1,91 @@
-#python code to control two 12V worm gear motors using a L298N motor driver and one 775 motor connected to a 12V 2 channel relay module.  The worm gear motors control the wheels
-#and the 775 motor controls the mower blades.  Running on Raspberry Pi 4B 2GB RAM with Raspbian Bullseye OS.
-
-#IMPORTS
 import RPi.GPIO as GPIO
 import time
 
-#CONSTANTS
-LEFT_PWMI_PIN = 13
-LEFT_IN1_PIN = 19
-LEFT_IN2_PIN = 26
-RIGHT_PWMI_PIN = 16
-RIGHT_IN3_PIN = 20
-RIGHT_IN4_PIN = 21
-
+# Set up GPIO mode
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-#FUNCTIONS
+# Define GPIO pins connected to the L298N
+IN1, IN2 = 19, 26
+IN3, IN4 = 20, 21
+ENA, ENB = 13, 16
 
-#init_motor_controller
+# Set up GPIO pins as output
+for pin in [IN1, IN2, IN3, IN4, ENA, ENB]:
+    GPIO.setup(pin, GPIO.OUT)
+
+# Set up PWM channels
+pwmA = GPIO.PWM(ENA, 1000)  # Initialize PWM for motor A (100Hz frequency)
+pwmB = GPIO.PWM(ENB, 1000)  # Initialize PWM for motor B (100Hz frequency)
+
+# Start PWM with 0% duty cycle (off)
+pwmA.start(0)
+pwmB.start(0)
+
 class MotorController:
-    #initializes the motor controller
-    def init_motor_controller():
-        GPIO.setup(LEFT_PWMI_PIN, GPIO.OUT)
-        GPIO.setup(LEFT_IN1_PIN, GPIO.OUT)
-        GPIO.setup(LEFT_IN2_PIN, GPIO.OUT)
-        GPIO.setup(RIGHT_PWMI_PIN, GPIO.OUT)
-        GPIO.setup(RIGHT_IN3_PIN, GPIO.OUT)
-        GPIO.setup(RIGHT_IN4_PIN, GPIO.OUT)
 
-        global left_motor
-        global right_motor
-        left_motor = GPIO.PWM(LEFT_PWMI_PIN, 100)
-        right_motor = GPIO.PWM(RIGHT_PWMI_PIN, 100)
-
-        left_motor.start(0)
-        right_motor.start(0)
-
-
-    #set_motor_speed
-    #sets the speed of the motor
+    @staticmethod
     def set_motor_speed(left_speed, right_speed):
-        left_motor.ChangeDutyCycle(left_speed)
-        right_motor.ChangeDutyCycle(right_speed)
+        # Set the speed of both motors
+        pwmA.ChangeDutyCycle(left_speed)
+        pwmB.ChangeDutyCycle(right_speed)
 
-    #set_motor_direction
-    #sets the direction of the motor
+    @staticmethod
     def set_motor_direction(direction):
+        # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
-            GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
-            GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
-            GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
+            GPIO.output(IN1, GPIO.LOW)
+            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN3, GPIO.LOW)
+            GPIO.output(IN4, GPIO.HIGH)
         elif direction == "backward":
-            GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-            GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
-            GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-            GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
+            GPIO.output(IN1, GPIO.HIGH)
+            GPIO.output(IN2, GPIO.LOW)
+            GPIO.output(IN3, GPIO.HIGH)
+            GPIO.output(IN4, GPIO.LOW)
         elif direction == "left":
-            GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-            GPIO.output(LEFT_IN2_PIN, GPIO.HIGH)
-            GPIO.output(RIGHT_IN3_PIN, GPIO.HIGH)
-            GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
+            GPIO.output(IN1, GPIO.HIGH)
+            GPIO.output(IN2, GPIO.LOW)
+            GPIO.output(IN3, GPIO.LOW)
+            GPIO.output(IN4, GPIO.HIGH)
         elif direction == "right":
-            GPIO.output(LEFT_IN1_PIN, GPIO.HIGH)
-            GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
-            GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-            GPIO.output(RIGHT_IN4_PIN, GPIO.HIGH)
-        else:
-            print("Invalid direction. Please use 'forward', 'backward', 'left', or 'right'.")
+            GPIO.output(IN1, GPIO.LOW)
+            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN3, GPIO.HIGH)
+            GPIO.output(IN4, GPIO.LOW)
 
-    #stop_motors
-    #stops the motors
+    @staticmethod
     def stop_motors():
-        set_motor_speed(0)
-        GPIO.output(LEFT_IN1_PIN, GPIO.LOW)
-        GPIO.output(LEFT_IN2_PIN, GPIO.LOW)
-        GPIO.output(RIGHT_IN3_PIN, GPIO.LOW)
-        GPIO.output(RIGHT_IN4_PIN, GPIO.LOW)
+        # Stop the motors
+        GPIO.output(IN1, GPIO.LOW)
+        GPIO.output(IN2, GPIO.LOW)
+        GPIO.output(IN3, GPIO.LOW)
+        GPIO.output(IN4, GPIO.LOW)
 
+    @staticmethod
     def cleanup():
-        left_motor.stop()
-        right_motor.stop()
+        # Stop the motors
+        MotorController.stop_motors()
+        
+        # Stop PWM
+        pwmA.stop()
+        pwmB.stop()
+        
         GPIO.cleanup()
+
+    @staticmethod
+    def move_mower(direction, speed):
+        # Set the direction and speed of the motors
+        MotorController.set_motor_direction(direction)
+        MotorController.set_motor_speed(speed)
+
+# Test the motors
+try:
+    #GPIO.cleanup()
+    #GPIO.setmode(GPIO.BCM)
+    MotorController.move_mower("forward", 100)  # Move forward at 50% speed
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.cleanup()
+
+except KeyboardInterrupt:
+    MotorController.cleanup()
