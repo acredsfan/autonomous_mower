@@ -152,16 +152,15 @@ def start_libcamera():
 def get_sensor_data():
     """Get all sensor data."""
     sensor_data = {}
-    sensor_data["battery_charge"] = sensor_interface.read_ina3221(3)
-    sensor_data["solar_status"] = sensor_interface.read_ina3221(1)
-    sensor_data["speed"] = sensor_interface.read_mpu9250_gyro()
-    sensor_data["heading"] = sensor_interface.read_mpu9250_compass()
-    bme280_data = sensor_interface.read_bme280()
-    sensor_data["temperature"] = bme280_data["temperature"]
-    sensor_data["humidity"] = bme280_data["humidity"]
-    sensor_data["pressure"] = bme280_data["pressure"]
-    sensor_data["left_distance"] = sensor_interface.read_vl53l0x_left()
-    sensor_data["right_distance"] = sensor_interface.read_vl53l0x_right()
+    sensor_data["battery_charge"] = sensors.read_ina3221(3)
+    sensor_data["solar_status"] = sensors.read_ina3221(1)
+    sensor_data["speed"] = sensors.read_mpu9250_gyro()
+    sensor_data["heading"] = sensors.read_mpu9250_compass()
+    sensor_data["temperature"] = sensors.read_bme280["temperature"]
+    sensor_data["humidity"] = sensors.read_bme280["humidity"]
+    sensor_data["pressure"] = sensors.read_bme280["pressure"]
+    sensor_data["left_distance"] = sensors.read_vl53l0x_left()
+    sensor_data["right_distance"] = sensors.read_vl53l0x_right()
     return sensor_data
 
 if __name__ == '__main__':
