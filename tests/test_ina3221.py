@@ -33,7 +33,7 @@ ina.enable_channel(3)
 while True:
     # Print the voltage from each channel
     print("Solar Panel Voltage: ", ina.bus_voltage(1), end='/r')
-    print("SLA Battery Voltage: ", ina.bus_voltage(3), end='/r'')
+    print("SLA Battery Voltage: ", ina.bus_voltage(3), end='/r')
 
     # Sleep for 0.1 seconds
     time.sleep(0.1)
