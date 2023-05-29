@@ -111,6 +111,7 @@ class SensorInterface:
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
         try:
+            self.mpu.configure()
             return self.mpu.readMagnetometerMaster()
         except Exception as e:
             print(f"Error during MPU9250 compass read: {e}")
@@ -118,6 +119,7 @@ class SensorInterface:
     def read_mpu9250_gyro(self):
         """Read MPU9250 gyro data."""
         try:
+            self.mpu.configure()
             return self.mpu.readGyroscopeMaster()
         except Exception as e:
             print(f"Error during MPU9250 gyro read: {e}")
@@ -125,6 +127,7 @@ class SensorInterface:
     def read_mpu9250_accel(self):
         """Read MPU9250 accelerometer data."""
         try:
+            self.mpu.configure()
             return self.mpu.readAccelerometerMaster()
         except Exception as e:
             print(f"Error during MPU9250 accelerometer read: {e}")
