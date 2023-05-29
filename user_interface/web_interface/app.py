@@ -14,18 +14,18 @@ app = Flask(__name__)
 Gst.init(None)
 sensors = sensor_interface.SensorInterface()
 
-# Replace this with your actual sensor data and other information
-battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
-solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
-speed = {"speed": 0}
-heading = {"heading": 0}
-temperature = {"temperature": 0}
-humidity = {"humidity": 0}
-pressure = {"pressure": 0}
-left_distance = {"left_distance": 0}
-right_distance = {"right_distance": 0}
-mowing_status = "Not mowing"
-next_scheduled_mow = "2023-05-06 12:00:00"
+# # Replace this with your actual sensor data and other information
+# battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
+# solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
+# speed = {"speed": sensors.read_mpu9250_gyro()}
+# heading = {"heading": sensors.read_mpu9250_compass()}
+# temperature = {"temperature": sensors.read_bme280()}
+# humidity = {"humidity": 0}
+# pressure = {"pressure": 0}
+# left_distance = {"left_distance": 0}
+# right_distance = {"right_distance": 0}
+# mowing_status = "Not mowing"
+# next_scheduled_mow = "2023-05-06 12:00:00"
 
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
@@ -42,7 +42,7 @@ libcamera_process = None
 pipeline = Gst.parse_launch(gst_pipeline)
 
 # Initialize the motor and relay controllers
-MotorController.init_motor_controller()
+#MotorController.init_motor_controller()
 #RelayController.init_relay_controller()
 
 first_request = True
@@ -53,13 +53,13 @@ def send_js(path):
 
 @app.route('/')
 def index():
-    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
-
+    sensor_data = get_sensor_data()
+    return render_template('status.html', **sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/status')
 def status():
-    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
-
+    sensor_data = get_sensor_data()
+    return render_template('status.html', **sensor_data, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/control')
 def control():
@@ -148,6 +148,21 @@ def start_libcamera():
                      "!", "rtph264pay", "pt=96", "config-interval=1", 
                      "!", "udpsink", "host=0.0.0.0", "port=80", "sync=false"]
     libcamera_process = subprocess.Popen(libcamera_cmd)
+
+def get_sensor_data():
+    """Get all sensor data."""
+    sensor_data = {}
+    sensor_data["battery_charge"] = sensor_interface.read_ina3221(3)
+    sensor_data["solar_status"] = sensor_interface.read_ina3221(1)
+    sensor_data["speed"] = sensor_interface.read_mpu9250_gyro()
+    sensor_data["heading"] = sensor_interface.read_mpu9250_compass()
+    bme280_data = sensor_interface.read_bme280()
+    sensor_data["temperature"] = bme280_data["temperature"]
+    sensor_data["humidity"] = bme280_data["humidity"]
+    sensor_data["pressure"] = bme280_data["pressure"]
+    sensor_data["left_distance"] = sensor_interface.read_vl53l0x_left()
+    sensor_data["right_distance"] = sensor_interface.read_vl53l0x_right()
+    return sensor_data
 
 if __name__ == '__main__':
     start_libcamera()
