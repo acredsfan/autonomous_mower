@@ -3,6 +3,7 @@ from barbudor_ina3221.lite import INA3221
 import time
 import busio
 import board
+import sys
 
 # Define the I2C bus
 bus = SMBus(1)
