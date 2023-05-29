@@ -86,8 +86,10 @@ class SensorInterface:
         """Read BME280 sensor data."""
         try:
             self.select_mux_channel(3)
+            temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
-                'temperature': self.bme280.temperature,
+                'temperature_c': self.bme280.temperature,
+                'temperature_f': temperature_f,
                 'humidity': self.bme280.humidity,
                 'pressure': self.bme280.pressure
             }
