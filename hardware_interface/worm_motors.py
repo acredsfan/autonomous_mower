@@ -33,25 +33,25 @@ class MotorController:
     def set_motor_direction(direction):
         # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(IN1, GPIO.HIGH)
-            GPIO.output(IN2, GPIO.LOW)
-            GPIO.output(IN3, GPIO.HIGH)
-            GPIO.output(IN4, GPIO.LOW)
+            GPIO.output(IN1, GPIO.LOW)
+            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN3, GPIO.LOW)
+            GPIO.output(IN4, GPIO.HIGH)
         elif direction == "backward":
-            GPIO.output(IN1, GPIO.LOW)
-            GPIO.output(IN2, GPIO.HIGH)
-            GPIO.output(IN3, GPIO.LOW)
-            GPIO.output(IN4, GPIO.HIGH)
-        elif direction == "left":
-            GPIO.output(IN1, GPIO.LOW)
-            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN1, GPIO.HIGH)
+            GPIO.output(IN2, GPIO.LOW)
             GPIO.output(IN3, GPIO.HIGH)
             GPIO.output(IN4, GPIO.LOW)
-        elif direction == "right":
+        elif direction == "left":
             GPIO.output(IN1, GPIO.HIGH)
             GPIO.output(IN2, GPIO.LOW)
             GPIO.output(IN3, GPIO.LOW)
             GPIO.output(IN4, GPIO.HIGH)
+        elif direction == "right":
+            GPIO.output(IN1, GPIO.LOW)
+            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN3, GPIO.HIGH)
+            GPIO.output(IN4, GPIO.LOW)
 
     @staticmethod
     def stop_motors():
@@ -80,7 +80,8 @@ class MotorController:
 
 # Test the motors
 try:
-    MotorController.move_mower("forward", 50)  # Move forward at 50% speed
+    GPIO.cleanup()
+    MotorController.move_mower("forward", 100)  # Move forward at 50% speed
     time.sleep(5)  # Run the motors for 5 seconds
     MotorController.cleanup()
 
