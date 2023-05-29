@@ -85,6 +85,7 @@ class SensorInterface:
     def read_bme280(self):
         """Read BME280 sensor data."""
         try:
+            select_mux_channel(3)
             return {
                 'temperature': self.bme280.temperature,
                 'humidity': self.bme280.humidity,
@@ -131,6 +132,7 @@ class SensorInterface:
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
         try:
+            select_mux_channel(2)
             if channel in [1, 3]:
                 Voltage = round(self.ina3221.bus_voltage(channel), 2)
                 Current = round(self.ina3221.shunt_voltage(channel), 2)
