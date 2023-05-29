@@ -98,6 +98,7 @@ class SensorInterface:
 
     def read_vl53l0x_left(self):
         """Read VL53L0X left sensor data."""
+        self.select_mux_channel(5)
         try:
             return self.vl53l0x_left.get_distance()
         except Exception as e:
@@ -105,6 +106,7 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X right sensor data."""
+        self.select_mux_channel(4)
         try:
             return self.vl53l0x_right.get_distance()
         except Exception as e:
