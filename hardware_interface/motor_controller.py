@@ -77,13 +77,13 @@ class MotorController:
     def move_mower(direction, speed):
         # Set the direction and speed of the motors
         MotorController.set_motor_direction(direction)
-        MotorController.set_motor_speed(speed)
+        MotorController.set_motor_speed(left_speed, right_speed)
 
 # Test the motors
 try:
     #GPIO.cleanup()
     #GPIO.setmode(GPIO.BCM)
-    MotorController.move_mower("left", 100)  # Move forward at 50% speed
+    MotorController.move_mower("left", 100, 100)  # Move forward at 50% speed
     time.sleep(5)  # Run the motors for 5 seconds
     MotorController.cleanup()
 
