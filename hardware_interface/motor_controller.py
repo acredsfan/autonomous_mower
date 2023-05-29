@@ -74,7 +74,7 @@ class MotorController:
         GPIO.cleanup()
 
     @staticmethod
-    def move_mower(direction, speed):
+    def move_mower(direction, left_speed, right_speed):
         # Set the direction and speed of the motors
         MotorController.set_motor_direction(direction)
         MotorController.set_motor_speed(left_speed, right_speed)
