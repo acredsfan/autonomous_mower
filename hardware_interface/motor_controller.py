@@ -85,6 +85,19 @@ try:
     #GPIO.setmode(GPIO.BCM)
     MotorController.move_mower("forward", 100, 100)  # Move forward at 50% speed
     time.sleep(5)  # Run the motors for 5 seconds
+    MotionController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("backward", 100, 100)  # Move backward at 50% speed
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("left", 100, 100)  # Turn left at 50% speed
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("right", 100, 100)  # Turn right at 50% speed
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
     MotorController.cleanup()
 
 except KeyboardInterrupt:
