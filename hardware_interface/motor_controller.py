@@ -6,7 +6,7 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
 # Define GPIO pins connected to the L298N
-IN1, IN2 = 19, 26
+IN1, IN2 = 4, 27
 IN3, IN4 = 20, 21
 ENA, ENB = 13, 16
 
