@@ -17,8 +17,8 @@ class SensorInterface:
         self.select_mux_channel(3)
         try:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
-            self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=0, tca9548a_addr=0x70)
-            self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=1, tca9548a_addr=0x70)
+            self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
+            self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
                 address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
@@ -120,6 +120,13 @@ class SensorInterface:
             return self.mpu.readGyroscopeMaster()
         except Exception as e:
             print(f"Error during MPU9250 gyro read: {e}")
+
+    def read_mpu9250_accel(self):
+        """Read MPU9250 accelerometer data."""
+        try:
+            return self.mpu.readAccelerometerMaster()
+        except Exception as e:
+            print(f"Error during MPU9250 accelerometer read: {e}")
 
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""

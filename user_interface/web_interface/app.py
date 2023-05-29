@@ -17,7 +17,7 @@ sensors = sensor_interface.SensorInterface()
 # Replace this with your actual sensor data and other information
 battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
 solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
-speed = {"speed": sensors.read_mpu9250_gyro()}
+speed = {"speed": sensors.read_mpu9250_accel()}
 heading = {"heading": sensors.read_mpu9250_compass()}
 bme280_data = sensors.read_bme280()
 temperature = {"temperature": bme280_data['temperature']}
