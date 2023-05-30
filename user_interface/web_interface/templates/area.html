@@ -5,6 +5,73 @@
     <div id="map"></div>
     <button id="confirm-button">Confirm Area</button>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let areaCoordinates = [];
+
+        function initMap() {
+            const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
+            const map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 8,
+                tilt: 0,
+                view: 'satellite',
+                disableDefaultUI: true
+            });
+
+            const drawingManager = new google.maps.drawing.DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [
+                google.maps.drawing.OverlayType.POLYGON
+                ]
+            }
+            });
+            drawingManager.setMap(map);
+            
+            google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
+                const polygon = event.overlay;
+                areaCoordinates = polygon.getPath().getArray().map(coord => ({
+                    lat: coord.lat(),
+                    lng: coord.lng()
+                }));
+                document.getElementById('confirm-button').disabled = false;
+            });
+        }
+    
+        function saveMowingArea(areaCoordinates) {
+            $.ajax({
+                url: '/save-mowing-area',
+                type: 'POST',
+                data: JSON.stringify(areaCoordinates),
+                contentType: 'application/json; charset=utf-8',
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Mowing area saved:', response);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error saving mowing area:', error);
+                }
+            });
+        }
+
+        function confirm_button() {
+            document.getElementById('confirm-button').disabled = true;
+            saveMowingArea(areaCoordinates);
+        }
+    
+        function loadScript() {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+        
+        window.addEventListener('load', function() {
+            loadScript();
+            document.getElementById('confirm-button').addEventListener('click', confirm_button);
+        });
+    </script>
     <style>
         #map {
             width: 100%;
