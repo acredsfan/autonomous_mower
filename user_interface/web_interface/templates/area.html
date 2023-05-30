@@ -38,22 +38,6 @@
                 document.getElementById('confirm-button').disabled = false;
             });
         }
-    
-        function saveMowingArea(areaCoordinates) {
-            $.ajax({
-                url: '/save-mowing-area',
-                type: 'POST',
-                data: JSON.stringify(areaCoordinates),
-                contentType: 'application/json; charset=utf-8',
-                dataType: 'json',
-                success: function(response) {
-                    console.log('Mowing area saved:', response);
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error saving mowing area:', error);
-                }
-            });
-        }
 
         function confirm_button() {
             document.getElementById('confirm-button').disabled = true;
