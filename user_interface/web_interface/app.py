@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 from camera import VideoCamera
 
 app = Flask(__name__)
-Gst.init(None)
 sensors = sensor_interface.SensorInterface()
 
 # Replace this with your actual sensor data and other information
