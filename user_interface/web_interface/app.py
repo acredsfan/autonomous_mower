@@ -132,5 +132,4 @@ def gen(camera):
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 if __name__ == '__main__':
-    start_libcamera()
     app.run(host='0.0.0.0', port=80, debug=True)
