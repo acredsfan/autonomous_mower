@@ -1,14 +1,12 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify, send_from_directory, Response
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface import MotorController, sensor_interface
 import subprocess
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
 import os
 from dotenv import load_dotenv
+from camera import VideoCamera
 
 app = Flask(__name__)
 Gst.init(None)
@@ -31,20 +29,6 @@ next_scheduled_mow = "2023-05-06 12:00:00"
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-# Define the gstreamer pipeline for h.264 RTSP streaming
-gst_pipeline = ("rtspsrc location=rtsp://pimowbot.local:8554/stream ! "
-                "rtph264depay ! h264parse ! avdec_h264 ! "
-                "videoconvert ! autovideosink")
-
-# Initialize the libcamera-vid subprocess
-libcamera_process = None
-# Initialize the GStreamer pipeline
-pipeline = Gst.parse_launch(gst_pipeline)
-
-# Initialize the motor and relay controllers
-#MotorController.init_motor_controller()
-#RelayController.init_relay_controller()
 
 first_request = True
 
@@ -80,6 +64,10 @@ def settings():
 def camera():
     return render_template('camera.html')
 
+@app.route('/video_feed')
+def video_feed():
+    return Response(gen(VideoCamera()),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
@@ -138,29 +126,11 @@ def stop_motors():
     # Stop the motors
     MotorController.stop_motors()
 
-def start_libcamera():
-    global libcamera_process
-    if libcamera_process is not None:
-        # If the libcamera-vid subprocess is already running, kill it
-        libcamera_process.kill()
-    libcamera_cmd = ["gst-launch-1.0", "libcamerasrc", "!", "video/x-raw", 
-                     "!", "videoconvert", 
-                     "!", "x264enc", "tune=zerolatency", "bitrate=500", 
-                     "!", "rtph264pay", "pt=96", "config-interval=1", 
-                     "!", "udpsink", "host=0.0.0.0", "port=80", "sync=false"]
-    libcamera_process = subprocess.Popen(libcamera_cmd)
-
-# def get_sensor_data():
-#     """Get all sensor data."""
-#     sensor_data = {}
-#     sensor_data["battery_charge"] = sensors.read_ina3221(3)
-#     sensor_data["solar_status"] = sensors.read_ina3221(1)
-#     sensor_data["speed"] = sensors.read_mpu9250_gyro()
-#     sensor_data["heading"] = sensors.read_mpu9250_compass()
-#     sensor_data["bme280"] = sensors.read_bme280()
-#     sensor_data["left_distance"] = sensors.read_vl53l0x_left()
-#     sensor_data["right_distance"] = sensors.read_vl53l0x_right()
-#     return sensor_data
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 if __name__ == '__main__':
     start_libcamera()
