@@ -44,25 +44,25 @@ class BladeController:
 
 
 
-# Try changing the speed
-set_speed(50)  # 50% speed forward
-time.sleep(2)  # run for 2 seconds
-set_speed(75)
-time.sleep(2)
-set_speed(100)
-time.sleep(2)
-set_speed(75)
-time.sleep(2)
-set_speed(50)
-time.sleep(2) 
-set_speed(10)
-time.sleep(2)
-set_speed(0)  # stop
-set_speed(-50)  # 50% speed reverse
-time.sleep(2)  # run for 2 seconds
-set_speed(-10)
-time.sleep(2)
-set_speed(0)  # stop
+# # Try changing the speed
+# set_speed(50)  # 50% speed forward
+# time.sleep(2)  # run for 2 seconds
+# set_speed(75)
+# time.sleep(2)
+# set_speed(100)
+# time.sleep(2)
+# set_speed(75)
+# time.sleep(2)
+# set_speed(50)
+# time.sleep(2) 
+# set_speed(10)
+# time.sleep(2)
+# set_speed(0)  # stop
+# set_speed(-50)  # 50% speed reverse
+# time.sleep(2)  # run for 2 seconds
+# set_speed(-10)
+# time.sleep(2)
+# set_speed(0)  # stop
 
-# Cleanup
-GPIO.cleanup()
+# # Cleanup
+# GPIO.cleanup()
