@@ -63,6 +63,7 @@ def settings():
 def camera():
     return render_template('camera.html')
 
+@app.route('/video_feed')
 def video_feed():
   return Response(gen(VideoCamera()), mimetype='video/h264')
 
