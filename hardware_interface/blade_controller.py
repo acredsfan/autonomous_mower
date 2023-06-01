@@ -23,20 +23,26 @@ pwm2 = GPIO.PWM(IN2, freq)
 pwm1.start(0)
 pwm2.start(0)
 
-# Function to set the motor speed
-def set_speed(speed):
-    if speed > 0:
-        # Forward
-        pwm1.ChangeDutyCycle(speed)
-        pwm2.ChangeDutyCycle(0)
-    elif speed < 0:
-        # Reverse
-        pwm1.ChangeDutyCycle(0)
-        pwm2.ChangeDutyCycle(-speed)
-    else:
-        # Stop
-        pwm1.ChangeDutyCycle(0)
-        pwm2.ChangeDutyCycle(0)
+class BladeController:
+
+    # Function to set the motor speed
+    @staticmethod
+    def set_speed(speed):
+        if speed > 0:
+            # Forward
+            pwm1.ChangeDutyCycle(speed)
+            pwm2.ChangeDutyCycle(0)
+        elif speed < 0:
+            # Reverse
+            pwm1.ChangeDutyCycle(0)
+            pwm2.ChangeDutyCycle(-speed)
+        else:
+            # Stop
+            pwm1.ChangeDutyCycle(0)
+            pwm2.ChangeDutyCycle(0)
+
+
+
 
 # Try changing the speed
 set_speed(50)  # 50% speed forward

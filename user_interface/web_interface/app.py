@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface import MotorController, sensor_interface
+from hardware_interface import MotorController, sensor_interface, BladeController
 import subprocess
 import os
 from dotenv import load_dotenv
@@ -119,7 +119,7 @@ def set_motor_direction(direction):
 
 def toggle_mower_blades():
     # Toggle the mower blades
-    BladeController.toggle_blades()
+    BladeController.set_speed()
 
 def stop_motors():
     # Stop the motors
