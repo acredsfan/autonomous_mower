@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 
-{% block content %}
-<h1>Camera Stream</h1>
-
-<img id="video" src="{{ url_for('video_feed') }}">
-
+{% block content %}  
+<h1>Camera Stream</h1>  
+<img id="video" src="{{ url_for('video_feed') }}" />
 {% endblock %}
