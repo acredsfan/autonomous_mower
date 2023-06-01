@@ -117,9 +117,13 @@ def set_motor_direction(direction):
     # Set the motor direction
     MotorController.set_direction(direction)
 
-def toggle_mower_blades():
+def start_mower_blades():
     # Toggle the mower blades
-    BladeController.set_speed()
+    BladeController.set_speed(75)
+
+def stop_mower_blades():
+    # Toggle the mower blades
+    BladeController.set_speed(0)
 
 def stop_motors():
     # Stop the motors
