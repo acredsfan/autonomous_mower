@@ -8,3 +8,4 @@ easydict
 barbudor-circuitpython-ina3221
 mpu9250-jmdev
 python-dotenv
+imutils
