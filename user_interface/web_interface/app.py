@@ -63,10 +63,10 @@ def settings():
 def camera():
     return render_template('camera.html')
 
-@app.route('/video_feed')
-def video_feed():
-    return Response(gen(VideoCamera()),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+@app.route('/video_feed')  
+def video_feed():  
+  return Response(gen(VideoCamera()),  
+  mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
@@ -119,7 +119,7 @@ def set_motor_direction(direction):
 
 def toggle_mower_blades():
     # Toggle the mower blades
-    RelayController.toggle_relay()
+    BladeController.toggle_blades()
 
 def stop_motors():
     # Stop the motors
