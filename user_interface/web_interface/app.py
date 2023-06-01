@@ -63,10 +63,8 @@ def settings():
 def camera():
     return render_template('camera.html')
 
-@app.route('/video_feed')  
-def video_feed():  
-  return Response(gen(VideoCamera()),  
-  mimetype='multipart/x-mixed-replace; boundary=frame')
+def video_feed():
+  return Response(gen(VideoCamera()), mimetype='video/h264')
 
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
