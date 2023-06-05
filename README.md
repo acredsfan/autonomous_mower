@@ -44,3 +44,5 @@ Here are the sensors and hardware I've procured for the robot:
 • 2x KY-003 Hall Effect Magnetic Sensor Modules - https://www.amazon.com/gp/product/B085KVV82D/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 
 I'll be happy to share any details you'd be interested in just let me know.
+
+UPDATE 6.5.2023 - I've added a .env.template to store the API key for Google Maps, to run the mapping module you need to update the file with your API key and save it as .env
