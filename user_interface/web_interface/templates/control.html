@@ -8,7 +8,7 @@
     <button onclick="move('right')">Turn Right</button>
     <button onclick="startMowing()">Start Mowing</button>
     <button onclick="stopMowing()">Stop Mowing</button>
-    <img src="{{ live_view_url }}" alt="Live view from Pi camera">
+    <img id="video" src="{{ url_for('video_feed') }}" />
 
     <script>
         function move(direction) {
