@@ -79,7 +79,8 @@ def move():
         MotorController.move_mower("left",100,100)
     elif direction == 'right':
         MotorController.move_mower("right",100,100)
-    else:
+    elif direction == 'stop':
+        MotorController.stop_motors()
         return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400
     return jsonify({'message': f'Moving {direction}.'})
 
