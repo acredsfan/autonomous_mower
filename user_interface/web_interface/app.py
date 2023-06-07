@@ -72,13 +72,13 @@ def video_feed():
 def move():
     direction = request.json.get('direction')
     if direction == 'forward':
-        set_motor_direction('forward')
+        MotorController.move_mower("forward",100,100)
     elif direction == 'backward':
-        set_motor_direction('backward')
+        MotorController.move_mower("backward",100,100)
     elif direction == 'left':
-        set_motor_direction('left')
+        MotorController.move_mower("left",100,100)
     elif direction == 'right':
-        set_motor_direction('right')
+        MotorController.move_mower("right",100,100)
     else:
         return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400
     return jsonify({'message': f'Moving {direction}.'})
