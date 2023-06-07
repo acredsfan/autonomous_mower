@@ -88,7 +88,7 @@ def move():
 def toggle_mower_blades():
     state = request.json.get('state')
     if state == 'on':
-        BladeController.set_speed(100)
+        BladeController.set_speed(90)
     elif state == 'off':
         BladeController.set_speed(0)
     else:
