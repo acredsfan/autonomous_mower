@@ -15,8 +15,8 @@ for pin in [IN1, IN2, IN3, IN4, ENA, ENB]:
     GPIO.setup(pin, GPIO.OUT)
 
 # Set up PWM channels
-pwmA = GPIO.PWM(ENA, 500)  # Initialize PWM for motor A (100Hz frequency)
-pwmB = GPIO.PWM(ENB, 500)  # Initialize PWM for motor B (100Hz frequency)
+pwmA = GPIO.PWM(ENA, 1500)  # Initialize PWM for motor A (100Hz frequency)
+pwmB = GPIO.PWM(ENB, 1500)  # Initialize PWM for motor B (100Hz frequency)
 
 # Start PWM with 0% duty cycle (off)
 pwmA.start(0)
