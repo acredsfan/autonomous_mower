@@ -84,6 +84,16 @@ def move():
         return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400
     return jsonify({'message': f'Moving {direction}.'})
 
+@app.route('/toggle-mower-blades', methods=['POST'])
+def toggle_mower_blades():
+    state = request.json.get('state')
+    if state == 'on':
+        BladeController.set_speed(75)
+    elif state == 'off':
+        BladeController.set_speed(0)
+    else:
+        return jsonify({'error': 'Invalid state. Please use "on" or "off".'}), 400
+    return jsonify({'message': f'Mower blades toggled {state}.'})
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():

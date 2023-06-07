@@ -7,6 +7,8 @@
     <button onclick="move('left')">Turn Left</button>
     <button onclick="move('right')">Turn Right</button>
     <button onclick="move('stop')">Stop</button>
+    <button onclick="toggle_mower_blades('on')">Turn Mower Blades On</button>
+    <button onclick="toggle_mower_blades('off')">Turn Mower Blades Off</button>
     <button onclick="startMowing()">Start Mowing</button>
     <button onclick="stopMowing()">Stop Mowing</button>
     <img id="video" src="{{ url_for('video_feed') }}" />
@@ -19,6 +21,19 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ direction: direction }),
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch((error) => console.error('Error:', error));
+        }
+
+        function toggle_mower_blades(state) {
+            fetch('/toggle-mower-blades', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ state: state }),
             })
             .then(response => response.json())
             .then(data => console.log(data))
