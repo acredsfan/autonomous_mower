@@ -7,12 +7,8 @@ print("tof1 set up")
 # Create a VL53L0X object for device on TCA9548A bus 2
 tof2 = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
 print("tof2 set up")
-tof1.close()
-print("tof1 reset")
-#tof1.open()
+tof1.open()
 print("tof1 opened")
-tof2.close()
-print("tof2 reset")
 tof2.open()
 print("tof2 opened")
 
