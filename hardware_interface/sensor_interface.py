@@ -79,7 +79,7 @@ class SensorInterface:
     def read_bme280(self):
         """Read BME280 sensor data."""
         try:
-            self.select_mux_channel(3)
+            #self.select_mux_channel(3)
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
                 'temperature_c': round(self.bme280.temperature, 1),
