@@ -100,8 +100,12 @@ print("Manufacturer ID: ", hex(read_register(INA3221_REG_MANUFACTURER_ID)))
 
 while True:
     # Read bus voltage (mV)
-    bus_volt_1 = read_register(INA3221_REG_BUSVOLT_1)
-    bus_volt_3 = read_register(INA3221_REG_BUSVOLT_3)
+    bus_volt_1 = read_register(INA3221_REG_BUSVOLT_1)*8
+    bus_volt_3 = read_register(INA3221_REG_BUSVOLT_3)*8
+
+    # Convert to voltage (V)
+    bus_volt_1 /= 1e3
+    bus_volt_3 /= 1e3
 
     # Read shunt voltage (uV), convert to current (mA)
     shunt_volt_1 = read_register(INA3221_REG_SHUNTVOLT_1) * 40
