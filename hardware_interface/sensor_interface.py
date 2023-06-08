@@ -68,11 +68,9 @@ class SensorInterface:
             self.init_hall_effect_sensors()
 
             # Initialize Right ToF sensor
-            self.select_mux_channel(4)
             self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
             # Initialize Left ToF sensor
-            self.select_mux_channel(5)
             self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
