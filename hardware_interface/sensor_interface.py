@@ -19,8 +19,13 @@ class SensorInterface:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
             self.select_mux_channel(4)
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
+            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             self.select_mux_channel(5)
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
+            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+            self.timing = self.vl53l0x_right.get_timing()
+            if timing < 20000:
+                timing = 20000
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
                 address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
@@ -86,13 +91,8 @@ class SensorInterface:
             print(f"Error during BME280 read: {e}")
 
     def read_vl53l0x_left(self):
-        # Read VL53L0X left sensor data.
-        self.i2c = busio.I2C(board.SCL, board.SDA)
-        timing = self.vl53l0x_left.get_timing()
-        if timing < 20000:
-            timing = 20000
+        """Read VL53L0X left sensor data."""
         self.select_mux_channel(5)
-        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_left.get_distance()
         except Exception as e:
@@ -100,12 +100,7 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X right sensor data."""
-        self.i2c = busio.I2C(board.SCL, board.SDA)
-        timing = self.vl53l0x_left.get_timing()
-        if timing < 20000:
-            timing = 20000
         self.select_mux_channel(4)
-        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_right.get_distance()
         except Exception as e:
