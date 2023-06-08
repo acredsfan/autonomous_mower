@@ -80,6 +80,8 @@ class SensorInterface:
         """Read BME280 sensor data."""
         try:
             self.select_mux_channel(3)
+            self.i2c = busio.I2C(board.SCL, board.SDA)
+            self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
                 'temperature_c': round(self.bme280.temperature, 1),
