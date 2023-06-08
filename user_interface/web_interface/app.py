@@ -11,17 +11,20 @@ from camera import VideoCamera
 app = Flask(__name__)
 sensors = sensor_interface.SensorInterface()
 
-# Replace this with your actual sensor data and other information
-battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
-solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
-speed = {"speed": sensors.read_mpu9250_accel()}
-heading = {"heading": sensors.read_mpu9250_compass()}
-bme280_data = sensors.read_bme280()
-temperature = bme280_data['temperature_f']
-humidity = bme280_data['humidity']
-pressure = bme280_data['pressure']
-left_distance = {"left_distance": sensors.read_vl53l0x_left()}
-right_distance = {"right_distance": sensors.read_vl53l0x_right()}
+# Define variables to hold sensor values
+battery_charge = {}
+solar_status = {}
+speed = {}
+heading = {}
+temperature = 0
+humidity = 0
+pressure = 0
+left_distance = {}
+right_distance = {}
+
+# Define a flag for stopping the sensor update thread
+stop_sensor_thread = False
+
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
@@ -30,6 +33,32 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 first_request = True
+
+def update_sensors():
+    global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
+
+    while not stop_sensor_thread:
+        # Update sensor values
+        battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
+        solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
+        speed = {"speed": sensors.read_mpu9250_accel()}
+        heading = {"heading": sensors.read_mpu9250_compass()}
+        bme280_data = sensors.read_bme280()
+        temperature = bme280_data['temperature_f']
+        humidity = bme280_data['humidity']
+        pressure = bme280_data['pressure']
+        left_distance = {"left_distance": sensors.read_vl53l0x_left()}
+        right_distance = {"right_distance": sensors.read_vl53l0x_right()}
+
+        time.sleep(1)  # Wait for 1 second before updating again
+
+@app.route('/static/<path:path>')
+def send_js(path):
+    return send_from_directory('static', path)
+
+@app.route('/')
+def index():
+    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance)
 
 @app.route('/static/<path:path>')
 def send_js(path):
@@ -146,4 +175,12 @@ def gen(camera):
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
 if __name__ == '__main__':
+    # Start the sensor update thread
+    sensor_thread = threading.Thread(target=update_sensors)
+    sensor_thread.start()
+
     app.run(host='0.0.0.0', port=90, debug=True)
+
+    # Set the flag to stop the sensor update thread
+    stop_sensor_thread = True
+    sensor_thread.join()  # Wait for the thread to finish
