@@ -100,8 +100,8 @@ print("Manufacturer ID: ", hex(read_register(INA3221_REG_MANUFACTURER_ID)))
 
 while True:
     # Read bus voltage (mV)
-    bus_volt_1 = read_register(INA3221_REG_BUSVOLT_1) * 8
-    bus_volt_3 = read_register(INA3221_REG_BUSVOLT_3) * 8
+    bus_volt_1 = read_register(INA3221_REG_BUSVOLT_1)
+    bus_volt_3 = read_register(INA3221_REG_BUSVOLT_3)
 
     # Read shunt voltage (uV), convert to current (mA)
     shunt_volt_1 = read_register(INA3221_REG_SHUNTVOLT_1) * 40
@@ -115,22 +115,5 @@ while True:
     print("Solar Panel: Voltage = {} mV, Current = {} mA".format(bus_volt_1, current_1))
     print("Battery: Voltage = {} mV, Current = {} mA".format(bus_volt_3, current_3))
     print("Battery SoC: {:.1f}%".format(soc))
-    
+
     time.sleep(1)
-
-BATTERY_FULL_VOLTAGE = 12.7 * 1e3  # mV
-BATTERY_EMPTY_VOLTAGE = 11.9 * 1e3  # mV
-
-# Function to estimate SoC based on voltage
-def estimate_soc(voltage):
-    if voltage >= BATTERY_FULL_VOLTAGE:
-        return 100.0
-    elif voltage <= BATTERY_EMPTY_VOLTAGE:
-        return 0.0
-    else:
-        return ((voltage - BATTERY_EMPTY_VOLTAGE) /
-                (BATTERY_FULL_VOLTAGE - BATTERY_EMPTY_VOLTAGE)) * 100.0
-
-# In the main loop, after reading the battery voltage:
-soc = estimate_soc(bus_volt_3)
-print("Battery SoC: {:.1f}%".format(soc))
