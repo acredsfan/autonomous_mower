@@ -73,6 +73,10 @@ INA3221_REG_SHUNTVOLT_1 = 0x01  # Channel 1 Shunt Voltage
 INA3221_REG_BUSVOLT_3 = 0x08  # Channel 3 Bus Voltage
 INA3221_REG_SHUNTVOLT_3 = 0x07  # Channel 3 Shunt Voltage
 
+# Constants for voltage-based SoC estimation
+BATTERY_FULL_VOLTAGE = 12.7 * 1e3  # mV
+BATTERY_EMPTY_VOLTAGE = 11.9 * 1e3  # mV
+
 # Function to read a 16-bit register
 def read_register(register):
     data = bus.read_i2c_block_data(INA_ADDR, register, 2)
@@ -81,6 +85,15 @@ def read_register(register):
 # Function to convert shunt voltage to current (assuming 0.1 ohm shunt resistor)
 def shunt_to_current(shunt_v):
     return shunt_v / 0.1
+
+def estimate_soc(voltage):
+    if voltage >= BATTERY_FULL_VOLTAGE:
+        return 100.0
+    elif voltage <= BATTERY_EMPTY_VOLTAGE:
+        return 0.0
+    else:
+        return ((voltage - BATTERY_EMPTY_VOLTAGE) /
+                (BATTERY_FULL_VOLTAGE - BATTERY_EMPTY_VOLTAGE)) * 100.0
 
 # Read the manufacturer id (should be 0x5449)
 print("Manufacturer ID: ", hex(read_register(INA3221_REG_MANUFACTURER_ID)))
@@ -97,7 +110,27 @@ while True:
     shunt_volt_3 = read_register(INA3221_REG_SHUNTVOLT_3) * 40
     current_3 = shunt_to_current(shunt_volt_3 / 1e6)
 
+    soc = estimate_soc(bus_volt_3)
+
     print("Solar Panel: Voltage = {} mV, Current = {} mA".format(bus_volt_1, current_1))
     print("Battery: Voltage = {} mV, Current = {} mA".format(bus_volt_3, current_3))
-
+    print("Battery SoC: {:.1f}%".format(soc))
+    
     time.sleep(1)
+
+BATTERY_FULL_VOLTAGE = 12.7 * 1e3  # mV
+BATTERY_EMPTY_VOLTAGE = 11.9 * 1e3  # mV
+
+# Function to estimate SoC based on voltage
+def estimate_soc(voltage):
+    if voltage >= BATTERY_FULL_VOLTAGE:
+        return 100.0
+    elif voltage <= BATTERY_EMPTY_VOLTAGE:
+        return 0.0
+    else:
+        return ((voltage - BATTERY_EMPTY_VOLTAGE) /
+                (BATTERY_FULL_VOLTAGE - BATTERY_EMPTY_VOLTAGE)) * 100.0
+
+# In the main loop, after reading the battery voltage:
+soc = estimate_soc(bus_volt_3)
+print("Battery SoC: {:.1f}%".format(soc))
