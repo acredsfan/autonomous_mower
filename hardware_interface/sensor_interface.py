@@ -63,14 +63,6 @@ class SensorInterface:
     def init_sensors(self):
         """Initialize all sensors."""
         try:
-            # Initialize VL53L0X sensors
-            # Start ranging on TCA9548A bus 4
-            self.select_mux_channel(4)
-            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-            # Start ranging on TCA9548A bus 5
-            self.select_mux_channel(5)
-            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-
             timing = self.vl53l0x_right.get_timing()
             if timing < 20000:
                 timing = 20000
@@ -100,7 +92,11 @@ class SensorInterface:
 
     def read_vl53l0x_left(self):
         """Read VL53L0X left sensor data."""
+        timing = self.vl53l0x_left.get_timing()
+        if timing < 20000:
+            timing = 20000
         self.select_mux_channel(5)
+        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_left.get_distance()
         except Exception as e:
@@ -108,7 +104,11 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X right sensor data."""
+        timing = self.vl53l0x_left.get_timing()
+        if timing < 20000:
+            timing = 20000
         self.select_mux_channel(4)
+        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_right.get_distance()
         except Exception as e:
