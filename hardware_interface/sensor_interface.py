@@ -92,18 +92,20 @@ class SensorInterface:
             print(f"Error during BME280 read: {e}")
 
     def read_vl53l0x_left(self):
-        """Read VL53L0X left sensor data."""
+        """Read VL53L0X ToF sensor data."""
         try:
+            self.select_mux_channel(5)
             return self.vl53l0x_left.get_distance()
         except Exception as e:
-            print(f"Error during VL53L0X left sensor read: {e}")
+            print(f"Error during VL53L0X left read: {e}")
 
     def read_vl53l0x_right(self):
-        """Read VL53L0X right sensor data."""
+        """Read VL53L0X ToF sensor data."""
         try:
+            self.select_mux_channel(4)
             return self.vl53l0x_right.get_distance()
         except Exception as e:
-            print(f"Error during VL53L0X right sensor read: {e}")
+            print(f"Error during VL53L0X right read: {e}")
 
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
