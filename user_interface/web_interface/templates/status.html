@@ -63,10 +63,10 @@
                         var sensorData = JSON.parse(xhr.responseText);
                         // Update the sensor data in the HTML elements
                         document.getElementById('battery-voltage').textContent = sensorData.battery_voltage.bus_voltage + ' V';
-                        document.getElementById('battery-current').textContent = sensorData.battery_voltage.shunt_voltage + ' A';
+                        document.getElementById('battery-current').textContent = sensorData.battery_voltage.current + ' A';
                         document.getElementById('battery-charge-level').textContent = sensorData.battery_voltage.charge_level;
                         document.getElementById('solar-voltage').textContent = sensorData.solar_voltage.bus_voltage + ' V';
-                        document.getElementById('solar-current').textContent = sensorData.solar_voltage.shunt_voltage + ' A';
+                        document.getElementById('solar-current').textContent = sensorData.solar_voltage.current + ' A';
                         document.getElementById('speed').textContent = sensorData.speed + ' mi/h';
                         document.getElementById('heading').textContent = sensorData.heading + ' degrees';
                         document.getElementById('temperature').textContent = sensorData.temperature + ' °F';
