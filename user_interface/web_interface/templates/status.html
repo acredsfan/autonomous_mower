@@ -5,42 +5,42 @@
     <table class="status-table">
         <tr>
             <td class="text-color">Battery Status</td>
-            <td>{{ battery_charge.battery_voltage.bus_voltage }} V</td>
-            <td>{{ battery_charge.battery_voltage.shunt_voltage }} A</td>
-            <td>{{ battery_charge.battery_voltage.charge_level }}</td>
+            <td id="battery-voltage">Loading...</td>
+            <td id="battery-current">Loading...</td>
+            <td id="battery-charge-level">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Solar Panel Status</td>
-            <td>{{ solar_status['Solar Panel Voltage'].bus_voltage }} V</td>
-            <td>{{ solar_status['Solar Panel Voltage'].shunt_voltage }} A</td>
+            <td id="solar-voltage">Loading...</td>
+            <td id="solar-current">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Speed</td>
-            <td>{{ speed }} mi/h</td>
+            <td id="speed">Loading...</td>
         </tr>
         <tr>
-            <td class="text-color"></td>Heading</td>
-            <td>{{ heading }} degrees</td>
+            <td class="text-color">Heading</td>
+            <td id="heading">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Temperature</td>
-            <td>{{ temperature }} °F</td>
+            <td id="temperature">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Humidity</td>
-            <td>{{ humidity }} %</td>
+            <td id="humidity">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Pressure</td>
-            <td>{{ pressure }} hPa</td>
+            <td id="pressure">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Left Distance</td>
-            <td>{{ left_distance }} cm</td>
+            <td id="left-distance">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Right Distance</td>
-            <td>{{ right_distance }} cm</td>
+            <td id="right-distance">Loading...</td>
         </tr>
         <tr>
             <td class="text-color">Mowing status</td>
@@ -52,4 +52,38 @@
         </tr>
     </table>
     <img id="video" src="{{ url_for('video_feed') }}" />
+
+    <script>
+        function updateSensorData() {
+            // Make an AJAX request to retrieve the updated sensor data
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var sensorData = JSON.parse(xhr.responseText);
+                        // Update the sensor data in the HTML elements
+                        document.getElementById('battery-voltage').textContent = sensorData.battery_voltage.bus_voltage + ' V';
+                        document.getElementById('battery-current').textContent = sensorData.battery_voltage.shunt_voltage + ' A';
+                        document.getElementById('battery-charge-level').textContent = sensorData.battery_voltage.charge_level;
+                        document.getElementById('solar-voltage').textContent = sensorData.solar_voltage.bus_voltage + ' V';
+                        document.getElementById('solar-current').textContent = sensorData.solar_voltage.shunt_voltage + ' A';
+                        document.getElementById('speed').textContent = sensorData.speed + ' mi/h';
+                        document.getElementById('heading').textContent = sensorData.heading + ' degrees';
+                        document.getElementById('temperature').textContent = sensorData.temperature + ' °F';
+                        document.getElementById('humidity').textContent = sensorData.humidity + ' %';
+                        document.getElementById('pressure').textContent = sensorData.pressure + ' hPa';
+                        document.getElementById('left-distance').textContent = sensorData.left_distance + ' cm';
+                        document.getElementById('right-distance').textContent = sensorData.right_distance + ' cm';
+                    } else {
+                        console.error('Error retrieving sensor data');
+                    }
+                }
+            };
+            xhr.open('GET', '/sensor-data', true);
+            xhr.send();
+        }
+
+        // Update sensor data every second
+        setInterval(updateSensorData, 1000);
+    </script>
 {% endblock %}

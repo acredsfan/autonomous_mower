@@ -58,6 +58,23 @@ def update_sensors():
 def send_js(path):
     return send_from_directory('static', path)
 
+@app.route('/sensor-data')
+def sensor_data():
+    # Retrieve the latest sensor data
+    sensor_data = {
+        'battery_voltage': sensors.read_ina3221(3),
+        'solar_voltage': sensors.read_ina3221(1),
+        'speed': sensors.read_mpu9250_accel(),
+        'heading': sensors.read_mpu9250_compass(),
+        'temperature': sensors.read_bme280()['temperature_f'],
+        'humidity': sensors.read_bme280()['humidity'],
+        'pressure': sensors.read_bme280()['pressure'],
+        'left_distance': sensors.read_vl53l0x_left(),
+        'right_distance': sensors.read_vl53l0x_right()
+    }
+
+    return jsonify(sensor_data)
+
 @app.route('/')
 def index():
 #    sensor_data = get_sensor_data()
