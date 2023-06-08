@@ -15,8 +15,8 @@ class SensorInterface:
         self.MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
-        self.select_mux_channel(3)
-        try:
+                try:
+            self.select_mux_channel(3)
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
@@ -79,7 +79,7 @@ class SensorInterface:
     def read_bme280(self):
         """Read BME280 sensor data."""
         try:
-            #self.select_mux_channel(3)
+            self.select_mux_channel(3)
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
                 'temperature_c': round(self.bme280.temperature, 1),
