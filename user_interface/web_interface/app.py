@@ -46,9 +46,10 @@ def update_sensors():
         speed = {"speed": sensors.calculate_speed()}
         heading = {"heading": sensors.read_mpu9250_compass()}
         bme280_data = sensors.read_bme280()
-        temperature = bme280_data['temperature_f']
-        humidity = bme280_data['humidity']
-        pressure = bme280_data['pressure']
+        if bme280_data is not None:
+            temperature = bme280_data['temperature_f']
+            humidity = bme280_data['humidity']
+            pressure = bme280_data['pressure']
         left_distance = {"left_distance": sensors.read_vl53l0x_left()}
         right_distance = {"right_distance": sensors.read_vl53l0x_right()}
 
