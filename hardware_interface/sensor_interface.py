@@ -17,7 +17,9 @@ class SensorInterface:
         self.select_mux_channel(3)
         try:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
+            self.select_mux_channel(4)
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
+            self.select_mux_channel(5)
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
