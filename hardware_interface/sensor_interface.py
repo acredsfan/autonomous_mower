@@ -63,11 +63,6 @@ class SensorInterface:
     def init_sensors(self):
         """Initialize all sensors."""
         try:
-            timing = self.vl53l0x_right.get_timing()
-            if timing < 20000:
-                timing = 20000
-            print("Timing %d ms" % (timing / 1000))
-
             # Initialize MPU9250
             self.mpu.configure()  # Apply the settings to the registers.
 
