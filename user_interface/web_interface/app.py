@@ -43,7 +43,7 @@ def update_sensors():
         # Update sensor values
         battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
         solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
-        speed = {"speed": sensors.read_mpu9250_accel()}
+        speed = {"speed": sensors.calculate_speed()}
         heading = {"heading": sensors.read_mpu9250_compass()}
         bme280_data = sensors.read_bme280()
         temperature = bme280_data['temperature_f']
@@ -64,7 +64,7 @@ def sensor_data():
     sensor_data = {
         'battery_voltage': sensors.read_ina3221(3),
         'solar_voltage': sensors.read_ina3221(1),
-        'speed': sensors.read_mpu9250_accel(),
+        'speed': sensors.calculate_speed(),
         'heading': sensors.read_mpu9250_compass(),
         'temperature': sensors.read_bme280()['temperature_f'],
         'humidity': sensors.read_bme280()['humidity'],

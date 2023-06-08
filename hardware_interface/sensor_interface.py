@@ -8,6 +8,7 @@ from mpu9250_jmdev.mpu_9250 import MPU9250
 from barbudor_ina3221.full import *
 import RPi.GPIO as GPIO
 import busio
+import time
 
 class SensorInterface:
     def __init__(self):
@@ -38,6 +39,9 @@ class SensorInterface:
             self.HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
             # change this to match the location's pressure (hPa) at sea level
             self.bme280.sea_level_pressure = 1013.25
+            self.previous_acceleration = [0, 0, 0]  # previous acceleration values for x, y, z
+            self.previous_time = time.time()  # time when the previous acceleration was measured
+            self.speed = [0, 0, 0]  # current speed for x, y, z
         except Exception as e:
             print(f"Error during initialization: {e}")
 
@@ -158,6 +162,25 @@ class SensorInterface:
             return sensor_1_state, sensor_2_state
         except Exception as e:
             print(f"Error during hall effect sensor read: {e}")
+
+    def calculate_speed(self):
+        """Calculate speed based on accelerometer data."""
+        try:
+            current_acceleration = self.read_mpu9250_accel()
+            current_time = time.time()
+            time_difference = current_time - self.previous_time
+
+            for i in range(3):
+                # Calculate speed using the formula speed = initial speed + acceleration * time.
+                # Convert from m/s^2 to mi/hr.
+                self.speed[i] += (current_acceleration[i] + self.previous_acceleration[i]) / 2 * time_difference * 3600 / 1609.34
+
+            self.previous_acceleration = current_acceleration
+            self.previous_time = current_time
+
+            return self.speed
+        except Exception as e:
+            print(f"Error during speed calculation: {e}")
 
     def ideal_mowing_conditions(self):
         # Check for high humidity
