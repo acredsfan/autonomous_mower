@@ -52,10 +52,6 @@ def update_sensors():
 
         time.sleep(1)  # Wait for 1 second before updating again
 
-@app.route('/')
-def index():
-    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance)
-
 @app.route('/static/<path:path>')
 def send_js(path):
     return send_from_directory('static', path)
