@@ -94,6 +94,7 @@ class SensorInterface:
 
     def read_vl53l0x_left(self):
         """Read VL53L0X ToF sensor data."""
+        self.vl53l0x_left.stop_ranging()
         self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_left.get_distance()
@@ -103,6 +104,7 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X ToF sensor data."""
+        self.vl53l0x_right.stop_ranging()
         self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_right.get_distance()
