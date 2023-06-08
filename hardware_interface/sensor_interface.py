@@ -82,10 +82,10 @@ class SensorInterface:
             self.select_mux_channel(3)
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
-                'temperature_c': self.bme280.temperature,
-                'temperature_f': temperature_f,
-                'humidity': self.bme280.humidity,
-                'pressure': self.bme280.pressure
+                'temperature_c': round(self.bme280.temperature, 1),
+                'temperature_f': round(temperature_f, 1),
+                'humidity': round(self.bme280.humidity, 1),
+                'pressure': round(self.bme280.pressure, 1)
             }
         except Exception as e:
             print(f"Error during BME280 read: {e}")
