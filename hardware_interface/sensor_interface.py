@@ -69,14 +69,6 @@ class SensorInterface:
 
             # Initialize hall effect sensors
             self.init_hall_effect_sensors()
-
-            # Initialize Right ToF sensor
-            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-            print("Right ToF initialized.")
-
-            # Initialize Left ToF sensor
-            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-            print("Left ToF initialized.")
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
 
@@ -96,17 +88,21 @@ class SensorInterface:
 
     def read_vl53l0x_left(self):
         """Read VL53L0X ToF sensor data."""
+        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_left.get_distance()
         except Exception as e:
             print(f"Error during VL53L0X left read: {e}")
+            self.vl53l0x_left.stop_ranging()
 
     def read_vl53l0x_right(self):
         """Read VL53L0X ToF sensor data."""
+        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_right.get_distance()
         except Exception as e:
             print(f"Error during VL53L0X right read: {e}")
+            self.vl53l0x_right.stop_ranging()
 
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
