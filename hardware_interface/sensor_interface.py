@@ -19,6 +19,8 @@ class SensorInterface:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
+            self.vl53l0x_right.open()
+            self.vl53l0x_left.open()
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
                 address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
@@ -69,12 +71,10 @@ class SensorInterface:
             self.init_hall_effect_sensors()
 
             # Initialize Right ToF sensor
-            self.vl53l0x_right.open()
             self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             print("Right ToF initialized.")
 
             # Initialize Left ToF sensor
-            self.vl53l0x_left.open()
             self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             print("Left ToF initialized.")
         except Exception as e:
