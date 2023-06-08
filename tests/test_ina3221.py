@@ -2,7 +2,7 @@ from smbus2 import SMBus, i2c_msg
 import time
 
 # Define the I2C bus
-bus = SMBus(1)
+#bus = SMBus(1)
 
 # Define the I2C address of the TCA9548A I2C multiplexer
 TCA9548A_I2C_ADDR = 0x70
@@ -49,7 +49,7 @@ INA3221_REG_CURRENT_CH1 = 0x04
 INA3221_REG_CURRENT_CH3 = 0x08
 
 # Initialize I2C bus
-bus = smbus.SMBus(INA3221_BUSNO)
+bus = smbus2.SMBus(INA3221_BUSNO)
 
 # Function to read 16-bit register
 def read_register(reg):
