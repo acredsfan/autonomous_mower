@@ -92,7 +92,7 @@ class SensorInterface:
     def read_vl53l0x_left(self):
         """Read VL53L0X ToF sensor data."""
         try:
-            self.select_mux_channel(5)
+            self.init_sensors()
             return self.vl53l0x_left.get_distance()
         except Exception as e:
             print(f"Error during VL53L0X left read: {e}")
@@ -100,7 +100,7 @@ class SensorInterface:
     def read_vl53l0x_right(self):
         """Read VL53L0X ToF sensor data."""
         try:
-            self.select_mux_channel(4)
+            self.init_sensors()
             return self.vl53l0x_right.get_distance()
         except Exception as e:
             print(f"Error during VL53L0X right read: {e}")
