@@ -1,20 +1,24 @@
-from smbus2 import SMBus, i2c_msg
-import time
+# from smbus2 import SMBus, i2c_msg
+# from barbudor_ina3221.lite import INA3221
+# import time
+# import busio
+# import board
+# import sys
 
-# Define the I2C bus
-#bus = SMBus(1)
+# # Define the I2C bus
+# bus = SMBus(1)
 
-# Define the I2C address of the TCA9548A I2C multiplexer
-TCA9548A_I2C_ADDR = 0x70
+# # Define the I2C address of the TCA9548A I2C multiplexer
+# TCA9548A_I2C_ADDR = 0x70
 
-# Function to switch the I2C channel
-def tca_select(channel):
-    if channel > 7:
-        return
-    bus.write_byte(TCA9548A_I2C_ADDR, 1<<channel)
+# # Function to switch the I2C channel
+# def tca_select(channel):
+#     if channel > 7:
+#         return
+#     bus.write_byte(TCA9548A_I2C_ADDR, 1<<channel)
 
-# Select the I2C channel
-tca_select(2)
+# # Select the I2C channel
+# tca_select(2)
 
 # # Create an I2C object
 # i2c = busio.I2C(board.SCL, board.SDA)
@@ -37,43 +41,63 @@ tca_select(2)
 #     # Sleep for 1 second
 #     time.sleep(1)
 
-# INA3221 constants
-INA3221_ADDRESS = 0x40  # Default I2C address for INA3221
-INA3221_BUSNO = 1       # I2C bus number on Raspberry Pi
+import smbus
 
-# INA3221 register addresses
+# Setup constants
+DEVICE_BUS = 1  # the bus the devices are connected to
+DEVICE_ADDR = 0x70  # the address of your TCA9548A
+CHANNEL = 2  # the channel your INA3221 is on
+
+# Create a bus object
+bus = smbus.SMBus(DEVICE_BUS)
+
+# Function to switch the multiplexer to the desired channel
+def tca_select(channel):
+    if 0 <= channel <= 7:
+        bus.write_byte_data(DEVICE_ADDR, 0, 1 << channel)
+    else:
+        raise ValueError('Multiplexer channel out of range (0-7)')
+
+# Switch to the INA3221 channel
+tca_select(CHANNEL)
+
+import time
+
+# INA3221 I2C address
+INA_ADDR = 0x40
+
+# INA3221 Registers
 INA3221_REG_MANUFACTURER_ID = 0xFE
-INA3221_REG_BUSVOLT_CH1 = 0x02
-INA3221_REG_BUSVOLT_CH3 = 0x06
-INA3221_REG_CURRENT_CH1 = 0x04
-INA3221_REG_CURRENT_CH3 = 0x08
+INA3221_REG_BUSVOLT_1 = 0x02  # Channel 1 Bus Voltage
+INA3221_REG_SHUNTVOLT_1 = 0x01  # Channel 1 Shunt Voltage
+INA3221_REG_BUSVOLT_3 = 0x08  # Channel 3 Bus Voltage
+INA3221_REG_SHUNTVOLT_3 = 0x07  # Channel 3 Shunt Voltage
 
-# Initialize I2C bus
-bus = smbus2.SMBus(INA3221_BUSNO)
+# Function to read a 16-bit register
+def read_register(register):
+    data = bus.read_i2c_block_data(INA_ADDR, register, 2)
+    return (data[0] << 8) + data[1]
 
-# Function to read 16-bit register
-def read_register(reg):
-    return bus.read_word_data(INA3221_ADDRESS, reg)
+# Function to convert shunt voltage to current (assuming 0.1 ohm shunt resistor)
+def shunt_to_current(shunt_v):
+    return shunt_v / 0.1
 
-# Function to convert raw register value to voltage
-def register_to_voltage(reg_val):
-    return reg_val * 0.001  # 1 LSB = 1 mV
+# Read the manufacturer id (should be 0x5449)
+print("Manufacturer ID: ", hex(read_register(INA3221_REG_MANUFACTURER_ID)))
 
-# Function to convert raw register value to current
-def register_to_current(reg_val):
-    return reg_val * 0.001  # 1 LSB = 1 mA
+while True:
+    # Read bus voltage (mV)
+    bus_volt_1 = read_register(INA3221_REG_BUSVOLT_1) * 8
+    bus_volt_3 = read_register(INA3221_REG_BUSVOLT_3) * 8
 
-# Read voltage and current for channel 1 (solar panel)
-solar_volt_raw = read_register(INA3221_REG_BUSVOLT_CH1)
-solar_volt = register_to_voltage(solar_volt_raw)
-solar_curr_raw = read_register(INA3221_REG_CURRENT_CH1)
-solar_curr = register_to_current(solar_curr_raw)
+    # Read shunt voltage (uV), convert to current (mA)
+    shunt_volt_1 = read_register(INA3221_REG_SHUNTVOLT_1) * 40
+    current_1 = shunt_to_current(shunt_volt_1 / 1e6)
 
-# Read voltage and current for channel 3 (battery)
-battery_volt_raw = read_register(INA3221_REG_BUSVOLT_CH3)
-battery_volt = register_to_voltage(battery_volt_raw)
-battery_curr_raw = read_register(INA3221_REG_CURRENT_CH3)
-battery_curr = register_to_current(battery_curr_raw)
+    shunt_volt_3 = read_register(INA3221_REG_SHUNTVOLT_3) * 40
+    current_3 = shunt_to_current(shunt_volt_3 / 1e6)
 
-print("Solar panel output: %.2f V, %.2f A" % (solar_volt, solar_curr))
-print("Battery charge level: %.2f V, %.2f A" % (battery_volt, battery_curr))
+    print("Solar Panel: Voltage = {} mV, Current = {} mA".format(bus_volt_1, current_1))
+    print("Battery: Voltage = {} mV, Current = {} mA".format(bus_volt_3, current_3))
+
+    time.sleep(1)
