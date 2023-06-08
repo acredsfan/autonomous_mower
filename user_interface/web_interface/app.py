@@ -7,6 +7,8 @@ import subprocess
 import os
 from dotenv import load_dotenv
 from camera import VideoCamera
+import time
+import threading
 
 app = Flask(__name__)
 sensors = sensor_interface.SensorInterface()
