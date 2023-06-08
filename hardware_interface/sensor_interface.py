@@ -69,10 +69,12 @@ class SensorInterface:
             self.init_hall_effect_sensors()
 
             # Initialize Right ToF sensor
+            self.vl53l0x_right.open()
             self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             print("Right ToF initialized.")
 
             # Initialize Left ToF sensor
+            self.vl53l0x_left.open()
             self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             print("Left ToF initialized.")
         except Exception as e:
