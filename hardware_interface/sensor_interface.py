@@ -64,11 +64,11 @@ class SensorInterface:
         """Initialize all sensors."""
         try:
             # Initialize VL53L0X sensors
-            # Start ranging on TCA9548A bus 1
+            # Start ranging on TCA9548A bus 4
+            self.select_mux_channel(4)
             self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-            # Start# The message got cut off, continuing from where it stopped
-
-            # Start ranging on TCA9548A bus 2
+            # Start ranging on TCA9548A bus 5
+            self.select_mux_channel(5)
             self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
             timing = self.vl53l0x_right.get_timing()
