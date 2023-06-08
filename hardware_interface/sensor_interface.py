@@ -86,7 +86,8 @@ class SensorInterface:
             print(f"Error during BME280 read: {e}")
 
     def read_vl53l0x_left(self):
-        """Read VL53L0X left sensor data."""
+        # Read VL53L0X left sensor data.
+        self.i2c = busio.I2C(board.SCL, board.SDA)
         timing = self.vl53l0x_left.get_timing()
         if timing < 20000:
             timing = 20000
@@ -99,6 +100,7 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X right sensor data."""
+        self.i2c = busio.I2C(board.SCL, board.SDA)
         timing = self.vl53l0x_left.get_timing()
         if timing < 20000:
             timing = 20000
