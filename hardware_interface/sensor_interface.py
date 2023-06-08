@@ -5,7 +5,7 @@ from adafruit_bme280 import basic as adafruit_bme280
 import VL53L0X
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
-from barbudor_ina3221.lite import INA3221
+from barbudor_ina3221.full import *
 import RPi.GPIO as GPIO
 import busio
 
@@ -134,8 +134,9 @@ class SensorInterface:
             self.select_mux_channel(2)
             if channel in [1, 3]:
                 Voltage = round(self.ina3221.bus_voltage(channel), 2)
-                Current = round(self.ina3221.shunt_voltage(channel), 2)
-                sensor_data = {"bus_voltage": Voltage, "shunt_voltage": Current}
+                Shunt_Voltage = round(self.ina3221.shunt_voltage(channel), 2)
+                Current = round(self.ina3221.current(channel), 2)
+                sensor_data = {"bus_voltage": Voltage, "current": Current, 'shunt_voltage': Shunt_Voltage}
                 
                 if channel == 3:  # if channel 3 is selected
                     # SLA battery charge level
