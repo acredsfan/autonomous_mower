@@ -51,5 +51,5 @@
             <td>{{ next_scheduled_mow }}</td>
         </tr>
     </table>
-    <img src="http://PiMowBot.local:8080" alt="Live view from Pi camera">
+    <img id="video" src="{{ url_for('video_feed') }}" />
 {% endblock %}
