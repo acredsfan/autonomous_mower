@@ -46,9 +46,10 @@ def update_sensors():
         speed = {"speed": sensors.calculate_speed()}
         heading = {"heading": sensors.read_mpu9250_compass()}
         bme280_data = sensors.read_bme280()
-        temperature = bme280_data['temperature_f']
-        humidity = bme280_data['humidity']
-        pressure = bme280_data['pressure']
+        if bme280_data is not None:
+            temperature = bme280_data['temperature_f']
+            humidity = bme280_data['humidity']
+            pressure = bme280_data['pressure']
         left_distance = {"left_distance": sensors.read_vl53l0x_left()}
         right_distance = {"right_distance": sensors.read_vl53l0x_right()}
 
@@ -61,14 +62,15 @@ def send_js(path):
 @app.route('/sensor-data')
 def sensor_data():
     # Retrieve the latest sensor data
+    bme280_data = sensors.read_bme280()
     sensor_data = {
         'battery_voltage': sensors.read_ina3221(3),
         'solar_voltage': sensors.read_ina3221(1),
         'speed': sensors.calculate_speed(),
         'heading': sensors.read_mpu9250_compass(),
-        'temperature': sensors.read_bme280()['temperature_f'],
-        'humidity': sensors.read_bme280()['humidity'],
-        'pressure': sensors.read_bme280()['pressure'],
+        'temperature': bme280_data['temperature_f'],
+        'humidity': bme280_data['humidity'],
+        'pressure': bme280_data['pressure'],
         'left_distance': sensors.read_vl53l0x_left(),
         'right_distance': sensors.read_vl53l0x_right()
     }
