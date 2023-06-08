@@ -17,12 +17,8 @@ class SensorInterface:
         self.select_mux_channel(3)
         try:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
-            self.select_mux_channel(4)
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=4, tca9548a_addr=0x70)
-            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-            self.select_mux_channel(5)
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=5, tca9548a_addr=0x70)
-            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
                 address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
@@ -71,10 +67,13 @@ class SensorInterface:
             # Initialize hall effect sensors
             self.init_hall_effect_sensors()
 
-            timing = self.vl53l0x_left.get_timing()
-            if timing < 20000:
-                timing = 20000
-            print("Timing %d ms" % (timing / 1000))
+            # Initialize Right ToF sensor
+            self.select_mux_channel(4)
+            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+
+            # Initialize Left ToF sensor
+            self.select_mux_channel(5)
+            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
 
