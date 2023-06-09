@@ -116,7 +116,7 @@ def move():
     if direction == 'forward':
         MotorController.move_mower("forward",100,100)
     elif direction == 'backward':
-        MotorController.move_mower("backward",100,100)
+        MotorController.move_mower("backward",90,90)
     elif direction == 'left':
         MotorController.move_mower("left",100,100)
     elif direction == 'right':
