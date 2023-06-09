@@ -7,7 +7,7 @@ GPIO.setwarnings(False)
 
 # Define GPIO pins connected to the L298N
 IN1, IN2 = 4, 27
-IN3, IN4 = 20, 21
+IN3, IN4 = 21, 20
 ENA, ENB = 13, 16
 
 # Set up GPIO pins as output
