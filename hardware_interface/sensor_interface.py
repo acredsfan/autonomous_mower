@@ -71,10 +71,19 @@ class SensorInterface:
             self.mpu.configure()  # Apply the settings to the registers.
             print("MPU9250 initialized.")
 
+             # Initialize Left TOF sensor
+            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+
+            # Initialize Right TOF sensor
+            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+
             # Initialize hall effect sensors
             self.init_hall_effect_sensors()
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
+
+
+
 
     def read_bme280(self):
         """Read BME280 sensor data."""
@@ -94,7 +103,6 @@ class SensorInterface:
 
     def read_vl53l0x_left(self):
         """Read VL53L0X ToF sensor data."""
-        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_left.get_distance()
         except Exception as e:
@@ -102,7 +110,6 @@ class SensorInterface:
 
     def read_vl53l0x_right(self):
         """Read VL53L0X ToF sensor data."""
-        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
         try:
             return self.vl53l0x_right.get_distance()
         except Exception as e:
