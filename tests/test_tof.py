@@ -100,12 +100,12 @@ sensor2 = VL53L0X.VL53L0X(i2c_address=0x29)
 # Select channel 0 on the multiplexer and initialize the first sensor.
 select_channel(6)
 sensor1.open()
-sensor1.start_ranging(VL53L0X.VL53L0X_BETTER_ACCURACY_MODE)
+sensor1.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
 # Select channel 1 on the multiplexer and initialize the second sensor.
 select_channel(7)
 sensor2.open()
-sensor2.start_ranging(VL53L0X.VL53L0X_BETTER_ACCURACY_MODE)
+sensor2.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
 while True:
     # Select channel 0 and read from the first sensor.
