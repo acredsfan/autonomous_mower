@@ -23,7 +23,7 @@ try:
         timing = 20000
     print("Timing %d ms" % (timing/1000))
 
-    for count in range(1, 101):
+    for count in range(1, 5):
         # Get distance from VL53L0X  on TCA9548A bus 1
         distance = tof_right.get_distance()
         if distance > 0:
