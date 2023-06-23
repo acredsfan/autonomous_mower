@@ -36,7 +36,7 @@ try:
     time.sleep(0.50)
     tof_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
     # Start ranging on TCA9548A bus 2
-    GPIO.output(left_shutdown, GPIO.HIGH)
+    #GPIO.output(left_shutdown, GPIO.HIGH)
     time.sleep(0.50)
 
     #tof_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
