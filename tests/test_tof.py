@@ -52,12 +52,16 @@ try:
         # Get distance from VL53L0X  on TCA9548A bus 1
         distance = tof_right.get_distance()
         if distance > 0:
-            print("1: %d mm, %d cm, %d" % (distance, (distance/10), count))
+            print("right: %d mm, %d cm, %d" % (distance, (distance/10), count))
+        else:
+            print("%d - ERROR" % 1)
 
         # Get distance from VL53L0X  on TCA9548A bus 2
         distance = tof_left.get_distance()
         if distance > 0:
-            print("2: %d mm, %d cm, %d" % (distance, (distance/10), count))
+            print("left: %d mm, %d cm, %d" % (distance, (distance/10), count))
+        else:
+            print("%d - ERROR" % 2)
 
         time.sleep(timing/1000000.00)
 
