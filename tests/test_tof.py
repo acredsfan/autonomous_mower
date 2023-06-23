@@ -28,7 +28,7 @@ try:
     # Create a VL53L0X object for device on TCA9548A bus 2
     tof_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
     tof_right.open()
-    tof_left.change_address(0X2a)
+    tof_left.change_address(0X30)
     tof_left.open()
 
     # Start ranging on TCA9548A bus 1
