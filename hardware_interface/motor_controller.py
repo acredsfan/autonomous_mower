@@ -79,31 +79,31 @@ class MotorController:
         MotorController.set_motor_direction(direction)
         MotorController.set_motor_speed(right_speed, left_speed)
 
-# # Test the motors
-# try:
-#     #GPIO.cleanup()
-#     #GPIO.setmode(GPIO.BCM)
-#     print("Testing the motors")
-#     MotorController.move_mower("forward", 100, 100)  # Move forward at 50% speed
-#     print("Moving Forward")
-#     time.sleep(5)  # Run the motors for 5 seconds
-#     MotorController.stop_motors()  # Stop the motors
-#     time.sleep(1)  # Wait for 1 second
-#     MotorController.move_mower("backward", 100, 100)  # Move backward at 50% speed
-#     print("Moving Backward")
-#     time.sleep(5)  # Run the motors for 5 seconds
-#     MotorController.stop_motors()  # Stop the motors
-#     time.sleep(1)  # Wait for 1 second
-#     MotorController.move_mower("left", 100, 100)  # Turn left at 50% speed
-#     print("Turning Left")
-#     time.sleep(5)  # Run the motors for 5 seconds
-#     MotorController.stop_motors()  # Stop the motors
-#     time.sleep(1)  # Wait for 1 second
-#     MotorController.move_mower("right", 100, 100)  # Turn right at 50% speed
-#     print("Turning Right")
-#     time.sleep(5)  # Run the motors for 5 seconds
-#     MotorController.stop_motors()  # Stop the motors
-#     MotorController.cleanup()
+# Test the motors
+try:
+    #GPIO.cleanup()
+    #GPIO.setmode(GPIO.BCM)
+    print("Testing the motors")
+    MotorController.move_mower("forward", 100, 100)  # Move forward at 50% speed
+    print("Moving Forward")
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("backward", 100, 100)  # Move backward at 50% speed
+    print("Moving Backward")
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("left", 100, 100)  # Turn left at 50% speed
+    print("Turning Left")
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    time.sleep(1)  # Wait for 1 second
+    MotorController.move_mower("right", 100, 100)  # Turn right at 50% speed
+    print("Turning Right")
+    time.sleep(5)  # Run the motors for 5 seconds
+    MotorController.stop_motors()  # Stop the motors
+    MotorController.cleanup()
 
-# except KeyboardInterrupt:
-#     MotorController.cleanup()
+except KeyboardInterrupt:
+    MotorController.cleanup()
