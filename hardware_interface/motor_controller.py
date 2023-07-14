@@ -1,26 +1,20 @@
 import RPi.GPIO as GPIO
 import time
 
-# Set up GPIO mode
-GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-
 # Define GPIO pins connected to the L298N
 IN1, IN2 = 4, 27
 IN3, IN4 = 21, 20
 ENA, ENB = 13, 16
 
-# Set up GPIO pins as output
-for pin in [IN1, IN2, IN3, IN4, ENA, ENB]:
-    GPIO.setup(pin, GPIO.OUT)
+# Set up GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup([IN1, IN2, IN3, IN4, ENA, ENB], GPIO.OUT)
 
-# Set up PWM channels
-pwmA = GPIO.PWM(ENA, 5000)  # Initialize PWM for motor A (100Hz frequency)
-pwmB = GPIO.PWM(ENB, 5000)  # Initialize PWM for motor B (100Hz frequency)
-
-# Start PWM with 0% duty cycle (off)
-pwmA.start(0)
-pwmB.start(0)
+# Set up PWM
+pwmA = GPIO.PWM(ENA, 1000)  # 1000 Hz
+pwmB = GPIO.PWM(ENB, 1000)  # 1000 Hz
+pwmA.start(0)  # Start with 0% duty cycle
+pwmB.start(0)  # Start with 0% duty cycle
 
 class MotorController:
 
@@ -34,26 +28,26 @@ class MotorController:
     def set_motor_direction(direction):
         # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(IN1, GPIO.LOW)
-            GPIO.output(IN2, GPIO.HIGH)
+            GPIO.output(IN1, GPIO.HIGH)
+            GPIO.output(IN2, GPIO.LOW)
             GPIO.output(IN3, GPIO.HIGH)
             GPIO.output(IN4, GPIO.LOW)
         elif direction == "backward":
-            GPIO.output(IN1, GPIO.HIGH)
-            GPIO.output(IN2, GPIO.LOW)
+            GPIO.output(IN1, GPIO.LOW)
+            GPIO.output(IN2, GPIO.HIGH)
             GPIO.output(IN3, GPIO.LOW)
             GPIO.output(IN4, GPIO.HIGH)
         elif direction == "right":
             GPIO.output(IN1, GPIO.HIGH)
             GPIO.output(IN2, GPIO.LOW)
-            GPIO.output(IN3, GPIO.HIGH)
-            GPIO.output(IN4, GPIO.LOW)
+            GPIO.output(IN3, GPIO.LOW)
+            GPIO.output(IN4, GPIO.HIGH)
         elif direction == "left":
             GPIO.output(IN1, GPIO.LOW)
             GPIO.output(IN2, GPIO.HIGH)
-            GPIO.output(IN3, GPIO.LOW)
-            GPIO.output(IN4, GPIO.HIGH)
-
+            GPIO.output(IN3, GPIO.HIGH)
+            GPIO.output(IN4, GPIO.LOW)
+            
     @staticmethod
     def stop_motors():
         # Stop the motors
