@@ -81,8 +81,8 @@ class MotorController:
 
 # Test the motors
 try:
-    GPIO.cleanup()
-    GPIO.setmode(GPIO.BCM)
+    # GPIO.cleanup()
+    # GPIO.setmode(GPIO.BCM)
     print("Testing the motors")
     MotorController.move_mower("forward", 100, 100)  # Move forward at 50% speed
     print("Moving Forward")
