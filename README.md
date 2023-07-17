@@ -33,7 +33,6 @@ Here are the sensors and hardware I've procured for the robot:
 • TP-Link AC1300 WiFi Adapter - https://www.amazon.com/gp/product/B08D72GSMS/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 • BME280 sensor module - https://www.amazon.com/gp/product/B07KR24P6P/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 • Neo-8M GPS Module - https://www.amazon.com/Shapea-NEO-8M-NEO8MV2-Control-Antenna/dp/B0BKL87C74/ref=sr_1_1?keywords=neo+8m&qid=1683213881&sr=8-1
-• 12V 2 Channel Relay - https://www.amazon.com/gp/product/B0057OC6D8/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • DC Voltage Regulator/Buck Converter 12V to 5V - https://www.amazon.com/gp/product/B08CHMJM9J/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • 997 DC motor for mower blades - https://www.amazon.com/Powerful-Voltage-DC12-36V-Silent-Bearing/dp/B08R73MQF1/ref=sr_1_3?hvadid=631587578546&hvdev=c&hvlocphy=9015649&hvnetw=g&hvqmt=e&hvrand=15298291863334120737&hvtargid=kwd-352957084306&hydadcr=19964_13472495&keywords=997%2Bmotor&qid=1683309933&sr=8-3&th=1
 • 2x 12V worm gear motors for wheels - https://www.amazon.com/gp/product/B00NMDPQAQ/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
@@ -42,7 +41,10 @@ Here are the sensors and hardware I've procured for the robot:
 • 2x VL53L0X Time of flight sensors - https://www.amazon.com/gp/product/B07XXTMRR2/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • INA3221 Power Monitor - https://www.amazon.com/gp/product/B0946L63LC/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • 2x KY-003 Hall Effect Magnetic Sensor Modules - https://www.amazon.com/gp/product/B085KVV82D/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• IBT-4 Motor Driver Board - https://a.co/d/cl5WV3u
 
 I'll be happy to share any details you'd be interested in just let me know.
 
 UPDATE 6.5.2023 - I've added a .env.template to store the API key for Google Maps, to run the mapping module you need to update the file with your API key and save it as .env
+
+UPDATE 7.17.2023 - I've removed the 12V relay from the system and added an IBT-4 Driver for the Mower Blade Motor.
