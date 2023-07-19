@@ -1,60 +1,61 @@
 import RPi.GPIO as GPIO
 import time
 
-# Define GPIO pins connected to the L298N
-IN1, IN2 = 4, 27
-IN3, IN4 = 21, 20
-ENA, ENB = 13, 16
+# Define GPIO pins connected to the IBT-2 drivers
+Prwm1, Lpwm1 = 4, 27  # Motor 1 control pins
+Prwm2, Lpwm2 = 21, 20  # Motor 2 control pins
+R_En1, L_En1 = 13, 13  # Motor 1 enable pins
+R_En2, L_En2 = 16, 16  # Motor 2 enable pins
 
 # Set up GPIO
 GPIO.setmode(GPIO.BCM)
-GPIO.setup([IN1, IN2, IN3, IN4, ENA, ENB], GPIO.OUT)
+GPIO.setup([Prwm1, Lpwm1, Prwm2, Lpwm2, R_En1, L_En1, R_En2, L_En2], GPIO.OUT)
 
 # Set up PWM
-pwmA = GPIO.PWM(ENA, 1000)  # 1000 Hz
-pwmB = GPIO.PWM(ENB, 1000)  # 1000 Hz
-pwmA.start(0)  # Start with 0% duty cycle
-pwmB.start(0)  # Start with 0% duty cycle
+pwm1 = GPIO.PWM(R_En1, 1000)  # 1000 Hz
+pwm2 = GPIO.PWM(R_En2, 1000)  # 1000 Hz
+pwm1.start(0)  # Start with 0% duty cycle
+pwm2.start(0)  # Start with 0% duty cycle
 
 class MotorController:
 
     @staticmethod
     def set_motor_speed(right_speed, left_speed):
         # Set the speed of both motors
-        pwmA.ChangeDutyCycle(right_speed)
-        pwmB.ChangeDutyCycle(left_speed)
+        pwm1.ChangeDutyCycle(right_speed)
+        pwm2.ChangeDutyCycle(left_speed)
 
     @staticmethod
     def set_motor_direction(direction):
         # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(IN1, GPIO.HIGH)
-            GPIO.output(IN2, GPIO.LOW)
-            GPIO.output(IN3, GPIO.HIGH)
-            GPIO.output(IN4, GPIO.LOW)
+            GPIO.output(Prwm1, GPIO.HIGH)
+            GPIO.output(Lpwm1, GPIO.LOW)
+            GPIO.output(Prwm2, GPIO.HIGH)
+            GPIO.output(Lpwm2, GPIO.LOW)
         elif direction == "backward":
-            GPIO.output(IN1, GPIO.LOW)
-            GPIO.output(IN2, GPIO.HIGH)
-            GPIO.output(IN3, GPIO.LOW)
-            GPIO.output(IN4, GPIO.HIGH)
+            GPIO.output(Prwm1, GPIO.LOW)
+            GPIO.output(Lpwm1, GPIO.HIGH)
+            GPIO.output(Prwm2, GPIO.LOW)
+            GPIO.output(Lpwm2, GPIO.HIGH)
         elif direction == "right":
-            GPIO.output(IN1, GPIO.HIGH)
-            GPIO.output(IN2, GPIO.LOW)
-            GPIO.output(IN3, GPIO.LOW)
-            GPIO.output(IN4, GPIO.HIGH)
+            GPIO.output(Prwm1, GPIO.HIGH)
+            GPIO.output(Lpwm1, GPIO.LOW)
+            GPIO.output(Prwm2, GPIO.LOW)
+            GPIO.output(Lpwm2, GPIO.HIGH)
         elif direction == "left":
-            GPIO.output(IN1, GPIO.LOW)
-            GPIO.output(IN2, GPIO.HIGH)
-            GPIO.output(IN3, GPIO.HIGH)
-            GPIO.output(IN4, GPIO.LOW)
+            GPIO.output(Prwm1, GPIO.LOW)
+            GPIO.output(Lpwm1, GPIO.HIGH)
+            GPIO.output(Prwm2, GPIO.HIGH)
+            GPIO.output(Lpwm2, GPIO.LOW)
             
     @staticmethod
     def stop_motors():
         # Stop the motors
-        GPIO.output(IN1, GPIO.LOW)
-        GPIO.output(IN2, GPIO.LOW)
-        GPIO.output(IN3, GPIO.LOW)
-        GPIO.output(IN4, GPIO.LOW)
+        GPIO.output(Prwm1, GPIO.LOW)
+        GPIO.output(Lpwm1, GPIO.LOW)
+        GPIO.output(Prwm2, GPIO.LOW)
+        GPIO.output(Lpwm2, GPIO.LOW)
 
     @staticmethod
     def cleanup():
@@ -62,8 +63,8 @@ class MotorController:
         MotorController.stop_motors()
         
         # Stop PWM
-        pwmA.stop()
-        pwmB.stop()
+        pwm1.stop()
+        pwm2.stop()
         
         GPIO.cleanup()
 
@@ -75,8 +76,6 @@ class MotorController:
 
 # Test the motors
 try:
-    # GPIO.cleanup()
-    # GPIO.setmode(GPIO.BCM)
     print("Testing the motors")
     MotorController.move_mower("forward", 100, 100)  # Move forward at 50% speed
     print("Moving Forward")
