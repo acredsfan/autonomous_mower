@@ -29,25 +29,25 @@ class MotorController:
     def set_motor_direction(direction):
         # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(Prwm1, GPIO.HIGH)
-            GPIO.output(Lpwm1, GPIO.LOW)
+            GPIO.output(Prwm1, GPIO.LOW)
+            GPIO.output(Lpwm1, GPIO.HIGH)
             GPIO.output(Prwm2, GPIO.HIGH)
             GPIO.output(Lpwm2, GPIO.LOW)
         elif direction == "backward":
-            GPIO.output(Prwm1, GPIO.LOW)
-            GPIO.output(Lpwm1, GPIO.HIGH)
+            GPIO.output(Prwm1, GPIO.HIGH)
+            GPIO.output(Lpwm1, GPIO.LOW)
             GPIO.output(Prwm2, GPIO.LOW)
             GPIO.output(Lpwm2, GPIO.HIGH)
         elif direction == "right":
             GPIO.output(Prwm1, GPIO.HIGH)
             GPIO.output(Lpwm1, GPIO.LOW)
-            GPIO.output(Prwm2, GPIO.LOW)
-            GPIO.output(Lpwm2, GPIO.HIGH)
+            GPIO.output(Prwm2, GPIO.HIGH)
+            GPIO.output(Lpwm2, GPIO.LOW)
         elif direction == "left":
             GPIO.output(Prwm1, GPIO.LOW)
             GPIO.output(Lpwm1, GPIO.HIGH)
-            GPIO.output(Prwm2, GPIO.HIGH)
-            GPIO.output(Lpwm2, GPIO.LOW)
+            GPIO.output(Prwm2, GPIO.LOW)
+            GPIO.output(Lpwm2, GPIO.HIGH)
             
     @staticmethod
     def stop_motors():
