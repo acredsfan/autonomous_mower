@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from camera import VideoCamera
 import time
 import threading
-from path_planning import PathPlanning
+from navigation_system import PathPlanning
 
 app = Flask(__name__)
 sensors = sensor_interface.SensorInterface()
