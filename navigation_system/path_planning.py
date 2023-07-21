@@ -90,8 +90,22 @@ class PathPlanning:
             return -1
 
     def take_action(self, state, action):
-        # Implement this method to take an action and return the new state
-        pass
+        if action == 'up':
+            new_state = (state[0] - 1, state[1])
+        elif action == 'down':
+            new_state = (state[0] + 1, state[1])
+        elif action == 'left':
+            new_state = (state[0], state[1] - 1)
+        elif action == 'right':
+            new_state = (state[0], state[1] + 1)
+        else:
+            raise ValueError(f"Invalid action: {action}")
+
+        # Make sure the new state is within the grid
+        new_state = (max(min(new_state[0], GRID_SIZE[0] - 1), 0),
+                    max(min(new_state[1], GRID_SIZE[1] - 1), 0))
+
+        return new_state
 
     def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, exploration_rate=0.1):
         q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
