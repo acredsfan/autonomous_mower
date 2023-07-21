@@ -1,5 +1,5 @@
 import serial
-from gpsd import gpsd
+import gpsd
 
 class GPSInterface:
     def __init__(self, port='/dev/serial0', baud_rate=9600, timeout=1):
