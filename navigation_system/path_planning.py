@@ -14,8 +14,11 @@ import random
 with open("config.json") as f:
     config = json.load(f)
 
-with open("user_polygon.json") as f:
-    polygon_coordinates = json.load(f)
+try:
+    with open("user_polygon.json") as f:
+        polygon_coordinates = json.load(f)
+except FileNotFoundError:
+    polygon_coordinates = []  # or some default value
 
 # Constants
 GRID_SIZE = (config['GRID_L'],config['GRID_W'])  # Grid size for path planning
