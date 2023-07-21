@@ -28,9 +28,10 @@ class GPSInterface:
     def close(self):
         self.gpsd.close()
 
+gps_interface = GPSInterface()
 while True:
     # Get gps position
-    packet = gpsd.get_current()
+    packet = gps_interface.gpsd.get_current()
 
     print("Latitude: ", packet.lat)
     print("Longitude: ", packet.lon)

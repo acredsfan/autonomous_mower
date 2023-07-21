@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from camera import VideoCamera
 import time
 import threading
+from path_planning import PathPlanning
 
 app = Flask(__name__)
 sensors = sensor_interface.SensorInterface()
@@ -29,6 +30,9 @@ stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
+
+
+path_planner = PathPlanning(...)
 
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
