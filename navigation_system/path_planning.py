@@ -75,11 +75,15 @@ class PathPlanning:
                     point = Point(x, y)
                     if obstacle_expanded.contains(point):
                         self.obstacle_map[x, y] = 1
+        # Trigger a new path planning if the obstacle map has changed
+        if np.any(obstacle_map != self.obstacle_map):
+            self.plan_path(self.start, self.goal, new_obstacles)
+        self.obstacle_map = obstacle_map
 
     def reward_function(self, old_state, new_state, action):
         if new_state == 'goal':
             return 100
-        elif self.obstacle_map[action] == 1:
+        elif self.obstacle_map[new_state[0], new_state[1]] == 1:
             return -100
         elif action != self.last_action:
             return -10
@@ -108,14 +112,14 @@ class PathPlanning:
 
         return new_state
 
-    def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, exploration_rate=0.1):
+    def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
         q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
 
         for episode in range(episodes):
             state = start
 
             for step in range(100):  # Limit each episode to a maximum of 100 steps
-                if random.uniform(0, 1) < exploration_rate:
+                if random.uniform(0, 1) < epsilon:
                     action = random.choice(['up', 'down', 'left', 'right'])  # Explore a random action
                 else:
                     action = np.argmax(q_table[state])  # Exploit the best known action
@@ -140,7 +144,36 @@ class PathPlanning:
                 if state == goal:
                     break
 
-        return q_table
+            # Decay epsilon after each episode
+            if epsilon > epsilon_min:
+                epsilon *= epsilon_decay
+
+        state = start
+        path = [state]
+        while state != goal:
+            action = np.argmax(q_table[state])
+            state = self.take_action(state, action)
+            path.append(state)
+        return path
+    
+    def get_path(self):
+        # Run Q-Learning algorithm
+        path = self.q_learning(self.start, self.goal, self.obstacles)
+
+        # Convert the result into a list of (lat, lng) coordinates
+        path_coords = []
+        for cell in path:
+            coord = self.grid_to_coord(cell)
+            path_coords.append(coord)
+            
+        return path_coords
+    
+    def grid_to_coord(self, cell):
+        # Convert a grid cell to a (lat, lng) coordinate
+        lat = cell[0] * self.lat_grid_size + self.min_lat
+        lng = cell[1] * self.lng_grid_size + self.min_lng
+        return {"lat": lat, "lng": lng}
+
 
 # Example usage
 if __name__ == "__main__":

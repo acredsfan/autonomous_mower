@@ -157,6 +157,12 @@ def get_mowing_area():
         coordinates = json.load(f)
     return jsonify(coordinates)
 
+@app.route('/get-path', methods=['GET'])
+def get_path():
+    # Generate the path
+    path = path_planner.get_path()
+    return jsonify(path)
+
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
     # Save the coordinates to the file

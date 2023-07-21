@@ -159,6 +159,31 @@ function updateMowingArea(polygon) {
     saveMowingArea(coordinates);
 }
 
+function getPathAndDraw() {
+    fetch('/get-path', {
+        method: 'GET',
+    })
+    .then(response => response.json())
+    .then(data => {
+        drawPath(data);
+    })
+    .catch((error) => console.error('Error:', error));
+}
+
+function drawPath(coordinates) {
+    var path = new google.maps.Polyline({
+        path: coordinates,
+        geodesic: true,
+        strokeColor: '#0000FF',
+        strokeOpacity: 1.0,
+        strokeWeight: 2
+    });
+    path.setMap(map);
+}
+
+// Call this function when you want to update the path
+getPathAndDraw();
+
 window.addEventListener('load', function() {
     loadScript();
     getAndDrawMowingArea();
