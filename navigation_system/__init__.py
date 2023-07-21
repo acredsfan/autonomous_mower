@@ -4,10 +4,10 @@
 #IMPORTS
 from .gps_interface import GPSInterface
 from .localization import Localization
-from .navigation import Navigation
+from .path_planning import PathPlanning
 
 __all__ = [
     'GPSInterface',
     'Localization',
-    'Navigation',
+    'PathPlanning'
 ]
