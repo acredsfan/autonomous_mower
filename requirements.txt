@@ -11,3 +11,6 @@ python-dotenv
 imutils
 picamera
 pathfinding
+shapely
+networkx
+rtree
