@@ -10,3 +10,4 @@ mpu9250-jmdev
 python-dotenv
 imutils
 picamera
+pathfinding
