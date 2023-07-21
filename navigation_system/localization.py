@@ -5,7 +5,7 @@
 
 # localization.py
 import math
-import sensor_interface
+from hardware_interface import sensor_interface
 import gpsd
 
 # Global variables
