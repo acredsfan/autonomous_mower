@@ -17,9 +17,6 @@ with open("config.json") as f:
 with open("user_polygon.json") as f:
     polygon_coordinates = json.load(f)
 
-# Set user polygon
-set_user_polygon(polygon_coordinates)
-
 # Constants
 GRID_SIZE = (config['GRID_L'],config['GRID_W'])  # Grid size for path planning
 OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']  # Margin around obstacles to account for robot size and path safety
@@ -105,6 +102,10 @@ class PathPlanning:
         new_state = (max(min(new_state[0], GRID_SIZE[0] - 1), 0),
                     max(min(new_state[1], GRID_SIZE[1] - 1), 0))
 
+        # Check if the new state is an obstacle
+        if self.obstacle_map[new_state] == 1:
+            return state
+
         return new_state
 
     def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, exploration_rate=0.1):
@@ -141,15 +142,17 @@ class PathPlanning:
 
         return q_table
 
-    # Example usage
-    if __name__ == "__main__":
-        # Set user polygon
-        set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
+# Example usage
+if __name__ == "__main__":
+    path_planner = PathPlanning()
 
-        # Test path planning
-        start = (10, 10)
-        goal = (90, 90)
-        obstacles = [Polygon([(30, 30), (30, 60), (60, 60), (60, 30)])]
+    # Set user polygon
+    path_planner.set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
 
-        path = plan_path(start, goal, obstacles)
-        print(path)
+    # Test path planning
+    start = (10, 10)
+    goal = (90, 90)
+    obstacles = [Polygon([(30, 30), (30, 60), (60, 60), (60, 30)])]
+
+    path = path_planner.plan_path(start, goal, obstacles)
+    print(path)
