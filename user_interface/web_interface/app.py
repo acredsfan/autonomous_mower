@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface import MotorController, sensor_interface, BladeController
+from hardware_interface import MotorController, SensorInterface, BladeController
 import subprocess
 import os
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ import threading
 from navigation_system import PathPlanning
 
 app = Flask(__name__)
-sensors = sensor_interface.SensorInterface()
+sensors = SensorInterface
 
 # Define variables to hold sensor values
 battery_charge = {}
