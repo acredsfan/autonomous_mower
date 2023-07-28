@@ -49,7 +49,7 @@ def update_sensors():
         solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
         speed = {"speed": sensors.calculate_speed()}
         heading = {"heading": sensors.read_mpu9250_compass()}
-        bme280_data = sensors.read_bme280()
+        bme280_data = sensors.read_bme280(self)
         if bme280_data is not None:
             temperature = bme280_data['temperature_f']
             humidity = bme280_data['humidity']
