@@ -17,12 +17,30 @@ class SensorInterface:
         self.i2c = busio.I2C(board.SCL, board.SDA)
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
+        except Exception as e:
+            print(f"Error during I2C initialization: {e}")
+        try:
             self.select_mux_channel(3)
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
+        except Exception as e:
+            print(f"Error during BME280 initialization: {e}")
+        try:
             self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=6, tca9548a_addr=0x70)
+        except Exception as e:
+            print(f"Error during VL53L0X right initialization: {e}")
+        try:
             self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
+        except Exception as e:
+            print(f"Error during VL53L0X left initialization: {e}")
+        try:
             self.vl53l0x_right.open()
+        except Exception as e:
+            print(f"Error during VL53L0X right open: {e}")
+        try:
             self.vl53l0x_left.open()
+        except Exception as e:
+            print(f"Error during VL53L0X left open: {e}")
+        try:          
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
                 address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
@@ -32,12 +50,16 @@ class SensorInterface:
                 afs=AFS_8G, 
                 mfs=AK8963_BIT_16, 
                 mode=AK8963_MODE_C100HZ)
+        except Exception as e:
+            print(f"Error during MPU9250 initialization: {e}")
+        try:
             self.select_mux_channel(2)
             self.ina3221 = INA3221(self.i2c)
             self.ina3221.enable_channel(1)
             self.ina3221.enable_channel(3)
-            self.HALL_EFFECT_SENSOR_1 = 17  # Replace with the correct GPIO pin number for sensor 1
-            self.HALL_EFFECT_SENSOR_2 = 18  # Replace with the correct GPIO pin number for sensor 2
+        except Exception as e:
+            print(f"Error during INA3221 initialization: {e}")
+        try:
             # change this to match the location's pressure (hPa) at sea level
             self.bme280.sea_level_pressure = 1013.25
             self.previous_acceleration = [0, 0, 0]  # previous acceleration values for x, y, z
