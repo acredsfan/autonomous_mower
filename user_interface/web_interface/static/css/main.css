@@ -139,7 +139,7 @@ input[type="text"], select {
 
 .main-content {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: start;
     gap: 20px;
 }
