@@ -60,7 +60,7 @@ def update_sensors():
         left_distance = {"left_distance": sensors.read_vl53l0x_left()}
         right_distance = {"right_distance": sensors.read_vl53l0x_right()}
 
-        time.sleep(1)  # Wait for 1 second before updating again
+        time.sleep(3)  # Wait for 3 second before updating again
 
 @app.route('/static/<path:path>')
 def send_js(path):
@@ -70,14 +70,20 @@ def send_js(path):
 def sensor_data():
     # Retrieve the latest sensor data
     bme280_data = sensors.read_bme280()
+    gps_data = gps.read_gps_data()
+    if gps_data is not None:
+        speed = gps_data['speed']
+    else:
+        speed = None
+
     sensor_data = {
         'battery_voltage': sensors.read_ina3221(3),
         'solar_voltage': sensors.read_ina3221(1),
-        'speed': gps.read_gps_data(),
+        'speed': speed,
         'heading': sensors.read_mpu9250_compass(),
-        'temperature': bme280_data['temperature_f'],
-        'humidity': bme280_data['humidity'],
-        'pressure': bme280_data['pressure'],
+        'temperature': bme280_data['temperature_f'] if bme280_data else None,
+        'humidity': bme280_data['humidity'] if bme280_data else None,
+        'pressure': bme280_data['pressure'] if bme280_data else None,
         'left_distance': sensors.read_vl53l0x_left(),
         'right_distance': sensors.read_vl53l0x_right()
     }
