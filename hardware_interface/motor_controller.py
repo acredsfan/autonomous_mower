@@ -12,8 +12,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup([Prwm1, Lpwm1, Prwm2, Lpwm2, R_En1, L_En1, R_En2, L_En2], GPIO.OUT)
 
 # Set up PWM
-pwm1 = GPIO.PWM(R_En1, 1000)  # 1000 Hz
-pwm2 = GPIO.PWM(R_En2, 1000)  # 1000 Hz
+pwm1 = GPIO.PWM(R_En1, 2000)  # 1000 Hz
+pwm2 = GPIO.PWM(R_En2, 2000)  # 1000 Hz
 pwm1.start(0)  # Start with 0% duty cycle
 pwm2.start(0)  # Start with 0% duty cycle
 
