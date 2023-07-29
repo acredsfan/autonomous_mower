@@ -31,11 +31,47 @@ obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
 class PathPlanning:
     def __init__(self):  # removed start and goal from the constructor
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
+        self.obstacles = set()  # Set of known obstacles (in WKT format)
         self.last_action = None
 
     def set_user_polygon(self, polygon_coordinates):
         global user_polygon
         user_polygon = Polygon(polygon_coordinates)
+
+    def update_obstacle_map(self, new_obstacles):
+        new_obstacle_set = set([obstacle.wkt for obstacle in new_obstacles])
+
+        # Find obstacles that were removed
+        removed_obstacles = self.obstacles - new_obstacle_set
+
+        # Remove the removed obstacles from the map
+        for obstacle_wkt in removed_obstacles:
+            obstacle = shapely.wkt.loads(obstacle_wkt)
+            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
+            minx, miny, maxx, maxy = obstacle_expanded.bounds
+            for x in range(int(minx), int(maxx) + 1):
+                for y in range(int(miny), int(maxy) + 1):
+                    point = Point(x, y)
+                    if obstacle_expanded.contains(point):
+                        self.obstacle_map[x, y] = 0
+
+        # Add the new obstacles to the map
+        for obstacle in new_obstacles:
+            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
+            minx, miny, maxx, maxy = obstacle_expanded.bounds
+            for x in range(int(minx), int(maxx) + 1):
+                for y in range(int(miny), int(maxy) + 1):
+                    point = Point(x, y)
+                    if obstacle_expanded.contains(point):
+                        self.obstacle_map[x, y] = 1
+
+        # Update the set of known obstacles
+        self.obstacles = new_obstacle_set
+
+        # Trigger a new path planning if the obstacle map has changed
+        if np.any(obstacle_map != self.obstacle_map):
+            self.plan_path(self.start, self.goal, [shapely.wkt.loads(wkt) for wkt in self.obstacles])
+        self.obstacle_map = obstacle_map          
 
     # This function generates a grid with marked obstacles
     def generate_grid(self, obstacles):
