@@ -5,31 +5,23 @@
     <div class="main-content">
         <div class="control-panel">
             <div class="controller">
-                <!-- Controller buttons here -->
+                <button class="btn btn-up" onclick="move('forward')"><i class="fas fa-arrow-up"></i></button>
+                <button class="btn btn-left" onclick="move('left')"><i class="fas fa-arrow-left"></i></button>
+                <button class="btn btn-down" onclick="move('backward')"><i class="fas fa-arrow-down"></i></button>
+                <button class="btn btn-right" onclick="move('right')"><i class="fas fa-arrow-right"></i></button>
+                <button class="btn btn-stop" onclick="move('stop')"><i class="fas fa-stop"></i></button>
             </div>
             <div class="mower-controls">
-                <!-- Mower control buttons here -->
+                <button class="btn btn-blades-on" onclick="toggle_mower_blades('on')"><i class="fas fa-power-off"></i></button>
+                <button class="btn btn-blades-off" onclick="toggle_mower_blades('off')"><i class="fas fa-ban"></i></button>
+                <button class="btn btn-start-mowing" onclick="startMowing()"><i class="fas fa-play"></i></button>
+                <button class="btn btn-stop-mowing" onclick="stopMowing()"><i class="fas fa-pause"></i></button>
             </div>
         </div>
         <div class="video-stream">
             <img id="video" src="{{ url_for('video_feed') }}" />
         </div>
     </div>
-    <div class="controller">
-        <button class="btn btn-up" onclick="move('forward')"><i class="fas fa-arrow-up"></i></button>
-        <button class="btn btn-left" onclick="move('left')"><i class="fas fa-arrow-left"></i></button>
-        <button class="btn btn-down" onclick="move('backward')"><i class="fas fa-arrow-down"></i></button>
-        <button class="btn btn-right" onclick="move('right')"><i class="fas fa-arrow-right"></i></button>
-        <button class="btn btn-stop" onclick="move('stop')"><i class="fas fa-stop"></i></button>
-    </div>
-    <div class="mower-controls">
-        <button class="btn btn-blades-on" onclick="toggle_mower_blades('on')"><i class="fas fa-power-off"></i></button>
-        <button class="btn btn-blades-off" onclick="toggle_mower_blades('off')"><i class="fas fa-ban"></i></button>
-        <button class="btn btn-start-mowing" onclick="startMowing()"><i class="fas fa-play"></i></button>
-        <button class="btn btn-stop-mowing" onclick="stopMowing()"><i class="fas fa-pause"></i></button>
-    </div>
-    <img id="video" src="{{ url_for('video_feed') }}" />
-
     <script>
         function move(direction) {
             fetch('/move', {
