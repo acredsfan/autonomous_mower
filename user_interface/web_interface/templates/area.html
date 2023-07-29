@@ -7,14 +7,22 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         let areaCoordinates = [];
+        let map;
+        let marker;
 
         function initMap() {
             const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
-            const map = new google.maps.Map(document.getElementById('map'), {
+            map = new google.maps.Map(document.getElementById('map'), {  // Use the global map variable
                 zoom: 8,
                 tilt: 0,
                 view: 'satellite',
                 disableDefaultUI: true
+            });
+
+            marker = new google.maps.Marker({
+                position: defaultCoordinates,
+                map: map,
+                title: 'Robot location'
             });
 
             const drawingManager = new google.maps.drawing.DrawingManager({
@@ -37,6 +45,20 @@
                 }));
                 document.getElementById('confirm-button').disabled = false;
             });
+
+            // Fetch the polygon data and create a polygon
+            fetch('/get-mowing-area')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const polygon = new google.maps.Polygon({
+                            paths: data,
+                            editable: true
+                        });
+                        polygon.setMap(map);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
 
         function confirm_button() {
@@ -51,6 +73,22 @@
             document.head.appendChild(script);
         }
         
+        function updateMap() {
+            fetch('/api/gps')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        var myLatLng = new google.maps.LatLng(data.latitude, data.longitude);
+                        map.setCenter(myLatLng);
+                        marker.setPosition(myLatLng);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Call updateMap every 5 seconds
+        setInterval(updateMap, 5000);
+
         window.addEventListener('load', function() {
             loadScript();
             document.getElementById('confirm-button').addEventListener('click', confirm_button);
