@@ -90,3 +90,41 @@ input[type="text"], select {
 .text-color {
     color: #228B22; /* Change the color to your desired color */
 }
+
+.controller {
+    display: grid;
+    grid-template-areas:
+        'up up up'
+        'left stop right'
+        'down down down';
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    background-color: #228B22;
+    border: none;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 18px;
+    margin: 10px 2px;
+    cursor: pointer;
+    border-radius: 50%;
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.btn-up { grid-area: up; }
+.btn-left { grid-area: left; }
+.btn-down { grid-area: down; }
+.btn-right { grid-area: right; }
+.btn-stop { grid-area: stop; }
+
+/* Font Awesome Icons */
+.fas {
+    font-size: 24px;
+}

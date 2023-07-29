@@ -2,6 +2,13 @@
 
 {% block content %}
     <h1>Control</h1>
+    <div class="controller">
+        <button class="btn btn-up" onclick="move('forward')"><i class="fas fa-arrow-up"></i></button>
+        <button class="btn btn-left" onclick="move('left')"><i class="fas fa-arrow-left"></i></button>
+        <button class="btn btn-down" onclick="move('backward')"><i class="fas fa-arrow-down"></i></button>
+        <button class="btn btn-right" onclick="move('right')"><i class="fas fa-arrow-right"></i></button>
+        <button class="btn btn-stop" onclick="move('stop')"><i class="fas fa-stop"></i></button>
+    </div>
     <button onclick="move('forward')">Move Forward</button>
     <button onclick="move('backward')">Move Backward</button>
     <button onclick="move('left')">Turn Left</button>
