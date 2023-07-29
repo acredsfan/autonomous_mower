@@ -137,6 +137,28 @@ input[type="text"], select {
 .btn-start-mowing { background-color: #006400; } /* DarkGreen for start mowing */
 .btn-stop-mowing { background-color: #8B4513; } /* SaddleBrown for stop mowing */
 
+.main-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 20px;
+}
+
+.control-panel {
+    flex: 1;
+    max-width: 600px; /* Adjust as needed */
+}
+
+.video-stream {
+    flex: 1;
+    max-width: 600px; /* Adjust as needed */
+}
+
+#video {
+    width: 100%;
+    height: auto;
+}
+
 /* Font Awesome Icons */
 .fas {
     font-size: 24px;
