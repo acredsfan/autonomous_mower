@@ -74,6 +74,32 @@ class MotorController:
         MotorController.set_motor_direction(direction)
         MotorController.set_motor_speed(right_speed, left_speed)
 
+    @staticmethod
+    def set_motor_direction_degrees(direction_degrees):
+        # Normalize the direction to the range [-180, 180]
+        direction_degrees = ((direction_degrees + 180) % 360) - 180
+
+        # Calculate the motor speeds based on the direction
+        if direction_degrees < -90:
+            # Turn left
+            right_speed = 100
+            left_speed = 100 + (direction_degrees + 90) * 2
+        elif direction_degrees < 0:
+            # Turn slightly left
+            right_speed = 100
+            left_speed = 100 + direction_degrees * 2
+        elif direction_degrees < 90:
+            # Turn slightly right
+            left_speed = 100
+            right_speed = 100 - direction_degrees * 2
+        else:
+            # Turn right
+            left_speed = 100
+            right_speed = 100 - (direction_degrees - 90) * 2
+
+        # Set the motor speeds
+        MotorController.set_motor_speed(right_speed, left_speed)
+
 # Test the motors
 # try:
 #     print("Testing the motors")

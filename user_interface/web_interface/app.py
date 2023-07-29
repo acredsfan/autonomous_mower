@@ -39,6 +39,13 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 first_request = True
 
+def init_web_interface():
+    global app
+    app = Flask(__name__)
+
+def start_web_interface():
+    app.run(host='0.0.0.0', port=90, debug=true)
+
 def update_sensors():
     global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
 

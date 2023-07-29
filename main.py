@@ -2,7 +2,7 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import localization, path_planning, gps_interface
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
-from user_interface import web_interface, mobile_app
+from user_interface.web_interface import init_web_interface, start_web_interface
 import time
 import datetime
 import threading
@@ -12,6 +12,9 @@ import subprocess
 mow_days = ["Monday", "Wednesday", "Friday"]  # Mow on these days by default
 mow_hours = "08:00"  # Mow at this time by default
 path_finding_thread = None  # Initialize path_finding_thread to None
+
+# Initialize the web interface
+init_web_interface()
 
 def main():
   # Initialization code...
@@ -74,6 +77,9 @@ def main():
 
     # Add a delay to control the loop execution rate
     time.sleep(0.1)
+
+# Start the web interface
+start_web_interface()
 
 # Wrap the main function call in a try-except block to handle exceptions (issue #5)
 try:
