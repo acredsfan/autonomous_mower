@@ -7,7 +7,7 @@ import time
 import numpy as np
 from hardware_interface import motor_controller
 from navigation_system import localization
-from obstacle_detection import direction_controller, sensor_interface
+from control_system import direction_controller
 
 # Constants
 MIN_DISTANCE_TO_OBSTACLE = 30  # in centimeters
