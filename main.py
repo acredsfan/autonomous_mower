@@ -2,6 +2,7 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import localization, path_planning, gps_interface
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
+from multiprocessing import Process
 from user_interface.web_interface.app import init_web_interface, start_web_interface
 import time
 import datetime
@@ -20,8 +21,21 @@ def main():
   # Start the Flask app in a separate process
   # global flask_app_process
   # flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
-  flask_app_thread = threading.Thread(target=start_web_interface)
-  flask_app_thread.start()
+  if __name__ == "__main__":
+      # Initialize the web interface
+      init_web_interface()
+
+      # Start the Flask app in a separate process
+      flask_app_process = Process(target=start_web_interface)
+      flask_app_process.start()
+
+      try:
+          main()
+      except Exception as e:
+          print(f"An error occurred: {e}")
+          # If an error occurs, terminate the Flask app process
+          if flask_app_process.is_alive():
+              flask_app_process.terminate()
   
   mowing_requested = False
   mower_blades_on = False
