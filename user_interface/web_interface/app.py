@@ -39,12 +39,16 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 first_request = True
 
-def init_web_interface():
-    global app
-    app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
-
 def start_web_interface():
+    # Start the sensor update thread
+    sensor_thread = threading.Thread(target=update_sensors)
+    sensor_thread.start()
+
     app.run(host='0.0.0.0', port=90, debug=True)
+
+    # Set the flag to stop the sensor update thread
+    stop_sensor_thread = True
+    sensor_thread.join()  # Wait for the thread to finish
 
 def update_sensors():
     global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
