@@ -1,19 +1,22 @@
 from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import localization, path_planning, gps_interface
-from obstacle_detection import camera_processing, tof_processing, avoidance_algorithm
+from obstacle_detection import CameraProcessing, TOFProcessing, AvoidanceAlgorithm
 from user_interface import web_interface, mobile_app
 import time
 import datetime
 import threading
+import subprocess
 
 # Initialize mow_days and mow_hours with default values at the beginning of your script
 mow_days = ["Monday", "Wednesday", "Friday"]  # Mow on these days by default
 mow_hours = "08:00"  # Mow at this time by default
+path_finding_thread = None  # Initialize path_finding_thread to None
 
 def main():
   # Initialization code...
-
+  # Start the Flask app in a separate process
+  flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
   mowing_requested = False
   mower_blades_on = False
 
@@ -54,7 +57,7 @@ def main():
     # Plan the path
     robot_position = localization.get_current_position()
     goal = localization.get_target_position()
-    obstacles = avoidance_algorithm.get_obstacle_data()
+    obstacles = AvoidanceAlgorithm.get_obstacle_data()
     path = path_planning.plan_path(robot_position, goal, obstacles)
 
     # Move the robot along the path - use threading for concurrent obstacle detection (issue #4)
@@ -63,7 +66,7 @@ def main():
       path_following_thread.start()
 
     # Check for obstacles and update the path if needed
-    obstacles_detected = avoidance_algorithm.detect_obstacles()
+    obstacles_detected = AvoidanceAlgorithm.detect_obstacles()
     if obstacles_detected and path_following_thread.is_alive():
       # Update the path to avoid obstacles
       path = path_planning.plan_path(robot_position, goal, obstacles_detected)
@@ -77,3 +80,5 @@ try:
     main()
 except Exception as e:
   print(f"An error occurred: {e}")
+  # If an error occurs, terminate the Flask app process
+  flask_app_process.terminate()
