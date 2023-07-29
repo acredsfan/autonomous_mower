@@ -162,8 +162,9 @@ def get_mowing_area():
 
 @app.route('/get-path', methods=['GET'])
 def get_path():
-    # Generate the path
-    path = path_planning.get_path()
+    start = ... #Determine start position
+    goal = ... #Determine goal position
+    path = path_planning.get_path(start, goal)
     return jsonify(path)
 
 @app.route('/save-mowing-area', methods=['POST'])
