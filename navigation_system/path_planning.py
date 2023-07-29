@@ -29,7 +29,7 @@ user_polygon = None
 obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
 
 class PathPlanning:
-    def __init__(self):
+    def __init__(self, start, goal):  # added start and goal as parameters to the constructor
         self.start = start
         self.goal = goal
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
@@ -39,6 +39,7 @@ class PathPlanning:
         global user_polygon
         user_polygon = Polygon(polygon_coordinates)
 
+    # This function generates a grid with marked obstacles
     def generate_grid(self, obstacles):
         grid = np.zeros(GRID_SIZE, dtype=np.uint8)
 
@@ -55,6 +56,7 @@ class PathPlanning:
 
         return grid
 
+    # This function plans the path using A* algorithm
     def plan_path(self, start, goal, obstacles):
         if not user_polygon:
             raise Exception("User polygon not set")
@@ -70,6 +72,7 @@ class PathPlanning:
 
         return path
 
+    # This function updates the obstacle map
     def update_obstacle_map(self, new_obstacles):
         for obstacle in new_obstacles:
             # Add the obstacle to the map
@@ -85,6 +88,7 @@ class PathPlanning:
             self.plan_path(self.start, self.goal, new_obstacles)
         self.obstacle_map = obstacle_map
 
+    # This function calculates the reward based on the action taken
     def reward_function(self, old_state, new_state, action):
         if new_state == 'goal':
             return 100
@@ -95,6 +99,7 @@ class PathPlanning:
         else:
             return -1
 
+    # This function determines the new state based on the action taken
     def take_action(self, state, action):
         if action == 'up':
             new_state = (state[0] - 1, state[1])
@@ -117,6 +122,7 @@ class PathPlanning:
 
         return new_state
 
+    # This function implements the Q-Learning algorithm
     def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
         q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
 
@@ -161,6 +167,7 @@ class PathPlanning:
             path.append(state)
         return path
     
+    # This function gets the path using Q-Learning algorithm
     def get_path(self):
         # Run Q-Learning algorithm
         path = self.q_learning(self.start, self.goal, self.obstacles)
@@ -173,8 +180,8 @@ class PathPlanning:
             
         return path_coords
     
+    # This function converts a grid cell to a (lat, lng) coordinate
     def grid_to_coord(self, cell):
-        # Convert a grid cell to a (lat, lng) coordinate
         lat = cell[0] * self.lat_grid_size + self.min_lat
         lng = cell[1] * self.lng_grid_size + self.min_lng
         return {"lat": lat, "lng": lng}
@@ -182,7 +189,7 @@ class PathPlanning:
 
 # Example usage
 if __name__ == "__main__":
-    path_planner = PathPlanning()
+    path_planner = PathPlanning((10, 10), (90, 90))  # Pass start and goal to the constructor
 
     # Set user polygon
     path_planner.set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
