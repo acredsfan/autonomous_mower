@@ -9,10 +9,11 @@ from dotenv import load_dotenv
 from camera import VideoCamera
 import time
 import threading
-from navigation_system import PathPlanning
+from navigation_system import PathPlanning, GPSInterface
 
 app = Flask(__name__)
 sensors = SensorInterface()
+gps = GPSInterface()
 
 # Define variables to hold sensor values
 battery_charge = {}
@@ -174,6 +175,14 @@ def save_mowing_area():
     with open('user_polygon.json', 'w') as f:
         json.dump(coordinates, f)
     return jsonify({'message': 'Area saved.'})
+
+@app.route('/api/gps', methods=['GET'])
+def get_gps():
+    data = gps.read_gps_data()
+    if data:
+        return jsonify({'latitude': data['latitude'], 'longitude': data['longitude']})
+    else:
+        return jsonify({'error': 'No GPS data available'})
 
 def set_motor_direction(direction):
     # Set the motor direction
