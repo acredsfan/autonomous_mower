@@ -4,7 +4,8 @@
 #IMPORTS
 # IMPORTS
 import threading
-from  obstacle_detection import ObstacleAvoidance, CameraProcessor
+import tof_processing
+import camera_processing
 from hardware_interface import MotorController
 import json
 import time
@@ -18,8 +19,8 @@ MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:
     def __init__(self):
-        self.tof_avoidance = ObstacleAvoidance()
-        self.camera_processor = CameraProcessor()
+        self.tof_avoidance = tof_processing()
+        self.camera_processor = camera_processing()
         self.obstacle_detected = False
 
     def _tof_avoidance_thread(self):
