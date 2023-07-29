@@ -6,7 +6,6 @@ from user_interface.web_interface.app import init_web_interface, start_web_inter
 import time
 import datetime
 import threading
-import subprocess
 
 # Initialize mow_days and mow_hours with default values at the beginning of your script
 mow_days = ["Monday", "Wednesday", "Friday"]  # Mow on these days by default
@@ -19,8 +18,11 @@ init_web_interface()
 def main():
   # Initialization code...
   # Start the Flask app in a separate process
-  global flask_app_process
-  flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
+  # global flask_app_process
+  # flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
+  flask_app_thread = threading.Thread(target=start_web_interface)
+  flask_app_thread.start()
+  
   mowing_requested = False
   mower_blades_on = False
 
