@@ -46,7 +46,11 @@ def update_sensors():
         # Update sensor values
         battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
         solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
-        speed = {"speed": gps.read_gps_data()}
+        gps_data = gps.read_gps_data()
+        if gps_data is not None:
+            speed = {"speed": gps_data['speed']}
+        else:
+            speed = {"speed": None}
         heading = {"heading": sensors.read_mpu9250_compass()}
         bme280_data = sensors.read_bme280()
         if bme280_data is not None:
