@@ -9,6 +9,8 @@ import camera_processing
 from hardware_interface import MotorController
 import json
 import time
+import sys
+sys.path.append('home/pi/autonomous_mower/obstacle_detection/')
 
 with open("config.json") as f:
     config = json.load(f)
