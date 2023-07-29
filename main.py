@@ -19,23 +19,8 @@ init_web_interface()
 def main():
   # Initialization code...
   # Start the Flask app in a separate process
-  # global flask_app_process
-  # flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
-  if __name__ == "__main__":
-      # Initialize the web interface
-      init_web_interface()
-
-      # Start the Flask app in a separate process
-      flask_app_process = Process(target=start_web_interface)
-      flask_app_process.start()
-
-      try:
-          main()
-      except Exception as e:
-          print(f"An error occurred: {e}")
-          # If an error occurs, terminate the Flask app process
-          if flask_app_process.is_alive():
-              flask_app_process.terminate()
+  flask_app_process = Process(target=start_web_interface)
+  flask_app_process.start()
   
   mowing_requested = False
   mower_blades_on = False
@@ -98,11 +83,11 @@ def main():
 start_web_interface()
 
 # Wrap the main function call in a try-except block to handle exceptions (issue #5)
-try:
-  if __name__ == "__main__":
-    main()
-except Exception as e:
-  print(f"An error occurred: {e}")
-  # If an error occurs, terminate the Flask app process
-  if flask_app_process is not None:
-    flask_app_process.terminate()
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        # If an error occurs, terminate the Flask app process
+        if 'flask_app_process' in locals() and flask_app_process.is_alive():
+            flask_app_process.terminate()
