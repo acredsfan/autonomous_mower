@@ -6,7 +6,7 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 import subprocess
 import os
 from dotenv import load_dotenv
-from camera import VideoCamera
+from .camera import VideoCamera
 import time
 import threading
 from navigation_system import PathPlanning, GPSInterface
