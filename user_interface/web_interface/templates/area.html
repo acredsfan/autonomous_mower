@@ -13,7 +13,8 @@
         function initMap() {
             const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
             map = new google.maps.Map(document.getElementById('map'), {  // Use the global map variable
-                zoom: 8,
+                zoom: 15,
+                center: defaultCoordinates,
                 tilt: 0,
                 view: 'satellite',
                 disableDefaultUI: true
