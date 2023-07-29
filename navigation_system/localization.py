@@ -1,7 +1,7 @@
 # Import required modules
 import math
 import time
-from hardware_interface import sensor_interface
+from hardware_interface import SensorInterface
 from gps_interface import GPSInterface  # Import the GPSInterface from gps_interface.py
 
 # Global variables
@@ -44,7 +44,7 @@ class Localization:
     def estimate_orientation(self):
         global current_heading
 
-        compass_data = sensor_interface.read_mpu9250_compass()
+        compass_data = SensorInterface.read_mpu9250_compass()
 
         try:
             current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
