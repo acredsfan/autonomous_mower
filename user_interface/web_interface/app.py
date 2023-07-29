@@ -31,6 +31,7 @@ stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
+path_planning = PathPlanning()
 
 dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
 load_dotenv(dotenv_path)
@@ -162,7 +163,7 @@ def get_mowing_area():
 @app.route('/get-path', methods=['GET'])
 def get_path():
     # Generate the path
-    path = PathPlanning.get_path()
+    path = path_planning.get_path()
     return jsonify(path)
 
 @app.route('/save-mowing-area', methods=['POST'])
