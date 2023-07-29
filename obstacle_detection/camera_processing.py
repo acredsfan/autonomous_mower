@@ -9,7 +9,7 @@ class CameraProcessor:
     def __init__(self, resolution=(640, 480), framerate=30):
         self.resolution = resolution
         self.framerate = framerate
-        self.camera = cv2.VideoCapture(0)
+        self.camera = cv2.VideoCapture('v4l2src device=/dev/video0 ! videoconvert ! appsink', cv2.CAP_GSTREAMER)
         self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, resolution[0])
         self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, resolution[1])
         self.camera.set(cv2.CAP_PROP_FPS, framerate)
