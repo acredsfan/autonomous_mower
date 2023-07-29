@@ -4,10 +4,10 @@
 #IMPORTS
 # IMPORTS
 import threading
-from tof_processing import ObstacleAvoidance as ToFAvoidance
-from camera_processing import CameraProcessor
-from motor_controller import init_motor_controller, set_motor_speed, set_motor_direction, stop_motors, cleanup
+from  obstacle_detection import TOFProcessing, CameraProcessing
+from hardware_interface import MotorController
 import json
+import time
 
 with open("config.json") as f:
     config = json.load(f)
@@ -18,11 +18,9 @@ MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:
     def __init__(self):
-        self.tof_avoidance = ToFAvoidance()
-        self.camera_processor = CameraProcessor()
+        self.tof_avoidance = TOFProcessing()
+        self.camera_processor = CameraProcessing()
         self.obstacle_detected = False
-
-        init_motor_controller()
 
     def _tof_avoidance_thread(self):
         """Run the Time of Flight obstacle avoidance in a separate thread."""
@@ -46,24 +44,24 @@ class AvoidanceAlgorithm:
         tof_thread.start()
 
         try:
-            set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
-            set_motor_direction("forward")
+            MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
+            MotorController.set_motor_direction("forward")
 
             while True:
                 self.check_camera_obstacles()
 
                 if self.tof_avoidance.obstacle_left or self.tof_avoidance.obstacle_right or self.obstacle_detected:
                     # Handle obstacle avoidance here
-                    stop_motors()
-                    set_motor_direction("backward")
-                    set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
+                    MotorController.stop_motors
+                    MotorController.set_motor_direction("backward")
+                    MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
                     time.sleep(1)
 
-                    set_motor_direction("left" if self.tof_avoidance.obstacle_left else "right")
+                    MotorController.set_motor_direction("left" if self.tof_avoidance.obstacle_left else "right")
                     time.sleep(0.5)
 
-                    set_motor_direction("forward")
-                    set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
+                    MotorController.set_motor_direction("forward")
+                    MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
 
                 else:
                     # No obstacles detected
@@ -74,10 +72,10 @@ class AvoidanceAlgorithm:
             print("Stopping the avoidance algorithm...")
 
         finally:
-            stop_motors()
+            MotorController.stop_motors()
             self.camera_processor.close()
             tof_thread.join()
-            cleanup()
+            self.cleanup()
 
 if __name__ == "__main__":
     avoidance_algorithm = AvoidanceAlgorithm()
