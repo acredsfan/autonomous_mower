@@ -30,8 +30,6 @@ obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
 
 class PathPlanning:
     def __init__(self, start, goal):  # added start and goal as parameters to the constructor
-        self.start = start
-        self.goal = goal
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
         self.last_action = None
 
@@ -170,7 +168,7 @@ class PathPlanning:
     # This function gets the path using Q-Learning algorithm
     def get_path(self):
         # Run Q-Learning algorithm
-        path = self.q_learning(self.start, self.goal, self.obstacles)
+        path = self.q_learning(start, goal, self.obstacles)
 
         # Convert the result into a list of (lat, lng) coordinates
         path_coords = []
