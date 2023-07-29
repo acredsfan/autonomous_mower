@@ -5,7 +5,7 @@
 #IMPORTS
 import time
 import numpy as np
-from hardware_interface import motor_controller
+from hardware_interface import MotorController
 from navigation_system import localization
 from control_system import direction_controller
 
@@ -65,11 +65,11 @@ class TrajectoryController:
         """
         Adjust the robot's speed and direction to follow the calculated trajectory.
         """
-        motor_controller.set_motor_direction(angle_to_target)
-        motor_controller.set_motor_speed(SPEED)
-        time_to_move = distance_to_target / motor_controller.get_speed_in_cm_per_second(SPEED)
+        MotorController.set_motor_direction(angle_to_target)
+        MotorController.set_motor_speed(SPEED)
+        time_to_move = distance_to_target / MotorController.get_speed_in_cm_per_second(SPEED)
         time.sleep(time_to_move)
-        motor_controller.set_motor_speed(0)
+        MotorController.set_motor_speed(0)
 
     def execute(self):
         """
@@ -103,4 +103,4 @@ class TrajectoryController:
         return distance_to_waypoint <= WAYPOINT_REACHED_THRESHOLD
 
     # Stop the robot when the path is complete
-    motor_controller.set_motor_speed(0,0)
+    MotorController.set_motor_speed(0,0)
