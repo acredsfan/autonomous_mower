@@ -44,7 +44,7 @@ def init_web_interface():
     app = Flask(__name__)
 
 def start_web_interface():
-    app.run(host='0.0.0.0', port=90, debug=true)
+    app.run(host='0.0.0.0', port=90, debug=True)
 
 def update_sensors():
     global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
