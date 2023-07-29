@@ -3,7 +3,7 @@
 
 #IMPORTS
 import time
-from sensor_interface import read_vl53l0x_left, read_vl53l0x_right
+from hardware_interface import SensorInterface
 
 # Constants
 MIN_DISTANCE_THRESHOLD = 150  # Minimum distance to consider an obstacle in millimeters
@@ -16,8 +16,8 @@ class ObstacleAvoidance:
 
     def _update_obstacle_status(self):
         """Update the obstacle status based on the VL53L0X sensor readings."""
-        left_distance = read_vl53l0x_left()
-        right_distance = read_vl53l0x_right()
+        left_distance = SensorInterface.read_vl53l0x_left()
+        right_distance = SensorInterface.read_vl53l0x_right()
 
         self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
         self.obstacle_right = right_distance < MIN_DISTANCE_THRESHOLD
