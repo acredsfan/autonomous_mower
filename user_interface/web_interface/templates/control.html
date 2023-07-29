@@ -9,10 +9,12 @@
         <button class="btn btn-right" onclick="move('right')"><i class="fas fa-arrow-right"></i></button>
         <button class="btn btn-stop" onclick="move('stop')"><i class="fas fa-stop"></i></button>
     </div>
-    <button onclick="toggle_mower_blades('on')">Turn Mower Blades On</button>
-    <button onclick="toggle_mower_blades('off')">Turn Mower Blades Off</button>
-    <button onclick="startMowing()">Start Mowing</button>
-    <button onclick="stopMowing()">Stop Mowing</button>
+    <div class="mower-controls">
+        <button class="btn btn-blades-on" onclick="toggle_mower_blades('on')"><i class="fas fa-power-off"></i></button>
+        <button class="btn btn-blades-off" onclick="toggle_mower_blades('off')"><i class="fas fa-ban"></i></button>
+        <button class="btn btn-start-mowing" onclick="startMowing()"><i class="fas fa-play"></i></button>
+        <button class="btn btn-stop-mowing" onclick="stopMowing()"><i class="fas fa-pause"></i></button>
+    </div>
     <img id="video" src="{{ url_for('video_feed') }}" />
 
     <script>

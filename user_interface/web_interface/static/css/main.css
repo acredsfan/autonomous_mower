@@ -124,6 +124,19 @@ input[type="text"], select {
 .btn-right { grid-area: right; }
 .btn-stop { grid-area: stop; }
 
+.mower-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-blades-on { background-color: #228B22; } /* Green for blades on */
+.btn-blades-off { background-color: #8B0000; } /* Red for blades off */
+.btn-start-mowing { background-color: #006400; } /* DarkGreen for start mowing */
+.btn-stop-mowing { background-color: #8B4513; } /* SaddleBrown for stop mowing */
+
 /* Font Awesome Icons */
 .fas {
     font-size: 24px;
