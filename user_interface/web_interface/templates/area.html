@@ -13,11 +13,12 @@
         function initMap() {
             const defaultCoordinates = {lat: 39.039547, lng: -84.228918};
             map = new google.maps.Map(document.getElementById('map'), {  // Use the global map variable
-                zoom: 15,
+                zoom: 18,  // Adjust this value as needed
                 center: defaultCoordinates,
                 tilt: 0,
                 view: 'satellite',
-                disableDefaultUI: true
+                disableDefaultUI: true,
+                center: defaultCoordinates
             });
 
             marker = new google.maps.Marker({
