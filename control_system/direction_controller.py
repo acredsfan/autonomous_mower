@@ -3,8 +3,11 @@
 # Running on Raspberry Pi 4B 2GB RAM with Raspbian Bullseye OS
 
 import time
-import motor_controller
-import sensor_interface
+from hardware_interface import SensorInterface, MotorController
+
+# Initialize the hardware interface
+sensor_interface = SensorInterface()
+motor_controller = MotorController()
 
 # Set the distance threshold for obstacle avoidance (in millimeters)
 DISTANCE_THRESHOLD = 300

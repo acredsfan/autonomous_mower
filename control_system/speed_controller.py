@@ -3,7 +3,7 @@
 # Running on Raspberry Pi 4B 2GB RAM with Raspbian Bullseye OS
 
 import time
-import motor_controller
+from hardware_interface import MotorController
 
 # Set default speed limits
 MIN_SPEED = 0
@@ -20,7 +20,7 @@ class SpeedController:
     # Function to accelerate the motors to the target speed
     def accelerate_to_target_speed(target_left_speed, target_right_speed):
         current_left_speed, current_right_speed = MIN_SPEED, MIN_SPEED
-        motor_controller.set_motor_speed(current_left_speed, current_right_speed)
+        MotorController.set_motor_speed(current_left_speed, current_right_speed)
 
         while current_left_speed < target_left_speed or current_right_speed < target_right_speed:
             if current_left_speed < target_left_speed:
@@ -29,12 +29,12 @@ class SpeedController:
             if current_right_speed < target_right_speed:
                 current_right_speed = min(current_right_speed + ACCELERATION_RATE, target_right_speed)
 
-            motor_controller.set_motor_speed(current_left_speed, current_right_speed)
+            MotorController.set_motor_speed(current_left_speed, current_right_speed)
             time.sleep(TIME_INTERVAL)
 
     # Function to decelerate the motors to the target speed
     def decelerate_to_target_speed(target_left_speed, target_right_speed):
-        current_left_speed, current_right_speed = motor_controller.get_motor_speed()
+        current_left_speed, current_right_speed = MotorController.get_motor_speed()
 
         while current_left_speed > target_left_speed or current_right_speed > target_right_speed:
             if current_left_speed > target_left_speed:
@@ -43,7 +43,7 @@ class SpeedController:
             if current_right_speed > target_right_speed:
                 current_right_speed = max(current_right_speed - DECELERATION_RATE, target_right_speed)
 
-            motor_controller.set_motor_speed(current_left_speed, current_right_speed)
+            MotorController.set_motor_speed(current_left_speed, current_right_speed)
             time.sleep(TIME_INTERVAL)
 
     # Function to set the speed of the motors with smooth acceleration and deceleration

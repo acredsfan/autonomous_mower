@@ -1,4 +1,4 @@
-from hardware_interface import motor_controller, sensor_interface, blade_controller
+from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import localization, path_planning, gps_interface
 from obstacle_detection import camera_processing, tof_processing, avoidance_algorithm
@@ -20,13 +20,13 @@ def main():
   # Main loop
   while True:
     # Check if ideal mowing conditions are met
-    if sensor_interface.ideal_mowing_conditions():
+    if SensorInterface.ideal_mowing_conditions():
       if not mower_blades_on:  # New condition to turn on mower blades
-        relay_controller.set_mower_blades("on")
+        BladeController.set_speed(90)
         mower_blades_on = True
     else:
       if mower_blades_on:  # New condition to turn off mower blades
-        relay_controller.set_mower_blades("off")
+        BladeController.set_speed(0)
         mower_blades_on = False
       # Wait for ideal conditions
       time.sleep(60)
@@ -38,15 +38,15 @@ def main():
     current_time = now.strftime("%H:%M")
     if weekday in mow_days and (current_time == mow_hours or mowing_requested):
       if not mower_blades_on:
-        relay_controller.set_mower_blades("on")
+        BladeController.set_speed(90)
         mower_blades_on = True
     else:
       if mower_blades_on:
-        relay_controller.set_mower_blades("off")
+        BladeController.set_speed(0)
         mower_blades_on = False
 
     # Update sensor data
-    sensor_interface.update_sensor_data()
+    SensorInterface.update_sensor_data()
 
     # Update localization
     localization.update_localization()
