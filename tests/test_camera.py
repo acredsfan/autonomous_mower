@@ -1,16 +1,12 @@
 import cv2
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0)  # Change the number to test other devices
 
-while(True):
-    # Capture frame-by-frame
-    ret, frame = cap.read()
+ret, frame = cap.read()
 
-    # Display the resulting frame
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+if ret:
+    cv2.imwrite('test_image.jpg', frame)
+else:
+    print('Failed to capture image')
 
-# When everything done, release the capture
 cap.release()
-cv2.destroyAllWindows()
