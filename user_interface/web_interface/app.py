@@ -69,7 +69,7 @@ def sensor_data():
     sensor_data = {
         'battery_voltage': sensors.read_ina3221(3),
         'solar_voltage': sensors.read_ina3221(1),
-        'speed': gps.read_gps_data(speed),
+        'speed': gps.read_gps_data(),
         'heading': sensors.read_mpu9250_compass(),
         'temperature': bme280_data['temperature_f'],
         'humidity': bme280_data['humidity'],
