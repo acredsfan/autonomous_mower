@@ -65,11 +65,11 @@ class TrajectoryController:
         """
         Adjust the robot's speed and direction to follow the calculated trajectory.
         """
-        MotorController.set_motor_direction(angle_to_target)
-        MotorController.set_motor_speed(SPEED)
+        MotorController.set_motor_direction_degrees(angle_to_target)
+        MotorController.set_motor_speed(SPEED, SPEED)
         time_to_move = distance_to_target / MotorController.get_speed_in_cm_per_second(SPEED)
         time.sleep(time_to_move)
-        MotorController.set_motor_speed(0)
+        MotorController.set_motor_speed(0, 0)
 
     def execute(self):
         """
@@ -103,4 +103,4 @@ class TrajectoryController:
         return distance_to_waypoint <= WAYPOINT_REACHED_THRESHOLD
 
     # Stop the robot when the path is complete
-    MotorController.set_motor_speed(0,0)
+    MotorController.set_motor_speed(0, 0)
