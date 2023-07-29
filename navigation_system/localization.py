@@ -2,7 +2,7 @@
 import math
 import time
 from hardware_interface import SensorInterface
-from gps_interface import GPSInterface  # Import the GPSInterface from gps_interface.py
+from navigation_system import GPSInterface
 
 # Global variables
 current_latitude = 0
