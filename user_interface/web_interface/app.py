@@ -99,7 +99,6 @@ def control():
 def area():
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
-
 @app.route('/settings')
 def settings():
     return render_template('settings.html')
