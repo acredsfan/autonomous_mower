@@ -41,7 +41,7 @@ first_request = True
 
 def init_web_interface():
     global app
-    app = Flask(__name__)
+    app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/templates')
 
 def start_web_interface():
     app.run(host='0.0.0.0', port=90, debug=True)
