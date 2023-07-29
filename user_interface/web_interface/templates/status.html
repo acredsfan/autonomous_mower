@@ -1,57 +1,58 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Status</h1>
-    <div class="status-grid">
-        <div class="status-item">
-            <span class="status-label">Battery Status</span>
-            <span id="battery-voltage" class="status-value">Loading...</span>
-            <span id="battery-current" class="status-value">Loading...</span>
-            <span id="battery-charge-level" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Solar Panel Status</span>
-            <span id="solar-voltage" class="status-value">Loading...</span>
-            <span id="solar-current" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Speed</span>
-            <span id="speed" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Heading</span>
-            <span id="heading" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Temperature</span>
-            <span id="temperature" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Humidity</span>
-            <span id="humidity" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Pressure</span>
-            <span id="pressure" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Left Distance</span>
-            <span id="left-distance" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Right Distance</span>
-            <span id="right-distance" class="status-value">Loading...</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Mowing status</span>
-            <span class="status-value">{{ mowing_status }}</span>
-        </div>
-        <div class="status-item">
-            <span class="status-label">Next scheduled mow</span>
-            <span class="status-value">{{ next_scheduled_mow }}</span>
-        </div>
-    </div>
-    <img id="video" src="{{ url_for('video_feed') }}" />
+<h1>Status</h1>
+<table class="status-table">
+    <tr>
+        <td class="status-label">Battery Status</td>
+        <td id="battery-voltage" class="status-value">Loading...</td>
+        <td id="battery-current" class="status-value">Loading...</td>
+        <td id="battery-charge-level" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Solar Panel Status</td>
+        <td id="solar-voltage" class="status-value">Loading...</td>
+        <td id="solar-current" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Speed</td>
+        <td id="speed" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Heading</td>
+        <td id="heading" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Temperature</td>
+        <td id="temperature" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Humidity</td>
+        <td id="humidity" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Pressure</td>
+        <td id="pressure" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Left Distance</td>
+        <td id="left-distance" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Right Distance</td>
+        <td id="right-distance" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Mowing status</td>
+        <td class="status-value">{{ mowing_status }}</td>
+    </tr>
+    <tr>
+        <td class="status-label">Next scheduled mow</td>
+        <td class="status-value">{{ next_scheduled_mow }}</td>
+    </tr>
+</table>
+<img id="video" src="{{ url_for('video_feed') }}" />
+
     <script>
         function updateSensorData() {
             // Make an AJAX request to retrieve the updated sensor data
