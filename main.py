@@ -1,7 +1,7 @@
 from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import localization, path_planning, gps_interface
-from obstacle_detection import CameraProcessing, TOFProcessing, AvoidanceAlgorithm
+from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
 from user_interface import web_interface, mobile_app
 import time
 import datetime
