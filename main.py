@@ -16,6 +16,7 @@ path_finding_thread = None  # Initialize path_finding_thread to None
 def main():
   # Initialization code...
   # Start the Flask app in a separate process
+  global flask_app_process
   flask_app_process = subprocess.Popen(['python', 'user_interface/web_interface/app.py'])
   mowing_requested = False
   mower_blades_on = False
@@ -81,4 +82,5 @@ try:
 except Exception as e:
   print(f"An error occurred: {e}")
   # If an error occurs, terminate the Flask app process
-  flask_app_process.terminate()
+  if flask_app_process is not None:
+    flask_app_process.terminate()
