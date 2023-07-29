@@ -3,11 +3,11 @@
 
 #IMPORTS
 from .avoidance_algorithm import AvoidanceAlgorithm
-from .camera_processing import CameraProcessing
-from .tof_processing import TOFProcessing
+from .camera_processing import CameraProcessor
+from .tof_processing import ObstacleAvoidance
 
 __all__ = [
     'AvoidanceAlgorithm',
-    'CameraProcessing',
-    'TOFProcessing',
+    'CameraProcessor',
+    'ObstacleAvoidance',
 ]
