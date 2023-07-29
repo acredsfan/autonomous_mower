@@ -30,6 +30,8 @@ obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
 
 class PathPlanning:
     def __init__(self):
+        self.start = start
+        self.goal = goal
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
         self.last_action = None
 
