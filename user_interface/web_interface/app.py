@@ -11,7 +11,7 @@ import time
 import threading
 from navigation_system import PathPlanning, GPSInterface
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 sensors = SensorInterface()
 gps = GPSInterface()
 
