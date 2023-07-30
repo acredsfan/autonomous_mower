@@ -8,9 +8,9 @@ R_En1, L_En1 = 13, 13  # Motor 1 enable pins
 R_En2, L_En2 = 16, 16  # Motor 2 enable pins
 
 # Set up GPIO
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup([Prwm1, Lpwm1, Prwm2, Lpwm2, R_En1, L_En1, R_En2, L_En2], GPIO.OUT)
-GPIO.setwarnings(False)
 
 # Set up PWM
 pwm1 = GPIO.PWM(R_En1, 2000)  # 1000 Hz
