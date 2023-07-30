@@ -3,7 +3,7 @@ from control_system import trajectory_controller, speed_controller, direction_co
 from navigation_system import localization, path_planning, gps_interface
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
 from multiprocessing import Process
-from user_interface.web_interface.app import init_web_interface, start_web_interface
+from user_interface.web_interface.app import start_web_interface
 import time
 import datetime
 import threading
@@ -12,9 +12,6 @@ import threading
 mow_days = ["Monday", "Wednesday", "Friday"]  # Mow on these days by default
 mow_hours = "08:00"  # Mow at this time by default
 path_finding_thread = None  # Initialize path_finding_thread to None
-
-# Initialize the web interface
-init_web_interface()
 
 def main():
   # Initialization code...
@@ -85,9 +82,11 @@ start_web_interface()
 # Wrap the main function call in a try-except block to handle exceptions (issue #5)
 if __name__ == "__main__":
     try:
+        flask_app_process = Process(target=start_web_interface)
+        flask_app_process.start()
+
         main()
+
     except Exception as e:
         print(f"An error occurred: {e}")
-        # If an error occurs, terminate the Flask app process
-        if 'flask_app_process' in locals() and flask_app_process.is_alive():
-            flask_app_process.terminate()
+        flask_app_process.terminate()
