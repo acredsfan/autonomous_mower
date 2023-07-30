@@ -200,10 +200,7 @@ class PathPlanning:
             state = self.take_action(state, action)
             path.append(state)
         return path
-    
-    print(f"Start: {start}")
-    print(f"Goal: {goal}")
-    
+        
     # This function gets the path using Q-Learning algorithm
     def get_path(self, start, goal):  # added start and goal as parameters
         # Run Q-Learning algorithm
