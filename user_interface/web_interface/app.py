@@ -44,7 +44,7 @@ def start_web_interface():
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
-    app.run(host='0.0.0.0', port=90, debug=True)
+    app.run(host='0.0.0.0', port=90, debug=False)
 
     # Set the flag to stop the sensor update thread
     stop_sensor_thread = True
