@@ -25,7 +25,7 @@ def main():
   # Main loop
   while True:
     # Check if ideal mowing conditions are met
-    if SensorInterface.ideal_mowing_conditions(self):
+    if SensorInterface.ideal_mowing_conditions():
       if not mower_blades_on:  # New condition to turn on mower blades
         BladeController.set_speed(90)
         mower_blades_on = True
