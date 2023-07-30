@@ -76,9 +76,6 @@ def main():
     # Add a delay to control the loop execution rate
     time.sleep(0.1)
 
-# Start the web interface
-start_web_interface()
-
 # Wrap the main function call in a try-except block to handle exceptions (issue #5)
 if __name__ == "__main__":
     try:
