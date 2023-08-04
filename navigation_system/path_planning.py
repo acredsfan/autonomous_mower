@@ -227,6 +227,17 @@ class PathPlanning:
         lat = cell[0] * self.lat_grid_size + self.min_lat
         lng = cell[1] * self.lng_grid_size + self.min_lng
         return {"lat": lat, "lng": lng}
+    
+    
+    def get_start_and_goal(self):
+        current_position = self.get_current_position()
+        sections = self.divide_yard_into_sections()
+        next_section = self.select_next_section(current_position, sections)
+        
+        start = current_position
+        goal = self.calculate_goal_position(next_section)
+        
+        return start, goal
 
 
 # Example usage
