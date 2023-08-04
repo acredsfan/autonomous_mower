@@ -110,7 +110,7 @@ def index():
 @app.route('/status')
 def status():
 #    sensor_data = get_sensor_data()
-    next_scheduled_mow = calculate_next_scheduled_mow(mow_days, mow_hours)
+    next_scheduled_mow = calculate_next_scheduled_mow()
     return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/control')
