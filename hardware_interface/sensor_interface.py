@@ -24,22 +24,7 @@ class SensorInterface:
             self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
         except Exception as e:
             print(f"Error during BME280 initialization: {e}")
-        try:
-            self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=6, tca9548a_addr=0x70)
-        except Exception as e:
-            print(f"Error during VL53L0X right initialization: {e}")
-        try:
-            self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
-        except Exception as e:
-            print(f"Error during VL53L0X left initialization: {e}")
-        try:
-            self.vl53l0x_right.open()
-        except Exception as e:
-            print(f"Error during VL53L0X right open: {e}")
-        try:
-            self.vl53l0x_left.open()
-        except Exception as e:
-            print(f"Error during VL53L0X left open: {e}")
+
         try:          
             self.mpu = MPU9250(
                 address_ak=AK8963_ADDRESS, 
@@ -67,6 +52,43 @@ class SensorInterface:
             self.speed = [0, 0, 0]  # current speed for x, y, z
         except Exception as e:
             print(f"Error during initialization: {e}")
+
+        # GPIO for Sensor 1 shutdown pin
+        self.right_shutdown = 23
+        # GPIO for Sensor 2 shutdown pin
+        self.left_shutdown = 22
+
+        GPIO.setwarnings(False)
+
+        # Setup GPIO for shutdown pins on each VL53L0X
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.right_shutdown, GPIO.OUT)
+        GPIO.setup(self.left_shutdown, GPIO.OUT)
+
+        # Set all shutdown pins low to turn off each VL53L0X
+        GPIO.output(self.right_shutdown, GPIO.LOW)
+        GPIO.output(self.left_shutdown, GPIO.LOW)
+
+        # Keep all low for 500 ms or so to make sure they reset
+        time.sleep(0.50)
+
+        # Create VL53L0X objects
+        self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=6, tca9548a_addr=0x70)
+        self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
+        self.vl53l0x_right.open()
+        self.vl53l0x_left.open()
+
+        # Start ranging
+        GPIO.output(self.right_shutdown, GPIO.HIGH)
+        time.sleep(0.50)
+        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+        GPIO.output(self.left_shutdown, GPIO.HIGH)
+        time.sleep(0.50)
+        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+
+        self.timing = self.vl53l0x_right.get_timing()
+        if self.timing < 20000:
+            self.timing = 20000
 
     # FUNCTIONS
     def select_mux_channel(self, channel):
@@ -105,9 +127,6 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
 
-
-
-
     def read_bme280(self):
         """Read BME280 sensor data."""
         try:
@@ -127,14 +146,22 @@ class SensorInterface:
     def read_vl53l0x_left(self):
         """Read VL53L0X ToF sensor data."""
         try:
-            return self.vl53l0x_left.get_distance()
+            distance = self.vl53l0x_left.get_distance()
+            if distance > 0:
+                return distance
+            else:
+                return -1  # Error
         except Exception as e:
             print(f"Error during VL53L0X left read: {e}")
 
     def read_vl53l0x_right(self):
         """Read VL53L0X ToF sensor data."""
         try:
-            return self.vl53l0x_right.get_distance()
+            distance = self.vl53l0x_right.get_distance()
+            if distance > 0:
+                return distance
+            else:
+                return -1  # Error
         except Exception as e:
             print(f"Error during VL53L0X right read: {e}")
 
