@@ -202,6 +202,30 @@ def get_gps():
         return jsonify({'latitude': data['latitude'], 'longitude': data['longitude']})
     else:
         return jsonify({'error': 'No GPS data available'})
+    
+@app.route('/save_settings', methods=['POST'])
+def save_settings():
+    # Get the mowing days and hours from the request
+    data = request.get_json()
+    mow_days = data['mowDays']
+    mow_hours = data['mowHours']
+
+    # Save the mowing days and hours to a JSON file
+    with open('mowing_schedule.json', 'w') as f:
+        json.dump({'mowDays': mow_days, 'mowHours': mow_hours}, f)
+
+    return jsonify({'message': 'Settings saved.'})
+
+def get_schedule():
+    # Check if the schedule file exists
+    if os.path.exists('mowing_schedule.json'):
+        # Load the mowing days and hours from the JSON file
+        with open('mowing_schedule.json', 'r') as f:
+            schedule = json.load(f)
+        return schedule['mowDays'], schedule['mowHours']
+    else:
+        # Return default values if the schedule is not set
+        return None, None
 
 def set_motor_direction(direction):
     # Set the motor direction
