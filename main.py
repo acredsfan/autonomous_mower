@@ -102,7 +102,7 @@ if __name__ == "__main__":
         flask_app_process.terminate()
         
         # Shut down the GStreamer pipeline (if applicable)
-        gstreamer_pipeline.stop()
+        #gstreamer_pipeline.stop()
 
         # Shut down other components (if applicable)
         MotorController.stop()
