@@ -8,6 +8,19 @@ import time
 import datetime
 import threading
 
+# Initialize PathPlanning class
+path_planner = path_planning.PathPlanning()
+
+def check_mowing_conditions():
+    if SensorInterface.ideal_mowing_conditions() and SensorInterface.check_weather():
+        if not mower_blades_on:
+            BladeController.set_speed(90)
+            return True
+    else:
+        if mower_blades_on:
+            BladeController.set_speed(0)
+    return False
+
 def main():
     # Start the Flask app in a separate process
     flask_app_process = Process(target=start_web_interface)
@@ -17,12 +30,9 @@ def main():
     mower_blades_on = False
     mow_days, mow_hours = get_schedule()
 
-    
     if mow_days is None or mow_hours is None:
         print("Mowing schedule not set. Please set the schedule in the web interface.")
-        # You can add logic here to handle this case, such as waiting for the schedule to be set
     else:
-
       # Main loop
       try:
         while True:
@@ -30,14 +40,8 @@ def main():
             mow_days, mow_hours = get_schedule()
 
             # Check if ideal mowing conditions are met (including weather)
-            if SensorInterface.ideal_mowing_conditions() and SensorInterface.check_weather():
-                if not mower_blades_on:
-                    BladeController.set_speed(90)
-                    mower_blades_on = True
-            else:
-                if mower_blades_on:
-                    BladeController.set_speed(0)
-                    mower_blades_on = False
+            mower_blades_on = check_mowing_conditions()
+            if not mower_blades_on:
                 time.sleep(60)
                 continue
 
@@ -46,13 +50,7 @@ def main():
             weekday = now.strftime("%A")
             current_time = now.strftime("%H:%M")
             if weekday in mow_days and (current_time == mow_hours or mowing_requested):
-                if not mower_blades_on:
-                    BladeController.set_speed(90)
-                    mower_blades_on = True
-            else:
-                if mower_blades_on:
-                    BladeController.set_speed(0)
-                    mower_blades_on = False
+                mower_blades_on = check_mowing_conditions()
 
             # Update sensor data
             SensorInterface.update_sensor_data()
@@ -62,9 +60,9 @@ def main():
 
             # Plan the path
             robot_position = localization.get_current_position()
-            goal = localization.get_target_position()
+            goal = path_planner.select_next_section(robot_position)
             obstacles = AvoidanceAlgorithm.get_obstacle_data()
-            path = path_planning.plan_path(robot_position, goal, obstacles)
+            path = path_planner.plan_path(robot_position, goal, obstacles)
 
             # Move the robot along the path
             if not path_following_thread.is_alive():
@@ -74,24 +72,20 @@ def main():
             # Check for obstacles and update the path if needed
             obstacles_detected = AvoidanceAlgorithm.detect_obstacles()
             if obstacles_detected and path_following_thread.is_alive():
-                path = path_planning.plan_path(robot_position, goal, obstacles_detected)
+                path = path_planner.plan_path(robot_position, goal, obstacles_detected)
 
             # Add a delay to control the loop execution rate
             time.sleep(0.1)
 
       except KeyboardInterrupt:
           print("Exiting...")
- 
           # Terminate the Flask app process
           flask_app_process.terminate()
-
           # Shut down the GStreamer pipeline (if applicable)
           gstreamer_pipeline.stop()
-
           # Shut down other components (if applicable)
           MotorController.stop()
           BladeController.stop()
-
           print("Shutdown complete.")
 
 if __name__ == "__main__":
@@ -100,10 +94,8 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"An error occurred: {e}")
         flask_app_process.terminate()
-        
         # Shut down the GStreamer pipeline (if applicable)
         #gstreamer_pipeline.stop()
-
         # Shut down other components (if applicable)
         MotorController.stop()
         BladeController.stop()
