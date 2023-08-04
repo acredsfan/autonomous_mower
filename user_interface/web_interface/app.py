@@ -33,7 +33,7 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 path_planning = PathPlanning()
 
-dotenv_path = os.path.join(os.path.dirname(__file__),'home' ,'pi', 'autonomous_mower', '.env')
+dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
