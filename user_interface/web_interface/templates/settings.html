@@ -3,12 +3,16 @@
 {% block content %}
     <h1>Settings</h1>
     <form id="settings-form">
-        <label for="mow-days">Mowing days:</label>
-        <select id="mow-days" multiple>
-            <!-- Add options for each day of the week -->
-        </select>
-        <label for="mow-hours">Mowing hours:</label>
-        <input type="text" id="mow-hours" placeholder="e.g., 9-17">
+        <label for="mow-days">Mowing days:</label><br>
+        {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+            <input type="checkbox" id="{{ day }}" name="mowDays" value="{{ day }}">
+            <label for="{{ day }}">{{ day }}</label><br>
+        {% endfor %}
+        <label for="mow-hours">Mowing hours:</label><br>
+        {% for hour in range(1, 25) %}
+            <input type="checkbox" id="hour-{{ hour }}" name="mowHours" value="{{ hour }}">
+            <label for="hour-{{ hour }}">{{ hour }}</label><br>
+        {% endfor %}
         <!-- Add other settings inputs here -->
         <button type="submit">Save Settings</button>
     </form>
@@ -16,9 +20,8 @@
         document.getElementById('settings-form').addEventListener('submit', function (event) {
             event.preventDefault();
 
-            const mowDays = document.getElementById('mow-days').value;
-            const mowHours = document.getElementById('mow-hours').value;
-            // Get other settings inputs here
+            const mowDays = Array.from(document.querySelectorAll('input[name="mowDays"]:checked')).map(checkbox => checkbox.value);
+            const mowHours = Array.from(document.querySelectorAll('input[name="mowHours"]:checked')).map(checkbox => checkbox.value);
 
             // Make an AJAX call to your Flask route for saving the settings
             saveSettings(mowDays, mowHours);
