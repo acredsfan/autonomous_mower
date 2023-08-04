@@ -109,6 +109,8 @@ def index():
 @app.route('/status')
 def status():
 #    sensor_data = get_sensor_data()
+    mow_days, mow_hours = get_schedule()
+    next_scheduled_mow = calculate_next_scheduled_mow(mow_days, mow_hours)
     return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/control')
@@ -226,7 +228,33 @@ def get_schedule():
     else:
         # Return default values if the schedule is not set
         return None, None
+    
+def calculate_next_scheduled_mow():
+    # Get the mowing days and hours from the schedule file
+    mow_days, mow_hours = get_schedule()
 
+    # Calculate the next scheduled mow
+    next_mow = datetime.datetime.now()
+    if mow_days is None or mow_hours is None:
+        return "Not scheduled"
+
+    # Convert mow_days to a list of integers (0 = Monday, 1 = Tuesday, etc.)
+    mow_days_int = [datetime.datetime.strptime(day, "%A").weekday() for day in mow_days]
+
+    # Get the current date and time
+    now = datetime.datetime.now()
+
+    # Find the next scheduled mow
+    for day_offset in range(7):
+        next_day = (now.weekday() + day_offset) % 7
+        if next_day in mow_days_int:
+            next_mow_date = now + datetime.timedelta(days=day_offset)
+            next_mow_date = next_mow_date.replace(hour=int(mow_hours.split(':')[0]), minute=int(mow_hours.split(':')[1]), second=0, microsecond=0)
+            if next_mow_date > now:
+                return next_mow_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    return "Not scheduled"
+    
 def set_motor_direction(direction):
     # Set the motor direction
     MotorController.set_direction(direction)
