@@ -1,15 +1,10 @@
 # This module deals with generating a path for the robot to follow while mowing the lawn. 
-
 import numpy as np
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 from shapely.geometry import Polygon, Point
-import cv2
-import networkx
-import rtree
 import json
-import random
 
 with open("config.json") as f:
     config = json.load(f)
@@ -21,22 +16,35 @@ except FileNotFoundError:
     polygon_coordinates = []  # or some default value
 
 # Constants
-GRID_SIZE = (config['GRID_L'],config['GRID_W'])  # Grid size for path planning
-OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']  # Margin around obstacles to account for robot size and path safety
+GRID_SIZE = (config['GRID_L'], config['GRID_W'])
+OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
+SECTION_SIZE = (10, 10)  # Example section size, you can adjust this
 
 # Global variables
 user_polygon = None
-obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
+obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
 
 class PathPlanning:
-    def __init__(self):  # removed start and goal from the constructor
-        self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)  # Map of known obstacles
-        self.obstacles = set()  # Set of known obstacles (in WKT format)
-        self.last_action = None
+    def __init__(self):
+        self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
+        self.obstacles = set()
+        self.sections = self.divide_yard_into_sections()
 
     def set_user_polygon(self, polygon_coordinates):
         global user_polygon
         user_polygon = Polygon(polygon_coordinates)
+
+    def divide_yard_into_sections(self):
+        sections = []
+        for i in range(0, GRID_SIZE[0], SECTION_SIZE[0]):
+            for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
+                section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
+                sections.append(section)
+        return sections
+
+    def select_next_section(self, current_position):
+        closest_section = min(self.sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
+        return closest_section
 
     def update_obstacle_map(self, new_obstacles):
         new_obstacle_set = set([obstacle.wkt for obstacle in new_obstacles])
