@@ -238,6 +238,11 @@ class PathPlanning:
         goal = self.calculate_goal_position(next_section)
         
         return start, goal
+    
+    def get_current_position(self):
+        # TODO: Implement logic to get the current position of the mower
+        # This could be based on sensors, GPS, or other localization methods
+        return (10, 10)  # Example current position
 
 
 # Example usage
@@ -268,7 +273,6 @@ if __name__ == "__main__":
         # You can replace this with your specific logic
         closest_section = min(sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
         return closest_section
-
 
     def get_current_position(self):
         # TODO: Implement logic to get the current position of the mower
