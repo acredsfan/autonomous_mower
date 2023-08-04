@@ -235,3 +235,38 @@ if __name__ == "__main__":
 
     path = path_planner.plan_path(start, goal, obstacles)
     print(path)
+
+    def divide_yard_into_sections(self):
+        sections = []
+        for i in range(0, grid_size[0], section_size[0]):
+            for j in range(0, grid_size[1], section_size[1]):
+                section = (i, j, i + section_size[0], j + section_size[1])
+                sections.append(section)
+        return sections
+
+    def select_next_section(self, current_position, sections):
+        # Example logic to select the next section based on proximity to current position
+        # You can replace this with your specific logic
+        closest_section = min(sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
+        return closest_section
+
+
+    def get_current_position(self):
+        # TODO: Implement logic to get the current position of the mower
+        # This could be based on sensors, GPS, or other localization methods
+        return (10, 10)  # Example current position
+
+    def calculate_goal_position(self, next_section):
+        # TODO: Implement logic to calculate the goal position within the selected section
+        # This could be the center of the section or another specific point
+        return (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
+
+    def get_start_and_goal(self):
+        current_position = self.get_current_position()
+        sections = self.divide_yard_into_sections()
+        next_section = self.select_next_section(current_position, sections)
+        
+        start = current_position
+        goal = self.calculate_goal_position(next_section)
+        
+        return start, goal
