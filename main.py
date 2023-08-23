@@ -29,6 +29,8 @@ def main():
     mowing_requested = False
     mower_blades_on = False
     mow_days, mow_hours = get_schedule()
+    robot_position = localization.get_current_position()
+    path_following_thread = threading.Thread()
 
     if mow_days is None or mow_hours is None:
         print("Mowing schedule not set. Please set the schedule in the web interface.")
@@ -36,6 +38,7 @@ def main():
       # Main loop
       try:
         while True:
+
             # Get user schedule
             mow_days, mow_hours = get_schedule()
 
@@ -48,9 +51,9 @@ def main():
             # Check if today is a mowing day
             now = datetime.datetime.now()
             weekday = now.strftime("%A")
-            current_time = now.strftime("%H:%M")
-            if weekday in mow_days and (current_time == mow_hours or mowing_requested):
-                mower_blades_on = check_mowing_conditions()
+            current_time = now.strftime("%H")
+            if weekday in mow_days and (current_time == mow_hours):
+                mowing_requested = True
 
             # Update sensor data
             SensorInterface.update_sensor_data()
@@ -82,7 +85,7 @@ def main():
           # Terminate the Flask app process
           flask_app_process.terminate()
           # Shut down the GStreamer pipeline (if applicable)
-          gstreamer_pipeline.stop()
+          #gstreamer_pipeline.stop()
           # Shut down other components (if applicable)
           MotorController.stop()
           BladeController.stop()

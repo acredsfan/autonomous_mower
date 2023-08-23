@@ -229,6 +229,12 @@ def get_schedule():
         # Return default values if the schedule is not set
         return None, None
     
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+    
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
     mow_days, mow_hours = get_schedule()
@@ -271,16 +277,15 @@ def stop_motors():
     # Stop the motors
     MotorController.stop_motors()
 
-def gen(camera):
-    while True:
-        frame = camera.get_frame()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
 if __name__ == '__main__':
     # Start the sensor update thread
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
+
+    app.run(host='0.0.0.0', port=90, debug=False)
+
+    # Create an instance of the VideoCamera class
+    camera = VideoCamera()
 
     # Set the flag to stop the sensor update thread
     stop_sensor_thread = True

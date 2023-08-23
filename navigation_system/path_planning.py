@@ -228,6 +228,14 @@ class PathPlanning:
         lng = cell[1] * self.lng_grid_size + self.min_lng
         return {"lat": lat, "lng": lng}
     
+    def calculate_goal_position(self, next_section):
+        # Determine the boundaries of teh selected section
+        section_size = (next_section[2] - next_section[0], next_section[3] - next_section[1])
+        
+        # Calculate the goal position within the selected section
+        goal_position = (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
+        
+        return goal_position  
     
     def get_start_and_goal(self):
         current_position = self.get_current_position()
@@ -240,10 +248,9 @@ class PathPlanning:
         return start, goal
     
     def get_current_position(self):
-        # TODO: Implement logic to get the current position of the mower
-        # This could be based on sensors, GPS, or other localization methods
-        return (10, 10)  # Example current position
-
+        # Get location of mower
+        current_position = self.get_current_position()
+        return current_position
 
 # Example usage
 if __name__ == "__main__":

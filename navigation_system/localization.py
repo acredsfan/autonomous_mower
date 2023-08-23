@@ -63,7 +63,6 @@ class Localization:
         self.estimate_position()
         self.estimate_orientation()
 
-
 if __name__ == '__main__':
     localization = Localization()
 
