@@ -36,7 +36,7 @@ Here are the sensors and hardware I've procured for the robot:
 • DC Voltage Regulator/Buck Converter 12V to 5V - https://www.amazon.com/gp/product/B08CHMJM9J/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • 997 DC motor for mower blades - https://www.amazon.com/Powerful-Voltage-DC12-36V-Silent-Bearing/dp/B08R73MQF1/ref=sr_1_3?hvadid=631587578546&hvdev=c&hvlocphy=9015649&hvnetw=g&hvqmt=e&hvrand=15298291863334120737&hvtargid=kwd-352957084306&hydadcr=19964_13472495&keywords=997%2Bmotor&qid=1683309933&sr=8-3&th=1
 • 2x 12V worm gear motors for wheels - https://www.amazon.com/gp/product/B00NMDPQAQ/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
-• L298 12V Dual H Bridge motor speed controller - https://www.amazon.com/gp/product/B09X18KHB8/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• 2x IBT-2 Motor Drivers for the Wheels
 • MPU-9250 Compass Module - https://www.amazon.com/gp/product/B07D55TK6Z/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 • 2x VL53L0X Time of flight sensors - https://www.amazon.com/gp/product/B07XXTMRR2/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • INA3221 Power Monitor - https://www.amazon.com/gp/product/B0946L63LC/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
