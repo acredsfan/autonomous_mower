@@ -247,11 +247,11 @@ class SensorInterface:
                 return False
 
             # Check for high temperature
-            if bme280_data['temperature'] > 30:
+            if bme280_data['temperature_f'] > 90:
                 return False
 
             # Check for low temperature
-            if bme280_data['temperature'] < 1:
+            if bme280_data['temperature_f'] < 35:
                 return False
 
             # Check for low pressure
