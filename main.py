@@ -22,11 +22,11 @@ lock = Lock()
 def check_mowing_conditions():
     try:
         if sensor_interface.ideal_mowing_conditions():
-            if not mower_blades_on:
+            if not BladeController.blades_on:
                 BladeController.set_speed(90)
                 return True
         else:
-            if mower_blades_on:
+            if BladeController.blades_on:
                 BladeController.set_speed(0)
         return False
     except Exception as e:
@@ -40,7 +40,6 @@ def main():
         flask_app_process.start()
 
         mowing_requested = False
-        mower_blades_on = False
         mow_days, mow_hours = get_schedule()
         localization_instance = Localization()
         robot_position = localization_instance.get_current_position()
