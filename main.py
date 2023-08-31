@@ -21,7 +21,7 @@ lock = Lock()
 
 def check_mowing_conditions():
     try:
-        if SensorInterface.ideal_mowing_conditions() and SensorInterface.check_weather():
+        if sensor_interface.ideal_mowing_conditions() and sensor_interface.check_weather():
             if not mower_blades_on:
                 BladeController.set_speed(90)
                 return True
