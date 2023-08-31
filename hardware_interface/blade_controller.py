@@ -41,8 +41,10 @@ class BladeController:
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(0)
 
-
-
+    def stop():
+        pwm1.stop()
+        pwm2.stop()
+        GPIO.cleanup()
 
 # # Try changing the speed
 # set_speed(50)  # 50% speed forward
