@@ -17,7 +17,7 @@ current_heading = 0
 class Localization:
     def __init__(self, baud_rate=9600, timeout=1):
         # Replace gpsd with GPSInterface
-        self.gps = GPSInterface(port=port, baudrate=baud_rate, timeout=timeout)
+        self.gps = GPSInterface(baudrate=baud_rate, timeout=timeout)
 
     def gps_to_meters(self, lat1, lon1, lat2, lon2):
         """
