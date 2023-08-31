@@ -1,7 +1,6 @@
 # Code for the obstacle avoidance algorithm
 # Uses the data from the ToF sensors and the camera to calculate the best direction to move in
 
-#IMPORTS
 # IMPORTS
 import threading
 from obstacle_detection import tof_processing

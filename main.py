@@ -10,7 +10,7 @@ import datetime
 import threading
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename='main.log', level=logging.INFO)
 
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()

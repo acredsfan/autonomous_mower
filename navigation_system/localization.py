@@ -3,6 +3,10 @@ import math
 import time
 from hardware_interface import SensorInterface
 from navigation_system import GPSInterface
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='localization.log', level=logging.INFO)
 
 # Global variables
 current_latitude = 0
