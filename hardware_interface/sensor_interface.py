@@ -242,7 +242,7 @@ class SensorInterface:
     def ideal_mowing_conditions(self):
         # Check for high humidity
         try:
-            bme280_data = self.read_bme280(self)
+            bme280_data = self.read_bme280()
             if bme280_data['humidity'] > 90:
                 return False
 
