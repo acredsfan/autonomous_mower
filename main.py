@@ -94,13 +94,13 @@ def main():
     except KeyboardInterrupt:
         logging.info("Exiting...")
         flask_app_process.terminate()
-        MotorController.stop()
+        MotorController.stop_motors()
         BladeController.stop()
         logging.info("Shutdown complete.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         flask_app_process.terminate()
-        MotorController.stop()
+        MotorController.stop_motors()
         BladeController.stop()
 
 if __name__ == "__main__":
