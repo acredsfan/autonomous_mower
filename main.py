@@ -14,6 +14,7 @@ logging.basicConfig(filename='main.log', level=logging.INFO)
 
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
+sensor_interface = SensorInterface()
 
 # Initialize Lock for shared resources
 lock = Lock()

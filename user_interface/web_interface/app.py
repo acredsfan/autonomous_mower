@@ -259,7 +259,11 @@ def calculate_next_scheduled_mow():
         next_day = (now.weekday() + day_offset) % 7
         if next_day in mow_days_int:
             next_mow_date = now + datetime.timedelta(days=day_offset)
-            next_mow_date = next_mow_date.replace(hour=int(mow_hours.split(':')[0]), minute=int(mow_hours.split(':')[1]), second=0, microsecond=0)
+            
+            # Use the first hour in the list as an example; adjust as needed
+            first_hour = int(mow_hours[0])
+            next_mow_date = next_mow_date.replace(hour=first_hour, minute=0, second=0, microsecond=0)
+            
             if next_mow_date > now:
                 return next_mow_date.strftime("%Y-%m-%d %H:%M:%S")
 
