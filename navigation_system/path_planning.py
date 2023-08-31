@@ -4,6 +4,7 @@ from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 from shapely.geometry import Polygon, Point
+from navigation_system import Localization
 import json
 
 with open("config.json") as f:
@@ -26,6 +27,7 @@ obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
 
 class PathPlanning:
     def __init__(self):
+        self.localization = Localization()
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
@@ -247,14 +249,25 @@ class PathPlanning:
         
         return start, goal
     
+    def coord_to_grid(self, lat, lon):
+    # TODO: Implement the conversion logic
+        grid_x = int((lat - self.min_lat) / self.lat_grid_size)
+        grid_y = int((lon - self.min_lng) / self.lng_grid_size)
+        return (grid_x, grid_y)
+    
     def get_current_position(self):
-        # Get location of mower
-        current_position = self.get_current_position()
-        return current_position
+        # Get location of mower from Locatlization class
+        lat, lon, alt = self.localization.get_current_position()
+        # Convert lat, lon, alt to Grid Cell location
+        grid_cell = self.coord_to_grid(lat, lon)
+        return grid_cell
+    
+
+    
 
 # Example usage
 if __name__ == "__main__":
-    path_planner = PathPlanning((10, 10), (90, 90))  # Pass start and goal to the constructor
+    path_planner = PathPlanning()  # Pass start and goal to the constructor
 
     # Set user polygon
     path_planner.set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
