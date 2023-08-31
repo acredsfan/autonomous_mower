@@ -1,25 +1,21 @@
 import cv2
-import logging
 
-logging.basicConfig(level=logging.DEBUG)
-cap = None  # Initialize outside try block
+# Initialize the camera
+cap = cv2.VideoCapture(0)
 
-try:
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Error: Couldn't open the camera.")
-    else:
-        ret, frame = cap.read()
-        if ret:
-            #cv2.imshow('Test Frame', frame)
-            cv2.waitKey(0)
-        else:
-            print("Error: Couldn't read a frame from the camera.")
-except KeyboardInterrupt:
-    print("Interrupted.")
-except Exception as e:
-    print(f"An error occurred: {e}")
-finally:
-    if cap:
-        cap.release()
-    cv2.destroyAllWindows()
+# Check if the camera opened successfully
+if not cap.isOpened():
+    print("Error: Could not open camera.")
+    exit()
+
+# Capture a single frame
+ret, frame = cap.read()
+
+# Save the frame as a JPEG file
+if ret:
+    cv2.imwrite("captured_frame.jpg", frame)
+else:
+    print("Error: Could not read frame.")
+
+# Release the camera
+cap.release()
