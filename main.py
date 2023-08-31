@@ -1,7 +1,7 @@
 import logging
 from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
-from navigation_system import localization, path_planning, gps_interface
+from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
 from user_interface.web_interface.app import start_web_interface, get_schedule
 from multiprocessing import Process, Lock
@@ -41,7 +41,7 @@ def main():
         mowing_requested = False
         mower_blades_on = False
         mow_days, mow_hours = get_schedule()
-        robot_position = localization.get_current_position()
+        robot_position = Localization.get_current_position()
         path_following_thread = threading.Thread()
 
         if mow_days is None or mow_hours is None:
@@ -70,10 +70,10 @@ def main():
                     SensorInterface.update_sensor_data()
 
                     # Update localization
-                    localization.update_localization()
+                    Localization.update_localization()
 
                     # Plan the path
-                    robot_position = localization.get_current_position()
+                    robot_position = Localization.get_current_position()
                     goal = path_planner.select_next_section(robot_position)
                     obstacles = AvoidanceAlgorithm.get_obstacle_data()
                     path = path_planner.plan_path(robot_position, goal, obstacles)
