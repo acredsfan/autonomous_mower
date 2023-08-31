@@ -68,10 +68,10 @@ def main():
                         mowing_requested = True
 
                     # Update sensor data
-                    SensorInterface.update_sensor_data()
+                    #SensorInterface.update_sensor_data()
 
                     # Update localization
-                    Localization.update_localization()
+                    #Localization.update_localization()
 
                     # Plan the path
                     robot_position = Localization.get_current_position()
