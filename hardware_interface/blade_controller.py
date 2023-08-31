@@ -25,6 +25,7 @@ pwm2.start(0)
 
 class BladeController:
 
+    blades_on = False  # Class attribute to track blade state
     # Function to set the motor speed
     @staticmethod
     def set_speed(speed):
@@ -32,19 +33,24 @@ class BladeController:
             # Forward
             pwm1.ChangeDutyCycle(speed)
             pwm2.ChangeDutyCycle(0)
+            BladeController.blades_on = True  # Blades are on
         elif speed < 0:
             # Reverse
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(-speed)
+            BladeController.blades_on = True  # Blades are on
         else:
             # Stop
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(0)
+            BladeController.blades_on = False  # Blades are off
 
+    @staticmethod
     def stop():
         pwm1.stop()
         pwm2.stop()
         GPIO.cleanup()
+        BladeController.blades_on = False  # Blades are off
 
 # # Try changing the speed
 # set_speed(50)  # 50% speed forward
