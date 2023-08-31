@@ -15,7 +15,7 @@ current_altitude = 0
 current_heading = 0
 
 class Localization:
-    def __init__(self, port='/dev/serial0', baud_rate=9600, timeout=1):
+    def __init__(self, baud_rate=9600, timeout=1):
         # Replace gpsd with GPSInterface
         self.gps = GPSInterface(port=port, baudrate=baud_rate, timeout=timeout)
 
