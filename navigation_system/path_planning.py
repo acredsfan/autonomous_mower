@@ -37,8 +37,8 @@ class PathPlanning:
         self.sections = self.divide_yard_into_sections()
         self.min_lat = None  # Initialize to None
         self.max_lat = None
-        self.min_lon = None
-        self.max_lon = None
+        self.min_lng = None
+        self.max_lng = None
         self.set_min_max_coordinates()  # Call the new method to set min and max coordinates
 
     def set_min_max_coordinates(self):
@@ -46,10 +46,10 @@ class PathPlanning:
         longitudes = [coord['lng'] for coord in polygon_coordinates]
         self.min_lat = min(latitudes)
         self.max_lat = max(latitudes)
-        self.min_lon = min(longitudes)
-        self.max_lon = max(longitudes)
+        self.min_lng = min(longitudes)
+        self.max_lng = max(longitudes)
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
-        self.lon_grid_size = (self.max_lon - self.min_lon) / GRID_SIZE[1]
+        self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
 
     def set_user_polygon(self, polygon_coordinates):
         global user_polygon
@@ -268,17 +268,17 @@ class PathPlanning:
         
         return start, goal
     
-    def coord_to_grid(self, lat, lon):
+    def coord_to_grid(self, lat, lng):
     # TODO: Implement the conversion logic
         grid_x = int((lat - self.min_lat) / self.lat_grid_size)
-        grid_y = int((lon - self.min_lng) / self.lng_grid_size)
+        grid_y = int((lng - self.min_lng) / self.lng_grid_size)
         return (grid_x, grid_y)
     
     def get_current_position(self):
         # Get location of mower from Locatlization class
-        lat, lon, alt = self.localization.get_current_position()
-        # Convert lat, lon, alt to Grid Cell location
-        grid_cell = self.coord_to_grid(lat, lon)
+        lat, lng, alt = self.localization.get_current_position()
+        # Convert lat, lng, alt to Grid Cell location
+        grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
     
 
