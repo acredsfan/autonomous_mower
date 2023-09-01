@@ -8,6 +8,10 @@ from obstacle_detection import camera_processing
 from hardware_interface import MotorController
 import json
 import time
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='avoidance.log', level=logging.DEBUG)
 
 with open("config.json") as f:
     config = json.load(f)
