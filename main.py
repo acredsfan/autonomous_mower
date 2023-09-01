@@ -10,7 +10,7 @@ import datetime
 import threading
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.INFO)
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
@@ -74,7 +74,7 @@ def main():
                     #Localization.update_localization()
 
                     # Plan the path
-                    robot_position = path_planning.get_current_position
+                    robot_position = Localization.get_current_position()
                     goal = path_planner.select_next_section(robot_position)
                     obstacles = AvoidanceAlgorithm.get_obstacle_data()
                     path = path_planner.plan_path(robot_position, goal, obstacles)

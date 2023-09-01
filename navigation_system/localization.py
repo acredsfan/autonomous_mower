@@ -6,7 +6,7 @@ from navigation_system import GPSInterface
 import logging
 
 # Initialize logging
-logging.basicConfig(filename='localization.log', level=logging.INFO)
+logging.basicConfig(filename='localization.log', level=logging.DEBUG)
 
 # Global variables
 current_latitude = 0
