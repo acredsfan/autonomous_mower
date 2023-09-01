@@ -3,6 +3,7 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
+from obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from user_interface.web_interface.app import start_web_interface, get_schedule
 from multiprocessing import Process, Lock
 import time

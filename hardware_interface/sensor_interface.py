@@ -243,29 +243,32 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during speed calculation: {e}")
 
-    def ideal_mowing_conditions(self):
-        # Check for high humidity
+def ideal_mowing_conditions(self):
+    attempts = 0
+    while attempts < 20:
         try:
             bme280_data = self.read_bme280()
-            if bme280_data['humidity'] > 90:
-                return False
+            if bme280_data is not None:
+                if bme280_data['humidity'] > 90:
+                    return False
+                if bme280_data['temperature_f'] > 90:
+                    return False
+                if bme280_data['temperature_f'] < 35:
+                    return False
+                if bme280_data['pressure'] < 1000:
+                    return False
+                return True
+            else:
+                print("Sensor data is not available. Retrying...")
+                time.sleep(5)  # Wait for 5 seconds before retrying
+                attempts += 1
 
-            # Check for high temperature
-            if bme280_data['temperature_f'] > 90:
-                return False
-
-            # Check for low temperature
-            if bme280_data['temperature_f'] < 35:
-                return False
-
-            # Check for low pressure
-            if bme280_data['pressure'] < 1000:
-                return False
         except Exception as e:
             print(f"Error during checking mowing conditions: {e}")
+            return False
 
-        # Return True if all conditions are met
-        return True
-    
+    print("Sensor data is not available after 20 attempts. Returning False.")
+    return False
+
 # At the end of sensor_interface.py
 sensor_interface = SensorInterface()
