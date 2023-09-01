@@ -9,6 +9,10 @@ from barbudor_ina3221.full import *
 import RPi.GPIO as GPIO
 import busio
 import time
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
 
 class SensorInterface:
     def __init__(self):
