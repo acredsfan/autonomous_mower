@@ -261,7 +261,7 @@ class PathPlanning:
     def get_start_and_goal(self):
         current_position = self.get_current_position()
         sections = self.divide_yard_into_sections()
-        next_section = self.select_next_section(current_position, sections)
+        next_section = self.select_next_section(current_position)
         
         start = current_position
         goal = self.calculate_goal_position(next_section)
