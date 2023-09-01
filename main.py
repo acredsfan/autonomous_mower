@@ -77,7 +77,8 @@ def main():
                     localization_instance = Localization()
                     robot_position = localization_instance.get_current_position()
                     goal = path_planner.select_next_section(robot_position)
-                    obstacles = AvoidanceAlgorithm.get_obstacle_data()
+                    avoidance_algorithm = AvoidanceAlgorithm()
+                    avoidance_algorithm.run_avoidance()
                     path = path_planner.plan_path(robot_position, goal, obstacles)
 
                     # Move the robot along the path
