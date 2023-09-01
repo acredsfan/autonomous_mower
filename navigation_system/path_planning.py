@@ -35,6 +35,21 @@ class PathPlanning:
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
+        self.min_lat = None  # Initialize to None
+        self.max_lat = None
+        self.min_lon = None
+        self.max_lon = None
+        self.set_min_max_coordinates()  # Call the new method to set min and max coordinates
+
+    def set_min_max_coordinates(self):
+        latitudes = [coord['lat'] for coord in polygon_coordinates]
+        longitudes = [coord['lon'] for coord in polygon_coordinates]
+        self.min_lat = min(latitudes)
+        self.max_lat = max(latitudes)
+        self.min_lon = min(longitudes)
+        self.max_lon = max(longitudes)
+        self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
+        self.lon_grid_size = (self.max_lon - self.min_lon) / GRID_SIZE[1]
 
     def set_user_polygon(self, polygon_coordinates):
         global user_polygon
