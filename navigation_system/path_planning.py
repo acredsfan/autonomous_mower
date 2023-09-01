@@ -43,7 +43,7 @@ class PathPlanning:
 
     def set_min_max_coordinates(self):
         latitudes = [coord['lat'] for coord in polygon_coordinates]
-        longitudes = [coord['lon'] for coord in polygon_coordinates]
+        longitudes = [coord['lng'] for coord in polygon_coordinates]
         self.min_lat = min(latitudes)
         self.max_lat = max(latitudes)
         self.min_lon = min(longitudes)
