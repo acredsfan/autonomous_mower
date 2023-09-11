@@ -219,15 +219,23 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during INA3221 read: {e}")
 
+    def update_obstacle_data(self, tof_left, tof_right, compass_data):
+        """
+        Update the obstacle_data grid based on ToF and compass data.
+        """
+        # Process ToF data to get obstacle distances
+        left_distance = self.read_vl53l0x_left()
+        right_distance = self.read_vl53l0x_right()
 
-    def read_hall_effect_sensors(self):
-        try:
-            sensor_1_state = GPIO.input(self.HALL_EFFECT_SENSOR_1)
-            sensor_2_state = GPIO.input(self.HALL_EFFECT_SENSOR_2)
+        # Use compass data to get the direction
+        direction = self.read_mpu9250_compass()
 
-            return sensor_1_state, sensor_2_state
-        except Exception as e:
-            print(f"Error during hall effect sensor read: {e}")
+        # Update the obstacle_data grid based on distances and direction
+        # Here, you can add your logic to update the grid
+        # ...
+
+    def get_obstacle_data(self):
+        return self.obstacle_data
 
     def calculate_speed(self):
         """Calculate speed based on accelerometer data."""
