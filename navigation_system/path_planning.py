@@ -1,5 +1,5 @@
-# This module deals with generating a path for the robot to follow while mowing the lawn. 
 import numpy as np
+import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
@@ -18,12 +18,12 @@ try:
     with open("user_polygon.json") as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    polygon_coordinates = []  # or some default value
+    polygon_coordinates = []
 
 # Constants
 GRID_SIZE = (config['GRID_L'], config['GRID_W'])
 OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
-SECTION_SIZE = (10, 10)  # Example section size, you can adjust this
+SECTION_SIZE = (10, 10)
 
 # Global variables
 user_polygon = None
@@ -35,11 +35,13 @@ class PathPlanning:
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
-        self.min_lat = None  # Initialize to None
+        self.min_lat = None
         self.max_lat = None
         self.min_lng = None
         self.max_lng = None
-        self.set_min_max_coordinates()  # Call the new method to set min and max coordinates
+        self.set_min_max_coordinates()
+        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
+        self.last_action = None
 
     def set_min_max_coordinates(self):
         latitudes = [coord['lat'] for coord in polygon_coordinates]
@@ -50,6 +52,7 @@ class PathPlanning:
         self.max_lng = max(longitudes)
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
         self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
+        pass
 
     def set_user_polygon(self, polygon_coordinates):
         global user_polygon
@@ -61,7 +64,8 @@ class PathPlanning:
             for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
                 section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
                 sections.append(section)
-        return sections
+        # return sections
+        pass
 
     def select_next_section(self, current_position):
         closest_section = min(self.sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
@@ -151,16 +155,15 @@ class PathPlanning:
             self.plan_path(self.start, self.goal, new_obstacles)
         self.obstacle_map = obstacle_map
 
-    # This function calculates the reward based on the action taken
     def reward_function(self, old_state, new_state, action):
         if new_state == 'goal':
             return 100
         elif self.obstacle_map[new_state[0], new_state[1]] == 1:
             return -100
         elif action != self.last_action:
-            return -10
+            return -10  # Penalty for not moving in a straight line
         else:
-            return -1
+            return 1  # Reward for moving in a straight line
 
     # This function determines the new state based on the action taken
     def take_action(self, state, action):
@@ -186,61 +189,38 @@ class PathPlanning:
         return new_state
 
     # This function implements the Q-Learning algorithm
-    def q_learning(self, start, goal, obstacles, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
-        q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
-
+    def q_learning(self, start, goal, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
         for episode in range(episodes):
             state = start
-
-            for step in range(100):  # Limit each episode to a maximum of 100 steps
+            for step in range(100):
                 if random.uniform(0, 1) < epsilon:
-                    action = random.choice(['up', 'down', 'left', 'right'])  # Explore a random action
+                    action = random.choice(['up', 'down', 'left', 'right'])
                 else:
-                    action = np.argmax(q_table[state])  # Exploit the best known action
+                    action = np.argmax(self.q_table[state])
 
-                # Take the action and get the new state and reward
                 new_state = self.take_action(state, action)
                 reward = self.reward_function(state, new_state, action)
 
-                # Update the Q-table
-                old_value = q_table[state][action]
-                next_max = np.max(q_table[new_state])
+                old_value = self.q_table[state][action]
+                next_max = np.max(self.q_table[new_state])
                 new_value = (1 - learning_rate) * old_value + learning_rate * (reward + discount_factor * next_max)
-                q_table[state][action] = new_value
+                self.q_table[state][action] = new_value
 
-                # Update the state
                 state = new_state
-
-                # Update the last action
                 self.last_action = action
 
-                # End the episode if we reached the goal
                 if state == goal:
                     break
 
-            # Decay epsilon after each episode
             if epsilon > epsilon_min:
                 epsilon *= epsilon_decay
 
-        state = start
-        path = [state]
-        while state != goal:
-            action = np.argmax(q_table[state])
-            state = self.take_action(state, action)
-            path.append(state)
-        return path
-        
-    # This function gets the path using Q-Learning algorithm
-    def get_path(self, start, goal):  # added start and goal as parameters
-        # Run Q-Learning algorithm
-        path = self.q_learning(start, goal, self.obstacles)
-
-        # Convert the result into a list of (lat, lng) coordinates
+    def get_path(self, start, goal):
+        path = self.q_learning(start, goal)
         path_coords = []
         for cell in path:
             coord = self.grid_to_coord(cell)
             path_coords.append(coord)
-            
         return path_coords
     
     # This function converts a grid cell to a (lat, lng) coordinate
