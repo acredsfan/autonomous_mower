@@ -40,7 +40,6 @@ def classify_obstacle(image):
     
     return label
 
-
 # Example usage
 if __name__ == "__main__":
     # Read an example image from your camera

@@ -12,6 +12,8 @@ import threading
 from navigation_system import PathPlanning, GPSInterface
 import datetime
 import logging
+import dotenv
+from dotenv import load_dotenv
 
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.INFO)
