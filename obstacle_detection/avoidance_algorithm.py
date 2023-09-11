@@ -9,6 +9,10 @@ from hardware_interface import MotorController
 import json
 import time
 import logging
+import numpy as np
+
+# Import GRID_SIZE from path_planning.py
+from navigation_system.path_planning import GRID_SIZE
 
 # Initialize logging
 logging.basicConfig(filename='avoidance.log', level=logging.DEBUG)
@@ -25,6 +29,37 @@ class AvoidanceAlgorithm:
         self.tof_avoidance = tof_processing()
         self.camera_processor = camera_processing()
         self.obstacle_detected = False
+        self.q_table = np.zeros((GRID_SIZE, GRID_SIZE, 4)) # Grid defined in path_planning, 4 directions
+        self.last_action = None
+        self.memory = {}   
+
+    def reward_function(self, obstacle_data, new_state):
+        if obstacle_data[new_state[0], new_state[1]] == 1:
+            return -100  # Penalty for hitting an obstacle
+        else:
+            return 1  # Reward for free space
+
+    def q_learning(self, current_state, obstacle_data, learning_rate=0.1, discount_factor=0.9):
+        if self.last_action is not None:
+            reward = self.reward_function(obstacle_data, current_state)
+            old_value = self.q_table[current_state[0], current_state[1], self.last_action]
+            next_max = np.max(self.q_table[current_state[0], current_state[1], :])
+            new_value = (1 - learning_rate) * old_value + learning_rate * (reward + discount_factor * next_max)
+            self.q_table[current_state[0], current_state[1], self.last_action] = new_value
+
+        # Check if the action led to a negative outcome
+        if self.reward_function(obstacle_data, current_state) < 0:
+            self.memory[current_state] = self.last_action
+
+    def get_next_action(self, current_state):
+        # Check memory to avoid actions that led to negative outcomes
+        if current_state in self.memory:
+            # Choose an action other than the one in memory
+            possible_actions = [0, 1, 2, 3]  # Assuming 4 actions: up, down, left, right
+            possible_actions.remove(self.memory[current_state])
+            return np.argmax(self.q_table[current_state[0], current_state[1], possible_actions])
+        else:
+            return np.argmax(self.q_table[current_state[0], current_state[1], :])
 
     def _tof_avoidance_thread(self):
         """Run the Time of Flight obstacle avoidance in a separate thread."""

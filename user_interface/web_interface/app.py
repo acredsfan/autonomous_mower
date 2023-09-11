@@ -144,15 +144,15 @@ def video_feed():
 # Add routes for AJAX requests here
 @app.route('/move', methods=['POST'])
 def move():
-    direction = request.json.get('direction')
+    direction = request.json.get('direction', 100, 100)
     if direction == 'forward':
-        MotorController.move_mower("forward",100,100)
+        MotorController.move_mower("forward", 100, 100)
     elif direction == 'backward':
-        MotorController.move_mower("backward",90,90)
+        MotorController.move_mower("backward", 100, 100)
     elif direction == 'left':
-        MotorController.move_mower("left",100,100)
+        MotorController.move_mower("left", 100, 100)
     elif direction == 'right':
-        MotorController.move_mower("right",100,100)
+        MotorController.move_mower("right", 100, 100)
     elif direction == 'stop':
         MotorController.stop_motors()
         return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400

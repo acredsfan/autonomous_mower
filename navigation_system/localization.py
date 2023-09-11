@@ -4,9 +4,13 @@ import time
 from hardware_interface import SensorInterface
 from navigation_system import GPSInterface
 import logging
+import json
 
 # Initialize logging
 logging.basicConfig(filename='localization.log', level=logging.DEBUG)
+
+with open("config.json") as f:
+    config = json.load(f)
 
 # Global variables
 current_latitude = 0
@@ -18,6 +22,30 @@ class Localization:
     def __init__(self):
         # Replace gpsd with GPSInterface
         self.gps = GPSInterface()
+        self.yard_boundary = self.load_yard_boundary()
+
+    def load_yard_boundary(self):
+        try:
+            with open('user_polygon.json') as f:
+                polygon_coordinates = json.load(f)
+            return polygon_coordinates.get('yard_boundary', [])
+        except FileNotFoundError:
+            print("Warning: config.json not found. Yard boundary is not set.")
+            return []
+        except json.JSONDecodeError:
+            print("Warning: Could not decode config.json. Yard boundary is not set.")
+            return []
+        
+    def set_min_max_coordinates(self):
+        latitudes = [coord['lat'] for coord in polygon_coordinates]
+        longitudes = [coord['lng'] for coord in polygon_coordinates]
+        self.min_lat = min(latitudes)
+        self.max_lat = max(latitudes)
+        self.min_lng = min(longitudes)
+        self.max_lng = max(longitudes)
+        self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
+        self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
+        pass
 
     def gps_to_meters(self, lat1, lon1, lat2, lon2):
         """
@@ -62,10 +90,28 @@ class Localization:
 
     def get_current_orientation(self):
         return current_heading
+    
+    def is_within_yard(self, lat, lon):
+        """
+        Check if the current position is within the yard boundary.
+        """
+        for boundary in self.yard_boundary:
+            if boundary['min_lat'] <= lat <= boundary['max_lat'] and boundary['min_lng'] <= lon <= boundary['max_lng']:
+                return True
+        return False
 
     def update(self):
         self.estimate_position()
         self.estimate_orientation()
+        # Check if within yard
+        lat, lon, _ = self.get_current_position()
+        if not self.is_within_yard(lat, lon):
+            print("Warning: Outside yard boundary!")
+            logging.warning("Outside yard boundary!")
+
+            # Take corrective actions to move back into yard
+            # TODO: Implement corrective actions
+            pass
 
 if __name__ == '__main__':
     localization = Localization()

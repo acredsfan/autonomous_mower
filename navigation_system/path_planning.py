@@ -8,6 +8,7 @@ from navigation_system import Localization
 import json
 import logging
 
+
 # Initialize logging
 logging.basicConfig(filename='path_planning.log', level=logging.DEBUG)
 
