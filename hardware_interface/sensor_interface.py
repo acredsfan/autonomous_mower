@@ -10,6 +10,10 @@ import RPi.GPIO as GPIO
 import busio
 import time
 import logging
+import numpy as np
+
+# Import GRID_SIZE from path_planning.py
+from navigation_system.path_planning import GRID_SIZE
 
 # Initialize logging
 logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
@@ -19,6 +23,7 @@ class SensorInterface:
         self.MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
+        self.obstacle_data = np.zeros(GRID_SIZE)
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
         except Exception as e:
