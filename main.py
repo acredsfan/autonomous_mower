@@ -9,13 +9,18 @@ from multiprocessing import Process, Lock
 import time
 import datetime
 import threading
+import cv2
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
+
+avoidance_algo = AvoidanceAlgorithm()
 sensor_interface = SensorInterface()
+localization = Localization()
+
 # Initialize MotorController with Q-Learning
 motor_controller = MotorController()
 
@@ -47,6 +52,7 @@ def main():
         localization_instance = Localization()
         robot_position = localization_instance.get_current_position()
         path_following_thread = threading.Thread()
+        cap = cv2.VideoCapture(0)
 
         if mow_days is None or mow_hours is None:
             logging.warning("Mowing schedule not set. Please set the schedule in the web interface.")
@@ -56,6 +62,9 @@ def main():
                 with lock:
                 # Get user schedule
                     mow_days, mow_hours = get_schedule()
+
+                    # Update Localization
+                    localization.update()
 
                     # Check if ideal mowing conditions are met (including weather)
                     mower_blades_on = check_mowing_conditions()
@@ -71,10 +80,30 @@ def main():
                         mowing_requested = True
 
                     # Update sensor data
-                    #SensorInterface.update_sensor_data()
+                    sensor_interface.update_obstacle_data
 
-                    # Update localization
-                    #Localization.update_localization()
+                    # Get current state for RL
+                    lat, lon, _ = localization.get_current_position()
+                    current_state = (lat, lon)
+
+                    # Update Q-table and get next action
+                    avoidance_algo.q_learning(current_state, sensor_interface.get_obstacle_data())
+                    next_action = avoidance_algo.get_next_action(current_state)
+
+                    # Execute Next action
+                    if next_action == 0:
+                        motor_controller.set_motor_speed_and_direction(0)
+                    elif next_action == 1:
+                        motor_controller.set_motor_speed_and_direction(1)
+                    elif next_action == 2:
+                    
+                    ret, frame = cap.read()
+
+                    if ret:
+                        # Classify obstacle using CNN
+                        obstacle_label = CameraProcessor.classify_obstacle(frame)
+                        print(f"Detected obstacle type: {obstacle_label}")
+
 
                     # Plan the path
                     localization_instance = Localization()
@@ -109,12 +138,14 @@ def main():
         flask_app_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
+        cap.release()
         logging.info("Shutdown complete.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         flask_app_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
+        cap.release()
 
 if __name__ == "__main__":
     main()
