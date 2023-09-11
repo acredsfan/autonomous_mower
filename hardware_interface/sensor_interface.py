@@ -230,9 +230,28 @@ class SensorInterface:
         # Use compass data to get the direction
         direction = self.read_mpu9250_compass()
 
+        # Convert compass direction to grid coordinates
+        dx, dy = 0, 0
+        if 0 <= direction < 90:
+            dx, dy = 1, 1
+        elif 90 <= direction < 180:
+            dx, dy = -1, 1
+        elif 180 <= direction < 270:
+            dx, dy = -1, -1
+        elif 270 <= direction < 360:
+            dx, dy = 1, -1
+
         # Update the obstacle_data grid based on distances and direction
-        # Here, you can add your logic to update the grid
-        # ...
+        # Assuming the mower is at the center of the grid
+        center_x, center_y = GRID_SIZE[0] // 2, GRID_SIZE[1] // 2
+
+        # Update for left sensor
+        if left_distance < 15:  # Assuming 50 is the threshold distance in cm
+            self.obstacle_data[center_x + dx][center_y + dy] = 1  # Mark as obstacle
+
+        # Update for right sensor
+        if right_distance < 15:
+            self.obstacle_data[center_x - dx][center_y - dy] = 1  # Mark as obstacle
 
     def get_obstacle_data(self):
         return self.obstacle_data
