@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 import time
+import numpy as np
 
 # Define GPIO pins connected to the IBT-2 drivers
 Prwm1, Lpwm1 = 4, 27  # Motor 1 control pins
@@ -19,6 +20,12 @@ pwm1.start(0)  # Start with 0% duty cycle
 pwm2.start(0)  # Start with 0% duty cycle
 
 class MotorController:
+    
+    def __init__(self):
+        # Set the initial motor speeds
+        MotorController.set_motor_speed(0, 0)
+        self.q_table = np.zeros((100, 4))  # 100 states, 4 actions (forward, backward, left, right)
+        self.last_action = None
 
     @staticmethod
     def set_motor_speed(right_speed, left_speed):
@@ -100,6 +107,31 @@ class MotorController:
 
         # Set the motor speeds
         MotorController.set_motor_speed(right_speed, left_speed)
+
+    def reward_function(self, deviation_from_path):
+        # Reward function based on how well the mower is following the path
+        return -abs(deviation_from_path)
+    
+    def q_learning(self, current_state, deviation_from_path, learning_rate=0.1, discount_factor=0.9):
+        reward = self.reward_function(deviation_from_path)
+        old_value = self.q_table[current_state][self.last_action]
+        next_max = np.max(self.q_table[current_state])
+        new_value = (1 - learning_rate) * old_value + learning_rate * (reward + discount_factor * next_max)
+        self.q_table[current_state][self.last_action] = new_value
+
+    def set_motor_speed_and_direction(self, current_state):
+        # Choose an action based on Q-table
+        action = np.argmax(self.q_table[current_state])
+        self.last_action = action
+
+        if action == 0:
+            self.move_mower("forward", 100, 100)
+        elif action == 1:
+            self.move_mower("backward", 100, 100)
+        elif action == 2:
+            self.move_mower("left", 100, 100)
+        elif action == 3:
+            self.move_mower("right", 100, 100)
 
 # Test the motors
 # try:

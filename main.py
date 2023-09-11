@@ -16,6 +16,8 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG)
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
 sensor_interface = SensorInterface()
+# Initialize MotorController with Q-Learning
+motor_controller = MotorController()
 
 # Initialize Lock for shared resources
 lock = Lock()
@@ -86,6 +88,13 @@ def main():
                     if not path_following_thread.is_alive():
                         path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
                         path_following_thread.start()
+
+                    # Here, add Q-Learning logic for motor control
+                    deviation_from_path = 0  # Calculate the deviation from the path
+                    current_state = 0  # Define the current state based on your criteria
+
+                    motor_controller.q_learning(current_state, deviation_from_path)
+                    motor_controller.set_motor_speed_and_direction(current_state)
 
                     # Check for obstacles and update the path if needed
                     obstacles_detected = AvoidanceAlgorithm.detect_obstacles()
