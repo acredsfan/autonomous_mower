@@ -96,6 +96,7 @@ def main():
                     elif next_action == 1:
                         motor_controller.set_motor_speed_and_direction(1)
                     elif next_action == 2:
+                        continue
                     
                     ret, frame = cap.read()
 
