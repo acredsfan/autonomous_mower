@@ -3,7 +3,6 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
-from obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from user_interface.web_interface.app import start_web_interface, get_schedule
 from multiprocessing import Process, Lock
 import time
@@ -17,11 +16,12 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG)
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
 
+# Initialize AvoidanceAlgorithm, SensorInterface, and Localization
 avoidance_algo = AvoidanceAlgorithm()
 sensor_interface = SensorInterface()
 localization = Localization()
 
-# Initialize MotorController with Q-Learning
+# Initialize MotorController
 motor_controller = MotorController()
 
 # Initialize Lock for shared resources
@@ -80,7 +80,7 @@ def main():
                         mowing_requested = True
 
                     # Update sensor data
-                    sensor_interface.update_obstacle_data
+                    sensor_interface.update_obstacle_data()
 
                     # Get current state for RL
                     lat, lon, _ = localization.get_current_position()
