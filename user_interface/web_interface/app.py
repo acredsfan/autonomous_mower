@@ -5,7 +5,7 @@ sys.path.append('/home/pi/autonomous_mower')
 from hardware_interface import MotorController, SensorInterface, BladeController
 import subprocess
 import os
-from dotenv import load_dotenv
+from obstacle_detection import camera_processing
 from .camera import VideoCamera
 import time
 import threading
@@ -236,6 +236,11 @@ def get_schedule():
 def gen(camera):
     while True:
         frame = camera.get_frame()
+
+        # Perform obstacle detection on the frame
+        obstacle_label = camera_processing.classify_obstacle(frame)
+        print(f"Detected obstacle type: {obstacle_label}")
+
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
     
