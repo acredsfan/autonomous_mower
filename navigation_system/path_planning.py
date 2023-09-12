@@ -19,6 +19,7 @@ try:
     with open("user_polygon.json") as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
+    print("config file not found")
     polygon_coordinates = []
 
 # Constants
@@ -45,6 +46,10 @@ class PathPlanning:
         self.last_action = None
 
     def set_min_max_coordinates(self):
+        """
+        Sets the minimum and maximum coordinates of the yard.
+        :return:
+        """
         latitudes = [coord['lat'] for coord in polygon_coordinates]
         longitudes = [coord['lng'] for coord in polygon_coordinates]
         self.min_lat = min(latitudes)
@@ -56,10 +61,18 @@ class PathPlanning:
         pass
 
     def set_user_polygon(self, polygon_coordinates):
+        """
+        Sets the user polygon.
+        :param polygon_coordinates:
+        :return:
+        """
         global user_polygon
         user_polygon = Polygon(polygon_coordinates)
 
     def divide_yard_into_sections(self):
+        """
+        Divides the yard into sections.
+        """
         sections = []
         for i in range(0, GRID_SIZE[0], SECTION_SIZE[0]):
             for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
@@ -69,10 +82,19 @@ class PathPlanning:
         pass
 
     def select_next_section(self, current_position):
-        closest_section = min(self.sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
-        return closest_section
+        """
+        Selects the next section to go to.
+        :param current_position:
+        :return:
+        """
+        pass
 
     def update_obstacle_map(self, new_obstacles):
+        """
+        Updates the obstacle map.
+        :param new_obstacles:
+        :return:
+        """
         new_obstacle_set = set([obstacle.wkt for obstacle in new_obstacles])
 
         # Find obstacles that were removed
@@ -109,6 +131,11 @@ class PathPlanning:
 
     # This function generates a grid with marked obstacles
     def generate_grid(self, obstacles):
+        """
+        Generates a grid with marked obstacles.
+        :param obstacles:
+        :return:
+        """
         grid = np.zeros(GRID_SIZE, dtype=np.uint8)
 
         # Mark the obstacles on the grid
@@ -157,6 +184,13 @@ class PathPlanning:
         self.obstacle_map = obstacle_map
 
     def reward_function(self, old_state, new_state, action):
+        """
+        This function calculates the reward for the given state transition.
+        :param old_state:
+        :param new_state:
+        :param action:
+        :return:
+        """
         if new_state == 'goal':
             return 100
         elif self.obstacle_map[new_state[0], new_state[1]] == 1:
@@ -191,6 +225,7 @@ class PathPlanning:
 
     # This function implements the Q-Learning algorithm
     def q_learning(self, start, goal, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
+        """"""
         for episode in range(episodes):
             state = start
             for step in range(100):
@@ -216,6 +251,7 @@ class PathPlanning:
             if epsilon > epsilon_min:
                 epsilon *= epsilon_decay
 
+    # This function returns the path to the goal
     def get_path(self, start, goal):
         path = self.q_learning(start, goal)
         path_coords = []
@@ -250,7 +286,7 @@ class PathPlanning:
         return start, goal
     
     def coord_to_grid(self, lat, lng):
-    # TODO: Implement the conversion logic
+        # Convert lat, lng to grid cell location
         grid_x = int((lat - self.min_lat) / self.lat_grid_size)
         grid_y = int((lng - self.min_lng) / self.lng_grid_size)
         return (grid_x, grid_y)
@@ -295,14 +331,20 @@ if __name__ == "__main__":
         return closest_section
 
     def get_current_position(self):
-        # TODO: Implement logic to get the current position of the mower
-        # This could be based on sensors, GPS, or other localization methods
-        return (10, 10)  # Example current position
-
+        # Get location of mower from Locatlization class
+        lat, lng, alt = self.localization.get_current_position()
+        # Convert lat, lng, alt to Grid Cell location
+        grid_cell = self.coord_to_grid(lat, lng)
+        return grid_cell
+    
     def calculate_goal_position(self, next_section):
-        # TODO: Implement logic to calculate the goal position within the selected section
-        # This could be the center of the section or another specific point
-        return (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
+        # Determine the boundaries of teh selected section
+        section_size = (next_section[2] - next_section[0], next_section[3] - next_section[1])
+        
+        # Calculate the goal position within the selected section
+        goal_position = (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
+        
+        return goal_position
 
     def get_start_and_goal(self):
         current_position = self.get_current_position()
