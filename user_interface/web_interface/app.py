@@ -14,6 +14,7 @@ import datetime
 import logging
 import dotenv
 from dotenv import load_dotenv
+from flask_socketio import SocketIO, emit
 
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.INFO)
@@ -21,6 +22,7 @@ logging.basicConfig(filename='UI.log', level=logging.INFO)
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 sensors = SensorInterface()
 gps = GPSInterface()
+socketio = SocketIO(app)
 
 # Define variables to hold sensor values
 battery_charge = {}
@@ -38,6 +40,10 @@ stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
+sensors = SensorInterface()
+gps = GPSInterface()
+motor_controller = MotorController()
+blade_controller = BladeController()
 path_planning = PathPlanning()
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
@@ -141,33 +147,27 @@ def camera():
 def video_feed():
   return Response(gen(VideoCamera()), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# Add routes for AJAX requests here
-@app.route('/move', methods=['POST'])
-def move():
-    direction = request.json.get('direction', 100, 100)
+@socketio.on('move')
+def handle_move(direction):
     if direction == 'forward':
-        MotorController.move_mower("forward", 100, 100)
+        motor_controller.move_mower("forward", 100, 100)
     elif direction == 'backward':
-        MotorController.move_mower("backward", 100, 100)
+        motor_controller.move_mower("backward", 100, 100)
     elif direction == 'left':
-        MotorController.move_mower("left", 100, 100)
+        motor_controller.move_mower("left", 100, 100)
     elif direction == 'right':
-        MotorController.move_mower("right", 100, 100)
+        motor_controller.move_mower("right", 100, 100)
     elif direction == 'stop':
-        MotorController.stop_motors()
-        return jsonify({'error': 'Invalid direction. Please use "forward", "backward", "left", or "right".'}), 400
-    return jsonify({'message': f'Moving {direction}.'})
+        motor_controller.stop_motors()
+    emit('message', {'data': f'Moving {direction}'})
 
-@app.route('/toggle-mower-blades', methods=['POST'])
-def toggle_mower_blades():
-    state = request.json.get('state')
+@socketio.on('toggle_blades')
+def handle_toggle_blades(state):
     if state == 'on':
-        BladeController.set_speed(90)
+        blade_controller.set_speed(90)
     elif state == 'off':
-        BladeController.set_speed(0)
-    else:
-        return jsonify({'error': 'Invalid state. Please use "on" or "off".'}), 400
-    return jsonify({'message': f'Mower blades toggled {state}.'})
+        blade_controller.set_speed(0)
+    emit('message', {'data': f'Blades toggled {state}'})
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
@@ -234,6 +234,11 @@ def get_schedule():
     else:
         # Return default values if the schedule is not set
         return None, None
+
+@socketio.on('request_frame')
+def handle_frame_request():
+    frame = VideoCamera().get_frame()
+    emit('update_frame', {'frame': frame})
     
 def gen(camera):
     while True:
@@ -298,6 +303,7 @@ if __name__ == '__main__':
     sensor_thread.start()
 
     app.run(host='0.0.0.0', port=90, debug=False)
+    socketio.run(app, host='0.0.0.0', port=90)
 
     # Create an instance of the VideoCamera class
     camera = VideoCamera()

@@ -12,60 +12,39 @@
                 <button class="btn btn-stop" onclick="move('stop')"><i class="fas fa-stop"></i></button>
             </div>
             <div class="mower-controls">
-                <button class="btn btn-blades-on" onclick="toggle_mower_blades('on')"><i class="fas fa-power-off"></i></button>
-                <button class="btn btn-blades-off" onclick="toggle_mower_blades('off')"><i class="fas fa-ban"></i></button>
-                <button class="btn btn-start-mowing" onclick="startMowing()"><i class="fas fa-play"></i></button>
-                <button class="btn btn-stop-mowing" onclick="stopMowing()"><i class="fas fa-pause"></i></button>
+                <button class="btn btn-blades-on" onclick="toggleBlades('on')"><i class="fas fa-power-off"></i></button>
+                <button class="btn btn-blades-off" onclick="toggleBlades('off')"><i class="fas fa-ban"></i></button>
             </div>
         </div>
         <div class="video-stream">
-            <img id="video" src="{{ url_for('video_feed') }}" />
+            <img id="camera_feed" alt="Camera Feed">
         </div>
     </div>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        socket.on('message', function(data) {
+            console.log(data.data);
+        });
+
+        socket.on('update_frame', function(data) {
+            var image = document.getElementById('camera_feed');
+            image.src = 'data:image/jpeg;base64,' + data.frame;
+        });
+
         function move(direction) {
-            fetch('/move', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ direction: direction }),
-            })
-            .then(response => response.json())
-            .then(data => console.log(data))
-            .catch((error) => console.error('Error:', error));
+            socket.emit('move', direction);
         }
 
-        function toggle_mower_blades(state) {
-            fetch('/toggle-mower-blades', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ state: state }),
-            })
-            .then(response => response.json())
-            .then(data => console.log(data))
-            .catch((error) => console.error('Error:', error));
+        function toggleBlades(state) {
+            socket.emit('toggle_blades', state);
         }
 
-        function startMowing() {
-            fetch('/start-mowing', {
-                method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => console.log(data))
-            .catch((error) => console.error('Error:', error));
-        }
-
-        function stopMowing() {
-            fetch('/stop-mowing', {
-                method: 'POST',
-            })
-            .then(response => response.json())
-            .then(data => console.log(data))
-            .catch((error) => console.error('Error:', error));
-        }
+        // Request a new frame every 500ms (or whatever interval you prefer)
+        setInterval(function() {
+            socket.emit('request_frame');
+        }, 500);
     </script>
 {% endblock %}

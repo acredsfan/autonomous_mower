@@ -188,3 +188,15 @@ window.addEventListener('load', function() {
     loadScript();
     getAndDrawMowingArea();
 });
+
+var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+socket.on('update_frame', function(data) {
+    var image = document.getElementById('camera_feed');
+    image.src = 'data:image/jpeg;base64,' + data.frame;
+});
+
+// Request a new frame every 500ms (or whatever interval you prefer)
+setInterval(function() {
+    socket.emit('request_frame');
+}, 500);

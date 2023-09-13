@@ -51,39 +51,32 @@
         <td class="status-value">{{ next_scheduled_mow }}</td>
     </tr>
 </table>
-<img id="video" src="{{ url_for('video_feed') }}" />
+<img id="video" alt="Camera Feed" />
 
-    <script>
-        function updateSensorData() {
-            // Make an AJAX request to retrieve the updated sensor data
-            var xhr = new XMLHttpRequest();
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState === XMLHttpRequest.DONE) {
-                    if (xhr.status === 200) {
-                        var sensorData = JSON.parse(xhr.responseText);
-                        // Update the sensor data in the HTML elements
-                        document.getElementById('battery-voltage').textContent = sensorData.battery_voltage.bus_voltage + ' V';
-                        document.getElementById('battery-current').textContent = sensorData.battery_voltage.current + ' A';
-                        document.getElementById('battery-charge-level').textContent = sensorData.battery_voltage.charge_level;
-                        document.getElementById('solar-voltage').textContent = sensorData.solar_voltage.bus_voltage + ' V';
-                        document.getElementById('solar-current').textContent = sensorData.solar_voltage.current + ' A';
-                        document.getElementById('speed').textContent = sensorData.speed + ' mph';
-                        document.getElementById('heading').textContent = sensorData.heading + ' degrees';
-                        document.getElementById('temperature').textContent = sensorData.temperature + ' °F';
-                        document.getElementById('humidity').textContent = sensorData.humidity + ' %';
-                        document.getElementById('pressure').textContent = sensorData.pressure + ' hPa';
-                        document.getElementById('left-distance').textContent = sensorData.left_distance + ' cm';
-                        document.getElementById('right-distance').textContent = sensorData.right_distance + ' cm';
-                    } else {
-                        console.error('Error retrieving sensor data');
-                    }
-                }
-            };
-            xhr.open('GET', '/sensor-data', true);
-            xhr.send();
-        }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
 
-        // Update sensor data every 5 seconds
-        setInterval(updateSensorData, 5000);
-    </script>
+    socket.on('update_status', function(data) {
+        // Update the sensor data in the HTML elements
+        // Example:
+        // document.getElementById('battery-voltage').textContent = data.battery_voltage.bus_voltage + ' V';
+        // ...
+    });
+
+    socket.on('update_frame', function(data) {
+        var image = document.getElementById('video');
+        image.src = 'data:image/jpeg;base64,' + data.frame;
+    });
+
+    // Request a new status update every 5 seconds (or whatever interval you prefer)
+    setInterval(function() {
+        socket.emit('request_status');
+    }, 5000);
+
+    // Request a new frame every 500ms (or whatever interval you prefer)
+    setInterval(function() {
+        socket.emit('request_frame');
+    }, 500);
+</script>
 {% endblock %}
