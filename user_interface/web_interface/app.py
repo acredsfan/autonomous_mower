@@ -169,6 +169,22 @@ def handle_toggle_blades(state):
         blade_controller.set_speed(0)
     emit('message', {'data': f'Blades toggled {state}'})
 
+@socketio.on('request_status')
+def handle_status_request():
+    global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
+    sensor_data = {
+        'battery_voltage': battery_charge,
+        'solar_voltage': solar_status,
+        'speed': speed,
+        'heading': heading,
+        'temperature': temperature,
+        'humidity': humidity,
+        'pressure': pressure,
+        'left_distance': left_distance,
+        'right_distance': right_distance
+    }
+    emit('update_status', sensor_data)
+
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     global mowing_requested
