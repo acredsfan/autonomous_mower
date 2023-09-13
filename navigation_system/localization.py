@@ -1,7 +1,6 @@
 # Import required modules
 import math
 import time
-from hardware_interface import SensorInterface
 from navigation_system import GPSInterface
 import logging
 import json
@@ -64,6 +63,8 @@ class Localization:
         return distance
 
     def estimate_position(self):
+        global current_heading
+        from hardware_interface import SensorInterface
         global current_latitude, current_longitude, current_altitude
 
         # Use GPSInterface to get the GPS data
