@@ -12,7 +12,7 @@ import time
 import logging
 import numpy as np
 
-
+import navigation_system.path_planning as pp
 
 # Initialize logging
 logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
@@ -20,11 +20,11 @@ logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
 class SensorInterface:
     def __init__(self):
         # Import GRID_SIZE from path_planning.py
-        from navigation_system.path_planning import GRID_SIZE
+        self.GRID_SIZE = pp.GRID_SIZE
         self.MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
-        self.obstacle_data = np.zeros(GRID_SIZE)
+        self.obstacle_data = np.zeros(self.GRID_SIZE)
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
         except Exception as e:
