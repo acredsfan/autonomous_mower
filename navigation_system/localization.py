@@ -27,7 +27,7 @@ class Localization:
         try:
             with open('user_polygon.json') as f:
                 polygon_coordinates = json.load(f)
-            return polygon_coordinates.get([])
+            return polygon_coordinates
         except FileNotFoundError:
             print("Warning: config.json not found. Yard boundary is not set.")
             return []
