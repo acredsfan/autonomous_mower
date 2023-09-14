@@ -1,17 +1,22 @@
 # Code for the camera processing module
 # Uses OpenCV to detect obstacles and calculate the distance to them
 
-#IMPORTS
+# IMPORTS
 import cv2
 import numpy as np
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 
 class CameraProcessor:
-    # Load pre-trained MobileNetV2 model + higher level layers
-    model = tf.keras.applications.MobileNetV2(weights='imagenet', input_shape=(224, 224, 3))
+    # Initialize the TFLite interpreter
+    interpreter = tflite.Interpreter(model_path="mobilenet_v2_ssd.tflite")
+    interpreter.allocate_tensors()
+
+    # Get input and output details
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
 
     def preprocess_image(image):
-        # Resize the image to (224, 224) that MobileNetV2 expects
+        # Resize the image to (224, 224)
         image = cv2.resize(image, (224, 224))
         
         # Convert the BGR image to RGB
@@ -28,13 +33,24 @@ class CameraProcessor:
     def classify_obstacle(image):
         processed_image = preprocess_image(image)
         
-        # Get model predictions
-        predictions = model.predict(processed_image)
-        
-        # Decode predictions to class labels and get the label with the highest probability
-        label = tf.keras.applications.mobilenet_v2.decode_predictions(predictions)[0][0][1]
+        # Run inference
+        interpreter.set_tensor(input_details[0]['index'], processed_image)
+        interpreter.invoke()
+
+        # Get the detection results
+        detection_boxes = interpreter.get_tensor(output_details[0]['index'])
+        detection_classes = interpreter.get_tensor(output_details[1]['index'])
+        detection_scores = interpreter.get_tensor(output_details[2]['index'])
+
+        # Process the results (you'll need to implement this part)
+        label = process_results(detection_boxes, detection_classes, detection_scores)
         
         return label
+
+# Implement this function to handle the detection results
+def process_results(detection_boxes, detection_classes, detection_scores):
+    # Your code here to process the results and return the label
+    pass
 
 # Example usage
 if __name__ == "__main__":
@@ -47,4 +63,3 @@ if __name__ == "__main__":
         print(f"Detected obstacle type: {obstacle_label}")
     
     cap.release()
-

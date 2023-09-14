@@ -14,5 +14,5 @@ pathfinding
 shapely
 networkx
 rtree
-tensorflow
+tflite-runtime
 flask-socketio
