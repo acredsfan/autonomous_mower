@@ -8,7 +8,7 @@ import tflite_runtime.interpreter as tflite
 
 class CameraProcessor:
     # Initialize the TFLite interpreter
-    interpreter = tflite.Interpreter(model_path="lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
+    interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
     interpreter.allocate_tensors()
 
     # Get input and output details
