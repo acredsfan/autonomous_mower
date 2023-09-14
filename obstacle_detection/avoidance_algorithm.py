@@ -26,7 +26,7 @@ MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:
     def __init__(self):
-        self.tof_avoidance = tof_processing()
+        self.tof_avoidance = tof_processing.avoid_obstacles()
         self.camera_processor = camera_processing()
         self.obstacle_detected = False
         self.q_table = np.zeros((GRID_SIZE, GRID_SIZE, 4)) # Grid defined in path_planning, 4 directions
