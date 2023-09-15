@@ -102,7 +102,7 @@ def main():
                     elif next_action == 2:
                         continue
                     
-                    ret, frame = cap.read()
+                    ret, frame = camera.get_frame()
 
                     if ret:
                         # Classify obstacle using CNN
