@@ -1,4 +1,9 @@
 import cv2
+import logging
+import time
+
+# Initialize logging
+logging.basicConfig(filename='UI.log', level=logging.DEBUG)
 
 class VideoCamera(object):
     def __init__(self):

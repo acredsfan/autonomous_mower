@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 
 # Initialize logging
-logging.basicConfig(filename='UI.log', level=logging.INFO)
+logging.basicConfig(filename='UI.log', level=logging.DEBUG)
 
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 sensors = SensorInterface()
