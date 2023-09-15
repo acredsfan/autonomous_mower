@@ -18,7 +18,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG)
 path_planner = path_planning.PathPlanning()
 
 # Initialize AvoidanceAlgorithm, SensorInterface, and Localization
-avoidance_algo = AvoidanceAlgorithm()
+avoidance_algo = AvoidanceAlgorithm(camera_instance)
 sensor_interface = SensorInterface()
 localization = Localization()
 
