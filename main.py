@@ -13,6 +13,9 @@ import threading
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
+# Initialize the camera
+camera = SingletonCamera()
+
 # Initialize PathPlanning class
 path_planner = path_planning.PathPlanning()
 
@@ -23,11 +26,6 @@ localization = Localization()
 
 # Initialize MotorController
 motor_controller = MotorController()
-
-# Initialize the camera
-camera = SingletonCamera()
-
-#start_web_interface(camera_instance=camera)
 
 # Initialize Lock for shared resources
 lock = Lock()
