@@ -5,13 +5,14 @@
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
+from user_interface.web_interface.camera import SingletonCamera
 
 class CameraProcessor:
     # Initialize the TFLite interpreter
     interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
     interpreter.allocate_tensors()
     # Initialize Camera
-    camera = camera_instance
+    camera = SingletonCamera.get_frame()
     # Get input and output details
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()

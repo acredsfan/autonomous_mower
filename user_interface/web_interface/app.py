@@ -15,6 +15,7 @@ import logging
 import dotenv
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
+from user_interface.web_interface.camera import SingletonCamera
 
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.DEBUG)
@@ -24,7 +25,7 @@ sensors = SensorInterface()
 gps = GPSInterface()
 socketio = SocketIO(app)
 try:
-    camera = VideoCamera()
+    camera = SingletonCamera()
 except Exception as e:
     print(f"Failed to initialize camer in app: {e}")
 
@@ -38,7 +39,6 @@ humidity = 0
 pressure = 0
 left_distance = {}
 right_distance = {}
-camera = None
 
 # Define a flag for stopping the sensor update thread
 stop_sensor_thread = False
@@ -260,8 +260,8 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    camera_instance = VideoCamera()
-    frame = camera_instance.get_frame()  # Use the single instance
+    camera= SingletonCamera()
+    frame = camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
 def gen(camera):
