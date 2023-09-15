@@ -60,7 +60,7 @@ first_request = True
 def start_web_interface():
     # Start the sensor update thread
     global camera
-    camera = camera_instance
+    camera = SingletonCamera()
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 

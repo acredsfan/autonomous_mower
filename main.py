@@ -4,6 +4,7 @@ from control_system import trajectory_controller, speed_controller, direction_co
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
 from user_interface.web_interface.app import start_web_interface, get_schedule
+from user_interface.web_interface.camera import SingletonCamera
 from multiprocessing import Process, Lock
 import time
 import datetime
@@ -25,7 +26,7 @@ localization = Localization()
 motor_controller = MotorController()
 
 # Initialize the camera
-camera = CameraProcessor()
+camera = SingletonCamera()
 
 start_web_interface(camera_instance=camera)
 
