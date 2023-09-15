@@ -47,10 +47,25 @@ class CameraProcessor:
         
         return label
 
-# Implement this function to handle the detection results
-def process_results(detection_boxes, detection_classes, detection_scores):
-    # Your code here to process the results and return the label
-    pass
+    # Implement this function to handle the detection results
+    def process_results(detection_boxes, detection_classes, detection_scores):
+        # Assuming a threshold of 0.5 for detection
+        threshold = 0.5
+        detected_objects = []
+
+        for i in range(len(detection_scores[0])):
+            if detection_scores[0][i] > threshold:
+                # Get the class and bounding box
+                class_id = int(detection_classes[0][i])
+                box = detection_boxes[0][i]
+
+                # You can map the class_id to a label if you have a mapping
+                # For example, if class_id 1 is 'tree', 2 is 'rock', etc.
+                label = f'Class {class_id}'  # Replace this with actual label mapping
+
+                detected_objects.append({'label': label, 'box': box})
+
+        return detected_objects
 
 # Example usage
 if __name__ == "__main__":

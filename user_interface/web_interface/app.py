@@ -325,9 +325,6 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=90, debug=False)
     socketio.run(app, host='0.0.0.0', port=90)
 
-    # Create an instance of the VideoCamera class
-    camera = VideoCamera()
-
-    # Set the flag to stop the sensor update thread
+      # Set the flag to stop the sensor update thread
     stop_sensor_thread = True
     sensor_thread.join()  # Wait for the thread to finish
