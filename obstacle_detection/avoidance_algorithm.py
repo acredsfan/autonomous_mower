@@ -25,7 +25,8 @@ CAMERA_OBSTACLE_THRESHOLD = config['CAMERA_OBSTACLE_THRESHOLD'] # Minimum area t
 MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:
-    def __init__(self):
+    def __init__(self, camera_instance):
+        self.camera = camera_instance
         self.tof_avoidance = tof_processing.ObstacleAvoidance()
         self.camera_processor = camera_processing.CameraProcessor()
         self.obstacle_detected = False
