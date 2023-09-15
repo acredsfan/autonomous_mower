@@ -23,6 +23,7 @@ app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/
 sensors = SensorInterface()
 gps = GPSInterface()
 socketio = SocketIO(app)
+camera = VideoCamera()
 
 # Define variables to hold sensor values
 battery_charge = {}
@@ -253,7 +254,7 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    frame = VideoCamera().get_frame()
+    frame = camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
 def gen(camera):
