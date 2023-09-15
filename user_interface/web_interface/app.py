@@ -23,7 +23,10 @@ app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/
 sensors = SensorInterface()
 gps = GPSInterface()
 socketio = SocketIO(app)
-camera = VideoCamera()
+try:
+    camera = VideoCamera()
+except Exception as e:
+    print(f"Failed to initialize camer in app: {e}")
 
 # Define variables to hold sensor values
 battery_charge = {}

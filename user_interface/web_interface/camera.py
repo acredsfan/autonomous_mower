@@ -3,7 +3,10 @@ import cv2
 class VideoCamera(object):
     def __init__(self):
         # Use OpenCV to capture from Raspberry Pi camera module
-        self.cap = cv2.VideoCapture('v4l2src device=/dev/video0 ! videoconvert ! appsink', cv2.CAP_GSTREAMER)
+        try:
+            self.cap = cv2.VideoCapture('v4l2src device=/dev/video0 ! videoconvert ! appsink', cv2.CAP_GSTREAMER)
+        except Exception as e:
+            print(f"Failed to initialize camera: {e}")
 
     def __del__(self):
         if hasattr(self, 'cap'):
