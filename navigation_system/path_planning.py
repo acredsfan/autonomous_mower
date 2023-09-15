@@ -7,6 +7,7 @@ from shapely.geometry import Polygon, Point
 from navigation_system import Localization
 import json
 import logging
+import time
 
 
 # Initialize logging
@@ -267,7 +268,10 @@ class PathPlanning:
         return {"lat": lat, "lng": lng}
     
     def calculate_goal_position(self, next_section):
-        # Determine the boundaries of teh selected section
+        # Determine the boundaries of thr selected section
+        if next_section is None:
+            logging.error("Next section is None.  Waiting for result...")
+            time.sleep(1)
         section_size = (next_section[2] - next_section[0], next_section[3] - next_section[1])
         
         # Calculate the goal position within the selected section
