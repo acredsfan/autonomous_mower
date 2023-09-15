@@ -3,8 +3,8 @@
 
 # IMPORTS
 import threading
-from obstacle_detection import tof_processing
-from obstacle_detection import camera_processing
+import obstacle_detection.tof_processing as tof_processing
+import obstacle_detection.camera_processing as camera_processing
 from hardware_interface import MotorController
 import json
 import time
