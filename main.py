@@ -147,6 +147,9 @@ def main():
         MotorController.stop_motors()
         BladeController.stop()
         cap.release()
+    finally:
+        if cap:
+            cap.release()
 
 if __name__ == "__main__":
     main()
