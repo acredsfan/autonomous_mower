@@ -38,6 +38,7 @@ humidity = 0
 pressure = 0
 left_distance = {}
 right_distance = {}
+camera = None
 
 # Define a flag for stopping the sensor update thread
 stop_sensor_thread = False
@@ -58,6 +59,8 @@ first_request = True
 
 def start_web_interface():
     # Start the sensor update thread
+    global camera
+    camera = camera_instance
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 

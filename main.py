@@ -24,6 +24,11 @@ localization = Localization()
 # Initialize MotorController
 motor_controller = MotorController()
 
+# Initialize the camera
+camera = CameraProcessor()
+
+start_web_interface(camera_instance=camera)
+
 # Initialize Lock for shared resources
 lock = Lock()
 
