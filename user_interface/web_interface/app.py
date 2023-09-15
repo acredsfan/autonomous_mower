@@ -21,6 +21,9 @@ from user_interface.web_interface.camera import SingletonCamera
 logging.basicConfig(filename='UI.log', level=logging.DEBUG)
 
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
+@app.before_request
+def before_request():
+    g.camera = camera_instance
 sensors = SensorInterface()
 gps = GPSInterface()
 socketio = SocketIO(app)
@@ -261,7 +264,7 @@ def get_schedule():
 @socketio.on('request_frame')
 def handle_frame_request():
     camera= SingletonCamera()
-    frame = camera.get_frame()  # Use the single instance
+    frame = g.camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
 def gen(camera):
