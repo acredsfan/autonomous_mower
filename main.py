@@ -9,7 +9,6 @@ from multiprocessing import Process, Lock
 import time
 import datetime
 import threading
-import cv2
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
@@ -28,7 +27,7 @@ motor_controller = MotorController()
 # Initialize the camera
 camera = SingletonCamera()
 
-start_web_interface(camera_instance=camera)
+#start_web_interface(camera_instance=camera)
 
 # Initialize Lock for shared resources
 lock = Lock()
@@ -50,7 +49,7 @@ def check_mowing_conditions():
 def main():
     try:
         # Start the Flask app in a separate process
-        flask_app_process = Process(target=start_web_interface)
+        flask_app_process = Process(target=start_web_interface, args=(camera,))
         flask_app_process.start()
 
         mowing_requested = False
@@ -58,7 +57,6 @@ def main():
         localization_instance = Localization()
         robot_position = localization_instance.get_current_position()
         path_following_thread = threading.Thread()
-        cap = cv2.VideoCapture(0)
 
         if mow_days is None or mow_hours is None:
             logging.warning("Mowing schedule not set. Please set the schedule in the web interface.")
@@ -145,17 +143,14 @@ def main():
         flask_app_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
-        cap.release()
+
         logging.info("Shutdown complete.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         flask_app_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
-        cap.release()
-    finally:
-        if cap:
-            cap.release()
+
 
 if __name__ == "__main__":
     main()
