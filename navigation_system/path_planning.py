@@ -1,3 +1,31 @@
+"""
+Path planning module.
+
+This module handles path planning for the autonomous mower. It divides the yard into a grid and uses A* search algorithm to find optimal path between points avoiding obstacles.
+
+Attributes:
+    localization (Localization): Localization instance to get current position
+    obstacle_map (np.ndarray): Occupancy grid map of yard with obstacles
+    obstacles (set): Set of obstacle geometries  
+    sections (list): List of yard sections 
+    min_lat (float): Minimum latitude of yard  
+    max_lat (float): Maximum latitude of yard
+    min_lng (float): Minimum longitude of yard
+    max_lng (float): Maximum longitude of yard
+    q_table (np.ndarray): Q-table for Q-learning algorithm
+    last_action (int): Last action taken  
+
+Class PathPlanning:
+    Path planning class
+    
+    Methods:
+        __init__(): Class constructor
+        set_min_max_coordinates(): Set min/max lat/lng of yard
+        set_user_polygon(): Set user defined yard polygon
+        divide_yard_into_sections(): Divide yard into sections
+        select_next_section(): Select next section to move to
+        update_obstacle_map(): Update occupancy grid map with obstacles
+"""
 import numpy as np
 import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
