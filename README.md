@@ -243,3 +243,4 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo python3 main.py
     ```
+8. Go to web UI at {hostname}.local:90 to set up the robot boundaries and schedules as well as to see sensor data/controls.
