@@ -19,17 +19,18 @@ from user_interface.web_interface.camera import SingletonCamera
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.DEBUG)
 
-app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
-@app.before_request
-def before_request():
-    g.camera = camera_instance
-sensors = SensorInterface()
-gps = GPSInterface()
-socketio = SocketIO(app)
 try:
     camera = SingletonCamera()
 except Exception as e:
     print(f"Failed to initialize camer in app: {e}")
+
+app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
+@app.before_request
+def before_request():
+    g.camera = camera
+sensors = SensorInterface()
+gps = GPSInterface()
+socketio = SocketIO(app)
 
 # Define variables to hold sensor values
 battery_charge = {}
