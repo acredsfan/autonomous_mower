@@ -6,7 +6,6 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 import subprocess
 import os
 from obstacle_detection import camera_processing
-from .camera import SingletonCamera
 import threading
 from navigation_system import PathPlanning, GPSInterface
 import datetime
@@ -267,7 +266,7 @@ def handle_frame_request():
     frame = g.camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
-def gen(camera):
+def gen(camera_instance):
     while True:
         camera_instance = SingletonCamera()
         frame = camera_instance.get_frame()  # Use the single instance
