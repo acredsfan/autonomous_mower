@@ -2,6 +2,8 @@ import time
 import RPi.GPIO as GPIO
 import adafruit_vl53l0x as VL53L0X
 import smbus2 as smbus
+import board
+import busio
 
 try:
 
@@ -13,6 +15,10 @@ try:
     # Initialize bus and MUX_ADDRESS here
     bus = smbus.SMBus(1)
     MUX_ADDRESS = 0x70
+
+    # Initialize I2C bus
+    i2c_bus1 = busio.I2C(board.SCL, board.SDA)
+    i2c_bus2 = busio.I2C(board.SCL, board.SDA)
     
     GPIO.setwarnings(False)
 
@@ -40,10 +46,10 @@ try:
         
     # Create a VL53L0X object for device on TCA9548A bus 1
     select_mux_channel(6)
-    tof_right = VL53L0X.VL53L0X(i2c_bus=1)
+    tof_right = VL53L0X.VL53L0X(i2c=i2c_bus1)
     # Create a VL53L0X object for device on TCA9548A bus 2
     select_mux_channel(7)
-    tof_left = VL53L0X.VL53L0X(i2c_bus=2)
+    tof_left = VL53L0X.VL53L0X(i2c=i2c_bus2)
  
     # Start ranging on TCA9548A bus 1
     GPIO.output(right_shutdown, GPIO.HIGH)
