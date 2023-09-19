@@ -2,7 +2,7 @@
 import smbus2 as smbus
 import board
 from adafruit_bme280 import basic as adafruit_bme280
-import VL53L0X
+from adafruit_vl53l0x import VL53L0X
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
 from barbudor_ina3221.full import *
