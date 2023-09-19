@@ -222,39 +222,24 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools
     ```
-2. Follow instructions to install VL53L0X packages from https://github.com/Gadgetoid/VL53L0X-python:
-    1. Clone the repository:
-        ```bash
-        git clone https://github.com/Gadgetoid/VL53L0X-python.git
-        ```
-
-    2. Navigate to the cloned directory (Note: The folder name may differ, the Gadgetoid instructions say "VL53L0X-python"):
-        ```bash
-        cd VL53L0X_rasp_python
-        ```
-
-    3. Install the library:
-        ```bash
-        sudo python3 setup.py install
-        ```
-3. Clone the repository:
+2. Clone the repository:
     ```bash
     sudo git clone https://github.com/acredsfan/autonomous_mower.git
     ```
-4. Go to new folder:
+3. Go to new folder:
     ```bash
     cd autonomous_mower
     ```
-5. Install packages from requirements.txt:
+4. Install packages from requirements.txt:
     ```bash
     sudo pip3 install -r requirements.txt
     ```
-6. Update and save .env.example as .env with your google maps api key:
+5. Update and save .env.example as .env with your google maps api key:
     ```bash
     sudo nano .env.example
     ```
-7. Run main.py to start the program:
+6. Run main.py to start the program:
     ```bash
     sudo python3 main.py
     ```
-8. Go to web UI at {hostname}.local:90 to set up the robot boundaries and schedules as well as to see sensor data/controls.
+7. Go to web UI at {hostname}.local:90 to set up the robot boundaries and schedules as well as to see sensor data/controls.
