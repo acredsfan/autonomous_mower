@@ -31,7 +31,7 @@ class SensorInterface:
             print(f"Error during I2C initialization: {e}")
         try:
             self.select_mux_channel(3)
-            self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c)
+            self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c, address=0x76)
         except Exception as e:
             print(f"Error during BME280 initialization: {e}")
 
