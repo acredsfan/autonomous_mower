@@ -16,3 +16,4 @@ networkx
 rtree
 tflite-runtime
 flask-socketio
+opencv-contrib-python
