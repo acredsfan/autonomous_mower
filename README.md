@@ -220,7 +220,7 @@ get_frame(self): Gets a frame from the video camera.
 INSTALLATION INSTRUCTIONS:
 1. Install necessary packages:
     ```bash
-    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools
+    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools sudo apt-get install gpsd gpsd-clients python3-gps
     ```
 2. Clone the repository:
     ```bash
