@@ -23,7 +23,7 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
+        var socket = io.connect('http://pimowbot.local:90');
 
         socket.on('message', function(data) {
             console.log(data.data);
