@@ -3,6 +3,7 @@ import smbus2 as smbus
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 import adafruit_vl53l0x
+import adafruit_tca9548a
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
 from barbudor_ina3221.full import *
@@ -11,7 +12,6 @@ import busio
 import time
 import logging
 import numpy as np
-
 import navigation_system.path_planning as pp
 
 # Initialize logging
@@ -25,6 +25,7 @@ class SensorInterface:
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.obstacle_data = np.zeros(self.GRID_SIZE)
+        self.tca = adafruit_tca9548a.TCA9548A(self.i2c, address=0x70)
         try:
             self.i2c = busio.I2C(board.SCL, board.SDA)
         except Exception as e:
@@ -63,10 +64,20 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during initialization: {e}")
 
-        # GPIO for Sensor 1 shutdown pin
-        self.right_shutdown = 23
-        # GPIO for Sensor 2 shutdown pin
-        self.left_shutdown = 22
+        # Assign VL53L0X shutdown pins
+        self.shutdown_pins = [22, 23]
+
+        def reset_sensors():
+            for pin_num in shutdown_pins:
+                pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+                pin.direction = digitalio.Direction.OUTPUT
+                pin.value = False
+            time.sleep(0.01)
+            for pin_num in shutdown_pins:
+                pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+                pin.direction = digitalio.Direction.OUTPUT
+                pin.value = True
+            time.sleep(0.01)
 
         GPIO.setwarnings(False)
 
@@ -83,15 +94,14 @@ class SensorInterface:
         time.sleep(0.50)
 
         # Create VL53L0X objects
+        reset_sensors()
         try:
-            self.select_mux_channel(6)  # Assuming channel 6 for the right sensor
-            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.i2c, address=0x29)
+            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.tca[6])
         except Exception as e:
             print(f"Error during VL53L0X right sensor initialization: {e}")
 
         try:
-            self.select_mux_channel(7)  # Assuming channel 7 for the left sensor
-            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.i2c, address=0x2A)
+            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.tca[7])
         except Exception as e:
             print(f"Error during VL53L0X left sensor initialization: {e}")
 
@@ -145,27 +155,23 @@ class SensorInterface:
 def read_vl53l0x_left(self):
     """Read VL53L0X ToF sensor data."""
     try:
-        self.vl53l0x_left.start_continuous()
         distance = self.vl53l0x_left.range
         if distance > 0:
             return distance
         else:
             return -1  # Error
     except Exception as e:
-        self.vl53l0x_left.stop_continuous()
         print(f"Error during VL53L0X left read: {e}")
 
 def read_vl53l0x_right(self):
     """Read VL53L0X ToF sensor data."""
     try:
-        self.vl53l0x_right.start_continuous()
         distance = self.vl53l0x_right.range
         if distance > 0:
             return distance
         else:
             return -1  # Error
     except Exception as e:
-        self.vl53l0x_right.stop_continuous()
         print(f"Error during VL53L0X right read: {e}")
 
     def read_mpu9250_compass(self):
