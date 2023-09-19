@@ -67,17 +67,7 @@ class SensorInterface:
         # Assign VL53L0X shutdown pins
         self.shutdown_pins = [22, 23]
 
-        def reset_sensors(self):
-            for pin_num in self.shutdown_pins:
-                pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
-                pin.direction = digitalio.Direction.OUTPUT
-                pin.value = False
-            time.sleep(0.01)
-            for pin_num in self.shutdown_pins:
-                pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
-                pin.direction = digitalio.Direction.OUTPUT
-                pin.value = True
-            time.sleep(0.01)
+
 
         # Create VL53L0X objects
         self.reset_sensors()
@@ -92,6 +82,19 @@ class SensorInterface:
             print(f"Error during VL53L0X left sensor initialization: {e}")
 
     # FUNCTIONS
+
+    def reset_sensors(self):
+        for pin_num in self.shutdown_pins:
+            pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+            pin.direction = digitalio.Direction.OUTPUT
+            pin.value = False
+        time.sleep(0.01)
+        for pin_num in self.shutdown_pins:
+            pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+            pin.direction = digitalio.Direction.OUTPUT
+            pin.value = True
+        time.sleep(0.01)
+
     def select_mux_channel(self, channel):
         """Select the specified channel on the TCA9548A I2C multiplexer."""
         if 0 <= channel <= 7:
