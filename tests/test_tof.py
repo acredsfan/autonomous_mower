@@ -27,7 +27,7 @@ try:
         """Select the specified channel on the TCA9548A I2C multiplexer."""
         if 0 <= channel <= 7:
             try:
-                self.bus.write_byte(self.MUX_ADDRESS, 1 << channel)
+                self.bus.write_byte(MUX_ADDRESS, 1 << channel)
             except Exception as e:
                 print(f"Error during multiplexer channel selection: {e}")
         else:
@@ -35,10 +35,10 @@ try:
         
     # Create a VL53L0X object for device on TCA9548A bus 1
     select_mux_channel(6)
-    tof_right = VL53L0X.VL53L0X(self.i2c_bus, 0x29)
+    tof_right = VL53L0X.VL53L0X(i2c_bus, 0x29)
     # Create a VL53L0X object for device on TCA9548A bus 2
     select_mux_channel(7)
-    tof_left = VL53L0X.VL53L0X(self.i2c_bus, 0x2a)
+    tof_left = VL53L0X.VL53L0X(i2c_bus, 0x2a)
     tof_right.open()
     tof_left.open()
 
