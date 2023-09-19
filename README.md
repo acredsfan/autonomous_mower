@@ -237,17 +237,6 @@ INSTALLATION INSTRUCTIONS:
         ```bash
         sudo python3 setup.py install
         ```
-
-3. Follow instructions to install VL53):
-        ```bash
-        cd VL53L0X_rasp_python
-        ```
-
-    3. Install the library:
-        ```bash
-        sudo python3 setup.py install
-        ```
-
 3. Clone the repository:
     ```bash
     sudo git clone https://github.com/acredsfan/autonomous_mower.git
