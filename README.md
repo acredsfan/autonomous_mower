@@ -222,19 +222,19 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools
     ```
-2. Clone the repository:
+2. Follow instructions at https://github.com/Gadgetoid/VL53L0X-python to install VL53L0X packages    
+3. Clone the repository:
     ```bash
     sudo git clone https://github.com/acredsfan/autonomous_mower.git
     ```
-3. Go to new folder:
+4. Go to new folder:
     ```bash
     cd autonomous_mower
     ```
-4. Install packages from requirements.txt:
+5. Install packages from requirements.txt:
     ```bash
     sudo pip3 install -r requirements.txt
     ```
-5. Follow instructions at https://github.com/Gadgetoid/VL53L0X-python to install VL53L0X packages
 6. Run main.py to start the program:
     ```bash
     sudo python3 main.py
