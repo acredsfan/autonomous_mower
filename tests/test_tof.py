@@ -23,11 +23,11 @@ try:
     # Keep all low for 500 ms or so to make sure they reset
     time.sleep(0.50)
 
-    def select_mux_channel(channel):
+    def select_mux_channel(self, channel):
         """Select the specified channel on the TCA9548A I2C multiplexer."""
         if 0 <= channel <= 7:
             try:
-                self.bus.write_byte(MUX_ADDRESS, 1 << channel)
+                self.bus.write_byte(self.MUX_ADDRESS, 1 << channel)
             except Exception as e:
                 print(f"Error during multiplexer channel selection: {e}")
         else:
@@ -35,22 +35,22 @@ try:
         
     # Create a VL53L0X object for device on TCA9548A bus 1
     select_mux_channel(6)
-    tof_right = VL53L0X.VL53L0X(i2c_bus, 0x29)
+    tof_right = VL53L0X.VL53L0X(i2c_bus=1)
     # Create a VL53L0X object for device on TCA9548A bus 2
     select_mux_channel(7)
-    tof_left = VL53L0X.VL53L0X(i2c_bus, 0x2a)
-    tof_right.open()
-    tof_left.open()
-
+    tof_left = VL53L0X.VL53L0X(i2c_bus=2)
+ 
     # Start ranging on TCA9548A bus 1
     GPIO.output(right_shutdown, GPIO.HIGH)
     time.sleep(0.50)
-    tof_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
+    tof_right.start_continuous()
+    tof_left.start_continuous()
+
     # Start ranging on TCA9548A bus 2
     GPIO.output(left_shutdown, GPIO.HIGH)
     time.sleep(0.50)
+    tof_left.start_continuous
 
-    tof_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
 
     timing = tof_right.get_timing()
     if timing < 20000:
@@ -59,14 +59,14 @@ try:
 
     for count in range(1, 5):
         # Get distance from VL53L0X  on TCA9548A bus 1
-        distance = tof_right.get_distance()
+        distance = tof_right.range()
         if distance > 0:
             print("right: %d mm, %d cm, %d" % (distance, (distance/10), count))
         else:
             print("%d - ERROR" % 1)
 
         # Get distance from VL53L0X  on TCA9548A bus 2
-        distance = tof_left.get_distance()
+        distance = tof_left.range()
         if distance > 0:
             print("left: %d mm, %d cm, %d" % (distance, (distance/10), count))
         else:
@@ -74,9 +74,9 @@ try:
 
         time.sleep(timing/1000000.00)
 
-    tof_right.stop_ranging()
+    tof_right.stop_continuous()
     GPIO.output(right_shutdown, GPIO.LOW)
-    tof_left.stop_ranging()
+    tof_left.stop_continuous()
     GPIO.output(left_shutdown, GPIO.LOW)
 
     tof_right.close()
