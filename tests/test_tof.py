@@ -1,6 +1,6 @@
 import time
-import VL53L0X
 import RPi.GPIO as GPIO
+import adafruit_vl53l0x as VL53L0X
 
 try:
 
