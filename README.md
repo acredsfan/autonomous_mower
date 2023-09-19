@@ -235,9 +235,9 @@ INSTALLATION INSTRUCTIONS:
     sudo pip3 install -r requirements.txt
     ```
 5. Download the tensorflow model file for object detection (the code in camera_processing.py looks for lite-model_qat_mobilenet_v2_retinanet_256_1.tflite in the obstacle_detection folder, so make sure to update the code if you use something different or if you move the file): https://tfhub.dev/google/lite-model/qat/mobilenet_v2_retinanet_256/1
-    1. If you're transferring via WinSCP, update the folder ownership to avoid transfer errors:
+    1. If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change'/home/pi' to the folder where you cloned the repository):
     ```bash
-    sudo chown -R pi:pi autonomous_mower/
+    sudo chown -R pi:pi /home/pi/autonomous_mower/
     ```
 6. Update and save .env.example as .env with your google maps api key:
     ```bash
