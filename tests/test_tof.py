@@ -23,10 +23,22 @@ try:
     # Keep all low for 500 ms or so to make sure they reset
     time.sleep(0.50)
 
+    def select_mux_channel(self, channel):
+        """Select the specified channel on the TCA9548A I2C multiplexer."""
+        if 0 <= channel <= 7:
+            try:
+                self.bus.write_byte(self.MUX_ADDRESS, 1 << channel)
+            except Exception as e:
+                print(f"Error during multiplexer channel selection: {e}")
+        else:
+            raise ValueError("Multiplexer channel must be an integer between 0 and 7.")
+        
     # Create a VL53L0X object for device on TCA9548A bus 1
-    tof_right = VL53L0X.VL53L0X(tca9548a_num=6, tca9548a_addr=0x70)
+    select_mux_channel(6)
+    tof_right = VL53L0X.VL53L0X(self.i2c_bus, 0x29)
     # Create a VL53L0X object for device on TCA9548A bus 2
-    tof_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
+    select_mux_channel(7)
+    tof_left = VL53L0X.VL53L0X(self.i2c_bus, 0x2a)
     tof_right.open()
     tof_left.open()
 
