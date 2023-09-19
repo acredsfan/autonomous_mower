@@ -1,31 +1,53 @@
 import time
 import board
-import adafruit_vl53l0x as VL53L0X
+import busio
 import adafruit_tca9548a
+import adafruit_vl53l0x
+import digitalio
 
-# Create I2C bus as normal
-i2c = board.I2C()  # uses board.SCL and board.SDA
-# i2c = board.STEMMA_I2C()  # For using the built-in STEMMA QT connector on a microcontroller
+# Initialize I2C bus and sensor.
+i2c = busio.I2C(board.SCL, board.SDA)
 
-# Create the TCA9548A object and give it the I2C bus
-tca = adafruit_tca9548a.TCA9548A(i2c)
+# Initialize TCA9548A multiplexer
+tca = adafruit_tca9548a.TCA9548A(i2c, address=0x70)
 
-# For each sensor, create it using the TCA9548A channel instead of the I2C object
-tof_right = VL53L0X.VL53L0X(tca[6])
-tof_left = VL53L0X.VL53L0X(tca[7])
+# Shutdown pins
+shutdown_pins = [22, 23]
 
-# After initial setup, can just use sensors as normal.
+# Function to reset sensors
+def reset_sensors():
+    for pin_num in shutdown_pins:
+        pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+        pin.direction = digitalio.Direction.OUTPUT
+        pin.value = False
+    time.sleep(0.01)
+    for pin_num in shutdown_pins:
+        pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
+        pin.direction = digitalio.Direction.OUTPUT
+        pin.value = True
+    time.sleep(0.01)
+
+# Reset sensors
+reset_sensors()
+
+# Initialize VL53L0X sensors
+vl53_left = adafruit_vl53l0x.VL53L0X(tca[6])
+vl53_right = adafruit_vl53l0x.VL53L0X(tca[7])
+
 try:
     while True:
-        #Scan i2C bus for devices
-        print("Scanning...")
-        while not i2c.try_lock():
-            pass
-        devices = i2c.scan()
-        i2c.unlock()
-        print("I2C addresses found:", [hex(device_address) for device_address in i2c.scan()])
-        # Read range and print it.
-        print(tof_right.range, tof_left.range)
-        time.sleep(0.1)
+    # Read the range from the left sensor
+        left_range = vl53_left.range
+        print(f"Left sensor range: {left_range}mm")
+
+        # Read the range from the right sensor
+        right_range = vl53_right.range
+        print(f"Right sensor range: {right_range}mm")
+
+        time.sleep(1.0)
 except KeyboardInterrupt:
-    print("Done!")
+    pass
+finally:
+    # Reset sensors
+    reset_sensors()
+
