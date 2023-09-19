@@ -17,3 +17,4 @@ rtree
 tflite-runtime
 flask-socketio
 opencv-contrib-python
+gpsd-py3
