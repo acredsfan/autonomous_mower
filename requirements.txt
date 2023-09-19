@@ -1,4 +1,4 @@
-smbus
+smbus2
 RPi.GPIO
 pyserial
 numpy
