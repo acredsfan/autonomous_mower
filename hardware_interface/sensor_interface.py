@@ -142,27 +142,27 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during BME280 read: {e}")
 
-def read_vl53l0x_left(self):
-    """Read VL53L0X ToF sensor data."""
-    try:
-        distance = self.vl53l0x_left.range
-        if distance > 0:
-            return distance
-        else:
-            return -1  # Error
-    except Exception as e:
-        print(f"Error during VL53L0X left read: {e}")
+    def read_vl53l0x_left(self):
+        """Read VL53L0X ToF sensor data."""
+        try:
+            distance = self.vl53l0x_left.range
+            if distance > 0:
+                return distance
+            else:
+                return -1  # Error
+        except Exception as e:
+            print(f"Error during VL53L0X left read: {e}")
 
-def read_vl53l0x_right(self):
-    """Read VL53L0X ToF sensor data."""
-    try:
-        distance = self.vl53l0x_right.range
-        if distance > 0:
-            return distance
-        else:
-            return -1  # Error
-    except Exception as e:
-        print(f"Error during VL53L0X right read: {e}")
+    def read_vl53l0x_right(self):
+        """Read VL53L0X ToF sensor data."""
+        try:
+            distance = self.vl53l0x_right.range
+            if distance > 0:
+                return distance
+            else:
+                return -1  # Error
+        except Exception as e:
+            print(f"Error during VL53L0X right read: {e}")
 
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
