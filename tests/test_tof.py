@@ -23,7 +23,7 @@ try:
     # Keep all low for 500 ms or so to make sure they reset
     time.sleep(0.50)
 
-    def select_mux_channel(self, channel):
+    def select_mux_channel(channel):
         """Select the specified channel on the TCA9548A I2C multiplexer."""
         if 0 <= channel <= 7:
             try:
