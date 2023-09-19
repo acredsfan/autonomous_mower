@@ -17,6 +17,14 @@ tof_left = VL53L0X.VL53L0X(tca[7])
 # After initial setup, can just use sensors as normal.
 try:
     while True:
+        #Scan i2C bus for devices
+        print("Scanning...")
+        while not i2c.try_lock():
+            pass
+        devices = i2c.scan()
+        i2c.unlock()
+        print("I2C addresses found:", [hex(device_address) for device_address in i2c.scan()])
+        # Read range and print it.
         print(tof_right.range, tof_left.range)
         time.sleep(0.1)
 except KeyboardInterrupt:
