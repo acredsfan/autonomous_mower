@@ -13,6 +13,7 @@ import time
 import logging
 import numpy as np
 import navigation_system.path_planning as pp
+import digitalio
 
 # Initialize logging
 logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
