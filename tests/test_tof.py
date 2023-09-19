@@ -1,4 +1,3 @@
-import time
 import board
 import busio
 import adafruit_tca9548a
@@ -7,28 +6,25 @@ import adafruit_vl53l0x
 # Initialize I2C bus and sensor.
 i2c = busio.I2C(board.SCL, board.SDA)
 
-# Initialize the TCA9548A multiplexer
-tca = adafruit_tca9548a.TCA9548A(i2c)
+# Initialize TCA9548A multiplexer
+tca = adafruit_tca9548a.TCA9548A(i2c, address=0x70)
 
-# Initialize the VL53L0X sensors
+# Initialize VL53L0X on channel 6 and 7 of TCA9548A
 vl53_left = adafruit_vl53l0x.VL53L0X(tca[6])
 vl53_right = adafruit_vl53l0x.VL53L0X(tca[7])
 
-vl53_left.range
-vl53_right.range
+# Set shutdown pins
+vl53_left._shutdown_pin = 22
+vl53_right._shutdown_pin = 23
 
-try:
-    while True:
-        # Perform ranging test
-        print(f"Left sensor distance: {vl53_left.range}mm")
-        print(f"Right sensor distance: {vl53_right.range}mm")
-        time.sleep(1)
+# Function to read distance
+def read_distance(sensor, name):
+    try:
+        print(f"{name} Distance: {sensor.range}mm")
+    except Exception as e:
+        print(f"Error reading {name}: {e}")
 
-
-
-except KeyboardInterrupt:
-    # Code will reach here when a keyboard interrupt (Ctrl+C) is detected
-    print("Program stopped by the user")
-    # Disable sensors or any other cleanup code
-    disable_sensor(shutdown_pins[0])
-    disable_sensor(shutdown_pins[1])
+# Main loop will read the range and print it every second.
+while True:
+    read_distance(vl53_left, "Left Sensor")
+    read_distance(vl53_right, "Right Sensor")
