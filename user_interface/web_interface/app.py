@@ -268,7 +268,7 @@ def handle_frame_request():
     
 def gen(camera):
     while True:
-        camera_instance = VideoCamera()
+        camera_instance = SingletonCamera()
         frame = camera_instance.get_frame()  # Use the single instance
 
         # Perform obstacle detection on the frame
