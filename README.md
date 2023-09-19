@@ -222,7 +222,32 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools
     ```
-2. Follow instructions at https://github.com/Gadgetoid/VL53L0X-python to install VL53L0X packages    
+2. Follow instructions to install VL53L0X packages from https://github.com/Gadgetoid/VL53L0X-python:
+    1. Clone the repository:
+        ```bash
+        git clone https://github.com/Gadgetoid/VL53L0X-python.git
+        ```
+
+    2. Navigate to the cloned directory (Note: The folder name may differ, the Gadgetoid instructions say "VL53L0X-python"):
+        ```bash
+        cd VL53L0X_rasp_python
+        ```
+
+    3. Install the library:
+        ```bash
+        sudo python3 setup.py install
+        ```
+
+3. Follow instructions to install VL53):
+        ```bash
+        cd VL53L0X_rasp_python
+        ```
+
+    3. Install the library:
+        ```bash
+        sudo python3 setup.py install
+        ```
+
 3. Clone the repository:
     ```bash
     sudo git clone https://github.com/acredsfan/autonomous_mower.git
