@@ -47,7 +47,7 @@ def check_mowing_conditions():
 def main():
     try:
         # Start the Flask app in a separate process
-        flask_app_process = Process(target=start_web_interface, args=(camera,))
+        flask_app_process = Process(target=start_web_interface)
         flask_app_process.start()
 
         mowing_requested = False
