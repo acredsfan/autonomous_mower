@@ -6,8 +6,7 @@ from hardware_interface import MotorController, SensorInterface, BladeController
 import subprocess
 import os
 from obstacle_detection import camera_processing
-from .camera import VideoCamera
-import time
+from .camera import SingletonCamera
 import threading
 from navigation_system import PathPlanning, GPSInterface
 import datetime
