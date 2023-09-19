@@ -216,3 +216,30 @@ user_interface/web_interface/camera.py
 VideoCamera: Class to handle video camera operations.
 __init__(self): Initializes the VideoCamera.
 get_frame(self): Gets a frame from the video camera.
+
+INSTALLATION INSTRUCTIONS:
+1. Install necessary packages:
+    ```bash
+    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools
+    ```
+2. Clone the repository:
+    ''' bash
+    sudo git clone https://github.com/acredsfan/autonomous_mower.git
+
+    '''
+3. Go to new folder:
+    '''bash
+    cd autonomous_mower
+    '''
+4. Install packages from requirements.txt:
+    ''' bash
+    sudo pip3 install -r requirements.txt
+    '''
+4. Install other packages:
+    ```bash
+    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip python3-opencv i2c-tools
+    ```
+5. Run main.py to start the program:
+    '''bash
+    sudo python3 main.py
+    '''
