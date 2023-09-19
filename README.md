@@ -235,7 +235,11 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo pip3 install -r requirements.txt
     ```
-6. Run main.py to start the program:
+6. Update and save .env.example as .env with your google maps api key:
+    ```bash
+    sudo nano .env.example
+    ```
+7. Run main.py to start the program:
     ```bash
     sudo python3 main.py
     ```
