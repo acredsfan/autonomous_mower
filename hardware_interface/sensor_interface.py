@@ -67,13 +67,13 @@ class SensorInterface:
         # Assign VL53L0X shutdown pins
         self.shutdown_pins = [22, 23]
 
-        def reset_sensors():
-            for pin_num in shutdown_pins:
+        def reset_sensors(self):
+            for pin_num in self.shutdown_pins:
                 pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
                 pin.direction = digitalio.Direction.OUTPUT
                 pin.value = False
             time.sleep(0.01)
-            for pin_num in shutdown_pins:
+            for pin_num in self.shutdown_pins:
                 pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
                 pin.direction = digitalio.Direction.OUTPUT
                 pin.value = True
@@ -94,7 +94,7 @@ class SensorInterface:
         time.sleep(0.50)
 
         # Create VL53L0X objects
-        reset_sensors()
+        self.reset_sensors()
         try:
             self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.tca[6])
         except Exception as e:
