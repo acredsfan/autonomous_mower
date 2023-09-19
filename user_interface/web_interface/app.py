@@ -330,7 +330,6 @@ if __name__ == '__main__':
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
-    app.run(host='0.0.0.0', port=90, debug=False)
     socketio.run(app, host='0.0.0.0', port=90)
 
       # Set the flag to stop the sensor update thread
