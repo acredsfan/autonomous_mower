@@ -85,13 +85,13 @@ class SensorInterface:
         # Create VL53L0X objects
         try:
             self.select_mux_channel(6)  # Assuming channel 6 for the right sensor
-            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.i2c)
+            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.i2c, address=0x29)
         except Exception as e:
             print(f"Error during VL53L0X right sensor initialization: {e}")
 
         try:
             self.select_mux_channel(7)  # Assuming channel 7 for the left sensor
-            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.i2c)
+            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.i2c, address=0x2A)
         except Exception as e:
             print(f"Error during VL53L0X left sensor initialization: {e}")
 
@@ -145,23 +145,27 @@ class SensorInterface:
 def read_vl53l0x_left(self):
     """Read VL53L0X ToF sensor data."""
     try:
+        self.vl53l0x_left.start_continuous()
         distance = self.vl53l0x_left.range
         if distance > 0:
             return distance
         else:
             return -1  # Error
     except Exception as e:
+        self.vl53l0x_left.stop_continuous()
         print(f"Error during VL53L0X left read: {e}")
 
 def read_vl53l0x_right(self):
     """Read VL53L0X ToF sensor data."""
     try:
+        self.vl53l0x_right.start_continuous()
         distance = self.vl53l0x_right.range
         if distance > 0:
             return distance
         else:
             return -1  # Error
     except Exception as e:
+        self.vl53l0x_right.stop_continuous()
         print(f"Error during VL53L0X right read: {e}")
 
     def read_mpu9250_compass(self):
