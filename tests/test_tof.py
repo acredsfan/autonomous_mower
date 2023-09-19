@@ -1,99 +1,48 @@
 import time
-import RPi.GPIO as GPIO
-import adafruit_vl53l0x as VL53L0X
-import smbus2 as smbus
 import board
 import busio
+import adafruit_tca9548a
+import adafruit_vl53l0x
+
+# Initialize I2C bus and sensor.
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Initialize the TCA9548A multiplexer
+tca = adafruit_tca9548a.TCA9548A(i2c, address=0x70)
+
+# Initialize the VL53L0X sensors
+vl53_left = adafruit_vl53l0x.VL53L0X(tca[6])
+vl53_right = adafruit_vl53l0x.VL53L0X(tca[7])
+
+# Shutdown pins
+shutdown_pins = [22, 23]
+
+# Function to enable sensor
+def enable_sensor(pin):
+    # Your code to enable sensor using GPIO pin
+    pass
+
+# Function to disable sensor
+def disable_sensor(pin):
+    # Your code to disable sensor using GPIO pin
+    pass
+
+# Enable sensors
+enable_sensor(shutdown_pins[0])
+enable_sensor(shutdown_pins[1])
 
 try:
+    while True:
+        # Perform ranging test
+        print(f"Left sensor distance: {vl53_left.range}mm")
+        print(f"Right sensor distance: {vl53_right.range}mm")
+        time.sleep(1)
 
-    # GPIO for Sensor 1 shutdown pin
-    right_shutdown = 23
-    # GPIO for Sensor 2 shutdown pin
-    left_shutdown = 22
-
-    # Initialize bus and MUX_ADDRESS here
-    bus = smbus.SMBus(1)
-    MUX_ADDRESS = 0x70
-
-    # Initialize I2C bus
-    i2c_bus1 = busio.I2C(board.SCL, board.SDA)
-    i2c_bus2 = busio.I2C(board.SCL, board.SDA)
-    
-    GPIO.setwarnings(False)
-
-    # Setup GPIO for shutdown pins on each VL53L0X
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(right_shutdown, GPIO.OUT)
-    GPIO.setup(left_shutdown, GPIO.OUT)
-
-    # Set all shutdown pins low to turn off each VL53L0X
-    GPIO.output(right_shutdown, GPIO.LOW)
-    GPIO.output(left_shutdown, GPIO.LOW)
-
-    # Keep all low for 500 ms or so to make sure they reset
-    time.sleep(0.50)
-
-    def select_mux_channel(channel):
-        """Select the specified channel on the TCA9548A I2C multiplexer."""
-        if 0 <= channel <= 7:
-            try:
-                bus.write_byte(MUX_ADDRESS, 1 << channel)
-            except Exception as e:
-                print(f"Error during multiplexer channel selection: {e}")
-        else:
-            raise ValueError("Multiplexer channel must be an integer between 0 and 7.")
-        
-    # Create a VL53L0X object for device on TCA9548A bus 1
-    select_mux_channel(6)
-    tof_right = VL53L0X.VL53L0X(i2c=i2c_bus1)
-    # Create a VL53L0X object for device on TCA9548A bus 2
-    select_mux_channel(7)
-    tof_left = VL53L0X.VL53L0X(i2c=i2c_bus2)
- 
-    # Start ranging on TCA9548A bus 1
-    GPIO.output(right_shutdown, GPIO.HIGH)
-    time.sleep(0.50)
-    tof_right.start_continuous()
-    tof_left.start_continuous()
-
-    # Start ranging on TCA9548A bus 2
-    GPIO.output(left_shutdown, GPIO.HIGH)
-    time.sleep(0.50)
-    tof_left.start_continuous
-
-
-    timing = tof_right.get_timing()
-    if timing < 20000:
-        timing = 20000
-    print("Timing %d ms" % (timing/1000))
-
-    for count in range(1, 5):
-        # Get distance from VL53L0X  on TCA9548A bus 1
-        distance = tof_right.range()
-        if distance > 0:
-            print("right: %d mm, %d cm, %d" % (distance, (distance/10), count))
-        else:
-            print("%d - ERROR" % 1)
-
-        # Get distance from VL53L0X  on TCA9548A bus 2
-        distance = tof_left.range()
-        if distance > 0:
-            print("left: %d mm, %d cm, %d" % (distance, (distance/10), count))
-        else:
-            print("%d - ERROR" % 2)
-
-        time.sleep(timing/1000000.00)
-
-    tof_right.stop_continuous()
-    GPIO.output(right_shutdown, GPIO.LOW)
-    tof_left.stop_continuous()
-    GPIO.output(left_shutdown, GPIO.LOW)
-
-    tof_right.close()
-    tof_left.close()
 
 
 except KeyboardInterrupt:
     # Code will reach here when a keyboard interrupt (Ctrl+C) is detected
     print("Program stopped by the user")
+    # Disable sensors or any other cleanup code
+    disable_sensor(shutdown_pins[0])
+    disable_sensor(shutdown_pins[1])
