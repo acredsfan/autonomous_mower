@@ -83,22 +83,17 @@ class SensorInterface:
         time.sleep(0.50)
 
         # Create VL53L0X objects
-        self.vl53l0x_right = VL53L0X.VL53L0X(tca9548a_num=6, tca9548a_addr=0x70)
-        self.vl53l0x_left = VL53L0X.VL53L0X(tca9548a_num=7, tca9548a_addr=0x70)
-        self.vl53l0x_right.open()
-        self.vl53l0x_left.open()
+        try:
+            self.select_mux_channel(6)  # Assuming channel 6 for the right sensor
+            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.i2c)
+        except Exception as e:
+            print(f"Error during VL53L0X right sensor initialization: {e}")
 
-        # Start ranging
-        GPIO.output(self.right_shutdown, GPIO.HIGH)
-        time.sleep(0.50)
-        self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-        GPIO.output(self.left_shutdown, GPIO.HIGH)
-        time.sleep(0.50)
-        self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-
-        self.timing = self.vl53l0x_right.get_timing()
-        if self.timing < 20000:
-            self.timing = 20000
+        try:
+            self.select_mux_channel(7)  # Assuming channel 7 for the left sensor
+            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.i2c)
+        except Exception as e:
+            print(f"Error during VL53L0X left sensor initialization: {e}")
 
     # FUNCTIONS
     def select_mux_channel(self, channel):
@@ -126,12 +121,6 @@ class SensorInterface:
             self.mpu.configure()  # Apply the settings to the registers.
             print("MPU9250 initialized.")
 
-             # Initialize Left TOF sensor
-            self.vl53l0x_left.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-
-            # Initialize Right TOF sensor
-            self.vl53l0x_right.start_ranging(VL53L0X.Vl53l0xAccuracyMode.BETTER)
-
             # Initialize hall effect sensors
             self.init_hall_effect_sensors()
         except Exception as e:
@@ -153,27 +142,27 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during BME280 read: {e}")
 
-    def read_vl53l0x_left(self):
-        """Read VL53L0X ToF sensor data."""
-        try:
-            distance = self.vl53l0x_left.get_distance()
-            if distance > 0:
-                return distance
-            else:
-                return -1  # Error
-        except Exception as e:
-            print(f"Error during VL53L0X left read: {e}")
+def read_vl53l0x_left(self):
+    """Read VL53L0X ToF sensor data."""
+    try:
+        distance = self.vl53l0x_left.range
+        if distance > 0:
+            return distance
+        else:
+            return -1  # Error
+    except Exception as e:
+        print(f"Error during VL53L0X left read: {e}")
 
-    def read_vl53l0x_right(self):
-        """Read VL53L0X ToF sensor data."""
-        try:
-            distance = self.vl53l0x_right.get_distance()
-            if distance > 0:
-                return distance
-            else:
-                return -1  # Error
-        except Exception as e:
-            print(f"Error during VL53L0X right read: {e}")
+def read_vl53l0x_right(self):
+    """Read VL53L0X ToF sensor data."""
+    try:
+        distance = self.vl53l0x_right.range
+        if distance > 0:
+            return distance
+        else:
+            return -1  # Error
+    except Exception as e:
+        print(f"Error during VL53L0X right read: {e}")
 
     def read_mpu9250_compass(self):
         """Read MPU9250 compass data."""
