@@ -29,7 +29,7 @@ def before_request():
     g.camera = camera
 sensors = SensorInterface()
 gps = GPSInterface()
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='threading')
 
 # Define variables to hold sensor values
 battery_charge = {}
