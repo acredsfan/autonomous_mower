@@ -1,6 +1,7 @@
 import time
 import RPi.GPIO as GPIO
 import adafruit_vl53l0x as VL53L0X
+import smbus2 as smbus
 
 try:
 
@@ -9,6 +10,10 @@ try:
     # GPIO for Sensor 2 shutdown pin
     left_shutdown = 22
 
+    # Initialize bus and MUX_ADDRESS here
+    bus = smbus.SMBus(1)
+    MUX_ADDRESS = 0x70
+    
     GPIO.setwarnings(False)
 
     # Setup GPIO for shutdown pins on each VL53L0X
@@ -27,7 +32,7 @@ try:
         """Select the specified channel on the TCA9548A I2C multiplexer."""
         if 0 <= channel <= 7:
             try:
-                self.bus.write_byte(self.MUX_ADDRESS, 1 << channel)
+                bus.write_byte(MUX_ADDRESS, 1 << channel)
             except Exception as e:
                 print(f"Error during multiplexer channel selection: {e}")
         else:
