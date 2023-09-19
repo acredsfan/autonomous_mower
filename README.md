@@ -234,7 +234,8 @@ INSTALLATION INSTRUCTIONS:
     ```bash
     sudo pip3 install -r requirements.txt
     ```
-5. Run main.py to start the program:
+5. Follow instructions at https://github.com/Gadgetoid/VL53L0X-python to install VL53L0X packages
+6. Run main.py to start the program:
     ```bash
     sudo python3 main.py
     ```
