@@ -81,10 +81,18 @@ class PathPlanning:
         """
         latitudes = [coord['lat'] for coord in polygon_coordinates]
         longitudes = [coord['lng'] for coord in polygon_coordinates]
-        self.min_lat = min(latitudes)
-        self.max_lat = max(latitudes)
-        self.min_lng = min(longitudes)
-        self.max_lng = max(longitudes)
+        if latitudes:
+            self.min_lat = min(latitudes)
+            self.max_lat = max(latitudes)
+        else:
+            self.min_lat = 10
+            self.max_lat = 11
+        if longitudes:
+            self.min_lng = min(longitudes)
+            self.max_lng = max(longitudes)
+        else:
+            self.min_lng = 10
+            self.max_lng = 11
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
         self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
         pass
