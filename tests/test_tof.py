@@ -8,28 +8,14 @@ import adafruit_vl53l0x
 i2c = busio.I2C(board.SCL, board.SDA)
 
 # Initialize the TCA9548A multiplexer
-tca = adafruit_tca9548a.TCA9548A(i2c, address=0x70)
+tca = adafruit_tca9548a.TCA9548A(i2c)
 
 # Initialize the VL53L0X sensors
 vl53_left = adafruit_vl53l0x.VL53L0X(tca[6])
 vl53_right = adafruit_vl53l0x.VL53L0X(tca[7])
 
-# Shutdown pins
-shutdown_pins = [22, 23]
-
-# Function to enable sensor
-def enable_sensor(pin):
-    # Your code to enable sensor using GPIO pin
-    pass
-
-# Function to disable sensor
-def disable_sensor(pin):
-    # Your code to disable sensor using GPIO pin
-    pass
-
-# Enable sensors
-enable_sensor(shutdown_pins[0])
-enable_sensor(shutdown_pins[1])
+vl53_left.range
+vl53_right.range
 
 try:
     while True:
