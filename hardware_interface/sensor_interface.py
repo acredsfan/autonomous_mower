@@ -79,20 +79,6 @@ class SensorInterface:
                 pin.value = True
             time.sleep(0.01)
 
-        GPIO.setwarnings(False)
-
-        # Setup GPIO for shutdown pins on each VL53L0X
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.right_shutdown, GPIO.OUT)
-        GPIO.setup(self.left_shutdown, GPIO.OUT)
-
-        # Set all shutdown pins low to turn off each VL53L0X
-        GPIO.output(self.right_shutdown, GPIO.LOW)
-        GPIO.output(self.left_shutdown, GPIO.LOW)
-
-        # Keep all low for 500 ms or so to make sure they reset
-        time.sleep(0.50)
-
         # Create VL53L0X objects
         self.reset_sensors()
         try:
