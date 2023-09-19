@@ -189,7 +189,7 @@ window.addEventListener('load', function() {
     getAndDrawMowingArea();
 });
 
-var socket = io.connect('http://' + document.domain + ':' + location.port);
+var socket = io.connect('http://pimowbot.local:90');
 
 socket.on('update_frame', function(data) {
     var image = document.getElementById('camera_feed');
