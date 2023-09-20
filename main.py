@@ -49,7 +49,7 @@ def check_mowing_conditions():
 def main():
     try:
         # Start the Gunicorn server in a separate process
-        gunicorn_process = subprocess.Popen(["gunicorn", "-k", "eventlet", "-w", "1", "--bind", "0.0.0.0:90", "wsgi:app"])
+        gunicorn_process = subprocess.Popen(["gunicorn", "-k", "eventlet", "-w", "1", "--bind", "0.0.0.0:90", "user_interface.web_interface.wsgi:app"])
 
 
         mowing_requested = False
