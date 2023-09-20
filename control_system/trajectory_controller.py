@@ -6,7 +6,6 @@
 import time
 import numpy as np
 from hardware_interface import MotorController
-from navigation_system import localization
 from control_system import direction_controller
 import logging
 
@@ -84,6 +83,7 @@ class TrajectoryController:
             self.follow_trajectory(angle_to_target, distance_to_target)
         
     def calculate_direction_and_speed(waypoint):
+        from navigation_system import localization
         current_position = localization.get_current_position()
         angle_to_waypoint, distance_to_waypoint = localization.calculate_angle_and_distance(
             current_position, waypoint
@@ -100,6 +100,7 @@ class TrajectoryController:
         return direction, speed
 
     def is_waypoint_reached(waypoint):
+        from navigation_system import localization
         current_position = localization.get_current_position()
         _, distance_to_waypoint = localization.calculate_angle_and_distance(
             current_position, waypoint
