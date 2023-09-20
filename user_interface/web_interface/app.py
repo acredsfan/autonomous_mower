@@ -210,11 +210,15 @@ def stop_mowing():
 
 @app.route('/get-mowing-area', methods=['GET'])
 def get_mowing_area():
-    # Load the coordinates from the file
-    with open('user_polygon.json', 'r') as f:
-        coordinates = json.load(f)
-    return jsonify(coordinates)
-
+    # Check if the file exists
+    if os.path.exists('user_polygon.json'):
+        # Load the coordinates from the file
+        with open('user_polygon.json', 'r') as f:
+            coordinates = json.load(f)
+        return jsonify(coordinates)
+    else:
+        return jsonify({'message': 'No area saved yet.'})
+    
 @app.route('/get-path', methods=['GET'])
 def get_path():
     start, goal = path_planning.get_start_and_goal()
