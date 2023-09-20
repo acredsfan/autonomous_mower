@@ -19,73 +19,44 @@ import threading
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
+
 class SensorInterface:
     def __init__(self):
-        # Import GRID_SIZE from path_planning.py
+        self.init_common_attributes()
+        self.init_sensors()
+
+    def init_common_attributes(self):
         self.GRID_SIZE = pp.GRID_SIZE
-        self.MUX_ADDRESS = 0x70  # Replace with your multiplexer's I2C address if different
+        self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
-        self.i2c = busio.I2C(board.SCL, board.SDA)
+        self.i2c = self.init_i2c()
         self.obstacle_data = np.zeros(self.GRID_SIZE)
         self.tca = adafruit_tca9548a.TCA9548A(self.i2c, address=0x70)
+        self.shutdown_pins = [22, 23]
+        self.sensor_data = {}
+        self.update_thread = threading.Thread(target=self.update_sensors)
+        self.update_thread.start()
+
+    def init_i2c(self):
         try:
-            self.i2c = busio.I2C(board.SCL, board.SDA)
+            return busio.I2C(board.SCL, board.SDA)
         except Exception as e:
             print(f"Error during I2C initialization: {e}")
+            return None
+
+    def init_sensor(self, sensor_name, init_func, *args, **kwargs):
         try:
-            self.select_mux_channel(3)
-            self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c, address=0x76)
+            return init_func(*args, **kwargs)
         except Exception as e:
-            print(f"Error during BME280 initialization: {e}")
+            print(f"Error during {sensor_name} initialization: {e}")
+            return None
 
-        try:          
-            self.mpu = MPU9250(
-                address_ak=AK8963_ADDRESS, 
-                address_mpu_master=MPU9050_ADDRESS_69, # In 0x69 Address
-                address_mpu_slave=None, 
-                bus=1,
-                gfs=GFS_1000, 
-                afs=AFS_8G, 
-                mfs=AK8963_BIT_16, 
-                mode=AK8963_MODE_C100HZ)
-        except Exception as e:
-            print(f"Error during MPU9250 initialization: {e}")
-        try:
-            self.select_mux_channel(2)
-            self.ina3221 = INA3221(self.i2c)
-            self.ina3221.enable_channel(1)
-            self.ina3221.enable_channel(3)
-        except Exception as e:
-            print(f"Error during INA3221 initialization: {e}")
-        try:
-            # change this to match the location's pressure (hPa) at sea level
-            self.bme280.sea_level_pressure = 1013.25
-            self.previous_acceleration = [0, 0, 0]  # previous acceleration values for x, y, z
-            self.previous_time = time.time()  # time when the previous acceleration was measured
-            self.speed = [0, 0, 0]  # current speed for x, y, z
-        except Exception as e:
-            print(f"Error during initialization: {e}")
-
-        # Assign VL53L0X shutdown pins
-        self.shutdown_pins = [22, 23]
-
-
-
-        # Create VL53L0X objects
-        self.reset_sensors()
-        try:
-            self.vl53l0x_right = adafruit_vl53l0x.VL53L0X(self.tca[6])
-        except Exception as e:
-            print(f"Error during VL53L0X right sensor initialization: {e}")
-
-        try:
-            self.vl53l0x_left = adafruit_vl53l0x.VL53L0X(self.tca[7])
-        except Exception as e:
-            print(f"Error during VL53L0X left sensor initialization: {e}")
-
-            self.sensor_data = {}
-            self.update_thread = threading.Thread(target=self.update_sensors)
-            self.update_thread.start()
+    def init_sensors(self):
+        self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
+        self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
+        self.ina3221 = self.init_sensor("INA3221", INA3221, self.i2c)
+        self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
+        self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
 
     # FUNCTIONS
     def update_sensors(self):
@@ -308,5 +279,4 @@ class SensorInterface:
         print("Sensor data is not available after 20 attempts. Returning False.")
         return False
 
-# At the end of sensor_interface.py
 sensor_interface = SensorInterface()
