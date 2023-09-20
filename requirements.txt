@@ -19,3 +19,4 @@ flask-socketio
 opencv-contrib-python
 gpsd-py3
 adafruit-circuitpython-tca9548a
+gunicorn
