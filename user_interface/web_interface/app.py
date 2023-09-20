@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface import MotorController, SensorInterface, BladeController
+from hardware_interface import MotorController, BladeController
 import subprocess
 import os
 from obstacle_detection import camera_processing
@@ -15,6 +15,8 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from user_interface.web_interface.camera import SingletonCamera
 import time
+from hardware_interface.sensor_interface import sensor_interface  # Assuming you named it sensor_interface
+
 
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.DEBUG)
@@ -78,22 +80,22 @@ def update_sensors():
 
     while not stop_sensor_thread:
         # Update sensor values
-        battery_charge = {"battery_voltage": sensors.read_ina3221(3)}
-        solar_status = {"Solar Panel Voltage": sensors.read_ina3221(1)}
+        battery_charge = {"battery_voltage": sensors.sensor_data['battery']}
+        solar_status = {"Solar Panel Voltage": sensors.sensor_data['solar']}
+        speed = {"speed": gps.read_gps_data()['speed']}
         gps_data = gps.read_gps_data()
         if gps_data is not None:
             speed = {"speed": gps_data['speed']}
         else:
             speed = {"speed": None}
-        heading = {"heading": sensors.read_mpu9250_compass()}
-        bme280_data = sensors.read_bme280()
+        heading = {"heading": sensors.sensor_data['compass']}
+        bme280_data = sensors.sensor_data['bme280']
         if bme280_data is not None:
             temperature = bme280_data['temperature_f']
             humidity = bme280_data['humidity']
             pressure = bme280_data['pressure']
-        left_distance = {"left_distance": sensors.read_vl53l0x_left()}
-        right_distance = {"right_distance": sensors.read_vl53l0x_right()}
-
+        left_distance = {"left_distance": sensors.sensor_data['ToF_Left']}
+        right_distance = {"right_distance": sensors.sensor_data['ToF_Right']}
         time.sleep(3)  # Wait for 3 second before updating again
 
 @app.route('/static/<path:path>')
