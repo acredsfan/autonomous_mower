@@ -3,8 +3,9 @@
 # Running on Raspberry Pi 4B 2GB RAM with Raspbian Bullseye OS
 
 import time
-from hardware_interface import SensorInterface, MotorController
+from hardware_interface import MotorController
 import logging
+from hardware_interface.sensor_interface import SensorInterface
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
