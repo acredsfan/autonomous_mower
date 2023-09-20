@@ -230,11 +230,11 @@ class SensorInterface:
         Update the obstacle_data grid based on ToF and compass data.
         """
         # Process ToF data to get obstacle distances
-        left_distance = self.read_vl53l0x_left()
-        right_distance = self.read_vl53l0x_right()
+        left_distance = self.sensor_data['ToF_Left']
+        right_distance = self.sensor_data['ToF_Right']
 
         # Use compass data to get the direction
-        direction = self.read_mpu9250_compass()
+        direction = self.sensor_data['compass']
 
         # Convert compass direction to grid coordinates
         dx, dy = 0, 0
@@ -265,7 +265,7 @@ class SensorInterface:
     def calculate_speed(self):
         """Calculate speed based on accelerometer data."""
         try:
-            current_acceleration = self.read_mpu9250_accel()
+            current_acceleration = self.sensor_data['accel']
             current_time = time.time()
             time_difference = current_time - self.previous_time
 
@@ -285,7 +285,7 @@ class SensorInterface:
         attempts = 0
         while attempts < 20:
             try:
-                bme280_data = self.read_bme280()
+                bme280_data = self.sensor_data['bme280']
                 if bme280_data is not None:
                     if bme280_data['humidity'] > 90:
                         return False
