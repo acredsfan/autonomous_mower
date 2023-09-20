@@ -50,7 +50,6 @@ stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-sensors = SensorInterface()
 gps = GPSInterface()
 motor_controller = MotorController()
 blade_controller = BladeController()

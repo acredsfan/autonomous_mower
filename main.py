@@ -1,5 +1,5 @@
 import logging
-from hardware_interface import MotorController, SensorInterface, BladeController
+from hardware_interface import MotorController, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
@@ -10,6 +10,8 @@ import time
 import datetime
 import threading
 import subprocess
+from hardware_interface.sensor_interface import sensor_interface
+
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
@@ -22,7 +24,6 @@ path_planner = path_planning.PathPlanning()
 
 # Initialize AvoidanceAlgorithm, SensorInterface, and Localization
 avoidance_algo = AvoidanceAlgorithm(camera)
-sensor_interface = SensorInterface()
 localization = Localization()
 
 # Initialize MotorController
