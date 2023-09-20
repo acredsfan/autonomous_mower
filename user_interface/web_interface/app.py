@@ -14,6 +14,7 @@ import dotenv
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from user_interface.web_interface.camera import SingletonCamera
+import time
 
 # Initialize logging
 logging.basicConfig(filename='UI.log', level=logging.DEBUG)
