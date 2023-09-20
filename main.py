@@ -9,6 +9,7 @@ from multiprocessing import Process, Lock
 import time
 import datetime
 import threading
+import subprocess
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
@@ -46,9 +47,9 @@ def check_mowing_conditions():
 
 def main():
     try:
-        # Start the Flask app in a separate process
-        flask_app_process = Process(target=start_web_interface)
-        flask_app_process.start()
+        # Start the Gunicorn server in a separate process
+        gunicorn_process = subprocess.Popen(["gunicorn", "-k", "eventlet", "-w", "1", "--bind", "0.0.0.0:90", "wsgi:app"])
+
 
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
@@ -138,18 +139,18 @@ def main():
 
     except KeyboardInterrupt:
         logging.info("Exiting...")
-        flask_app_process.terminate()
+        gunicorn_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
 
         logging.info("Shutdown complete.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-        flask_app_process.terminate()
+        gunicorn_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
         #stop sensor thread
-        
+
 
 
 if __name__ == "__main__":
