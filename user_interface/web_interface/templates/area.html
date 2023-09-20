@@ -100,7 +100,6 @@
                 .then(data => {
                     if (!data.error) {
                         var myLatLng = new google.maps.LatLng(data.latitude, data.longitude);
-                        map.setCenter(myLatLng);
                         marker.setPosition(myLatLng);
                     }
                 })

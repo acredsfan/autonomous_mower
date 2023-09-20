@@ -31,20 +31,17 @@ function stopMowing() {
 
 
 function saveMowingArea(mowingAreaCoordinates) {
-    // Make an AJAX POST request to the server to save the mowing area
-    $.ajax({
-        url: '/save-mowing-area',
-        type: 'POST',
-        data: JSON.stringify(mowingAreaCoordinates),
-        contentType: 'application/json; charset=utf-8',
-        dataType: 'json',
-        success: function(response) {
-            console.log('Mowing area saved:', response);
+    // Make an AJAX POST request to the server to save the mowing area as an polygon array
+    fetch('/save-mowing-area', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
         },
-        error: function(xhr, status, error) {
-            console.error('Error saving mowing area:', error);
-        }
-    });
+        body: JSON.stringify({ mowingAreaCoordinates: mowingAreaCoordinates }),
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch((error) => console.error('Error:', error));
 }
 
 function saveSettings(mowDays, mowHours) {

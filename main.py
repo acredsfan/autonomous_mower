@@ -148,6 +148,8 @@ def main():
         flask_app_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
+        #stop sensor thread
+        
 
 
 if __name__ == "__main__":
