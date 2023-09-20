@@ -30,7 +30,7 @@ app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/
 @app.before_request
 def before_request():
     g.camera = camera
-sensors = SensorInterface()
+sensors = sensor_interface
 gps = GPSInterface()
 socketio = SocketIO(app, async_mode='threading')
 
