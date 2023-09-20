@@ -20,9 +20,11 @@ WAYPOINT_REACHED_THRESHOLD = 30  # in centimeters
 
 # FUNCTIONS
 class TrajectoryController:
-    def __init__(self, navigation_system, obstacle_detection):
+    def __init__(self, navigation_system, obstacle_detection, direction_controller):
         self.navigation_system = navigation_system
         self.obstacle_detection = obstacle_detection
+        self.direction_controller = direction_controller
+        self.motor_controller = MotorController()
 
     def calculate_trajectory(self):
         """
@@ -68,8 +70,8 @@ class TrajectoryController:
         """
         Adjust the robot's speed and direction to follow the calculated trajectory.
         """
-        MotorController.set_motor_direction_degrees(angle_to_target)
-        MotorController.set_motor_speed(SPEED, SPEED)
+        self.motor_controller.set_motor_direction_degrees(angle_to_target)
+        self.motor_controller.set_motor_speed(SPEED, SPEED)
         time_to_move = distance_to_target / MotorController.get_speed_in_cm_per_second(SPEED)
         time.sleep(time_to_move)
         MotorController.set_motor_speed(0, 0)
@@ -84,7 +86,7 @@ class TrajectoryController:
         
     def calculate_direction_and_speed(waypoint):
         from navigation_system import localization
-        current_position = localization.get_current_position()
+        current_position = self.navigation_system.get_current_position()
         angle_to_waypoint, distance_to_waypoint = localization.calculate_angle_and_distance(
             current_position, waypoint
         )
@@ -101,8 +103,8 @@ class TrajectoryController:
 
     def is_waypoint_reached(waypoint):
         from navigation_system import localization
-        current_position = localization.get_current_position()
-        _, distance_to_waypoint = localization.calculate_angle_and_distance(
+        current_position = self.navigation_system.get_current_position()
+        distance_to_waypoint = localization.calculate_distance(
             current_position, waypoint
         )
         return distance_to_waypoint <= WAYPOINT_REACHED_THRESHOLD
