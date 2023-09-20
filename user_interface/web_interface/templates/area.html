@@ -63,6 +63,24 @@
                 .catch(error => console.error('Error:', error));
         }
 
+        function saveMowingArea() {
+            fetch('/save-mowing-area', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(areaCoordinates)
+            })
+               .then(response => response.json())
+               .then(data => {
+                    if (data.status ==='success') {
+                        alert('Mowing area saved successfully');
+                    } else {
+                        alert('Error saving mowing area');
+                    }
+                })
+               .catch(error => console.error('Error:', error));
+
         function confirm_button() {
             document.getElementById('confirm-button').disabled = true;
             saveMowingArea(areaCoordinates);
