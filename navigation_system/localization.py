@@ -4,6 +4,7 @@ import time
 from navigation_system import GPSInterface
 import logging
 import json
+from hardware_interface.sensor_interface import sensor_interface
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
@@ -64,7 +65,6 @@ class Localization:
 
     def estimate_position(self):
         global current_heading
-        from hardware_interface import SensorInterface
         global current_latitude, current_longitude, current_altitude
 
         # Use GPSInterface to get the GPS data
@@ -77,7 +77,7 @@ class Localization:
     def estimate_orientation(self):
         global current_heading
 
-        compass_data = SensorInterface.read_mpu9250_compass()
+        compass_data = sensor_interface.sensor_data['compass']
 
         try:
             current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
