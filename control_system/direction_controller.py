@@ -1,3 +1,27 @@
+"""Direction controller module.
+
+Controls the direction of the robot based on sensor input to avoid obstacles. 
+
+Class DirectionController:
+
+    Attributes:
+        DISTANCE_THRESHOLD: Minimum distance to obstacle to trigger avoidance
+        CHECK_INTERVAL: Time between direction checks going forward
+        TURN_INTERVAL: Time to turn when avoiding obstacle
+        sensor_interface: SensorInterface instance  
+        motor_controller: MotorController instance
+
+    Methods:
+
+        __init__(): Initializes controller attributes.
+
+        obstacle_detected(): Checks sensor readings for obstacles.
+
+        choose_turn_direction(): Decides turn direction based on obstacles.
+
+        control_direction(): Main control loop to handle direction.
+
+"""
 import time
 import logging
 from hardware_interface import MotorController
