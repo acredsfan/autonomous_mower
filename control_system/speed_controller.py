@@ -4,6 +4,10 @@
 
 import time
 from hardware_interface import MotorController
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Set default speed limits
 MIN_SPEED = 0

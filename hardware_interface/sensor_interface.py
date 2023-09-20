@@ -17,7 +17,7 @@ import digitalio
 import threading
 
 # Initialize logging
-logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 class SensorInterface:
     def __init__(self):

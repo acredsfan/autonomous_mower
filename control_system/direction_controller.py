@@ -4,6 +4,10 @@
 
 import time
 from hardware_interface import SensorInterface, MotorController
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Initialize the hardware interface
 sensor_interface = SensorInterface()

@@ -6,7 +6,7 @@ import logging
 import json
 
 # Initialize logging
-logging.basicConfig(filename='localization.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 with open("config.json") as f:
     config = json.load(f)

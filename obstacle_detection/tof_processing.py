@@ -4,6 +4,10 @@
 #IMPORTS
 import time
 from hardware_interface import SensorInterface
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Constants
 MIN_DISTANCE_THRESHOLD = 150  # Minimum distance to consider an obstacle in millimeters

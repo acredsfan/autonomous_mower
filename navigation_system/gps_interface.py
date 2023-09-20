@@ -17,6 +17,10 @@ Class GPSInterface:
 """
 import gpsd
 import time
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 class GPSInterface:
     def __init__(self):

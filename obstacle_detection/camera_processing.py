@@ -6,6 +6,10 @@ import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 from user_interface.web_interface.camera import SingletonCamera
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 class CameraProcessor:
     # Initialize the TFLite interpreter

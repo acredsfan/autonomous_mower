@@ -39,7 +39,7 @@ import time
 
 
 # Initialize logging
-logging.basicConfig(filename='path_planning.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 with open("config.json") as f:
     config = json.load(f)

@@ -1,5 +1,9 @@
 import RPi.GPIO as GPIO
 import time
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Set the GPIO mode
 GPIO.setmode(GPIO.BCM)

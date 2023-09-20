@@ -25,7 +25,7 @@ Methods:
     get_frame(): Gets next video frame from camera.
 """
 # Initialize logging
-logging.basicConfig(filename='UI.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
  
 class SingletonCamera:
     _instance = None

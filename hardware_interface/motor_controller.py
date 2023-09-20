@@ -1,6 +1,10 @@
 import RPi.GPIO as GPIO
 import time
 import numpy as np
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Define GPIO pins connected to the IBT-2 drivers
 Prwm1, Lpwm1 = 4, 27  # Motor 1 control pins

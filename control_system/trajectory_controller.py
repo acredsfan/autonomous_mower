@@ -8,6 +8,10 @@ import numpy as np
 from hardware_interface import MotorController
 from navigation_system import localization
 from control_system import direction_controller
+import logging
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
 # Constants
 MIN_DISTANCE_TO_OBSTACLE = 30  # in centimeters
