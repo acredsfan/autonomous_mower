@@ -15,7 +15,9 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 from user_interface.web_interface.camera import SingletonCamera
 import time
-from hardware_interface.sensor_interface import sensor_interface  # Assuming you named it sensor_interface
+from hardware_interface.sensor_interface import sensor_interface
+from flask_cors import CORS
+
 
 
 # Initialize logging
@@ -33,6 +35,7 @@ def before_request():
 sensors = sensor_interface
 gps = GPSInterface()
 socketio = SocketIO(app, async_mode='threading')
+CORS(app)
 
 # Define variables to hold sensor values
 battery_charge = {}
