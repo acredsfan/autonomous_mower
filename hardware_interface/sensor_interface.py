@@ -14,6 +14,7 @@ import logging
 import numpy as np
 import navigation_system.path_planning as pp
 import digitalio
+import threading
 
 # Initialize logging
 logging.basicConfig(filename='sensors.log', level=logging.DEBUG)
@@ -82,8 +83,22 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during VL53L0X left sensor initialization: {e}")
 
-    # FUNCTIONS
+            self.sensor_data = {}
+            self.update_thread = threading.Thread(target=self.update_sensors)
+            self.update_thread.start()
 
+    # FUNCTIONS
+    def update_sensors(self):
+        while True:
+            self.sensor_data['ToF_Right'] = self.read_vl53l0x_right
+            self.sensor_data['ToF_Left'] = self.read_vl53l0x_left
+            self.sensor_data['compass'] = self.read_mpu9250_compass
+            self.sensor_data['gyro'] = self.read_mpu9250_gyro
+            self.sensor_data['accel'] = self.read_mpu9250_accel
+            self.sensor_data['bme280'] = self.read_bme280
+            self.sensor_data['solar'] = self.read_ina3221(1)
+            self.sensor_data['battery'] = self.read_ina3221(3)
+               
     def reset_sensors(self):
         for pin_num in self.shutdown_pins:
             pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
