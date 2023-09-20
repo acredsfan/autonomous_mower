@@ -68,7 +68,7 @@ class Localization:
         global current_latitude, current_longitude, current_altitude
 
         # Use GPSInterface to get the GPS data
-        data = self.gps.get_data()
+        data = self.gps.read_gps_data()
         if data is not None:
             current_latitude = data['lat']
             current_longitude = data['lon']
