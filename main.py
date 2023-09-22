@@ -116,7 +116,7 @@ def main():
                     goal = path_planner.select_next_section(robot_position)
                     avoidance_algorithm = AvoidanceAlgorithm()
                     avoidance_algorithm.run_avoidance()
-                    path = path_planner.plan_path(robot_position, goal, obstacles)
+                    path = path_planner.plan_path(robot_position, goal, path_planning.obstacle_map)
 
                     # Move the robot along the path
                     if not path_following_thread.is_alive():

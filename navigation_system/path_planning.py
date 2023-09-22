@@ -105,6 +105,7 @@ class PathPlanning:
         pass
 
     def select_next_section(self, current_position):
+        #TODO: Implement section selection logic
         """
         Selects the next section to go to.
         :param current_position:
@@ -113,6 +114,7 @@ class PathPlanning:
         pass
 
     def update_obstacle_map(self, new_obstacles):
+         #TODO: Implement section selection logic
         """
         Updates the obstacle map.
         :param new_obstacles:
