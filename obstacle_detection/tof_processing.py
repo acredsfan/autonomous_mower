@@ -3,7 +3,7 @@
 
 #IMPORTS
 import time
-from hardware_interface import SensorInterface
+from hardware_interface.sensor_interface import SensorInterface
 import logging
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 
