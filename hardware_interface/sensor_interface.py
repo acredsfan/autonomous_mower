@@ -6,7 +6,7 @@ import adafruit_vl53l0x
 import adafruit_tca9548a
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
-from barbudor_ina3221.full import *
+import barbudor_ina3221.full as INA3221
 import RPi.GPIO as GPIO
 import busio
 import time
@@ -54,7 +54,7 @@ class SensorInterface:
     def init_sensors(self):
         self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
         self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
-        self.ina3221 = self.init_sensor("INA3221", INA3221, self.i2c)
+        self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
         self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
         self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
 
