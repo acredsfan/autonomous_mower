@@ -12,7 +12,7 @@ import busio
 import time
 import logging
 import numpy as np
-import navigation_system.path_planning as pp
+from constants import GRID_SIZE
 import digitalio
 import threading
 
@@ -26,7 +26,7 @@ class SensorInterface:
         self.init_sensors()
 
     def init_common_attributes(self):
-        self.GRID_SIZE = pp.GRID_SIZE
+        self.GRID_SIZE = GRID_SIZE
         self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
         self.i2c = self.init_i2c()

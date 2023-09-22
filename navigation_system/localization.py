@@ -4,7 +4,6 @@ import time
 from navigation_system import GPSInterface
 import logging
 import json
-from hardware_interface.sensor_interface import sensor_interface
 from constants import EARTH_RADIUS, polygon_coordinates
 
 class Localization:
@@ -33,6 +32,7 @@ class Localization:
             self.current_altitude = data['alt']
 
     def estimate_orientation(self):
+        from hardware_interface.sensor_interface import sensor_interface
         try:
             compass_data = sensor_interface.sensor_data['compass']
             self.current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
