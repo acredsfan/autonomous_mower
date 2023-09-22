@@ -5,14 +5,13 @@ from navigation_system import GPSInterface
 import logging
 import json
 from hardware_interface.sensor_interface import sensor_interface
-
-EARTH_RADIUS = 6371e3  # Earth's radius in meters
+from constants import EARTH_RADIUS, polygon_coordinates
 
 class Localization:
     def __init__(self):
         logging.basicConfig(filename='main.log', level=logging.DEBUG)
         self.gps = GPSInterface()
-        self.yard_boundary = self.load_json_file('user_polygon.json')
+        self.yard_boundary = polygon_coordinates
         self.current_latitude = 0
         self.current_longitude = 0
         self.current_altitude = 0

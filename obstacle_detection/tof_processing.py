@@ -5,13 +5,10 @@
 import time
 from hardware_interface import SensorInterface
 import logging
+from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
-
-# Constants
-MIN_DISTANCE_THRESHOLD = 150  # Minimum distance to consider an obstacle in millimeters
-AVOIDANCE_DELAY = 0.5  # Time to wait between avoidance checks in seconds
 
 class ObstacleAvoidance:
     def __init__(self):

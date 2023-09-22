@@ -32,29 +32,15 @@ from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 from shapely.geometry import Polygon, Point
+from shapely import wkt
 from navigation_system import Localization
 import json
 import logging
 import time
-
+from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
-
-with open("config.json") as f:
-    config = json.load(f)
-
-try:
-    with open("user_polygon.json") as f:
-        polygon_coordinates = json.load(f)
-except FileNotFoundError:
-    print("config file not found")
-    polygon_coordinates = []
-
-# Constants
-GRID_SIZE = (config['GRID_L'], config['GRID_W'])
-OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
-SECTION_SIZE = (10, 10)
 
 # Global variables
 user_polygon = None
@@ -139,7 +125,7 @@ class PathPlanning:
 
         # Remove the removed obstacles from the map
         for obstacle_wkt in removed_obstacles:
-            obstacle = shapely.wkt.loads(obstacle_wkt)
+            obstacle = wkt.loads(obstacle_wkt)
             obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
             minx, miny, maxx, maxy = obstacle_expanded.bounds
             for x in range(int(minx), int(maxx) + 1):
@@ -163,7 +149,7 @@ class PathPlanning:
 
         # Trigger a new path planning if the obstacle map has changed
         if np.any(obstacle_map != self.obstacle_map):
-            self.plan_path(self.start, self.goal, [shapely.wkt.loads(wkt) for wkt in self.obstacles])
+            self.plan_path(self.start, self.goal, [wkt.loads(wkt) for wkt in self.obstacles])
         self.obstacle_map = obstacle_map          
 
     # This function generates a grid with marked obstacles
@@ -358,9 +344,9 @@ if __name__ == "__main__":
 
     def divide_yard_into_sections(self):
         sections = []
-        for i in range(0, grid_size[0], section_size[0]):
-            for j in range(0, grid_size[1], section_size[1]):
-                section = (i, j, i + section_size[0], j + section_size[1])
+        for i in range(0, GRID_SIZE[0], SECTION_SIZE[0]):
+            for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
+                section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
                 sections.append(section)
         return sections
 

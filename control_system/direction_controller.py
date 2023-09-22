@@ -26,7 +26,6 @@ import time
 import logging
 from hardware_interface import MotorController
 from hardware_interface.sensor_interface import SensorInterface
-import logging
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)

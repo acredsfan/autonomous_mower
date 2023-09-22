@@ -8,15 +8,10 @@ import numpy as np
 from hardware_interface import MotorController
 from control_system import direction_controller
 import logging
+from constants import MIN_DISTANCE_TO_OBSTACLE, TURN_ANGLE, SPEED, WAYPOINT_REACHED_THRESHOLD
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
-
-# Constants
-MIN_DISTANCE_TO_OBSTACLE = 30  # in centimeters
-TURN_ANGLE = 45  # in degrees
-SPEED = 50  # as a percentage of the maximum motor speed
-WAYPOINT_REACHED_THRESHOLD = 30  # in centimeters
 
 # FUNCTIONS
 class TrajectoryController:
@@ -86,11 +81,10 @@ class TrajectoryController:
         
     def calculate_direction_and_speed(waypoint):
         from navigation_system import localization
+        
         current_position = self.navigation_system.get_current_position()
-        angle_to_waypoint, distance_to_waypoint = localization.calculate_angle_and_distance(
-            current_position, waypoint
-        )
-
+        angle_to_waypoint, distance_to_waypoint = localization.calculate_angle_and_distance(current_position, waypoint)
+        
         left_obstacle, right_obstacle = direction_controller.obstacle_detected()
         if left_obstacle or right_obstacle:
             direction = direction_controller.choose_turn_direction(left_obstacle, right_obstacle)
@@ -98,7 +92,13 @@ class TrajectoryController:
         else:
             direction = angle_to_waypoint
             speed = SPEED
-
+        
+        print(f"Current position: {current_position}")
+        print(f"Angle to waypoint: {angle_to_waypoint}")
+        print(f"Distance to waypoint: {distance_to_waypoint}")
+        print(f"Left obstacle detected: {left_obstacle}")
+        print(f"Right obstacle detected: {right_obstacle}")
+        
         return direction, speed
 
     def is_waypoint_reached(waypoint):
@@ -107,7 +107,9 @@ class TrajectoryController:
         distance_to_waypoint = localization.calculate_distance(
             current_position, waypoint
         )
+        print(f"Current Position: {current_position}")
+        print(f"Distance to Waypoint: {distance_to_waypoint}")
         return distance_to_waypoint <= WAYPOINT_REACHED_THRESHOLD
 
-    # Stop the robot when the path is complete
-    MotorController.set_motor_speed(0, 0)
+        # Stop the robot when the path is complete
+        MotorController.set_motor_speed(0, 0)

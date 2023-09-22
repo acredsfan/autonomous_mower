@@ -5,20 +5,9 @@
 import time
 from hardware_interface import MotorController
 import logging
-
+from constants import MIN_SPEED, MAX_SPEED, ACCELERATION_RATE, DECELERATION_RATE, TIME_INTERVAL
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
-
-# Set default speed limits
-MIN_SPEED = 0
-MAX_SPEED = 100
-
-# Set acceleration and deceleration rates
-ACCELERATION_RATE = 2  # Increase in motor speed per loop iteration
-DECELERATION_RATE = 3  # Decrease in motor speed per loop iteration
-
-# Time interval between loop iterations
-TIME_INTERVAL = 0.1
 
 class SpeedController:
     # Function to accelerate the motors to the target speed
@@ -51,3 +40,14 @@ class SpeedController:
             time.sleep(TIME_INTERVAL)
 
     # Function to set the speed of the motors with smooth acceleration and deceleration
+    def set_motor_speed(left_speed, right_speed):
+        MotorController.set_motor_speed(left_speed, right_speed)
+        MotorController.set_motor_speed(left_speed + ACCELERATION_RATE, right_speed + ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 2 * ACCELERATION_RATE, right_speed + 2 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 3 * ACCELERATION_RATE, right_speed + 3 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 4 * ACCELERATION_RATE, right_speed + 4 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 5 * ACCELERATION_RATE, right_speed + 5 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 6 * ACCELERATION_RATE, right_speed + 6 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 7 * ACCELERATION_RATE, right_speed + 7 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 8 * ACCELERATION_RATE, right_speed + 8 * ACCELERATION_RATE)
+        MotorController.set_motor_speed(left_speed + 9 * ACCELERATION_RATE, right_speed + 9 * ACCELERATION_RATE)

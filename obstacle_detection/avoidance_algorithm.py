@@ -10,19 +10,13 @@ import json
 import time
 import logging
 import numpy as np
+from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED
 
 # Import GRID_SIZE from path_planning.py
 from navigation_system.path_planning import GRID_SIZE
 
 # Initialize logging
 logging.basicConfig(filename='avoidance.log', level=logging.DEBUG)
-
-with open("config.json") as f:
-    config = json.load(f)
-
-# Constants
-CAMERA_OBSTACLE_THRESHOLD = config['CAMERA_OBSTACLE_THRESHOLD'] # Minimum area to consider an obstacle from the camera
-MOTOR_SPEED = 70
 
 class AvoidanceAlgorithm:
     def __init__(self, camera_instance):

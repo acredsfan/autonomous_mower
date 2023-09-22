@@ -36,25 +36,24 @@ class CameraProcessor:
         
         return image
 
-    def classify_obstacle(image):
-        processed_image = preprocess_image(image)
-        
+    def classify_obstacle(self, image):  # Added 'self'
+        processed_image = self.preprocess_image(image)  # Call static method
+
         # Run inference
-        interpreter.set_tensor(input_details[0]['index'], processed_image)
-        interpreter.invoke()
+        self.interpreter.set_tensor(self.input_details[0]['index'], processed_image)  # Added 'self'
+        self.interpreter.invoke()  # Added 'self'
 
         # Get the detection results
-        detection_boxes = interpreter.get_tensor(output_details[0]['index'])
-        detection_classes = interpreter.get_tensor(output_details[1]['index'])
-        detection_scores = interpreter.get_tensor(output_details[2]['index'])
+        detection_boxes = self.interpreter.get_tensor(self.output_details[0]['index'])  # Added 'self'
+        detection_classes = self.interpreter.get_tensor(self.output_details[1]['index'])  # Added 'self'
+        detection_scores = self.interpreter.get_tensor(self.output_details[2]['index'])  # Added 'self'
 
-        # Process the results (you'll need to implement this part)
-        label = process_results(detection_boxes, detection_classes, detection_scores)
+        # Process the results
+        label = self.process_results(detection_boxes, detection_classes, detection_scores)  # Added 'self'
         
         return label
 
-    # Implement this function to handle the detection results
-    def process_results(detection_boxes, detection_classes, detection_scores):
+    def process_results(self, detection_boxes, detection_classes, detection_scores):
         # Assuming a threshold of 0.5 for detection
         threshold = 0.5
         detected_objects = []
@@ -75,12 +74,12 @@ class CameraProcessor:
 
 # Example usage
 if __name__ == "__main__":
-    # Read an example image from your camera
-    cap = cv2.VideoCapture(0)  # Use 0 for default camera
+    camera_processor = CameraProcessor()  # Create an instance
+    cap = cv2.VideoCapture(0)
     ret, frame = cap.read()
     
     if ret:
-        obstacle_label = classify_obstacle(frame)
+        obstacle_label = camera_processor.classify_obstacle(frame)  # Use the instance to call the method
         print(f"Detected obstacle type: {obstacle_label}")
     
     cap.release()
