@@ -33,8 +33,9 @@ motor_controller = MotorController()
 lock = Lock()
 
 def check_mowing_conditions():
+    sensor_interface_instance = sensor_interface
     try:
-        if sensor_interface.ideal_mowing_conditions():
+        if sensor_interface_instance.ideal_mowing_conditions():
             if not BladeController.blades_on:
                 BladeController.set_speed(90)
                 return True
