@@ -37,7 +37,7 @@ from navigation_system import Localization
 import json
 import logging
 import time
-from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config
+from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -59,26 +59,12 @@ class PathPlanning:
         self.set_min_max_coordinates()
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
         self.last_action = None
+        self.min_lng = min_lng
+        self.max_lng = max_lng
+        self.min_lat = min_lat
+        self.max_lat = max_lat
 
     def set_min_max_coordinates(self):
-        """
-        Sets the minimum and maximum coordinates of the yard.
-        :return:
-        """
-        latitudes = [coord['lat'] for coord in polygon_coordinates]
-        longitudes = [coord['lng'] for coord in polygon_coordinates]
-        if latitudes:
-            self.min_lat = min(latitudes)
-            self.max_lat = max(latitudes)
-        else:
-            self.min_lat = 10
-            self.max_lat = 11
-        if longitudes:
-            self.min_lng = min(longitudes)
-            self.max_lng = max(longitudes)
-        else:
-            self.min_lng = 10
-            self.max_lng = 11
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
         self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
         pass

@@ -43,4 +43,28 @@ AVOIDANCE_DELAY = 0.5  # Time to wait between avoidance checks in seconds
 # For user_interface (if you add more modules here)
 UI_REFRESH_RATE = 1  # UI refresh rate in Hz
 
+
+def set_min_max_coordinates(self):
+    """
+    Sets the minimum and maximum coordinates of the yard.
+    :return:
+    """
+    latitudes = [coord['lat'] for coord in polygon_coordinates]
+    longitudes = [coord['lng'] for coord in polygon_coordinates]
+    if latitudes:
+        min_lat = min(latitudes)
+        smax_lat = max(latitudes)
+    else:
+        min_lat = 10
+        max_lat = 11
+    if longitudes:
+        min_lng = min(longitudes)
+        max_lng = max(longitudes)
+    else:
+        min_lng = 10
+        max_lng = 11
+    lat_grid_size = (max_lat - min_lat) / GRID_SIZE[0]
+    lng_grid_size = (max_lng - min_lng) / GRID_SIZE[1]
+    pass
+
 # Add more constants as needed

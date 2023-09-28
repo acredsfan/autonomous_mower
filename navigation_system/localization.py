@@ -8,7 +8,7 @@ import logging
 import logging
 import json
 import logging
-from constants import EARTH_RADIUS, polygon_coordinates
+from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 from hardware_interface.sensor_interface import SensorInterface
 
 class Localization:
@@ -24,6 +24,10 @@ class Localization:
         self.current_altitude = 0
         self.current_heading = 0
         self.mpu = SensorInterface.initialize_mpu9250()
+        self.min_lat = min_lat
+        self.max_lat = max_lat
+        self.min_lng = min_lng
+        self.max_lng = max_lng
 
     def load_json_file(self, file_name):
         logging.info(f'Entering Function or Method')
@@ -72,9 +76,8 @@ class Localization:
 
     def is_within_yard(self, lat, lon):
         logging.info(f'Entering Function or Method')
-        for boundary in self.yard_boundary:
-            if boundary['min_lat'] <= lat <= boundary['max_lat'] and boundary['min_lng'] <= lon <= boundary['max_lng']:
-                return True
+        if self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng:
+            return True
         return False
 
 if __name__ == '__main__':
