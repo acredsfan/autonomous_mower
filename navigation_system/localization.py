@@ -9,6 +9,7 @@ import logging
 import json
 import logging
 from constants import EARTH_RADIUS, polygon_coordinates
+from hardware_interface.sensor_interface import sensor_interface
 
 class Localization:
     logging.info(f'Entering Function or Method')
@@ -44,7 +45,7 @@ class Localization:
         logging.info(f'Entering Function or Method')
         from hardware_interface.sensor_interface import SensorInterface
         try:
-            compass_data = SensorInterface.sensor_data['compass']
+            compass_data = SensorInterface.read_mpu9250_compass()
             self.current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
             if self.current_heading < 0:
                 self.current_heading += 360
