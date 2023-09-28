@@ -9,7 +9,7 @@ import logging
 import json
 import logging
 from constants import EARTH_RADIUS, polygon_coordinates
-from hardware_interface.sensor_interface import sensor_interface
+from hardware_interface.sensor_interface import SensorInterface
 
 class Localization:
     logging.info(f'Entering Function or Method')
