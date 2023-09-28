@@ -45,7 +45,7 @@ class Localization:
         logging.info(f'Entering Function or Method')
         from hardware_interface.sensor_interface import SensorInterface
         try:
-            compass_data = SensorInterface.read_mpu9250_compass()
+            compass_data = SensorInterface.read_mpu9250_compass(self)
             self.current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
             if self.current_heading < 0:
                 self.current_heading += 360
