@@ -24,9 +24,11 @@ class SensorInterface:
     def __init__(self):
         self.init_common_attributes()
         self.init_sensors()
-        self.sensor_data_lock = threading.Lock()
-
+        
     def init_common_attributes(self):
+        self.sensor_data_lock = threading.Lock()
+        self.update_thread = threading.Thread(target=self.update_sensors)
+        self.update_thread.start()
         self.GRID_SIZE = GRID_SIZE
         self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
@@ -35,8 +37,6 @@ class SensorInterface:
         self.tca = adafruit_tca9548a.TCA9548A(self.i2c, address=0x70)
         self.shutdown_pins = [22, 23]
         self.sensor_data = {}
-        self.update_thread = threading.Thread(target=self.update_sensors)
-        self.update_thread.start()
 
     def init_i2c(self):
         try:
