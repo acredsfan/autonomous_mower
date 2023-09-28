@@ -4,7 +4,7 @@ import numpy as np
 import logging
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 # Define GPIO pins connected to the IBT-2 drivers
 Prwm1, Lpwm1 = 4, 27  # Motor 1 control pins

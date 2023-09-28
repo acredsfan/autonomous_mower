@@ -28,7 +28,7 @@ from hardware_interface import MotorController
 from hardware_interface.sensor_interface import SensorInterface
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class DirectionController:
     def __init__(self):
@@ -37,8 +37,6 @@ class DirectionController:
         self.TURN_INTERVAL = 1
         self.sensor_interface = SensorInterface()
         self.motor_controller = MotorController()
-        
-        logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
     def obstacle_detected(self):
         left_distance = self.sensor_interface.read_vl53l0x_left()

@@ -16,7 +16,7 @@ from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED
 from navigation_system.path_planning import GRID_SIZE
 
 # Initialize logging
-logging.basicConfig(filename='avoidance.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class AvoidanceAlgorithm:
     def __init__(self, camera_instance):

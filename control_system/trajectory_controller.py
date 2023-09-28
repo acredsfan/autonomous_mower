@@ -11,7 +11,7 @@ import logging
 from constants import MIN_DISTANCE_TO_OBSTACLE, TURN_ANGLE, SPEED, WAYPOINT_REACHED_THRESHOLD
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 # FUNCTIONS
 class TrajectoryController:
