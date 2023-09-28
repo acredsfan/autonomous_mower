@@ -24,6 +24,11 @@ class SensorInterface:
     def __init__(self):
         self.init_common_attributes()
         self.init_sensors()
+        self.start_update_thread()  # Separate method to start the thread
+
+    def start_update_thread(self):
+        self.update_thread = threading.Thread(target=self.update_sensors)
+        self.update_thread.start()
         
     def init_common_attributes(self):
         self.sensor_data_lock = threading.Lock()
