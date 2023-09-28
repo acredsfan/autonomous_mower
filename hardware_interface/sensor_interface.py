@@ -24,6 +24,7 @@ class SensorInterface:
     def __init__(self):
         self.init_common_attributes()
         self.init_sensors()
+        self.sensor_data_lock = threading.Lock()
 
     def init_common_attributes(self):
         self.GRID_SIZE = GRID_SIZE
@@ -53,8 +54,11 @@ class SensorInterface:
 
     def init_sensors(self):
         try:
+            self.i2c = busio.I2C(board.SCL, board.SDA)
+            self.select_mux_channel(3)
             self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
             self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
+            self.select_mux_channel(2)
             self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
             self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
             self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
@@ -65,27 +69,28 @@ class SensorInterface:
     # FUNCTIONS
     def update_sensors(self):
         while True:
-            self.sensor_data['ToF_Right'] = self.read_vl53l0x_right
-            self.sensor_data['ToF_Left'] = self.read_vl53l0x_left
-            self.sensor_data['compass'] = self.read_mpu9250_compass
-            self.sensor_data['gyro'] = self.read_mpu9250_gyro
-            self.sensor_data['accel'] = self.read_mpu9250_accel
-            self.sensor_data['bme280'] = self.read_bme280
-            self.sensor_data['solar'] = self.read_ina3221(1)
-            self.sensor_data['battery'] = self.read_ina3221(3)
-            time.sleep(0.1)
+            with self.sensor_data_lock:
+                self.sensor_data['ToF_Right'] = self.read_vl53l0x_right
+                self.sensor_data['ToF_Left'] = self.read_vl53l0x_left
+                self.sensor_data['compass'] = self.read_mpu9250_compass
+                self.sensor_data['gyro'] = self.read_mpu9250_gyro
+                self.sensor_data['accel'] = self.read_mpu9250_accel
+                self.sensor_data['bme280'] = self.read_bme280
+                self.sensor_data['solar'] = self.read_ina3221(1)
+                self.sensor_data['battery'] = self.read_ina3221(3)
+            time.sleep(0.5)
                
     def reset_sensors(self):
         for pin_num in self.shutdown_pins:
             pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
             pin.direction = digitalio.Direction.OUTPUT
             pin.value = False
-        time.sleep(0.01)
+        time.sleep(0.05)
         for pin_num in self.shutdown_pins:
             pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
             pin.direction = digitalio.Direction.OUTPUT
             pin.value = True
-        time.sleep(0.01)
+        time.sleep(0.05)
 
     def select_mux_channel(self, channel):
         """Select the specified channel on the TCA9548A I2C multiplexer."""
@@ -100,9 +105,6 @@ class SensorInterface:
     def read_bme280(self):
         """Read BME280 sensor data."""
         try:
-            self.i2c = busio.I2C(board.SCL, board.SDA)
-            self.select_mux_channel(3)
-            self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(self.i2c, address=0x76)
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
                 'temperature_c': round(self.bme280.temperature, 1),
@@ -162,7 +164,6 @@ class SensorInterface:
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
         try:
-            self.select_mux_channel(2)
             if channel in [1, 3]:
                 Voltage = round(self.ina3221.bus_voltage(channel), 2)
                 Shunt_Voltage = round(self.ina3221.shunt_voltage(channel), 2)
@@ -215,7 +216,8 @@ class SensorInterface:
             self.obstacle_data[center_x - dx][center_y - dy] = 1  # Mark as obstacle
 
     def get_obstacle_data(self):
-        return self.obstacle_data
+        with self.sensor_data_lock:
+            return self.obstacle_data
 
     def calculate_speed(self):
         """Calculate speed based on accelerometer data."""
