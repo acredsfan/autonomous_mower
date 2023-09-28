@@ -24,7 +24,7 @@ from flask_cors import CORS
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 try:
-    camera = camera_instance()
+    camera = camera_instance
 except Exception as e:
     print(f"Failed to initialize camer in app: {e}")
 
@@ -67,7 +67,7 @@ first_request = True
 def start_web_interface():
     # Start the sensor update thread
     global camera
-    camera = camera_instance()
+    camera = camera_instance
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
@@ -271,13 +271,13 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    camera= camera_instance()
+    camera= camera_instance
     frame = g.camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
 def gen(camera_instance):
     while True:
-        camera_instance = camera_instance()
+        camera_instance = camera_instance
         frame = camera_instance.get_frame()  # Use the single instance
 
         # Perform obstacle detection on the frame
