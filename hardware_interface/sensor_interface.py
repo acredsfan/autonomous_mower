@@ -25,16 +25,17 @@ class SensorInterface:
         self.sensor_data = {}  # Define sensor_data here
         self.init_common_attributes()
         self.init_sensors()
+        # Wait for init_sensor() to finish
+        time.wait(3)
+        # start update thread after init_sensors() completes
         self.start_update_thread()  # Separate method to start the thread
 
     def start_update_thread(self):
+        #wait for 
         self.update_thread = threading.Thread(target=self.update_sensors)
         self.update_thread.start()
         
     def init_common_attributes(self):
-        self.sensor_data_lock = threading.Lock()
-        self.update_thread = threading.Thread(target=self.update_sensors)
-        self.update_thread.start()
         self.GRID_SIZE = GRID_SIZE
         self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
