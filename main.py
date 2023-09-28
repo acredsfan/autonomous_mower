@@ -59,7 +59,7 @@ def main():
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
         localization_instance = Localization()
-        robot_position = localization_instance.get_current_position()
+        robot_position = localization_instance.estimate_position()
         path_following_thread = threading.Thread()
 
         if mow_days is None or mow_hours is None:
