@@ -19,9 +19,10 @@ import threading
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG)
 
-
 class SensorInterface:
     def __init__(self):
+        self.sensor_data_lock = threading.Lock()
+        self.sensor_data = {}  # Define sensor_data here
         self.init_common_attributes()
         self.init_sensors()
         self.start_update_thread()  # Separate method to start the thread
