@@ -48,6 +48,10 @@ obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
 
 class PathPlanning:
     def __init__(self):
+        self.min_lng = min_lng
+        self.max_lng = max_lng
+        self.min_lat = min_lat
+        self.max_lat = max_lat
         self.localization = Localization()
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
@@ -55,10 +59,6 @@ class PathPlanning:
         self.set_min_max_coordinates()
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
         self.last_action = None
-        self.min_lng = min_lng
-        self.max_lng = max_lng
-        self.min_lat = min_lat
-        self.max_lat = max_lat
 
     def set_min_max_coordinates(self):
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
