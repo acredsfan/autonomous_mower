@@ -42,7 +42,7 @@ class Localization:
 
     def estimate_orientation(self):
         logging.info(f'Entering Function or Method')
-        from hardware_interface.sensor_interface import sensor_interface
+        from hardware_interface.sensor_interface import SensorInterface
         try:
             compass_data = sensor_interface.sensor_data['compass']
             self.current_heading = math.degrees(math.atan2(compass_data['y'], compass_data['x']))
