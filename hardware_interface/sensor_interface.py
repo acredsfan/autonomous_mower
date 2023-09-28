@@ -6,6 +6,10 @@ import adafruit_vl53l0x
 import adafruit_tca9548a
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
+print("Debugging SensorInterface before INA3221 read:")
+print(f"  Type: {type(self)}")
+print(f"  Has 'bus': {hasattr(self, 'bus')}")
+print(f"  Has 'ina3221': {hasattr(self, 'ina3221')}")
 import barbudor_ina3221.full as INA3221
 import RPi.GPIO as GPIO
 import busio
@@ -109,6 +113,7 @@ class SensorInterface:
 
     def read_bme280(self):
         """Read BME280 sensor data."""
+        self.select_mux_channel(3)
         try:
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
