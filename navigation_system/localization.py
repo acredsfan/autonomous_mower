@@ -23,7 +23,6 @@ class Localization:
         self.current_longitude = 0
         self.current_altitude = 0
         self.current_heading = 0
-        self.mpu = SensorInterface.initialize_mpu9250()
         self.min_lat = min_lat
         self.max_lat = max_lat
         self.min_lng = min_lng
