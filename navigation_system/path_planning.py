@@ -285,7 +285,7 @@ class PathPlanning:
         return goal_position  
     
     def get_start_and_goal(self):
-        current_position = self.get_current_position()
+        current_position = self.estimate_position()
         sections = self.divide_yard_into_sections()
         next_section = self.select_next_section(current_position)
         
@@ -300,9 +300,9 @@ class PathPlanning:
         grid_y = int((lng - self.min_lng) / self.lng_grid_size)
         return (grid_x, grid_y)
     
-    def get_current_position(self):
+    def estimate_position(self):
         # Get location of mower from Locatlization class
-        lat, lng, alt = self.localization.get_current_position()
+        lat, lng, alt = self.localization.estimate_position()
         # Convert lat, lng, alt to Grid Cell location
         grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
@@ -339,9 +339,9 @@ if __name__ == "__main__":
         closest_section = min(sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
         return closest_section
 
-    def get_current_position(self):
+    def estimate_position(self):
         # Get location of mower from Locatlization class
-        lat, lng, alt = self.localization.get_current_position()
+        lat, lng, alt = self.localization.estimate_position()
         # Convert lat, lng, alt to Grid Cell location
         grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
@@ -356,7 +356,7 @@ if __name__ == "__main__":
         return goal_position
 
     def get_start_and_goal(self):
-        current_position = self.get_current_position()
+        current_position = self.estimate_position()
         sections = self.divide_yard_into_sections()
         next_section = self.select_next_section(current_position, sections)
         

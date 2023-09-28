@@ -39,3 +39,6 @@ class SingletonCamera:
     def get_frame(self):
         ret, frame = self.cap.read()
         return frame if ret else None
+    
+# Initialize the camera instance
+camera_instance = SingletonCamera()
