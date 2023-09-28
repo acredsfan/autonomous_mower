@@ -64,6 +64,7 @@ class SensorInterface:
             self.select_mux_channel(3)
             self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
             self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
+            self.mpu.calibrate()
             self.select_mux_channel(2)
             self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
             self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
@@ -148,7 +149,8 @@ class SensorInterface:
         """Read MPU9250 compass data."""
         try:
             self.mpu.configure()
-            return self.mpu.readMagnetometerMaster()
+            print(f'Debug: read_mpu9250_compass returns: {self.mpu.readMagnetometerMaster()}')
+            return self.mpu.readMagnetometerMaster()            
         except Exception as e:
             print(f"Error during MPU9250 compass read: {e}")
 
