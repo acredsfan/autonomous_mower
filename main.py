@@ -11,6 +11,13 @@ import time
 import datetime
 import threading
 import subprocess
+from hardware_interface.sensor_interface import sensor_interface# Explicitly initialize common attributes and debug
+sensor_interface.init_common_attributes()
+print("Debugging SensorInterface:")
+print(f"  Type: {type(sensor_interface)}")
+print(f"  Has 'bus': {hasattr(sensor_interface, 'bus')}")
+print(f"  Has 'ina3221': {hasattr(sensor_interface, 'ina3221')}")
+
 # Initialize SensorInterface
 sensor_interface = SensorInterface()
 
@@ -59,7 +66,7 @@ def main():
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
         localization_instance = Localization()
-        robot_position = localization_instance.estimate_position()
+        robot_position = localization_instance.get_current_position()
         path_following_thread = threading.Thread()
 
         if mow_days is None or mow_hours is None:
