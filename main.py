@@ -66,7 +66,7 @@ def main():
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
         localization_instance = Localization()
-        robot_position = localization_instance.get_current_position()
+        robot_position = localization_instance.estimate_position()
         path_following_thread = threading.Thread()
 
         if mow_days is None or mow_hours is None:
@@ -98,7 +98,7 @@ def main():
                     sensor_interface.update_obstacle_data()
 
                     # Get current state for RL
-                    lat, lon, _ = localization.get_current_position()
+                    lat, lon, _ = localization.estimate_position()
                     current_state = (lat, lon)
 
                     # Update Q-table and get next action
@@ -123,7 +123,7 @@ def main():
 
                     # Plan the path
                     localization_instance = Localization()
-                    robot_position = localization_instance.get_current_position()
+                    robot_position = localization_instance.estimate_position()
                     goal = path_planner.select_next_section(robot_position)
                     avoidance_algorithm = AvoidanceAlgorithm()
                     avoidance_algorithm.run_avoidance()
