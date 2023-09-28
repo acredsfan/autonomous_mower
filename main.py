@@ -54,6 +54,7 @@ def check_mowing_conditions():
                 BladeController.set_speed(0)
         return False
     except Exception as e:
+        logging.exception('An error occurred')
         logging.error(f"Error in check_mowing_conditions: {e}")
         return False
 
