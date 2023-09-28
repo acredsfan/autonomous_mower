@@ -30,7 +30,7 @@ class SensorInterface:
         self.GRID_SIZE = GRID_SIZE
         self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
-        self.i2c = self.init_i2c()
+        self.i2c = busio.I2C(board.SCL, board.SDA)
         self.obstacle_data = np.zeros(self.GRID_SIZE)
         self.tca = adafruit_tca9548a.TCA9548A(self.i2c, address=0x70)
         self.shutdown_pins = [22, 23]
@@ -54,7 +54,6 @@ class SensorInterface:
 
     def init_sensors(self):
         try:
-            self.i2c = busio.I2C(board.SCL, board.SDA)
             self.select_mux_channel(3)
             self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
             self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
