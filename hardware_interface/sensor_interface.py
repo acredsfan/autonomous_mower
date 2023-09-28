@@ -52,11 +52,15 @@ class SensorInterface:
             return None
 
     def init_sensors(self):
-        self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
-        self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
-        self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
-        self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
-        self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
+        try:
+            self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
+            self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
+            self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
+            self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
+            self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
+            self.mpu.configure()  # Apply the settings to the registers.
+        except Exception as e:
+            print(f"Error during sensor initialization: {e}")
 
     # FUNCTIONS
     def update_sensors(self):
@@ -92,26 +96,6 @@ class SensorInterface:
                 print(f"Error during multiplexer channel selection: {e}")
         else:
             raise ValueError("Multiplexer channel must be an integer between 0 and 7.")
-
-    def init_hall_effect_sensors(self):
-        try:
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setup(self.HALL_EFFECT_SENSOR_1, GPIO.IN)
-            GPIO.setup(self.HALL_EFFECT_SENSOR_2, GPIO.IN)
-        except Exception as e:
-            print(f"Error during hall effect sensor initialization: {e}")
-
-    def init_sensors(self):
-        """Initialize all sensors."""
-        try:
-            # Initialize MPU9250
-            self.mpu.configure()  # Apply the settings to the registers.
-            print("MPU9250 initialized.")
-
-            # Initialize hall effect sensors
-            self.init_hall_effect_sensors()
-        except Exception as e:
-            print(f"Error during sensor initialization: {e}")
 
     def read_bme280(self):
         """Read BME280 sensor data."""
