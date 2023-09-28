@@ -34,7 +34,7 @@ def before_request():
     g.camera = camera
 sensors = sensor_interface
 gps = GPSInterface()
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', engineio_logger=True, ping_timeout=30)
 CORS(app)
 
 # Define variables to hold sensor values
