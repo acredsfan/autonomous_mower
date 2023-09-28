@@ -26,7 +26,7 @@ class SensorInterface:
         self.init_common_attributes()
         self.init_sensors()
         # Wait for init_sensor() to finish
-        time.wait(3)
+        time.sleep(3)
         # start update thread after init_sensors() completes
         self.start_update_thread()  # Separate method to start the thread
 
