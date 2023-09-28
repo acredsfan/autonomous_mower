@@ -41,22 +41,22 @@ class Localization:
             self.current_longitude = data['longitude']
             self.current_altitude = data['altitude']
 
-def estimate_orientation(self):
-    logging.info('Entering Function or Method')
-    from hardware_interface.sensor_interface import SensorInterface
+    def estimate_orientation(self):
+        logging.info('Entering Function or Method')
+        from hardware_interface.sensor_interface import SensorInterface
 
-    try:
-        compass_data = SensorInterface.read_mpu9250_compass(self)
-        x, y, z = compass_data['x'], compass_data['y'], compass_data['z']
+        try:
+            compass_data = SensorInterface.read_mpu9250_compass(self)
+            x, y, z = compass_data['x'], compass_data['y'], compass_data['z']
 
-        # Calculate the orientation angle in degrees
-        self.current_heading = math.degrees(math.atan2(y, x))
+            # Calculate the orientation angle in degrees
+            self.current_heading = math.degrees(math.atan2(y, x))
 
-        if self.current_heading < 0:
-            self.current_heading += 360
-    except Exception as e:
-        logging.exception('An error occurred')
-        logging.error(f"Error estimating orientation: {e}")
+            if self.current_heading < 0:
+                self.current_heading += 360
+        except Exception as e:
+            logging.exception('An error occurred')
+            logging.error(f"Error estimating orientation: {e}")
 
     def update(self):
         logging.info(f'Entering Function or Method')
