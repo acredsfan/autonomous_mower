@@ -170,10 +170,10 @@ class SensorInterface:
 
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
-        print("Debugging SensorInterface before INA3221 read:")
-        print(f"  Type: {type(self)}")
-        print(f"  Has 'bus': {hasattr(self, 'bus')}")
-        print(f"  Has 'ina3221': {hasattr(self, 'ina3221')}")
+        # print("Debugging SensorInterface before INA3221 read:")
+        # print(f"  Type: {type(self)}")
+        # print(f"  Has 'bus': {hasattr(self, 'bus')}")
+        # print(f"  Has 'ina3221': {hasattr(self, 'ina3221')}")
         try:
             self.select_mux_channel(2) 
             if channel in [1, 3]:
