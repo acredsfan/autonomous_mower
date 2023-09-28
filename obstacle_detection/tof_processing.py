@@ -8,7 +8,7 @@ import logging
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class ObstacleAvoidance:
     def __init__(self):

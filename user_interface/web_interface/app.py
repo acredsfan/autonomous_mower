@@ -21,7 +21,7 @@ from flask_cors import CORS
 
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG)
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 try:
     camera = SingletonCamera()

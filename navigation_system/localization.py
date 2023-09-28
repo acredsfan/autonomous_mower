@@ -8,7 +8,7 @@ from constants import EARTH_RADIUS, polygon_coordinates
 
 class Localization:
     def __init__(self):
-        logging.basicConfig(filename='main.log', level=logging.DEBUG)
+        logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         self.gps = GPSInterface()
         self.yard_boundary = polygon_coordinates
         self.current_latitude = 0
