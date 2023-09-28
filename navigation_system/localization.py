@@ -27,9 +27,9 @@ class Localization:
     def estimate_position(self):
         data = self.gps.read_gps_data()
         if data:
-            self.current_latitude = data['lat']
-            self.current_longitude = data['lon']
-            self.current_altitude = data['alt']
+            self.current_latitude = data['latitude']
+            self.current_longitude = data['longitutde']
+            self.current_altitude = data['altitude']
 
     def estimate_orientation(self):
         from hardware_interface.sensor_interface import sensor_interface
