@@ -1,3 +1,4 @@
+from hardware_interface.sensor_interface import SensorInterface
 import logging
 from hardware_interface import MotorController, BladeController
 from control_system import trajectory_controller, speed_controller, direction_controller
@@ -10,7 +11,9 @@ import time
 import datetime
 import threading
 import subprocess
-from hardware_interface.sensor_interface import sensor_interface
+# Initialize SensorInterface
+sensor_interface = SensorInterface()
+
 
 
 # Initialize logging
