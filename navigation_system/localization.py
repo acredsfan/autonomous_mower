@@ -18,6 +18,7 @@ class Localization:
         logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         self.gps = GPSInterface()
         self.yard_boundary = polygon_coordinates
+        print(self.yard_boundary)
         self.current_latitude = 0
         self.current_longitude = 0
         self.current_altitude = 0
