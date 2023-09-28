@@ -23,6 +23,7 @@ class Localization:
         self.current_longitude = 0
         self.current_altitude = 0
         self.current_heading = 0
+        self.mpu = SensorInterface.initialize_mpu9250()
 
     def load_json_file(self, file_name):
         logging.info(f'Entering Function or Method')
