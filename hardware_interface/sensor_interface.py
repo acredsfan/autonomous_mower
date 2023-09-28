@@ -169,6 +169,7 @@ class SensorInterface:
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
         try:
+            self.select_mux_channel(2) 
             if channel in [1, 3]:
                 Voltage = round(self.ina3221.bus_voltage(channel), 2)
                 Shunt_Voltage = round(self.ina3221.shunt_voltage(channel), 2)
