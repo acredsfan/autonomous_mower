@@ -52,10 +52,6 @@ class PathPlanning:
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
-        self.min_lat = None
-        self.max_lat = None
-        self.min_lng = None
-        self.max_lng = None
         self.set_min_max_coordinates()
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
         self.last_action = None
