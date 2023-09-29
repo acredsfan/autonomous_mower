@@ -33,12 +33,20 @@ class SingletonCamera:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(SingletonCamera, cls).__new__(cls)
+            import os
+            if not os.path.exists('/dev/video0'):
+                logging.error("Camera at /dev/video0 not found.")
             cls._instance.cap = cv2.VideoCapture(0)  # Initialize camera here
         return cls._instance
 
     def get_frame(self):
         ret, frame = self.cap.read()
+        if not ret:
+            logging.error("Failed to get frame.")
         return frame if ret else None
+    
+    def __del__(self):
+        self.cap.release()
     
 # Initialize the camera instance
 camera_instance = SingletonCamera()
