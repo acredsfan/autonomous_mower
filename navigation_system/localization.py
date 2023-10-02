@@ -35,8 +35,9 @@ class Localization:
         return []
 
     def estimate_position(self):
-        logging.info(f'Entering Function or Method')
+        logging.info(f'Entering estimate_position()')
         data = self.gps.read_gps_data()
+        logging.info(f'GPS data for estimate_position(): {data}')
         if data:
             self.current_latitude = data['latitude']
             self.current_longitude = data['longitude']
