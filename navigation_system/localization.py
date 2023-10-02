@@ -1,13 +1,9 @@
 # Import required modules
 import math
-import logging
 import time
-import logging
 from navigation_system import GPSInterface
 import logging
-import logging
 import json
-import logging
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 from hardware_interface.sensor_interface import SensorInterface
 
