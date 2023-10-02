@@ -1,11 +1,11 @@
-from navigation_system import GPSInterface
+from navigation_system.gps_interface import GPSInterface
 import logging
 from hardware_interface.sensor_interface import SensorInterface
 import math
 
 def estimate_position(self):
     logging.info(f'Entering Function or Method')
-    data = gps.read_gps_data()
+    data = GPSInterface.read_gps_data()
     if data:
         current_latitude = data['latitude']
         current_longitude = data['longitude']
