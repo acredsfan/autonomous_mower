@@ -45,6 +45,9 @@ class Localization:
             self.current_latitude = data['latitude']
             self.current_longitude = data['longitude']
             self.current_altitude = data['altitude']
+            print(f"Current position: {self.current_latitude}, {self.current_longitude}, {self.current_altitude}")
+        else:
+            logging.warning("GPS data is None.")
 
     def estimate_orientation(self):
         try:
