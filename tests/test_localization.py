@@ -3,7 +3,7 @@ import logging
 from hardware_interface.sensor_interface import SensorInterface
 import math
 
-def estimate_position(self):
+def estimate_position():
     logging.info(f'Entering Function or Method')
     data = GPSInterface.read_gps_data()
     if data:
@@ -14,9 +14,9 @@ def estimate_position(self):
     else:
         logging.warning("GPS data is None.")
 
-def estimate_orientation(self):
+def estimate_orientation():
     try:
-        compass_data = SensorInterface.read_mpu9250_compass(self)
+        compass_data = SensorInterface.read_mpu9250_compass()
         
         # Check if compass_data is None
         if compass_data is not None:
