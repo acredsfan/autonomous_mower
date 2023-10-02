@@ -1,4 +1,4 @@
-from navigation_system import GPSInterface
+from navigation_system.gps_interface import GPSInterface
 import logging
 from hardware_interface.sensor_interface import SensorInterface
 import math
