@@ -1,7 +1,7 @@
 # Import required modules
 import math
 import time
-from navigation_system import GPSInterface
+from navigation_system.gps_interface import GPSInterface
 import logging
 import json
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
