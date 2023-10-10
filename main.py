@@ -19,24 +19,18 @@ print(f"  Type: {type(sensor_interface)}")
 print(f"  Has 'bus': {hasattr(sensor_interface, 'bus')}")
 print(f"  Has 'ina3221': {hasattr(sensor_interface, 'ina3221')}")
 
-# Initialize SensorInterface
-sensor_interface = SensorInterface()
-
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-# Initialize the camera
-camera = SingletonCamera()
-
-# Initialize PathPlanning class
-path_planner = path_planning.PathPlanning()
-
-# Initialize AvoidanceAlgorithm, SensorInterface, and Localization
-avoidance_algo = AvoidanceAlgorithm(camera)
-localization = Localization()
-
-# Initialize MotorController
-motor_controller = MotorController()
+#Function to initialize all resources
+def initialize_resources():
+    global sensor_interface, camera, path_planner, avoidance_algo, localization, motor_controller
+    sensor_interface = SensorInterface()
+    camera = SingletonCamera()
+    path_planner = path_planning.PathPlanning()
+    avoidance_algo = AvoidanceAlgorithm(camera)
+    localization = Localization()
+    motor_controller = MotorController()
 
 # Initialize Lock for shared resources
 lock = Lock()
@@ -76,6 +70,9 @@ def read_shared_resource():
 
 def main():
     try:
+        # Initialize all resources
+        initialize_resources()
+
         update_thread = Thread(target=update_shared_resource)
         read_thread = Thread(target=read_shared_resource)
         update_thread.start()
