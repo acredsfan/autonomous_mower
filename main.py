@@ -9,6 +9,7 @@ from user_interface.web_interface.camera import SingletonCamera
 from multiprocessing import Process, Lock
 import time
 import datetime
+from threading import Thread, Lock
 import threading
 import subprocess
 from hardware_interface.sensor_interface import sensor_interface# Explicitly initialize common attributes and debug
@@ -20,8 +21,6 @@ print(f"  Has 'ina3221': {hasattr(sensor_interface, 'ina3221')}")
 
 # Initialize SensorInterface
 sensor_interface = SensorInterface()
-
-
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -42,6 +41,9 @@ motor_controller = MotorController()
 # Initialize Lock for shared resources
 lock = Lock()
 
+# Shared Resource
+shared_resource = []
+
 def check_mowing_conditions():
     sensor_interface_instance = sensor_interface
     try:
@@ -58,11 +60,29 @@ def check_mowing_conditions():
         logging.error(f"Error in check_mowing_conditions: {e}")
         return False
 
+# Function to update shared resource
+def update_shared_resource():
+    global shared_resource
+    with lock:
+        # Update the shared resource here
+        shared_resource.append("new_data")
+
+# Function to read from shared resource
+def read_shared_resource():
+    global shared_resource
+    with lock:
+        # Read the shared resource here
+        print(shared_resource)
+
 def main():
     try:
+        update_thread = Thread(target=update_shared_resource)
+        read_thread = Thread(target=read_shared_resource)
+        update_thread.start()
+        read_thread.start()
+
         # Start the Gunicorn server in a separate process
         gunicorn_process = subprocess.Popen(["gunicorn", "-k", "eventlet", "-w", "1", "--bind", "0.0.0.0:90", "user_interface.web_interface.wsgi:app"])
-
 
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
@@ -155,7 +175,8 @@ def main():
         gunicorn_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
-
+        update_thread.join()
+        read_thread.join()
         logging.info("Shutdown complete.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
