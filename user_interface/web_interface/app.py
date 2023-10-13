@@ -272,7 +272,7 @@ def get_schedule():
 @socketio.on('request_frame')
 def handle_frame_request():
     camera= camera_instance
-    frame = camera_instance.get_current_frame()  # Use the single instance
+    frame = camera_instance.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
 def gen(camera_instance):

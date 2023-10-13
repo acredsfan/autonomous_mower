@@ -45,11 +45,7 @@ class SingletonCamera:
         if not ret:
             logging.error("Failed to get frame.")
         return frame if ret else None
-    
-    def get_current_frame(self):
-        ret, frame = self.cap.read()
-        return frame if ret else None
-    
+        
     def __del__(self):
         self.cap.release()
     
