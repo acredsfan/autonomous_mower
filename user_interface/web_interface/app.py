@@ -24,7 +24,7 @@ from flask_cors import CORS
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 try:
-    camera = SingletonCamera
+    camera = SingletonCamera()
 except Exception as e:
     print(f"Failed to initialize camer in app: {e}")
 
@@ -67,7 +67,6 @@ first_request = True
 def start_web_interface():
     # Start the sensor update thread
     global camera
-    camera = SingletonCamera
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
@@ -159,7 +158,8 @@ def camera():
 
 @app.route('/video_feed')
 def video_feed():
-  return Response(gen(SingletonCamera()), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @socketio.on('move')
 def handle_move(direction):
@@ -337,7 +337,7 @@ def start_web_interface():
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
-    socketio.run(app, host='0.0.0.0', port=90)
+    socketio.run(app, host='0.0.0.0', port=90, threaded=True)
 
     # Set the flag to stop the sensor update thread
     stop_sensor_thread = True
