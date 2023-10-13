@@ -5,13 +5,13 @@
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
-from user_interface.web_interface.camera import Camera
+from user_interface.web_interface.camera import camera_instance
 import logging
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-camera = Camera()
+camera = camera_instance()
 
 class CameraProcessor:
     # Initialize the TFLite interpreter

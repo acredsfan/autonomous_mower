@@ -159,7 +159,7 @@ def camera():
 
 @app.route('/video_feed')
 def video_feed():
-  return Response(gen(VideoCamera()), mimetype='multipart/x-mixed-replace; boundary=frame')
+  return Response(gen(camera_instance()), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @socketio.on('move')
 def handle_move(direction):
