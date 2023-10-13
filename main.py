@@ -176,6 +176,7 @@ def main():
         BladeController.stop()
         update_thread.join()
         read_thread.join()
+        # Shut down Sensor Thread
         logging.info("Shutdown complete.")
 
     except Exception as e:
@@ -183,7 +184,10 @@ def main():
         gunicorn_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
-        #stop sensor thread
+        update_thread.join()
+        read_thread.join()
+        # Add sensor cleanup here
+        logging.info("Shutdown complete.")
 
 if __name__ == "__main__":
     main()
