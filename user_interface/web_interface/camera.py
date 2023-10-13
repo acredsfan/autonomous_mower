@@ -29,7 +29,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
  
 class SingletonCamera:
     _instance = None
-    video = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0)
     
     def __new__(cls):
         if cls._instance is None:
@@ -47,7 +47,7 @@ class SingletonCamera:
         return frame if ret else None
     
     def get_current_frame(self):
-        ret, frame = self.video.read()
+        ret, frame = self.cap.read()
         return frame if ret else None
     
     def __del__(self):
