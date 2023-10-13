@@ -278,5 +278,15 @@ class SensorInterface:
 
         print("Sensor data is not available after 20 attempts. Returning False.")
         return False
+    
+    def cleanup(self):
+        self.reset_sensors()
+        self.bus.deinit()
+        self.vl53l0x_left.stop_ranging()
+        self.vl53l0x_right.stop_ranging()
+        self.mpu.close()
+        self.bme280.deinit()
+        self.ina3221.deinit()
+        print("Sensors deinitialized.")
 
 sensor_interface = SensorInterface()
