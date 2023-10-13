@@ -24,6 +24,7 @@ from flask_cors import CORS
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 camera = SingletonCamera()
+print(f"SingletonCamera instance in app.py: {camera}")
 
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 @app.before_request
@@ -268,6 +269,7 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
+    print(f"Using SingletonCamera instance in handle_frame_request: {camera}")
     frame = camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
