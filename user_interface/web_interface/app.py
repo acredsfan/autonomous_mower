@@ -151,7 +151,7 @@ def settings():
     return render_template('settings.html')
 
 @app.route('/camera')
-def camera():
+def camera_route():
     return render_template('camera.html')
 
 @app.route('/video_feed')
@@ -270,7 +270,7 @@ def get_schedule():
 @socketio.on('request_frame')
 def handle_frame_request():
     print(f"Using SingletonCamera instance in handle_frame_request: {camera}")
-    frame = camera.get_frame()  # Use the single instance
+    frame = camera.get_frame()
     emit('update_frame', {'frame': frame})
     
 def gen(camera):
