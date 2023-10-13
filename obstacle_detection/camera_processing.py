@@ -5,18 +5,19 @@
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
-from user_interface.web_interface.camera import camera_instance
+from user_interface.web_interface.camera import Camera
 import logging
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+
+camera = Camera()
 
 class CameraProcessor:
     # Initialize the TFLite interpreter
     interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
     interpreter.allocate_tensors()
     # Initialize Camera
-    camera = camera_instance
     # Get input and output details
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
