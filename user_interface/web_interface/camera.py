@@ -42,7 +42,7 @@ class SingletonCamera:
     def get_frame(self):
         try:
             print("Trying to read a frame...")  # Debugging line
-            ret, frame = self.video.read()
+            ret, frame = self.cap.read()
             if ret:
                 print("Frame read successfully.")  # Debugging line
                 ret, jpeg = cv2.imencode('.jpg', frame)

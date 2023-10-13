@@ -23,6 +23,7 @@ class Localization:
         self.max_lat = max_lat
         self.min_lng = min_lng
         self.max_lng = max_lng
+        self.sensor_interface = SensorInterface()
 
     def load_json_file(self, file_name):
         logging.info(f'Entering Function or Method')
@@ -48,7 +49,7 @@ class Localization:
 
     def estimate_orientation(self):
         try:
-            compass_data = SensorInterface.read_mpu9250_compass(self)
+            compass_data = self.sensor_interface.read_mpu9250_compass()
             
             # Check if compass_data is None
             if compass_data is not None:
