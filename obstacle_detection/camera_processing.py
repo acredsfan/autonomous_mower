@@ -38,6 +38,8 @@ class CameraProcessor:
         return image
 
     def classify_obstacle(self, image):  # Added 'self'
+        if image is None:
+            image = camera_instance.get_current_frame()
         processed_image = self.preprocess_image(image)  # Call static method
 
         # Run inference

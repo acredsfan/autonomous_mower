@@ -29,6 +29,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
  
 class SingletonCamera:
     _instance = None
+    video = cv2.VideoCapture(0)
     
     def __new__(cls):
         if cls._instance is None:
