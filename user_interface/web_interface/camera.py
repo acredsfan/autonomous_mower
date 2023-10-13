@@ -39,12 +39,20 @@ class SingletonCamera:
                 logging.error("Camera at /dev/video0 not found.")
             cls._instance.cap = cv2.VideoCapture(0)  # Initialize camera here
         return cls._instance
-
     def get_frame(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            logging.error("Failed to get frame.")
-        return frame if ret else None
+        try:
+            print("Trying to read a frame...")  # Debugging line
+            ret, frame = self.video.read()
+            if ret:
+                print("Frame read successfully.")  # Debugging line
+                ret, jpeg = cv2.imencode('.jpg', frame)
+                return jpeg.tobytes()
+            else:
+                print("Failed to grab frame.")  # Debugging line
+                return None
+        except Exception as e:
+            print(f"An exception occurred: {e}")  # Debugging line
+            return None
         
     def __del__(self):
         self.cap.release()
