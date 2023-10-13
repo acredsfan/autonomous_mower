@@ -6,7 +6,7 @@ from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance, AvoidanceAlgorithm
 from user_interface.web_interface.app import start_web_interface, get_schedule
 from user_interface.web_interface.camera import SingletonCamera
-from multiprocessing import Process, Lock
+from multiprocessing import Process
 import time
 import datetime
 from threading import Thread, Lock
@@ -39,9 +39,8 @@ lock = Lock()
 shared_resource = []
 
 def check_mowing_conditions():
-    sensor_interface_instance = sensor_interface
     try:
-        if sensor_interface_instance.ideal_mowing_conditions():
+        if sensor_interface.ideal_mowing_conditions():
             if not BladeController.blades_on:
                 BladeController.set_speed(90)
                 return True
@@ -83,8 +82,7 @@ def main():
 
         mowing_requested = False
         mow_days, mow_hours = get_schedule()
-        localization_instance = Localization()
-        robot_position = localization_instance.estimate_position()
+        robot_position = localization.estimate_position()
         path_following_thread = threading.Thread()
 
         if mow_days is None or mow_hours is None:
@@ -141,8 +139,8 @@ def main():
 
 
                         # Plan the path
-                        localization_instance = Localization()
-                        robot_position = localization_instance.estimate_position()
+                        localization = Localization()
+                        robot_position = localization.estimate_position()
                         goal = path_planner.select_next_section(robot_position)
                         avoidance_algorithm = AvoidanceAlgorithm()
                         avoidance_algorithm.run_avoidance()
@@ -187,6 +185,6 @@ def main():
         MotorController.stop_motors()
         BladeController.stop()
         #stop sensor thread
-        
+
 if __name__ == "__main__":
     main()
