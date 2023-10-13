@@ -11,7 +11,7 @@ import logging
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-frame = camera_instance.get_current_frame
+frame = camera_instance.get_current_frame()
 
 class CameraProcessor:
     # Initialize the TFLite interpreter
@@ -76,9 +76,8 @@ class CameraProcessor:
 # Example usage
 if __name__ == "__main__":
     camera_processor = CameraProcessor()  # Create an instance
-    cap = frame
-    ret, frame = frame
+    frame = camera_instance.get_current_frame()  # Get a frame from the camera
     
-    if ret:
+    if frame is not None:
         obstacle_label = camera_processor.classify_obstacle(frame)  # Use the instance to call the method
         print(f"Detected obstacle type: {obstacle_label}")
