@@ -11,13 +11,12 @@ import logging
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-camera = camera_instance()
-
 class CameraProcessor:
     # Initialize the TFLite interpreter
     interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
     interpreter.allocate_tensors()
     # Initialize Camera
+    camera = camera_instance.get_current_frame
     # Get input and output details
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
