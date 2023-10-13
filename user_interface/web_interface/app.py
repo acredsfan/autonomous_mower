@@ -23,10 +23,7 @@ from flask_cors import CORS
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-try:
-    camera = SingletonCamera()
-except Exception as e:
-    print(f"Failed to initialize camer in app: {e}")
+camera = SingletonCamera()
 
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 @app.before_request
