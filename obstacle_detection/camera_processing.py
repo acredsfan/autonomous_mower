@@ -11,12 +11,13 @@ import logging
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
+frame = camera_instance.get_current_frame
+
 class CameraProcessor:
     # Initialize the TFLite interpreter
     interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
     interpreter.allocate_tensors()
     # Initialize Camera
-    camera = camera_instance.get_current_frame
     # Get input and output details
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
@@ -75,11 +76,9 @@ class CameraProcessor:
 # Example usage
 if __name__ == "__main__":
     camera_processor = CameraProcessor()  # Create an instance
-    cap = cv2.VideoCapture(0)
-    ret, frame = cap.read()
+    cap = frame
+    ret, frame = frame
     
     if ret:
         obstacle_label = camera_processor.classify_obstacle(frame)  # Use the instance to call the method
         print(f"Detected obstacle type: {obstacle_label}")
-    
-    cap.release()
