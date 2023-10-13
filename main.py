@@ -138,7 +138,6 @@ def main():
 
 
                         # Plan the path
-                        localization = Localization()
                         robot_position = localization.estimate_position()
                         goal = path_planner.select_next_section(robot_position)
                         avoidance_algorithm = AvoidanceAlgorithm()
