@@ -11,8 +11,6 @@ import logging
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-frame = SingletonCamera.get_frame()
-
 class CameraProcessor:
     # Initialize the TFLite interpreter
     interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
@@ -78,8 +76,3 @@ class CameraProcessor:
 # Example usage
 if __name__ == "__main__":
     camera_processor = CameraProcessor()  # Create an instance
-    frame = SingletonCamera.get_frame()  # Get a frame from the camera
-    
-    if frame is not None:
-        obstacle_label = camera_processor.classify_obstacle(frame)  # Use the instance to call the method
-        print(f"Detected obstacle type: {obstacle_label}")
