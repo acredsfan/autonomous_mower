@@ -13,7 +13,7 @@ import logging
 import dotenv
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
-from user_interface.web_interface.camera import camera_instance
+from user_interface.web_interface.camera import SingletonCamera
 import time
 from hardware_interface.sensor_interface import sensor_interface
 from flask_cors import CORS
@@ -24,7 +24,7 @@ from flask_cors import CORS
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 try:
-    camera = camera_instance
+    camera = SingletonCamera
 except Exception as e:
     print(f"Failed to initialize camer in app: {e}")
 
@@ -67,7 +67,7 @@ first_request = True
 def start_web_interface():
     # Start the sensor update thread
     global camera
-    camera = camera_instance
+    camera = SingletonCamera
     sensor_thread = threading.Thread(target=update_sensors)
     sensor_thread.start()
 
@@ -159,7 +159,7 @@ def camera():
 
 @app.route('/video_feed')
 def video_feed():
-  return Response(gen(camera_instance()), mimetype='multipart/x-mixed-replace; boundary=frame')
+  return Response(gen(SingletonCamera()), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @socketio.on('move')
 def handle_move(direction):
@@ -271,14 +271,12 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    camera= camera_instance
-    frame = camera_instance.get_frame()  # Use the single instance
+    frame = SingletonCamera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
-def gen(camera_instance):
+def gen(SingletonCamera):
     while True:
-        camera_instance = camera_instance
-        frame = camera_instance.get_frame()  # Use the single instance
+        frame = SingletonCamera.get_frame()  # Use the single instance
 
         # Perform obstacle detection on the frame
         obstacle_label = camera_processing.classify_obstacle(frame)
