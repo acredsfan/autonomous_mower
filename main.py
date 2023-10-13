@@ -92,80 +92,85 @@ def main():
         else:
             # Main loop
             while True:
-                with lock:
-                # Get user schedule
-                    mow_days, mow_hours = get_schedule()
+                try:
+                    with lock:
+                    # Get user schedule
+                        mow_days, mow_hours = get_schedule()
 
-                    # Update Localization
-                    localization.update()
+                        # Update Localization
+                        localization.update()
 
-                    # Check if ideal mowing conditions are met (including weather)
-                    mower_blades_on = check_mowing_conditions()
-                    if not mower_blades_on:
-                        time.sleep(60)
-                        continue
+                        # Check if ideal mowing conditions are met (including weather)
+                        mower_blades_on = check_mowing_conditions()
+                        if not mower_blades_on:
+                            time.sleep(60)
+                            continue
 
-                    # Check if today is a mowing day
-                    now = datetime.datetime.now()
-                    weekday = now.strftime("%A")
-                    current_time = now.strftime("%H")
-                    if weekday in mow_days and (current_time == mow_hours):
-                        mowing_requested = True
+                        # Check if today is a mowing day
+                        now = datetime.datetime.now()
+                        weekday = now.strftime("%A")
+                        current_time = now.strftime("%H")
+                        if weekday in mow_days and (current_time == mow_hours):
+                            mowing_requested = True
 
-                    # Update sensor data
-                    sensor_interface.update_obstacle_data()
+                        # Update sensor data
+                        sensor_interface.update_obstacle_data()
 
-                    # Get current state for RL
-                    lat, lon, _ = localization.estimate_position()
-                    current_state = (lat, lon)
+                        # Get current state for RL
+                        lat, lon, _ = localization.estimate_position()
+                        current_state = (lat, lon)
 
-                    # Update Q-table and get next action
-                    avoidance_algo.q_learning(current_state, sensor_interface.get_obstacle_data())
-                    next_action = avoidance_algo.get_next_action(current_state)
+                        # Update Q-table and get next action
+                        avoidance_algo.q_learning(current_state, sensor_interface.get_obstacle_data())
+                        next_action = avoidance_algo.get_next_action(current_state)
 
-                    # Execute Next action
-                    if next_action == 0:
-                        motor_controller.set_motor_speed_and_direction(0)
-                    elif next_action == 1:
-                        motor_controller.set_motor_speed_and_direction(1)
-                    elif next_action == 2:
-                        continue
-                    
-                    ret, frame = camera.get_frame()
+                        # Execute Next action
+                        if next_action == 0:
+                            motor_controller.set_motor_speed_and_direction(0)
+                        elif next_action == 1:
+                            motor_controller.set_motor_speed_and_direction(1)
+                        elif next_action == 2:
+                            continue
+                        
+                        ret, frame = camera.get_frame()
 
-                    if ret:
-                        # Classify obstacle using CNN
-                        obstacle_label = CameraProcessor.classify_obstacle(frame)
-                        print(f"Detected obstacle type: {obstacle_label}")
+                        if ret:
+                            # Classify obstacle using CNN
+                            obstacle_label = CameraProcessor.classify_obstacle(frame)
+                            print(f"Detected obstacle type: {obstacle_label}")
 
 
-                    # Plan the path
-                    localization_instance = Localization()
-                    robot_position = localization_instance.estimate_position()
-                    goal = path_planner.select_next_section(robot_position)
-                    avoidance_algorithm = AvoidanceAlgorithm()
-                    avoidance_algorithm.run_avoidance()
-                    path = path_planner.plan_path(robot_position, goal, path_planning.obstacle_map)
+                        # Plan the path
+                        localization_instance = Localization()
+                        robot_position = localization_instance.estimate_position()
+                        goal = path_planner.select_next_section(robot_position)
+                        avoidance_algorithm = AvoidanceAlgorithm()
+                        avoidance_algorithm.run_avoidance()
+                        path = path_planner.plan_path(robot_position, goal, path_planning.obstacle_map)
 
-                    # Move the robot along the path
-                    if not path_following_thread.is_alive():
-                        path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
-                        path_following_thread.start()
+                        # Move the robot along the path
+                        if not path_following_thread.is_alive():
+                            path_following_thread = threading.Thread(target=trajectory_controller.follow_path, args=(path,))
+                            path_following_thread.start()
 
-                    # Here, add Q-Learning logic for motor control
-                    deviation_from_path = 0  # Calculate the deviation from the path
-                    current_state = 0  # Define the current state based on your criteria
+                        # Here, add Q-Learning logic for motor control
+                        deviation_from_path = 0  # Calculate the deviation from the path
+                        current_state = 0  # Define the current state based on your criteria
 
-                    motor_controller.q_learning(current_state, deviation_from_path)
-                    motor_controller.set_motor_speed_and_direction(current_state)
+                        motor_controller.q_learning(current_state, deviation_from_path)
+                        motor_controller.set_motor_speed_and_direction(current_state)
 
-                    # Check for obstacles and update the path if needed
-                    obstacles_detected = AvoidanceAlgorithm.detect_obstacles()
-                    if obstacles_detected and path_following_thread.is_alive():
-                        path = path_planner.plan_path(robot_position, goal, obstacles_detected)
+                        # Check for obstacles and update the path if needed
+                        obstacles_detected = AvoidanceAlgorithm.detect_obstacles()
+                        if obstacles_detected and path_following_thread.is_alive():
+                            path = path_planner.plan_path(robot_position, goal, obstacles_detected)
 
-                    # Add a delay to control the loop execution rate
-                    time.sleep(0.1)
+                        # Add a delay to control the loop execution rate
+                        time.sleep(0.1)
+                
+                except Exception as inner_e:
+                    logging.exception(f"Error inside main loop: {inner_e}")
+
 
     except KeyboardInterrupt:
         logging.info("Exiting...")
@@ -175,14 +180,13 @@ def main():
         update_thread.join()
         read_thread.join()
         logging.info("Shutdown complete.")
+
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         gunicorn_process.terminate()
         MotorController.stop_motors()
         BladeController.stop()
         #stop sensor thread
-
-
-
+        
 if __name__ == "__main__":
     main()
