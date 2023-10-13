@@ -271,12 +271,12 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    frame = SingletonCamera.get_frame()  # Use the single instance
+    frame = camera.get_frame()  # Use the single instance
     emit('update_frame', {'frame': frame})
     
-def gen(SingletonCamera):
+def gen(camera):
     while True:
-        frame = SingletonCamera.get_frame()  # Use the single instance
+        frame = camera.get_frame()  # Use the single instance
 
         # Perform obstacle detection on the frame
         obstacle_label = camera_processing.classify_obstacle(frame)
