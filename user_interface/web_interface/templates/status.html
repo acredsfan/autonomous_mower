@@ -55,24 +55,26 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
-    var socket = io.connect('http://' + document.domain + ':' + location.port)
-
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
     socket.on('update_status', function(data) {
-        // Update the sensor data in the HTML elements
-        // Example:
-        // document.getElementById('battery-voltage').textContent = data.battery_voltage.bus_voltage + ' V';
-        // ...
+        document.getElementById('battery-voltage').textContent = data.battery_voltage.battery_voltage + ' V';
+        document.getElementById('solar-voltage').textContent = data.solar_voltage['Solar Panel Voltage'] + ' V';
+        document.getElementById('speed').textContent = data.speed.speed + ' m/s';
+        document.getElementById('heading').textContent = data.heading.heading + ' °';
+        document.getElementById('temperature').textContent = data.temperature + ' °F';
+        document.getElementById('humidity').textContent = data.humidity + ' %';
+        document.getElementById('pressure').textContent = data.pressure + ' hPa';
+        document.getElementById('left-distance').textContent = data.left_distance.left_distance + ' cm';
+        document.getElementById('right-distance').textContent = data.right_distance.right_distance + ' cm';
     });
+    setInterval(function() {
+        socket.emit('request_status');
+    }, 5000);
 
     socket.on('update_frame', function(data) {
         var image = document.getElementById('video');
         image.src = 'data:image/jpeg;base64,' + data.frame;
     });
-
-    // Request a new status update every 5 seconds (or whatever interval you prefer)
-    setInterval(function() {
-        socket.emit('request_status');
-    }, 5000);
 
     // Request a new frame every 500ms (or whatever interval you prefer)
     setInterval(function() {
