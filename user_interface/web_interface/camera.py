@@ -2,6 +2,8 @@ import cv2
 import os
 import logging
 
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+
 class SingletonCamera:
     _instance = None
 
@@ -20,7 +22,6 @@ class SingletonCamera:
     def get_frame(self):
         if self.cap is None:
             return None
-
         try:
             ret, frame = self.cap.read()
             if not ret:
@@ -34,9 +35,6 @@ class SingletonCamera:
     def __del__(self):
         if self.cap is not None:
             self.cap.release()
-
-# Initialize logging
-logging.basicConfig(level=logging.INFO)
 
 # Test the SingletonCamera
 if __name__ == "__main__":
