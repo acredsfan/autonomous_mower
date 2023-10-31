@@ -12,14 +12,16 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
-        if os.path.exists("/dev/video0"):
-            self.cap = cv2.VideoCapture(0)
-            if not self.cap.isOpened():
-                logging.error("Failed to open camera at index 0.")
-                self.cap = None
-        else:
-            logging.error("/dev/video0 not found.")
+        available_indices = [i for i in range(10) if cv2.VideoCapture(i).read()[0]]
+        for index in available_indices:
+            self.cap = cv2.VideoCapture(index)
+            if self.cap.isOpened():
+                logging.info(f"Camera successfully opened at index {index}.")
+                return
             self.cap = None
+
+        if self.cap is None:
+            logging.error("Failed to open any available cameras.")
 
     def get_frame(self):
         if self.cap is None:
