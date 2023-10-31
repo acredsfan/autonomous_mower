@@ -85,7 +85,7 @@ class SensorInterface:
                 self.sensor_data['bme280'] = self.read_bme280
                 self.sensor_data['solar'] = self.read_ina3221(1)
                 self.sensor_data['battery'] = self.read_ina3221(3)
-            time.sleep(0.5)
+            time.sleep(1.0)
                
     def reset_sensors(self):
         for pin_num in self.shutdown_pins:
