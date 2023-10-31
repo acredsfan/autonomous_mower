@@ -69,7 +69,7 @@
     });
     setInterval(function() {
         socket.emit('request_status');
-    }, 5000);
+    }, 1000);
 
     socket.on('update_frame', function(data) {
         var image = document.getElementById('video');
