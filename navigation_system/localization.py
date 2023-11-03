@@ -54,7 +54,7 @@ class Localization:
             # Check if compass_data is None
             if compass_data is not None:
                 logging.info(f'Compass data: {compass_data}')
-                x, y, z = compass_data['x'], compass_data['y'], compass_data['z']
+                x, y, z = compass_data
 
                 # Calculate the orientation angle in degrees
                 self.current_heading = math.degrees(math.atan2(y, x))
