@@ -19,18 +19,18 @@ class SingletonCamera:
             logging.error("Failed to open camera at index 0.")
             self.cap = None
 
-def get_frame(self):
-    if not self.cap:
-        return None
-    try:
-        ret, frame = self.cap.read()
-        if not ret:
-            logging.error("Failed to grab frame.")
+    def get_frame(self):
+        if not self.cap:
             return None
-        return frame
-    except Exception as e:
-        logging.error(f"Exception: {e}")
-        return None
+        try:
+            ret, frame = self.cap.read()
+            if not ret:
+                logging.error("Failed to grab frame.")
+                return None
+            return frame
+        except Exception as e:
+            logging.error(f"Exception: {e}")
+            return None
 
     def __del__(self):
         if self.cap is not None:
