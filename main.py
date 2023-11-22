@@ -176,7 +176,6 @@ def main():
         update_thread.join()
         read_thread.join()
         # Shut down Sensor Thread
-        sensor_interface.cleanup()
         camera.cleanup()
         logging.info("Shutdown complete.")
 
@@ -188,7 +187,6 @@ def main():
         update_thread.join()
         read_thread.join()
         # Add sensor cleanup here
-        sensor_interface.cleanup()
         camera.cleanup()
         logging.info("Shutdown complete.")
 
