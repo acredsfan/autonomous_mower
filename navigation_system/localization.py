@@ -19,6 +19,10 @@ class Localization:
         self.current_altitude = 0
         self.current_heading = 0
         self.sensor_interface = SensorInterface()
+        self.min_lat = min_lat
+        self.max_lat = max_lat
+        self.min_lng = min_lng
+        self.max_lng = max_lng
 
     def load_json_file(self, file_name):
         """Load data from a JSON file."""
