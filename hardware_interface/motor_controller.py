@@ -6,85 +6,79 @@ import logging
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-# Define GPIO pins connected to the IBT-2 drivers
-Prwm1, Lpwm1 = 4, 27  # Motor 1 control pins
-Prwm2, Lpwm2 = 21, 20  # Motor 2 control pins
-R_En1, L_En1 = 13, 13  # Motor 1 enable pins
-R_En2, L_En2 = 16, 16  # Motor 2 enable pins
-
-# Set up GPIO
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
-GPIO.setup([Prwm1, Lpwm1, Prwm2, Lpwm2, R_En1, L_En1, R_En2, L_En2], GPIO.OUT)
-
-# Set up PWM
-pwm1 = GPIO.PWM(R_En1, 2000)  # 1000 Hz
-pwm2 = GPIO.PWM(R_En2, 2000)  # 1000 Hz
-pwm1.start(0)  # Start with 0% duty cycle
-pwm2.start(0)  # Start with 0% duty cycle
-
 class MotorController:
-    
     def __init__(self):
-        # Set the initial motor speeds
-        MotorController.set_motor_speed(0, 0)
-        self.q_table = np.zeros((100, 4))  # 100 states, 4 actions (forward, backward, left, right)
-        self.last_action = None
+        # Define GPIO pins connected to the IBT-2 drivers
+        self.Prwm1, self.Lpwm1 = 4, 27  # Motor 1 control pins
+        self.Prwm2, self.Lpwm2 = 21, 20  # Motor 2 control pins
+        self.R_En1, self.L_En1 = 13, 13  # Motor 1 enable pins
+        self.R_En2, self.L_En2 = 16, 16  # Motor 2 enable pins
 
-    @staticmethod
-    def set_motor_speed(right_speed, left_speed):
+        # Set up GPIO
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup([self.Prwm1, self.Lpwm1, self.Prwm2, self.Lpwm2, self.R_En1, self.L_En1, self.R_En2, self.L_En2], GPIO.OUT)
+
+        # Set up PWM
+        self.pwm1 = GPIO.PWM(self.R_En1, 2000)  # 2000 Hz
+        self.pwm2 = GPIO.PWM(self.R_En2, 2000)  # 2000 Hz
+        self.pwm1.start(0)  # Start with 0% duty cycle
+        self.pwm2.start(0)  # Start with 0% duty cycle
+
+    def set_motor_speed(self, right_speed, left_speed):
         # Set the speed of both motors
-        pwm1.ChangeDutyCycle(right_speed)
-        pwm2.ChangeDutyCycle(left_speed)
+        self.pwm1.ChangeDutyCycle(right_speed)
+        self.pwm2.ChangeDutyCycle(left_speed)
 
-    @staticmethod
-    def set_motor_direction(direction):
+    def set_motor_direction(self, direction):
         # Set the direction of both motors
         if direction == "forward":
-            GPIO.output(Prwm1, GPIO.LOW)
-            GPIO.output(Lpwm1, GPIO.HIGH)
-            GPIO.output(Prwm2, GPIO.HIGH)
-            GPIO.output(Lpwm2, GPIO.LOW)
+            GPIO.output(self.Prwm1, GPIO.LOW)
+            GPIO.output(self.Lpwm1, GPIO.HIGH)
+            GPIO.output(self.Prwm2, GPIO.HIGH)
+            GPIO.output(self.Lpwm2, GPIO.LOW)
         elif direction == "backward":
-            GPIO.output(Prwm1, GPIO.HIGH)
-            GPIO.output(Lpwm1, GPIO.LOW)
-            GPIO.output(Prwm2, GPIO.LOW)
-            GPIO.output(Lpwm2, GPIO.HIGH)
+            GPIO.output(self.Prwm1, GPIO.HIGH)
+            GPIO.output(self.Lpwm1, GPIO.LOW)
+            GPIO.output(self.Prwm2, GPIO.LOW)
+            GPIO.output(self.Lpwm2, GPIO.HIGH)
         elif direction == "right":
-            GPIO.output(Prwm1, GPIO.HIGH)
-            GPIO.output(Lpwm1, GPIO.LOW)
-            GPIO.output(Prwm2, GPIO.HIGH)
-            GPIO.output(Lpwm2, GPIO.LOW)
+            GPIO.output(self.Prwm1, GPIO.HIGH)
+            GPIO.output(self.Lpwm1, GPIO.LOW)
+            GPIO.output(self.Prwm2, GPIO.HIGH)
+            GPIO.output(self.Lpwm2, GPIO.LOW)
         elif direction == "left":
-            GPIO.output(Prwm1, GPIO.LOW)
-            GPIO.output(Lpwm1, GPIO.HIGH)
-            GPIO.output(Prwm2, GPIO.LOW)
-            GPIO.output(Lpwm2, GPIO.HIGH)
-            
-    @staticmethod
-    def stop_motors():
-        # Stop the motors
-        GPIO.output(Prwm1, GPIO.LOW)
-        GPIO.output(Lpwm1, GPIO.LOW)
-        GPIO.output(Prwm2, GPIO.LOW)
-        GPIO.output(Lpwm2, GPIO.LOW)
+            GPIO.output(self.Prwm1, GPIO.LOW)
+            GPIO.output(self.Lpwm1, GPIO.HIGH)
+            GPIO.output(self.Prwm2, GPIO.LOW)
+            GPIO.output(self.Lpwm2, GPIO.HIGH)
 
-    @staticmethod
-    def cleanup():
+    def stop_motors(self):
         # Stop the motors
-        MotorController.stop_motors()
+        GPIO.output(self.Prwm1, GPIO.LOW)
+        GPIO.output(self.Lpwm1, GPIO.LOW)
+        GPIO.output(self.Prwm2, GPIO.LOW)
+        GPIO.output(self.Lpwm2, GPIO.LOW)
+
+    def cleanup(self):
+        # Stop the motors
+        self.stop_motors()
         
         # Stop PWM
-        pwm1.stop()
-        pwm2.stop()
+        self.pwm1.stop()
+        self.pwm2.stop()
         
         GPIO.cleanup()
 
-    @staticmethod
-    def move_mower(direction, left_speed, right_speed):
-        # Set the direction and speed of the motors
-        MotorController.set_motor_direction(direction)
-        MotorController.set_motor_speed(right_speed, left_speed)
+    def move_mower(self, direction, left_speed, right_speed):
+        try:
+            # Set the direction and speed of the motors
+            self.set_motor_direction(direction)
+            self.set_motor_speed(right_speed, left_speed)
+            return True
+        except Exception as e:
+            logging.error(f"Failed to move mower due to: {e}")
+            return False
 
     @staticmethod
     def set_motor_direction_degrees(direction_degrees):
