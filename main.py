@@ -30,7 +30,12 @@ def initialize_resources():
     path_planner = path_planning.PathPlanning()
     avoidance_algo = AvoidanceAlgorithm(camera)
     localization = Localization()
-    motor_controller = MotorController()
+    try:
+        motor_controller = MotorController()
+    except RuntimeError as e:
+        logging.error(f"Failed to initialize MotorController: {e}")
+        GPIO.cleanup()  # Cleanup all GPIO
+        motor_controller = MotorController()  # Attempt to reinitialize
 
 # Initialize Lock for shared resources
 lock = Lock()
@@ -67,6 +72,7 @@ def read_shared_resource():
         print(shared_resource)
 
 def main():
+    gunicorn_process = None
     try:
         # Initialize all resources
         initialize_resources()
@@ -166,7 +172,8 @@ def main():
                 
                 except Exception as inner_e:
                     logging.exception(f"Error inside main loop: {inner_e}")
-
+                    if gunicorn_process is not None:
+                        gunicorn_process.terminate()
 
     except KeyboardInterrupt:
         logging.info("Exiting...")
