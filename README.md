@@ -42,6 +42,7 @@ Here are the sensors and hardware I've procured for the robot:
 • INA3221 Power Monitor - https://www.amazon.com/gp/product/B0946L63LC/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
 • 2x KY-003 Hall Effect Magnetic Sensor Modules - https://www.amazon.com/gp/product/B085KVV82D/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
 • IBT-4 Motor Driver Board - https://a.co/d/cl5WV3u
+• youyeetoo RPLIDAR C1 Fusion Lidar DTOF - https://www.amazon.com/dp/B0CNXLJJ61?psc=1&ref=ppx_yo2ov_dt_b_product_details
 
 I'll be happy to share any details you'd be interested in just let me know.
 
