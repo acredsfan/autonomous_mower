@@ -17,8 +17,7 @@ from user_interface.web_interface.camera import SingletonCamera
 import time
 from hardware_interface.sensor_interface import sensor_interface
 from flask_cors import CORS
-
-
+import cv2
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -27,13 +26,17 @@ camera = SingletonCamera()
 print(f"SingletonCamera instance in app.py: {camera}")
 
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
-@app.before_request
-def before_request():
-    g.camera = camera
-sensors = sensor_interface
-gps = GPSInterface()
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', engineio_logger=True, ping_timeout=30)
 CORS(app)
+
+dotenv_path = '/home/pi/autonomous_mower/.env'
+load_dotenv(dotenv_path)
+google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
+gps = GPSInterface()
+motor_controller = MotorController()
+blade_controller = BladeController()
+path_planning = PathPlanning()
 
 # Define variables to hold sensor values
 battery_charge = {}
@@ -51,42 +54,16 @@ stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-gps = GPSInterface()
-motor_controller = MotorController()
-blade_controller = BladeController()
-path_planning = PathPlanning()
-
-dotenv_path = '/home/pi/autonomous_mower/.env'
-load_dotenv(dotenv_path)
-google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-first_request = True
-
-def start_web_interface():
-    # Start the sensor update thread
-    global camera
-    sensor_thread = threading.Thread(target=update_sensors)
-    sensor_thread.start()
-
-    app.run(host='0.0.0.0', port=90, debug=False)
-
-    # Set the flag to stop the sensor update thread
-    stop_sensor_thread = True
-    sensor_thread.join()  # Wait for the thread to finish
 
 def update_sensors():
-    global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
+    global stop_sensor_thread, battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
+    sensors = sensor_interface
 
     while not stop_sensor_thread:
         # Update sensor values
         battery_charge = {"battery_voltage": sensors.sensor_data['battery']}
         solar_status = {"Solar Panel Voltage": sensors.sensor_data['solar']}
         speed = {"speed": gps.read_gps_data()['speed']}
-        gps_data = gps.read_gps_data()
-        if gps_data is not None:
-            speed = {"speed": gps_data['speed']}
-        else:
-            speed = {"speed": None}
         heading = {"heading": sensors.sensor_data['compass']}
         bme280_data = sensors.sensor_data['bme280']
         if bme280_data is not None:
@@ -95,119 +72,38 @@ def update_sensors():
             pressure = bme280_data['pressure']
         left_distance = {"left_distance": sensors.sensor_data['ToF_Left']}
         right_distance = {"right_distance": sensors.sensor_data['ToF_Right']}
-        time.sleep(3)  # Wait for 3 second before updating again
+        time.sleep(3)
 
-@app.route('/static/<path:path>')
-def send_js(path):
-    return send_from_directory('static', path)
-
-@app.route('/sensor-data')
-def sensor_data():
-    # Retrieve the latest sensor data
-    bme280_data = sensors.read_bme280()
-    gps_data = gps.read_gps_data()
-    if gps_data is not None:
-        speed = gps_data['speed']
-    else:
-        speed = None
-
-    sensor_data = {
-        'battery_voltage': sensors.read_ina3221(3),
-        'solar_voltage': sensors.read_ina3221(1),
-        'speed': speed,
-        'heading': sensors.read_mpu9250_compass(),
-        'temperature': bme280_data['temperature_f'] if bme280_data else None,
-        'humidity': bme280_data['humidity'] if bme280_data else None,
-        'pressure': bme280_data['pressure'] if bme280_data else None,
-        'left_distance': sensors.read_vl53l0x_left(),
-        'right_distance': sensors.read_vl53l0x_right()
-    }
-
-    return jsonify(sensor_data)
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        if frame is not None:
+            success, buffer = cv2.imencode('.jpg', frame)
+            if success:
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        else:
+            print("Failed to get the frame from the camera.")
 
 @app.route('/')
 def index():
-#    sensor_data = get_sensor_data()
     next_scheduled_mow = calculate_next_scheduled_mow()
-    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
-
-@app.route('/status')
-def status():
-#    sensor_data = get_sensor_data()
-    next_scheduled_mow = calculate_next_scheduled_mow()
-    return render_template('status.html', battery_charge=battery_charge, solar_status=solar_status, speed=speed, heading=heading, temperature=temperature, humidity=humidity, pressure=pressure, left_distance=left_distance, right_distance=right_distance, mowing_status=mowing_status, next_scheduled_mow=next_scheduled_mow)
-
-@app.route('/control')
-def control():
-    return render_template('control.html')
-
-
-@app.route('/area')
-def area():
-    return render_template('area.html', google_maps_api_key=google_maps_api_key)
-
-@app.route('/settings')
-def settings():
-    return render_template('settings.html')
-
-@app.route('/camera')
-def camera_route():
-    return render_template('camera.html')
+    return render_template('index.html', google_maps_api_key=google_maps_api_key, next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(generate(),
+    return Response(gen(camera),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@socketio.on('move')
-def handle_move(direction):
-    if direction == 'forward':
-        motor_controller.move_mower("forward", 100, 100)
-    elif direction == 'backward':
-        motor_controller.move_mower("backward", 100, 100)
-    elif direction == 'left':
-        motor_controller.move_mower("left", 100, 100)
-    elif direction == 'right':
-        motor_controller.move_mower("right", 100, 100)
-    elif direction == 'stop':
-        motor_controller.stop_motors()
-    emit('message', {'data': f'Moving {direction}'})
-
-@socketio.on('toggle_blades')
-def handle_toggle_blades(state):
-    if state == 'on':
-        blade_controller.set_speed(90)
-    elif state == 'off':
-        blade_controller.set_speed(0)
-    emit('message', {'data': f'Blades toggled {state}'})
-
-@socketio.on('request_status')
-def handle_status_request():
-    global battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
-    sensor_data = {
-        'battery_voltage': battery_charge,
-        'solar_voltage': solar_status,
-        'speed': speed,
-        'heading': heading,
-        'temperature': temperature,
-        'humidity': humidity,
-        'pressure': pressure,
-        'left_distance': left_distance,
-        'right_distance': right_distance
-    }
-    emit('update_status', sensor_data)
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
-    global mowing_requested
-    mowing_requested = True
+    # Trigger start mowing actions
     return jsonify({'message': 'Mower started.'})
-
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    toggle_mower_blades()
-    stop_motors()
+    # Trigger stop mowing actions
     return jsonify({'message': 'Mower stopped.'})
 
 @app.route('/get-mowing-area', methods=['GET'])
