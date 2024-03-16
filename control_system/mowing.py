@@ -1,66 +1,72 @@
 # mowing.py
-import logging
-from hardware_interface import MotorController, BladeController
-from navigation_system import Localization
-from obstacle_detection import ObstacleAvoidance
-from control_system import trajectory_controller
-from user_interface.web_interface.app import update_status  # Adjust according to your actual update status method
 
-class MowingSystem:
+# Import necessary modules from the project's structure
+from hardware_interface.motor_controller import MotorController
+from hardware_interface.blade_controller import BladeController
+from hardware_interface.sensor_interface import SensorInterface
+from navigation_system.path_planning import PathPlanner
+from navigation_system.gps_interface import GPSInterface
+from obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from control_system.speed_controller import SpeedController
+from control_system.direction_controller import DirectionController
+from control_system.trajectory_controller import TrajectoryController
+
+class AutonomousMower:
     def __init__(self):
-        # Initialize components; these are assumed to be singleton or effectively singleton in use
-        self.blade_controller = BladeController()
+        # Initialize hardware interfaces
         self.motor_controller = MotorController()
-        self.localization = Localization()
-        self.obstacle_avoidance = ObstacleAvoidance()
-        self.trajectory_controller = trajectory_controller
-        self.is_mowing = False
+        self.blade_controller = BladeController()
+        self.sensor_interface = SensorInterface()
 
-    def start_mowing(self):
-        try:
-            # Start the blades
-            self.blade_controller.start()
-            self.is_mowing = True
-            logging.info("Blades started for mowing.")
+        # Initialize navigation and obstacle detection components
+        self.gps_interface = GPSInterface()
+        self.path_planner = PathPlanner(self.gps_interface)
+        self.avoidance_algorithm = AvoidanceAlgorithm(self.sensor_interface)
 
-            # Begin mowing along the planned path, integrating obstacle avoidance
-            self.begin_path_following_and_obstacle_avoidance()
-            logging.info("Mowing started successfully.")
-            update_status("Mowing started.")
-        except Exception as e:
-            logging.error(f"Failed to start mowing: {e}")
-            update_status(f"Mowing error: {e}")
+        # Initialize control system components
+        self.speed_controller = SpeedController(self.motor_controller)
+        self.direction_controller = DirectionController(self.motor_controller)
+        self.trajectory_controller = TrajectoryController(self.direction_controller, self.speed_controller)
 
-    def stop_mowing(self):
-        try:
-            # Stop the blades
-            self.blade_controller.stop()
-            self.is_mowing = False
-            logging.info("Mowing stopped successfully.")
-            update_status("Mowing stopped.")
-        except Exception as e:
-            logging.error(f"Failed to stop mowing: {e}")
-            update_status(f"Mowing stop error: {e}")
+    def generate_mowing_path(self, lawn_layout, known_obstacles):
+        # This method should be overridden with actual lawn layout and known obstacles
+        self.mowing_path = self.path_planner.plan_path(lawn_layout, known_obstacles)
 
-    def begin_path_following_and_obstacle_avoidance(self):
-        """
-        Start following the path while checking for obstacles.
-        This method will integrate the trajectory controller and obstacle avoidance system.
-        """
-        # Placeholder for starting trajectory following and obstacle avoidance logic
-        # Example: self.trajectory_controller.follow_path_with_obstacle_avoidance()
-        # Note: You'll need to implement or adjust this method based on your system design
-        pass
+    def mow_lawn(self):
+        if not self.mowing_path:
+            raise ValueError("Mowing path not generated. Call generate_mowing_path first.")
 
-    def update_mowing_status(self):
-        """
-        Update the mowing status on the web UI.
-        """
-        status_message = "Mowing in progress" if self.is_mowing else "Mowing paused or stopped"
-        update_status(status_message)
+        for waypoint in self.mowing_path:
+            self.trajectory_controller.navigate_to(waypoint)
+            while not self.trajectory_controller.at_target(waypoint):
+                current_position = self.gps_interface.get_current_position()
+                self.trajectory_controller.update(current_position)
 
-# Example usage within other parts of your system could be as simple as:
-# mowing_system = MowingSystem()
-# mowing_system.start_mowing()
-# ... later ...
-# mowing_system.stop_mowing()
+                if self.sensor_interface.detect_obstacle():
+                    obstacle_position = self.sensor_interface.get_obstacle_position()
+                    avoidance_path = self.avoidance_algorithm.calculate_avoidance_path(obstacle_position)
+                    for avoidance_waypoint in avoidance_path:
+                        self.trajectory_controller.navigate_to(avoidance_waypoint)
+                    self.trajectory_controller.navigate_to(waypoint)
+
+            self.blade_controller.engage()
+
+        self.blade_controller.disengage()
+
+    def perform_safety_checks(self):
+        if not self.motor_controller.check_status() or not self.sensor_interface.check_sensors():
+            print("Safety stop triggered")
+            self.motor_controller.stop()
+            self.blade_controller.disengage()
+            return False
+        return True
+
+if __name__ == "__main__":
+    autonomous_mower = AutonomousMower()
+    lawn_layout = {...}  # Define the lawn layout here
+    known_obstacles = [...]  # Define known obstacles here
+    autonomous_mower.generate_mowing_path(lawn_layout, known_obstacles)
+    try:
+        autonomous_mower.mow_lawn()
+    except ValueError as e:
+        print(f"Error during mowing operation: {e}")

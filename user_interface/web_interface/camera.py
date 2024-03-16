@@ -1,48 +1,55 @@
 import cv2
+import threading
 import logging
+from queue import Queue, Empty
 
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class SingletonCamera:
     _instance = None
+    _lock = threading.Lock()
 
     def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(SingletonCamera, cls).__new__(cls)
-            cls._instance.init_camera()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(SingletonCamera, cls).__new__(cls)
+                cls._instance.init_camera()
         return cls._instance
 
     def init_camera(self):
-        self.cap = cv2.VideoCapture(0)  # Make sure the index is correct for your setup
-        if not self.cap.isOpened():
-            logging.error("Failed to open camera at index 0.")
-            self.cap = None
-        else:
-            logging.info("Camera initialized successfully.")
+        self.frame_queue = Queue(maxsize=1)
+        self.cap = cv2.VideoCapture(0)
+        self.running = True
+        self.read_thread = threading.Thread(target=self.update, daemon=True)
+        self.read_thread.start()
 
-    def reinitialize_camera(self):
-        """Method to attempt reinitializing the camera."""
-        if self.cap:
-            self.cap.release()  # Release the current cap if exists
-        self.init_camera()
-
-    def get_frame(self):
-        if self.cap is None:
-            logging.error("Camera capture is not initialized.")
-            return None
-        try:
+    def update(self):
+        while self.running:
             ret, frame = self.cap.read()
             if not ret:
-                logging.error("cap.read() returned False. Unable to grab frame.")
-                return None
-            return frame
-        except Exception as e:
-            logging.error(f"Error grabbing frame: {e}")
-            return None
+                logging.warning("Failed to read frame from camera")
+                continue
+            if not self.frame_queue.empty():
+                try:
+                    self.frame_queue.get_nowait()  # Discard any old frame
+                except Empty:
+                    pass
+            self.frame_queue.put(frame)
 
-    def release(self):
-        if self.cap:
-            self.cap.release()
+    def get_frame(self):
+        if self.frame_queue.empty():
+            logging.warning("Frame queue is empty")
+            return None
+        return self.frame_queue.get()
+
+    def stop_camera(self):
+        self.running = False
+        self.read_thread.join()
+        self.cap.release()
+
+    def __del__(self):
+        self.stop_camera()
+
 
 # # Test the SingletonCamera
 # if __name__ == "__main__":
