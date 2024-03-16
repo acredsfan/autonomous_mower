@@ -50,6 +50,12 @@ class SingletonCamera:
     def __del__(self):
         self.stop_camera()
 
+    def cleanup(self):
+    # Method to release the camera resource
+        if self.cap is not None:
+            self.cap.release()
+            print("Camera released successfully.")
+
 
 # # Test the SingletonCamera
 # if __name__ == "__main__":
