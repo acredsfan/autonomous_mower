@@ -11,7 +11,8 @@ from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class ObstacleAvoidance:
-    def __init__(self):
+    def __init__(self, camera=None):
+        self.camera = camera
         self.obstacle_left = False
         self.obstacle_right = False
 

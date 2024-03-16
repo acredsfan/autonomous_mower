@@ -107,7 +107,8 @@ def main():
         if read_thread and read_thread.is_alive():
             read_thread.join()
 
-        motor_controller.cleanup()
+        if 'motor_controller' in globals():
+            motor_controller.cleanup()
         BladeController.stop()
         camera.cleanup()
         GPIO.cleanup()

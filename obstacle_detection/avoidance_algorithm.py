@@ -3,11 +3,9 @@
 
 # IMPORTS
 import threading
-import obstacle_detection.tof_processing as tof_processing
-import obstacle_detection.camera_processing as camera_processing
-from hardware_interface import MotorController
-import json
-import time
+from obstacle_detection.tof_processing import ObstacleAvoidance as ToFAvoidance
+from obstacle_detection.camera_processing import CameraProcessor
+from hardware_interface.motor_controller import MotorController
 import logging
 import numpy as np
 from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED
@@ -19,14 +17,14 @@ from navigation_system.path_planning import GRID_SIZE
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class AvoidanceAlgorithm:
-    def __init__(self, camera_instance):
-        self.camera = camera_instance
-        self.tof_avoidance = tof_processing.ObstacleAvoidance()
-        self.camera_processor = camera_processing.CameraProcessor()
+    def __init__(self):
+        self.camera = CameraProcessor()
+        self.tof_avoidance = ToFAvoidance()
+        self.motor_controller = MotorController()
         self.obstacle_detected = False
-        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4)) # Grid defined in path_planning, 4 directions
+        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # Grid defined in path_planning, 4 directions
         self.last_action = None
-        self.memory = {}   
+        self.memory = {}
 
     def reward_function(self, obstacle_data, new_state):
         if obstacle_data[new_state[0], new_state[1]] == 1:
@@ -62,9 +60,10 @@ class AvoidanceAlgorithm:
 
     def check_camera_obstacles(self):
         """Check for obstacles using the camera and update the obstacle_detected attribute."""
-        obstacles = self.camera_processor.process_frame()
+        obstacles = self.camera.process_frame()
 
-        for _, _, w, h in obstacles:
+        for obstacle in obstacles:
+            _, _, w, h = obstacle['box']
             if w * h > CAMERA_OBSTACLE_THRESHOLD:
                 self.obstacle_detected = True
                 return
@@ -78,38 +77,19 @@ class AvoidanceAlgorithm:
         tof_thread.start()
 
         try:
-            MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
-            MotorController.set_motor_direction("forward")
-
             while True:
                 self.check_camera_obstacles()
 
-                if self.tof_avoidance.obstacle_left or self.tof_avoidance.obstacle_right or self.obstacle_detected:
+                if self.tof_avoidance.obstacle_detected or self.obstacle_detected:
                     # Handle obstacle avoidance here
-                    MotorController.stop_motors
-                    MotorController.set_motor_direction("backward")
-                    MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
-                    time.sleep(1)
-
-                    MotorController.set_motor_direction("left" if self.tof_avoidance.obstacle_left else "right")
-                    time.sleep(0.5)
-
-                    MotorController.set_motor_direction("forward")
-                    MotorController.set_motor_speed(MOTOR_SPEED, MOTOR_SPEED)
-
-                else:
-                    # No obstacles detected
-                    # Continue the normal operation of the robot
-                    print("No obstacles detected.")
+                    print("Obstacle detected, handling avoidance...")
 
         except KeyboardInterrupt:
             print("Stopping the avoidance algorithm...")
 
         finally:
-            MotorController.stop_motors()
-            self.camera_processor.close()
             tof_thread.join()
-            self.cleanup()
+            print("Avoidance algorithm stopped.")
 
 if __name__ == "__main__":
     avoidance_algorithm = AvoidanceAlgorithm()
