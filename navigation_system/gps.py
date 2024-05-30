@@ -593,7 +593,7 @@ if __name__ == "__main__":
     update_thread = None
     line_reader = None
 
-    waypoint_count = args.waypoints      # number of paypoints in the path
+    waypoint_count = args.waypoints      # number of waypoints in the path
     samples_per_waypoint = args.samples  # number of readings per waypoint
     waypoints = []
     waypoint_samples = []

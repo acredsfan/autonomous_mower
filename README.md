@@ -24,44 +24,49 @@ Bonus points if we can get it to also act as a security robot when not mowing wh
 Super bonus if we can get it to trim patterns and words into the yard in a special mode for holidays/events.
 Here are the sensors and hardware I've procured for the robot:
 
-• Raspberry Pi 4 2GB
+• Raspberry Pi 4 4GB
 
 • 64GB micro SD card
 
-• 5 MP Raspberry pi camera module - https://www.amazon.com/gp/product/B07RXKZ1KN/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• 8 MP Raspberry pi camera module - https://a.co/d/0AwH90z
 
 • 20 Watt 12V solar panel - https://www.offgridtec.com/offgridtecr-olp-30w-solarpanel-12v-schindeltechnologie-perc.html
 
-• 10A 12V solar charge controller - https://www.amazon.com/gp/product/B07VDRN9LK/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• 10A 12V solar charge controller - https://a.co/d/fi02yps
 
-• 12V 18AH SLA Battery - https://www.amazon.com/gp/product/B00K8V2PF4/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• 12V 20AH LiFePO4 Battery - https://a.co/d/0YHIv9B
 
-• TP-Link AC1300 WiFi Adapter - https://www.amazon.com/gp/product/B08D72GSMS/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• TP-Link AC1300 WiFi Adapter - https://a.co/d/9hrsDR0
 
-• BME280 sensor module - https://www.amazon.com/gp/product/B07KR24P6P/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• BME280 sensor module - https://a.co/d/hE2FmhO
 
-• Neo-8M GPS Module - https://www.amazon.com/Shapea-NEO-8M-NEO8MV2-Control-Antenna/dp/B0BKL87C74/ref=sr_1_1?keywords=neo+8m&qid=1683213881&sr=8-1
+• SparkFun GPS-RTK-SMA Kit - https://a.co/d/ar8m13h
+    NOTE:To use RTK for millimeter accuracy, you will need either a Base Station (instructions to build provided by @TCIII: [link](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to a NTRIP server.  If you are ok with accuracy between 1.5-2.5 meters, then a NEO-M9N or NEO-M8N will suffice without the need for a base station or NTRIP server.
 
-• DC Voltage Regulator/Buck Converter 12V to 5V - https://www.amazon.com/gp/product/B08CHMJM9J/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• DC Voltage Regulator/Buck Converter 12V to 5V - https://a.co/d/2fuTrJv
 
-• 997 DC motor for mower blades - https://www.amazon.com/Powerful-Voltage-DC12-36V-Silent-Bearing/dp/B08R73MQF1/ref=sr_1_3?hvadid=631587578546&hvdev=c&hvlocphy=9015649&hvnetw=g&hvqmt=e&hvrand=15298291863334120737&hvtargid=kwd-352957084306&hydadcr=19964_13472495&keywords=997%2Bmotor&qid=1683309933&sr=8-3&th=1
+• 997 DC motor for mower blades - https://a.co/d/gA0PXvn
 
-• 2x 12V worm gear motors for wheels - https://www.amazon.com/gp/product/B00NMDPQAQ/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• 2x 12V worm gear motors for wheels - https://a.co/d/eC2qFmM
 
-• 2x IBT-2 Motor Drivers for the Wheels
+• 2x IBT-2 Motor Drivers for the Wheels - https://a.co/d/cos40lB
 
-• MPU-9250 Compass Module - https://www.amazon.com/gp/product/B07D55TK6Z/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• MPU-9250 Compass Module - https://a.co/d/iHYSXZ7
 
-• 2x VL53L0X Time of flight sensors - https://www.amazon.com/gp/product/B07XXTMRR2/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• BNO085 IMU - 
 
-• INA3221 Power Monitor - https://www.amazon.com/gp/product/B0946L63LC/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&th=1
+• 2x VL53L0X Time of flight sensors - https://a.co/d/3Zd6glM
 
-• 2x KY-003 Hall Effect Magnetic Sensor Modules - https://www.amazon.com/gp/product/B085KVV82D/ref=ppx_yo_dt_b_search_asin_title?ie=UTF8&psc=1
+• INA3221 Power Monitor - https://a.co/d/2HxeiL3
+
+• 2x KY-003 Hall Effect Magnetic Sensor Modules - https://a.co/d/iRczHRb
 
 • IBT-4 Motor Driver Board - https://a.co/d/cl5WV3u
 
-Possibly Added Later:
-• youyeetoo RPLIDAR C1 Fusion Lidar DTOF - https://www.amazon.com/dp/B0CNXLJJ61?psc=1&ref=ppx_yo2ov_dt_b_product_details
+• I2C splitter - 
+
+Considering to incorporate:
+• youyeetoo RPLIDAR C1 Fusion Lidar DTOF - https://a.co/d/4W2Vmj7
 
 I'll be happy to share any details you'd be interested in just let me know.
 
