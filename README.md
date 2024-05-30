@@ -28,46 +28,46 @@ Here are the sensors and hardware I've procured for the robot:
 
 • 64GB micro SD card
 
-• 8 MP Raspberry pi camera module - https://a.co/d/0AwH90z
+• [8 MP Raspberry pi camera module](https://a.co/d/0AwH90z)
 
-• 20 Watt 12V solar panel - https://www.offgridtec.com/offgridtecr-olp-30w-solarpanel-12v-schindeltechnologie-perc.html
+• [20 Watt 12V solar panel](https://www.offgridtec.com/offgridtecr-olp-30w-solarpanel-12v-schindeltechnologie-perc.html)
 
-• 10A 12V solar charge controller - https://a.co/d/fi02yps
+• [10A 12V solar charge controller](https://a.co/d/fi02yps)
 
-• 12V 20AH LiFePO4 Battery - https://a.co/d/0YHIv9B
+• [12V 20AH LiFePO4 Battery](https://a.co/d/0YHIv9B)
 
-• TP-Link AC1300 WiFi Adapter - https://a.co/d/9hrsDR0
+• [TP-Link AC1300 WiFi Adapter](https://a.co/d/9hrsDR0)
 
-• BME280 sensor module - https://a.co/d/hE2FmhO
+• [BME280 sensor module](https://a.co/d/hE2FmhO)
 
-• SparkFun GPS-RTK-SMA Kit - https://a.co/d/ar8m13h
+• [SparkFun GPS-RTK-SMA Kit](https://a.co/d/ar8m13h)
 
     > **NOTE:** To use RTK for millimeter accuracy, you will need either a Base Station (instructions to build provided by @TCIII: [link](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to a NTRIP server. If you are ok with accuracy between 1.5-2.5 meters, then a NEO-M9N or NEO-M8N will suffice without the need for a base station or NTRIP server.
 
-• DC Voltage Regulator/Buck Converter 12V to 5V - https://a.co/d/2fuTrJv
+• [DC Voltage Regulator/Buck Converter 12V to 5V](https://a.co/d/2fuTrJv)
 
-• 997 DC motor for mower blades - https://a.co/d/gA0PXvn
+• [997 DC motor for mower blades](https://a.co/d/gA0PXvn)
 
-• 2x 12V worm gear motors for wheels - https://a.co/d/eC2qFmM
+• 2x [12V worm gear motors for wheels](https://a.co/d/eC2qFmM)
 
-• 2x IBT-2 Motor Drivers for the Wheels - https://a.co/d/cos40lB
+• [10Amp 7V-30V DC Motor Driver for R/C (2 Channels)](https://www.cytron.io/p-10amp-7v-30v-dc-motor-driver-for-rc-2-channels)
 
-• MPU-9250 Compass Module - https://a.co/d/iHYSXZ7
+• [MPU-9250 Compass Module](https://a.co/d/iHYSXZ7)
 
 • BNO085 IMU - 
 
-• 2x VL53L0X Time of flight sensors - https://a.co/d/3Zd6glM
+• 2x [VL53L0X Time of flight sensors](https://a.co/d/3Zd6glM)
 
-• INA3221 Power Monitor - https://a.co/d/2HxeiL3
+• [INA3221 Power Monitor](https://a.co/d/2HxeiL3)
 
-• 2x KY-003 Hall Effect Magnetic Sensor Modules - https://a.co/d/iRczHRb
+• 2x [KY-003 Hall Effect Magnetic Sensor Modules](https://a.co/d/iRczHRb)
 
-• IBT-4 Motor Driver Board - https://a.co/d/cl5WV3u
+• [IBT-4 Motor Driver Board](https://a.co/d/cl5WV3u)
 
 • I2C splitter - 
 
 Considering to incorporate:
-• youyeetoo RPLIDAR C1 Fusion Lidar DTOF - https://a.co/d/4W2Vmj7
+• [youyeetoo RPLIDAR C1 Fusion Lidar DTOF](https://a.co/d/4W2Vmj7)
 
 I'll be happy to share any details you'd be interested in just let me know.
 
