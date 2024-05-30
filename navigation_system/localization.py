@@ -2,7 +2,7 @@ import math
 import time
 import json
 import logging
-from navigation_system.gps_interface import GPSInterface
+from navigation_system.gps import GPS, GpsNmeaPositions  # Updated import
 from hardware_interface.sensor_interface import SensorInterface
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 
@@ -12,7 +12,8 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG,
 
 class Localization:
     def __init__(self):
-        self.gps = GPSInterface()
+        self.gps = GPS(port='/dev/ttyUSB0', baudrate=115200)  # Initialize GPS with USB port
+        self.position_reader = GpsNmeaPositions(debug=False)  # Initialize position reader
         self.yard_boundary = polygon_coordinates  # Define your yard boundary coordinates here
         self.current_latitude = 0
         self.current_longitude = 0
@@ -35,11 +36,10 @@ class Localization:
 
     def estimate_position(self):
         """Estimate the current position using GPS data."""
-        data = self.gps.read_gps_data()
-        if data:
-            self.current_latitude = data['latitude']
-            self.current_longitude = data['longitude']
-            self.current_altitude = data['altitude']
+        lines = self.gps.run()  # Read NMEA lines from GPS
+        positions = self.position_reader.run(lines)  # Convert NMEA lines to positions
+        if positions:
+            ts, self.current_latitude, self.current_longitude = positions[-1]
             logging.info(f"Current position: {self.current_latitude}, {self.current_longitude}, {self.current_altitude}")
         else:
             logging.warning("GPS data is None.")

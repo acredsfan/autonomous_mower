@@ -7,7 +7,7 @@ import subprocess
 import os
 from obstacle_detection import camera_processing
 import threading
-from navigation_system import PathPlanning, GPSInterface
+from navigation_system import PathPlanning, GPS, GpsNmeaPositions  # Updated import
 import datetime
 import logging
 import dotenv
@@ -33,7 +33,8 @@ dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-gps = GPSInterface()
+gps = GPS(port='/dev/ttyUSB0', baudrate=9600)  # Initialize GPS with USB port
+position_reader = GpsNmeaPositions(debug=False)  # Initialize position reader
 motor_controller = MotorController()
 blade_controller = BladeController()
 path_planning = PathPlanning()
@@ -63,15 +64,21 @@ def update_sensors():
         # Update sensor values
         battery_charge = {"battery_voltage": sensors.sensor_data['battery']}
         solar_status = {"Solar Panel Voltage": sensors.sensor_data['solar']}
-        speed = {"speed": gps.read_gps_data()['speed']}
-        heading = {"heading": sensors.sensor_data['compass']}
-        bme280_data = sensors.sensor_data['bme280']
-        if bme280_data is not None:
-            temperature = bme280_data['temperature_f']
-            humidity = bme280_data['humidity']
-            pressure = bme280_data['pressure']
-        left_distance = {"left_distance": sensors.sensor_data['ToF_Left']}
-        right_distance = {"right_distance": sensors.sensor_data['ToF_Right']}
+        lines = gps.run()  # Read NMEA lines from GPS
+        positions = position_reader.run(lines)  # Convert NMEA lines to positions
+        if positions:
+            ts, current_latitude, current_longitude = positions[-1]
+            speed = {"speed": 0}  # Replace with actual speed calculation if available
+            heading = {"heading": sensors.sensor_data['compass']}
+            bme280_data = sensors.sensor_data['bme280']
+            if bme280_data is not None:
+                temperature = bme280_data['temperature_f']
+                humidity = bme280_data['humidity']
+                pressure = bme280_data['pressure']
+            left_distance = {"left_distance": sensors.sensor_data['ToF_Left']}
+            right_distance = {"right_distance": sensors.sensor_data['ToF_Right']}
+        else:
+            logging.warning("GPS data is None.")
         time.sleep(3)
 
 def gen(camera):
@@ -133,12 +140,14 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    data = gps.read_gps_data()
-    if data:
-        return jsonify({'latitude': data['latitude'], 'longitude': data['longitude']})
+    lines = gps.run()  # Read NMEA lines from GPS
+    positions = position_reader.run(lines)  # Convert NMEA lines to positions
+    if positions:
+        ts, latitude, longitude = positions[-1]
+        return jsonify({'latitude': latitude, 'longitude': longitude})
     else:
         return jsonify({'error': 'No GPS data available'})
-    
+
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
     # Get the mowing days and hours from the request
@@ -168,18 +177,7 @@ def handle_frame_request():
     print(f"Using SingletonCamera instance in handle_frame_request: {camera}")
     frame = camera.get_frame()
     emit('update_frame', {'frame': frame})
-    
-def gen(camera):
-    while True:
-        frame = camera.get_frame()  # Use the single instance
 
-        # Perform obstacle detection on the frame
-        obstacle_label = camera_processing.classify_obstacle(frame)
-        print(f"Detected obstacle type: {obstacle_label}")
-
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-    
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
     mow_days, mow_hours = get_schedule()
