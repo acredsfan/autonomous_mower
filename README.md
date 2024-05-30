@@ -41,7 +41,8 @@ Here are the sensors and hardware I've procured for the robot:
 • BME280 sensor module - https://a.co/d/hE2FmhO
 
 • SparkFun GPS-RTK-SMA Kit - https://a.co/d/ar8m13h
-    NOTE:To use RTK for millimeter accuracy, you will need either a Base Station (instructions to build provided by @TCIII: [link](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to a NTRIP server.  If you are ok with accuracy between 1.5-2.5 meters, then a NEO-M9N or NEO-M8N will suffice without the need for a base station or NTRIP server.
+
+    > **NOTE:** To use RTK for millimeter accuracy, you will need either a Base Station (instructions to build provided by @TCIII: [link](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to a NTRIP server. If you are ok with accuracy between 1.5-2.5 meters, then a NEO-M9N or NEO-M8N will suffice without the need for a base station or NTRIP server.
 
 • DC Voltage Regulator/Buck Converter 12V to 5V - https://a.co/d/2fuTrJv
 
