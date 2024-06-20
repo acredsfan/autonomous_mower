@@ -1,9 +1,8 @@
-#IMPORTS
+# IMPORTS
 import smbus2 as smbus
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 import adafruit_vl53l0x
-import adafruit_tca9548a
 from mpu9250_jmdev.registers import *
 from mpu9250_jmdev.mpu_9250 import MPU9250
 import barbudor_ina3221.full as INA3221
@@ -37,11 +36,8 @@ class SensorInterface:
         
     def init_common_attributes(self):
         self.GRID_SIZE = GRID_SIZE
-        self.MUX_ADDRESS = 0x70
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
-        self.obstacle_data = np.zeros(self.GRID_SIZE)
-        self.tca = adafruit_tca9548a.TCA9548A(self.i2c, address=0x70)
         self.shutdown_pins = [22, 23]
         self.sensor_data = {}
 
@@ -61,14 +57,20 @@ class SensorInterface:
 
     def init_sensors(self):
         try:
-            self.select_mux_channel(3)
             self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
             self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
-            #self.mpu.calibrate()
-            self.select_mux_channel(2)
             self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
-            self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.tca[6])
-            self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.tca[7])
+
+            # Initialize VL53L0X sensors and change their I2C addresses
+            self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.i2c)
+            self.vl53l0x_left.set_address(0x30)  # New address for the left sensor
+
+            # Delay to ensure the address change takes effect
+            time.sleep(0.1)
+
+            self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.i2c)
+            self.vl53l0x_right.set_address(0x31)  # New address for the right sensor
+
             self.mpu.configure()  # Apply the settings to the registers.
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
@@ -77,12 +79,12 @@ class SensorInterface:
     def update_sensors(self):
         while True:
             with self.sensor_data_lock:
-                self.sensor_data['ToF_Right'] = self.read_vl53l0x_right
-                self.sensor_data['ToF_Left'] = self.read_vl53l0x_left
-                self.sensor_data['compass'] = self.read_mpu9250_compass
-                self.sensor_data['gyro'] = self.read_mpu9250_gyro
-                self.sensor_data['accel'] = self.read_mpu9250_accel
-                self.sensor_data['bme280'] = self.read_bme280
+                self.sensor_data['ToF_Right'] = self.read_vl53l0x_right()
+                self.sensor_data['ToF_Left'] = self.read_vl53l0x_left()
+                self.sensor_data['compass'] = self.read_mpu9250_compass()
+                self.sensor_data['gyro'] = self.read_mpu9250_gyro()
+                self.sensor_data['accel'] = self.read_mpu9250_accel()
+                self.sensor_data['bme280'] = self.read_bme280()
                 self.sensor_data['solar'] = self.read_ina3221(1)
                 self.sensor_data['battery'] = self.read_ina3221(3)
             time.sleep(1.0)
@@ -99,19 +101,8 @@ class SensorInterface:
             pin.value = True
         time.sleep(0.05)
 
-    def select_mux_channel(self, channel):
-        """Select the specified channel on the TCA9548A I2C multiplexer."""
-        if 0 <= channel <= 7:
-            try:
-                self.bus.write_byte(self.MUX_ADDRESS, 1 << channel)
-            except Exception as e:
-                print(f"Error during multiplexer channel selection: {e}")
-        else:
-            raise ValueError("Multiplexer channel must be an integer between 0 and 7.")
-
     def read_bme280(self):
         """Read BME280 sensor data."""
-        self.select_mux_channel(3)
         try:
             temperature_f = self.bme280.temperature * 9 / 5 + 32
             return {
@@ -172,12 +163,7 @@ class SensorInterface:
 
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
-        # print("Debugging SensorInterface before INA3221 read:")
-        # print(f"  Type: {type(self)}")
-        # print(f"  Has 'bus': {hasattr(self, 'bus')}")
-        # print(f"  Has 'ina3221': {hasattr(self, 'ina3221')}")
         try:
-            self.select_mux_channel(2) 
             if channel in [1, 3]:
                 Voltage = round(self.ina3221.bus_voltage(channel), 2)
                 Shunt_Voltage = round(self.ina3221.shunt_voltage(channel), 2)
