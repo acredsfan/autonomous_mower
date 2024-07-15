@@ -3,16 +3,15 @@ import smbus2 as smbus
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 import adafruit_vl53l0x
-from mpu9250_jmdev.registers import *
-from mpu9250_jmdev.mpu_9250 import MPU9250
+import adafruit_bno08x
+from adafruit_bno08x.i2c import BNO08X_I2C
 import barbudor_ina3221.full as INA3221
-import RPi.GPIO as GPIO
+import gpiod
 import busio
 import time
 import logging
 import numpy as np
 from constants import GRID_SIZE
-import digitalio
 import threading
 
 # Initialize logging
@@ -39,7 +38,21 @@ class SensorInterface:
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.shutdown_pins = [22, 23]
+        self.interrupt_pins = [24, 25]  # New GPIO pins for interrupts
         self.sensor_data = {}
+        self.init_gpio()
+
+    def init_gpio(self):
+        self.chip = gpiod.Chip('gpiochip0')
+        self.shutdown_lines = [self.chip.get_line(pin) for pin in self.shutdown_pins]
+        self.interrupt_lines = [self.chip.get_line(pin) for pin in self.interrupt_pins]
+        
+        for line in self.shutdown_lines:
+            line.request(consumer='shutdown', type=gpiod.LINE_REQ_DIR_OUT)
+            line.set_value(1)
+
+        for line in self.interrupt_lines:
+            line.request(consumer='interrupt', type=gpiod.LINE_REQ_EV_FALLING_EDGE)
 
     def init_i2c(self):
         try:
@@ -58,10 +71,12 @@ class SensorInterface:
     def init_sensors(self):
         try:
             self.bme280 = self.init_sensor("BME280", adafruit_bme280.Adafruit_BME280_I2C, self.i2c, address=0x76)
-            self.mpu = self.init_sensor("MPU9250", MPU9250, address_ak=AK8963_ADDRESS, address_mpu_master=MPU9050_ADDRESS_69, bus=1, gfs=GFS_1000, afs=AFS_8G, mfs=AK8963_BIT_16, mode=AK8963_MODE_C100HZ)
+            self.bno085 = self.init_sensor("BNO085", BNO08X_I2C, self.i2c)
             self.ina3221 = self.init_sensor("INA3221", INA3221.INA3221, self.i2c)
 
             # Initialize VL53L0X sensors and change their I2C addresses
+            self.reset_sensors()  # Ensure sensors are in known state
+
             self.vl53l0x_left = self.init_sensor("VL53L0X left sensor", adafruit_vl53l0x.VL53L0X, self.i2c)
             self.vl53l0x_left.set_address(0x30)  # New address for the left sensor
 
@@ -71,34 +86,51 @@ class SensorInterface:
             self.vl53l0x_right = self.init_sensor("VL53L0X right sensor", adafruit_vl53l0x.VL53L0X, self.i2c)
             self.vl53l0x_right.set_address(0x31)  # New address for the right sensor
 
-            self.mpu.configure()  # Apply the settings to the registers.
+            # Setup GPIO1 interrupt handling
+            for line in self.interrupt_lines:
+                line.event_read()  # Clear any existing events
+                threading.Thread(target=self.monitor_interrupts, args=(line,)).start()
+
         except Exception as e:
             print(f"Error during sensor initialization: {e}")
 
     # FUNCTIONS
+    def monitor_interrupts(self, line):
+        while True:
+            event = line.event_wait(sec=1)
+            if event:
+                event = line.event_read()
+                if event.type == gpiod.LineEvent.FALLING_EDGE:
+                    if line == self.interrupt_lines[0]:
+                        self.handle_interrupt_left()
+                    elif line == self.interrupt_lines[1]:
+                        self.handle_interrupt_right()
+
+    def handle_interrupt_left(self):
+        logging.info("Interrupt from left VL53L0X sensor")
+        self.sensor_data['ToF_Left'] = self.read_vl53l0x_left()
+
+    def handle_interrupt_right(self):
+        logging.info("Interrupt from right VL53L0X sensor")
+        self.sensor_data['ToF_Right'] = self.read_vl53l0x_right()
+
     def update_sensors(self):
         while True:
             with self.sensor_data_lock:
-                self.sensor_data['ToF_Right'] = self.read_vl53l0x_right()
-                self.sensor_data['ToF_Left'] = self.read_vl53l0x_left()
-                self.sensor_data['compass'] = self.read_mpu9250_compass()
-                self.sensor_data['gyro'] = self.read_mpu9250_gyro()
-                self.sensor_data['accel'] = self.read_mpu9250_accel()
+                self.sensor_data['compass'] = self.read_bno085_compass()
+                self.sensor_data['gyro'] = self.read_bno085_gyro()
+                self.sensor_data['accel'] = self.read_bno085_accel()
                 self.sensor_data['bme280'] = self.read_bme280()
                 self.sensor_data['solar'] = self.read_ina3221(1)
                 self.sensor_data['battery'] = self.read_ina3221(3)
             time.sleep(1.0)
                
     def reset_sensors(self):
-        for pin_num in self.shutdown_pins:
-            pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
-            pin.direction = digitalio.Direction.OUTPUT
-            pin.value = False
+        for line in self.shutdown_lines:
+            line.set_value(0)
         time.sleep(0.05)
-        for pin_num in self.shutdown_pins:
-            pin = digitalio.DigitalInOut(getattr(board, f"D{pin_num}"))
-            pin.direction = digitalio.Direction.OUTPUT
-            pin.value = True
+        for line in self.shutdown_lines:
+            line.set_value(1)
         time.sleep(0.05)
 
     def read_bme280(self):
@@ -136,30 +168,29 @@ class SensorInterface:
         except Exception as e:
             print(f"Error during VL53L0X right read: {e}")
 
-    def read_mpu9250_compass(self):
-        """Read MPU9250 compass data."""
+    def read_bno085_compass(self):
+        """Read BNO085 compass data."""
         try:
-            self.mpu.configure()
-            print(f'Debug: read_mpu9250_compass returns: {self.mpu.readMagnetometerMaster()}')
-            return self.mpu.readMagnetometerMaster()            
+            quaternion = self.bno085.quaternion
+            return quaternion  # Example format
         except Exception as e:
-            print(f"Error during MPU9250 compass read: {e}")
+            print(f"Error during BNO085 compass read: {e}")
 
-    def read_mpu9250_gyro(self):
-        """Read MPU9250 gyro data."""
+    def read_bno085_gyro(self):
+        """Read BNO085 gyro data."""
         try:
-            self.mpu.configure()
-            return self.mpu.readGyroscopeMaster()
+            gyro = self.bno085.gyro
+            return gyro  # Example format
         except Exception as e:
-            print(f"Error during MPU9250 gyro read: {e}")
+            print(f"Error during BNO085 gyro read: {e}")
 
-    def read_mpu9250_accel(self):
-        """Read MPU9250 accelerometer data."""
+    def read_bno085_accel(self):
+        """Read BNO085 accelerometer data."""
         try:
-            self.mpu.configure()
-            return self.mpu.readAccelerometerMaster()
+            accel = self.bno085.acceleration
+            return accel  # Example format
         except Exception as e:
-            print(f"Error during MPU9250 accelerometer read: {e}")
+            print(f"Error during BNO085 accelerometer read: {e}")
 
     def read_ina3221(self, channel):
         """Read INA3221 power monitor data."""
@@ -270,7 +301,7 @@ class SensorInterface:
         self.bus.deinit()
         self.vl53l0x_left.stop_ranging()
         self.vl53l0x_right.stop_ranging()
-        self.mpu.close()
+        self.bno085.close()
         self.bme280.deinit()
         self.ina3221.deinit()
         print("Sensors deinitialized.")
