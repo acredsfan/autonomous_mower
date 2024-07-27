@@ -38,7 +38,7 @@ class SensorInterface:
         self.bus = smbus.SMBus(1)
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.shutdown_pins = [22, 23]
-        self.interrupt_pins = [24, 25]  # New GPIO pins for interrupts
+        self.interrupt_pins = [6, 12]  # New GPIO pins for interrupts
         self.sensor_data = {}
         self.init_gpio()
 
