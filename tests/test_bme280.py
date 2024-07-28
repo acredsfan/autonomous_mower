@@ -1,5 +1,5 @@
 import unittest
-from hardware_interface.sensor_interface import SensorInterface
+from hardware_interface import SensorInterface
 
 class TestBME280Sensor(unittest.TestCase):
     def setUp(self):
