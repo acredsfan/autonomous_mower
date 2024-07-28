@@ -29,7 +29,7 @@ logger.addHandler(console_handler)
 logging.debug("Available GPIO chips: %s", os.listdir('/dev/'))
 
 # Define the GPIO chip and lines
-chip = gpiod.Chip('gpiochip1')
+chip = gpiod.Chip('gpiochip0')
 IN1 = chip.get_line(24)
 IN2 = chip.get_line(25)
 

@@ -3,8 +3,8 @@ import smbus2 as smbus
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 import adafruit_vl53l0x
-import adafruit_bno08x
 from adafruit_bno08x.i2c import BNO08X_I2C
+import adafruit_bno08x
 import barbudor_ina3221.full as INA3221
 import gpiod
 import busio
