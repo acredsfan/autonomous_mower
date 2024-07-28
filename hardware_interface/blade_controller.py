@@ -1,5 +1,6 @@
 import gpiod
 import time
+import os
 import logging
 import threading
 
