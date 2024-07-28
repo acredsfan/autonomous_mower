@@ -4,7 +4,10 @@ import logging
 import threading
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+logging.basicConfig(filename='/home/pi/autonomous_mower/main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+
+# Print available GPIO chips
+logging.debug("Available GPIO chips: %s", os.listdir('/dev/'))
 
 # Define the GPIO chip and lines
 chip = gpiod.Chip('gpiochip0')
