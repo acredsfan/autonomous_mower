@@ -1,6 +1,6 @@
 from hardware_interface.sensor_interface import SensorInterface
 import logging
-from hardware_interface import MotorController, BladeController
+from hardware_interface import BladeController
 from control_system import trajectory_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance
