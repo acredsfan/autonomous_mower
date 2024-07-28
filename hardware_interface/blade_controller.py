@@ -1,35 +1,69 @@
-import RPi.GPIO as GPIO
+import gpiod
 import time
 import logging
+import threading
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-# Set the GPIO mode
-GPIO.setmode(GPIO.BCM)
+# Define the GPIO chip and lines
+chip = gpiod.Chip('gpiochip0')
+IN1 = chip.get_line(24)
+IN2 = chip.get_line(25)
 
-# Set the motor control pins
-IN1 = 24
-IN2 = 25
+# Configure the lines as outputs
+IN1.request(consumer='blade_controller', type=gpiod.LINE_REQ_DIR_OUT)
+IN2.request(consumer='blade_controller', type=gpiod.LINE_REQ_DIR_OUT)
 
-# Set the motor control pins as output
-GPIO.setup(IN1, GPIO.OUT)
-GPIO.setup(IN2, GPIO.OUT)
+class PWM:
+    def __init__(self, line, frequency):
+        self.line = line
+        self.frequency = frequency
+        self.duty_cycle = 0
+        self.running = False
+        self.thread = None
+
+    def start(self, duty_cycle):
+        self.duty_cycle = duty_cycle
+        self.running = True
+        self.thread = threading.Thread(target=self._run)
+        self.thread.start()
+
+    def _run(self):
+        period = 1.0 / self.frequency
+        while self.running:
+            on_time = period * (self.duty_cycle / 100.0)
+            off_time = period - on_time
+            if self.duty_cycle > 0:
+                self.line.set_value(1)
+                time.sleep(on_time)
+            if self.duty_cycle < 100:
+                self.line.set_value(0)
+                time.sleep(off_time)
+
+    def ChangeDutyCycle(self, duty_cycle):
+        self.duty_cycle = duty_cycle
+
+    def stop(self):
+        self.running = False
+        if self.thread is not None:
+            self.thread.join()
+        self.line.set_value(0)
 
 # Set the frequency for PWM (adjust as needed)
 freq = 1000
 
 # Setup PWM
-pwm1 = GPIO.PWM(IN1, freq)
-pwm2 = GPIO.PWM(IN2, freq)
+pwm1 = PWM(IN1, freq)
+pwm2 = PWM(IN2, freq)
 
 # Start PWM with 0% duty cycle (off)
 pwm1.start(0)
 pwm2.start(0)
 
 class BladeController:
-
     blades_on = False  # Class attribute to track blade state
+
     # Function to set the motor speed
     @staticmethod
     def set_speed(speed):
@@ -53,28 +87,27 @@ class BladeController:
     def stop():
         pwm1.stop()
         pwm2.stop()
-        GPIO.cleanup()
         BladeController.blades_on = False  # Blades are off
 
 # # Try changing the speed
-# set_speed(50)  # 50% speed forward
+# BladeController.set_speed(50)  # 50% speed forward
 # time.sleep(2)  # run for 2 seconds
-# set_speed(75)
+# BladeController.set_speed(75)
 # time.sleep(2)
-# set_speed(100)
+# BladeController.set_speed(100)
 # time.sleep(2)
-# set_speed(75)
+# BladeController.set_speed(75)
 # time.sleep(2)
-# set_speed(50)
-# time.sleep(2) 
-# set_speed(10)
+# BladeController.set_speed(50)
 # time.sleep(2)
-# set_speed(0)  # stop
-# set_speed(-50)  # 50% speed reverse
+# BladeController.set_speed(10)
+# time.sleep(2)
+# BladeController.set_speed(0)  # stop
+# BladeController.set_speed(-50)  # 50% speed reverse
 # time.sleep(2)  # run for 2 seconds
-# set_speed(-10)
+# BladeController.set_speed(-10)
 # time.sleep(2)
-# set_speed(0)  # stop
+# BladeController.set_speed(0)  # stop
 
 # # Cleanup
-# GPIO.cleanup()
+# BladeController.stop()
