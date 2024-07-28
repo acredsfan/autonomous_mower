@@ -25,4 +25,3 @@ pynmea2
 requests
 pyubx2
 adafruit-circuitpython-bno08x
-gpiod
