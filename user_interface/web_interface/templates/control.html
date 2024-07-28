@@ -20,7 +20,7 @@
             <img id="camera_feed" alt="Camera Feed">
         </div>
     </div>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
         var socket = io.connect('http://' + document.domain + ':' + location.port)
@@ -33,14 +33,6 @@
             var image = document.getElementById('camera_feed');
             image.src = 'data:image/jpeg;base64,' + data.frame;
         });
-
-        function move(direction) {
-            socket.emit('move', direction);
-        }
-
-        function toggleBlades(state) {
-            socket.emit('toggle_blades', state);
-        }
 
         // Request a new frame every 500ms (or whatever interval you prefer)
         setInterval(function() {

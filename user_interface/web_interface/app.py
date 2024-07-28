@@ -2,12 +2,12 @@ from flask import Flask, render_template, request, jsonify, send_from_directory,
 import sys
 import json
 sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface import MotorController, BladeController
+from hardware_interface import BladeController, RoboHATDriver
 import subprocess
 import os
 from obstacle_detection import camera_processing
 import threading
-from navigation_system import PathPlanning, GPS, GpsNmeaPositions  # Updated import
+from navigation_system import PathPlanning, GpsNmeaPositions  # Updated import
 import datetime
 import logging
 import dotenv
@@ -16,7 +16,6 @@ from flask_socketio import SocketIO, emit
 from user_interface.web_interface.camera import SingletonCamera
 import time
 from hardware_interface.sensor_interface import sensor_interface
-from flask_cors import CORS
 import cv2
 
 # Initialize logging
@@ -35,9 +34,23 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 gps = GPS(port='/dev/ttyUSB0', baudrate=9600)  # Initialize GPS with USB port
 position_reader = GpsNmeaPositions(debug=False)  # Initialize position reader
-motor_controller = MotorController()
 blade_controller = BladeController()
 path_planning = PathPlanning()
+
+# Configuration placeholder (replace with actual configuration)
+class Config:
+    MM1_SERIAL_PORT = '/dev/ttyUSB0'
+    MM1_MAX_FORWARD = 2000
+    MM1_MAX_REVERSE = 1000
+    MM1_STOPPED_PWM = 1500
+    MM1_STEERING_MID = 1500
+    AUTO_RECORD_ON_THROTTLE = True
+    JOYSTICK_DEADZONE = 0.1
+
+cfg = Config()
+
+# Initialize RoboHATDriver
+robohat_driver = RoboHATDriver(cfg, debug=True)
 
 # Define variables to hold sensor values
 battery_charge = {}
@@ -106,11 +119,13 @@ def video_feed():
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
+    # Example: robohat_driver.run(0.5, 0.5) for forward movement at half speed
     return jsonify({'message': 'Mower started.'})
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
     # Trigger stop mowing actions
+    robohat_driver.run(0, 0)
     return jsonify({'message': 'Mower stopped.'})
 
 @app.route('/get-mowing-area', methods=['GET'])
@@ -178,6 +193,19 @@ def handle_frame_request():
     frame = camera.get_frame()
     emit('update_frame', {'frame': frame})
 
+@app.route('/control', methods=['POST'])
+def control():
+    data = request.json
+    steering = data.get('steering', 0)
+    throttle = data.get('throttle', 0)
+    robohat_driver.run(steering, throttle)
+    return jsonify({'status': 'success'})
+
+@app.route('/stop', methods=['POST'])
+def stop():
+    robohat_driver.run(0, 0)
+    return jsonify({'status': 'stopped'})
+
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
     mow_days, mow_hours = get_schedule()
@@ -207,10 +235,6 @@ def calculate_next_scheduled_mow():
                 return next_mow_date.strftime("%Y-%m-%d %H:%M:%S")
 
     return "Not scheduled"
-    
-def set_motor_direction(direction):
-    # Set the motor direction
-    MotorController.set_direction(direction)
 
 def start_mower_blades():
     # Toggle the mower blades
@@ -222,7 +246,7 @@ def stop_mower_blades():
 
 def stop_motors():
     # Stop the motors
-    MotorController.stop_motors()
+    robohat_driver.run(0, 0)
 
 def start_web_interface():
     global stop_sensor_thread
@@ -235,3 +259,6 @@ def start_web_interface():
     # Set the flag to stop the sensor update thread
     stop_sensor_thread = True
     sensor_thread.join() # Wait for the thread to finish
+
+if __name__ == '__main__':
+    start_web_interface()

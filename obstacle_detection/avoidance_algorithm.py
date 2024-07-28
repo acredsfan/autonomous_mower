@@ -5,7 +5,7 @@
 import threading
 from obstacle_detection.tof_processing import ObstacleAvoidance as ToFAvoidance
 from obstacle_detection.camera_processing import CameraProcessor
-from hardware_interface.motor_controller import MotorController
+from hardware_interface import RoboHATController  # Updated import
 import logging
 import numpy as np
 from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED
@@ -17,10 +17,10 @@ from navigation_system.path_planning import GRID_SIZE
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class AvoidanceAlgorithm:
-    def __init__(self):
+    def __init__(self, cfg):
         self.camera = CameraProcessor()
         self.tof_avoidance = ToFAvoidance()
-        self.motor_controller = MotorController()
+        self.motor_controller = RoboHATController(cfg)  # Updated to use RoboHATController
         self.obstacle_detected = False
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # Grid defined in path_planning, 4 directions
         self.last_action = None
@@ -70,6 +70,31 @@ class AvoidanceAlgorithm:
 
         self.obstacle_detected = False
 
+    def handle_avoidance(self):
+        """Handle the obstacle avoidance logic."""
+        logging.info("Obstacle detected, handling avoidance...")
+        # Example logic: stop, then decide new direction based on Q-learning
+        self.motor_controller.run(0, 0)  # Stop the mower
+
+        current_state = self.get_current_state()
+        next_action = self.get_next_action(current_state)
+        self.last_action = next_action
+
+        # Example actions; these should be replaced with actual movement logic
+        if next_action == 0:  # Up
+            self.motor_controller.run(0.5, MOTOR_SPEED)
+        elif next_action == 1:  # Down
+            self.motor_controller.run(-0.5, -MOTOR_SPEED)
+        elif next_action == 2:  # Left
+            self.motor_controller.run(-0.5, MOTOR_SPEED)
+        elif next_action == 3:  # Right
+            self.motor_controller.run(0.5, -MOTOR_SPEED)
+
+    def get_current_state(self):
+        # Implement logic to get the current state based on the mower's position
+        # Placeholder example:
+        return (0, 0)
+
     def run_avoidance(self):
         """Continuously run the avoidance algorithm using data from ToF sensors and the camera."""
         # Start the ToF avoidance thread
@@ -81,16 +106,26 @@ class AvoidanceAlgorithm:
                 self.check_camera_obstacles()
 
                 if self.tof_avoidance.obstacle_detected or self.obstacle_detected:
-                    # Handle obstacle avoidance here
-                    print("Obstacle detected, handling avoidance...")
+                    self.handle_avoidance()
 
         except KeyboardInterrupt:
-            print("Stopping the avoidance algorithm...")
+            logging.info("Stopping the avoidance algorithm...")
 
         finally:
             tof_thread.join()
-            print("Avoidance algorithm stopped.")
+            logging.info("Avoidance algorithm stopped.")
 
 if __name__ == "__main__":
-    avoidance_algorithm = AvoidanceAlgorithm()
+    # Configuration placeholder (replace with actual configuration)
+    class Config:
+        MM1_SERIAL_PORT = '/dev/ttyUSB0'
+        MM1_MAX_FORWARD = 2000
+        MM1_MAX_REVERSE = 1000
+        MM1_STOPPED_PWM = 1500
+        MM1_STEERING_MID = 1500
+        AUTO_RECORD_ON_THROTTLE = True
+        JOYSTICK_DEADZONE = 0.1
+
+    cfg = Config()
+    avoidance_algorithm = AvoidanceAlgorithm(cfg)
     avoidance_algorithm.run_avoidance()

@@ -2,8 +2,9 @@ import math
 import time
 import json
 import logging
-from navigation_system.gps import GPS, GpsNmeaPositions  # Updated import
+from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 from hardware_interface.sensor_interface import SensorInterface
+from hardware_interface import RoboHATController
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 
 # Configure logging
@@ -11,9 +12,12 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class Localization:
-    def __init__(self):
-        self.gps = GPS(port='/dev/ttyUSB0', baudrate=115200)  # Initialize GPS with USB port
-        self.position_reader = GpsNmeaPositions(debug=False)  # Initialize position reader
+    def __init__(self, cfg):
+        self.gps = GpsNmeaPositions()
+        self.latest_position = GpsLatestPosition()
+        self.motor_controller = RoboHATController(cfg)
+        self.position_reader = GpsNmeaPositions()
+        self.position = None
         self.yard_boundary = polygon_coordinates  # Define your yard boundary coordinates here
         self.current_latitude = 0
         self.current_longitude = 0
@@ -70,7 +74,17 @@ class Localization:
         return self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng
 
 if __name__ == '__main__':
-    localization = Localization()
+    class Config:
+        MM1_SERIAL_PORT = '/dev/ttyUSB0'
+        MM1_MAX_FORWARD = 2000
+        MM1_MAX_REVERSE = 1000
+        MM1_STOPPED_PWM = 1500
+        MM1_STEERING_MID = 1500
+        AUTO_RECORD_ON_THROTTLE = True
+        JOYSTICK_DEADZONE = 0.1
+
+    cfg = Config()
+    localization = Localization(cfg)
     try:
         while True:
             localization.update()

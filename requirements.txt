@@ -22,3 +22,5 @@ eventlet
 flask-cors
 donkeycar
 pynmea2
+requests
+pyubx

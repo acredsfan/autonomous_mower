@@ -1,10 +1,45 @@
 function move(direction) {
-    fetch('/move', {
+    fetch('/control', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ direction: direction }),
+        body: JSON.stringify({ steering: getSteering(direction), throttle: getThrottle(direction) }),
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
+    .catch((error) => console.error('Error:', error));
+}
+
+function getSteering(direction) {
+    switch (direction) {
+        case 'left':
+            return -1;
+        case 'right':
+            return 1;
+        default:
+            return 0;
+    }
+}
+
+function getThrottle(direction) {
+    switch (direction) {
+        case 'forward':
+            return 1;
+        case 'backward':
+            return -1;
+        default:
+            return 0;
+    }
+}
+
+function toggleBlades(state) {
+    fetch('/toggle_blades', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ state: state }),
     })
     .then(response => response.json())
     .then(data => console.log(data))

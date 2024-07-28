@@ -1,6 +1,6 @@
 from hardware_interface.sensor_interface import SensorInterface
 import logging
-from hardware_interface import BladeController
+from hardware_interface import BladeController, RoboHATController
 from control_system import trajectory_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance
@@ -20,19 +20,19 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 shared_resource = []
 
 # Function to initialize all resources
-def initialize_resources():
+def initialize_resources(cfg):
     global sensor_interface, camera, path_planner, avoidance_algo, localization, motor_controller
     sensor_interface = SensorInterface()
     camera = SingletonCamera()
     path_planner = path_planning.PathPlanning()
     avoidance_algo = ObstacleAvoidance(camera)
-    localization = Localization()
+    localization = Localization(cfg)
     try:
-        motor_controller = MotorController()
+        motor_controller = RoboHATController(cfg)
     except RuntimeError as e:
-        logging.error(f"Failed to initialize MotorController: {e}")
+        logging.error(f"Failed to initialize RoboHATController: {e}")
         GPIO.cleanup()  # Cleanup all GPIO
-        motor_controller = MotorController()  # Retry initialization
+        motor_controller = RoboHATController(cfg)  # Retry initialization
 
 # Lock for shared resources
 lock = Lock()
@@ -68,11 +68,21 @@ def read_shared_resource():
 
 # Main function
 def main():
+    class Config:
+        MM1_SERIAL_PORT = '/dev/ttyUSB0'
+        MM1_MAX_FORWARD = 2000
+        MM1_MAX_REVERSE = 1000
+        MM1_STOPPED_PWM = 1500
+        MM1_STEERING_MID = 1500
+        AUTO_RECORD_ON_THROTTLE = True
+        JOYSTICK_DEADZONE = 0.1
+
+    cfg = Config()
     gunicorn_process = None
     update_thread = None
     read_thread = None
     try:
-        initialize_resources()
+        initialize_resources(cfg)
         logging.info("All resources initialized successfully.")
 
         update_thread = Thread(target=update_shared_resource)
@@ -108,7 +118,7 @@ def main():
             read_thread.join()
 
         if 'motor_controller' in globals():
-            motor_controller.cleanup()
+            motor_controller.shutdown()
         BladeController.stop()
         camera.cleanup()
         GPIO.cleanup()

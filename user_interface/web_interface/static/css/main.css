@@ -45,6 +45,10 @@ button {
     box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add a shadow effect */
 }
 
+button:hover {
+    background-color: #1c6e1c; /* Darker green on hover */
+}
+
 form {
     margin: 0 auto;
     width: 60%;
@@ -116,6 +120,10 @@ input[type="text"], select {
     cursor: pointer;
     border-radius: 50%;
     box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.btn:hover {
+    background-color: #1c6e1c; /* Darker green on hover */
 }
 
 .btn-up { grid-area: up; }

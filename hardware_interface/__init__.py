@@ -1,10 +1,11 @@
 # init code for the hardware interface
 
 #IMPORTS
-from .motor_controller import MotorController
+from .robohat import RoboHATController, RoboHATDriver
 from .blade_controller import BladeController
 
 __all__ = [
-    'MotorController',
+    'RoboHATController',
+    'RoboHATDriver',
     'BladeController'
 ]

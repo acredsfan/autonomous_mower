@@ -2,10 +2,10 @@
 # It will communicate with the motor controller module to adjust the robot's path when necessary.
 # Will need to be compatible with a Raspberry Pi 4B 2GB RAM running Raspbian Bullseye OS.
 
-#IMPORTS
+# IMPORTS
 import time
 import numpy as np
-from hardware_interface import MotorController
+from hardware_interface import RoboHATController
 from control_system import direction_controller
 import logging
 from constants import MIN_DISTANCE_TO_OBSTACLE, TURN_ANGLE, SPEED, WAYPOINT_REACHED_THRESHOLD
@@ -15,11 +15,11 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 
 # FUNCTIONS
 class TrajectoryController:
-    def __init__(self, navigation_system, obstacle_detection, direction_controller):
+    def __init__(self, cfg, navigation_system, obstacle_detection, direction_controller):
         self.navigation_system = navigation_system
         self.obstacle_detection = obstacle_detection
         self.direction_controller = direction_controller
-        self.motor_controller = MotorController()
+        self.motor_controller = RoboHATController(cfg)
 
     def calculate_trajectory(self):
         """
@@ -65,11 +65,10 @@ class TrajectoryController:
         """
         Adjust the robot's speed and direction to follow the calculated trajectory.
         """
-        self.motor_controller.set_motor_direction_degrees(angle_to_target)
-        self.motor_controller.set_motor_speed(SPEED, SPEED)
-        time_to_move = distance_to_target / MotorController.get_speed_in_cm_per_second(SPEED)
+        self.motor_controller.run(angle_to_target, SPEED)
+        time_to_move = distance_to_target / RoboHATController.get_speed_in_cm_per_second(SPEED)
         time.sleep(time_to_move)
-        MotorController.set_motor_speed(0, 0)
+        self.motor_controller.run(0, 0)
 
     def execute(self):
         """
@@ -79,15 +78,15 @@ class TrajectoryController:
             angle_to_target, distance_to_target = self.calculate_trajectory()
             self.follow_trajectory(angle_to_target, distance_to_target)
         
-    def calculate_direction_and_speed(waypoint):
+    def calculate_direction_and_speed(self, waypoint):
         from navigation_system import localization
         
         current_position = self.navigation_system.get_current_position()
         angle_to_waypoint, distance_to_waypoint = localization.calculate_angle_and_distance(current_position, waypoint)
         
-        left_obstacle, right_obstacle = direction_controller.obstacle_detected()
+        left_obstacle, right_obstacle = self.direction_controller.obstacle_detected()
         if left_obstacle or right_obstacle:
-            direction = direction_controller.choose_turn_direction(left_obstacle, right_obstacle)
+            direction = self.direction_controller.choose_turn_direction(left_obstacle, right_obstacle)
             speed = SPEED
         else:
             direction = angle_to_waypoint
@@ -101,7 +100,7 @@ class TrajectoryController:
         
         return direction, speed
 
-    def is_waypoint_reached(waypoint):
+    def is_waypoint_reached(self, waypoint):
         from navigation_system import localization
         current_position = self.navigation_system.get_current_position()
         distance_to_waypoint = localization.calculate_distance(
@@ -112,4 +111,4 @@ class TrajectoryController:
         return distance_to_waypoint <= WAYPOINT_REACHED_THRESHOLD
 
         # Stop the robot when the path is complete
-        MotorController.set_motor_speed(0, 0)
+        self.motor_controller.run(0, 0)
