@@ -20,7 +20,6 @@ def get_wifi_networks_to_scan():
         print("Wifi_Networks_to_Scan not found or empty in the .env file.")
         return None
 
-
 def get_current_connection():
     result = subprocess.run(["iwgetid"], capture_output=True, text=True)
     essid_re = re.compile(r'ESSID:"(.+)"')
@@ -37,8 +36,11 @@ def get_current_connection():
         if bssid_match:
             current_bssid = bssid_match.group(1).strip()
 
-    return current_essid, current_bssid
+    # Debug prints to verify current connection details
+    print(f"Current ESSID: {current_essid}")
+    print(f"Current BSSID: {current_bssid}")
 
+    return current_essid, current_bssid
 
 def scan_wifi(selected_essids):
     result = subprocess.run(["sudo", "iwlist", "wlan0", "scan"], capture_output=True, text=True)
@@ -55,7 +57,7 @@ def scan_wifi(selected_essids):
         print(f"Error running iwlist: {result.stderr}")
         return networks
     else:
-        print(f"Succesfully ran iwlist.")
+        print(f"Successfully ran iwlist.")
 
     current_network = {}
     for line in result.stdout.split('\n'):
@@ -89,10 +91,9 @@ def scan_wifi(selected_essids):
                 networks.append(current_network)
             current_network = {}
 
-    #Print ESSID of filtered networks removing duplicate names
+    # Print ESSID of filtered networks removing duplicate names
     print(f"Filtered networks: {set([network['SSID'] for network in networks])}")
     return networks
-
 
 def write_to_csv(networks, current_essid, current_bssid, filename='wifi_scan_results.csv'):
     if not networks:
@@ -115,7 +116,6 @@ def write_to_csv(networks, current_essid, current_bssid, filename='wifi_scan_res
         writer.writerows(networks)
 
     print(f"Results written to {filename}")
-
 
 if __name__ == "__main__":
     selected_essids = get_wifi_networks_to_scan()
