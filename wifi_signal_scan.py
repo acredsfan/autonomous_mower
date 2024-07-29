@@ -1,16 +1,17 @@
 import subprocess
 import re
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 import os
 import csv
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(find_dotenv())
 
 def get_wifi_networks_to_scan():
     networks = os.getenv('Wifi_Networks_to_Scan')
     if networks and networks.lower() != 'all':
-        return networks.split(',')
+        # Split the networks string by commas, strip surrounding quotes and spaces
+        return [network.strip().strip('"') for network in networks.split('","')]
     else:
         return 'all'
 
@@ -60,5 +61,4 @@ if __name__ == "__main__":
 
     # Write the results to a CSV file
     write_to_csv(networks)
-
 
