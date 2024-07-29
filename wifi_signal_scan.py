@@ -10,7 +10,7 @@ load_dotenv(find_dotenv())
 def get_wifi_networks_to_scan():
     networks = os.getenv('Wifi_Networks_to_Scan')
     if networks and networks.lower() != 'all':
-        # Split the networks string by commas, strip surrounding quotes and spaces
+        # Handle spaces and quotes correctly
         return [network.strip().strip('"') for network in networks.split('","')]
     else:
         return 'all'
