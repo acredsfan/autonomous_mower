@@ -89,8 +89,8 @@ def scan_wifi(selected_essids):
                 networks.append(current_network)
             current_network = {}
 
-    #Print ESSID of filtered networks
-    print(f"Filtered networks: {[network['SSID'] for network in networks]}")
+    #Print ESSID of filtered networks removing duplicate names
+    print(f"Filtered networks: {set([network['SSID'] for network in networks])}")
     return networks
 
 
