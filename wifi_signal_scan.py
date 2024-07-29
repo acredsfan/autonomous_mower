@@ -29,9 +29,9 @@ def scan_wifi(selected_essids):
     signal_re = re.compile(r'Signal level=(-?\d+) dBm')
     channel_re = re.compile(r'Channel:(\d+)')
     frequency_re = re.compile(r'Frequency:(\d+\.?\d*) GHz')  # Match frequency with decimal
-    signal_quality_re = re.compile(r'Link Quality=(\d+/\d+)')
-    noise_level_re = re.compile(r'Noise level=(-?\d+) dBm')
-    bit_rate_re = re.compile(r'Bit Rate=(\d+) Mb/s')
+    signal_quality_re = re.compile(r'Quality=(\d+/\d+)')
+    #noise_level_re = re.compile(r'Noise level=(-?\d+) dBm')
+    bit_rate_re = re.compile(r'Bit Rates=(\d+) Mb/s')
     bssid_re = re.compile(r'Address: ([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})')
 
     if result.returncode != 0:
@@ -47,7 +47,7 @@ def scan_wifi(selected_essids):
         channel_match = channel_re.search(line)
         frequency_match = frequency_re.search(line)
         signal_quality_match = signal_quality_re.search(line)
-        noise_level_match = noise_level_re.search(line)
+        #noise_level_match = noise_level_re.search(line)
         bit_rate_match = bit_rate_re.search(line)
         bssid_match = bssid_re.search(line)
 
