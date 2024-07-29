@@ -47,7 +47,6 @@ def scan_wifi(selected_essids):
         channel_match = channel_re.search(line)
         frequency_match = frequency_re.search(line)
         signal_quality_match = signal_quality_re.search(line)
-        #noise_level_match = noise_level_re.search(line)
         bit_rate_match = bit_rate_re.search(line)
         bssid_match = bssid_re.search(line)
 
@@ -65,9 +64,6 @@ def scan_wifi(selected_essids):
 
         if signal_quality_match:
             current_network['Signal Quality'] = signal_quality_match.group(1)
-
-        #if noise_level_match:
-        #    current_network['Noise Level (dBm)'] = int(noise_level_match.group(1))
         
         if bit_rate_match:
             # Extract individual bit rates and store as a list
@@ -91,8 +87,14 @@ def write_to_csv(networks, filename='wifi_scan_results.csv'):
         print("No networks to write to CSV.")
         return
 
+    # Ensure all networks have the same keys
+    all_keys = set().union(*(network.keys() for network in networks))
+    for network in networks:
+        for key in all_keys:
+            network.setdefault(key, None)
+
     with open(filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=networks[0].keys())  # Get headers from the first network
+        writer = csv.DictWriter(file, fieldnames=all_keys)  # Use all keys as headers
         writer.writeheader()
         writer.writerows(networks)
 
