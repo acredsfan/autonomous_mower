@@ -4,11 +4,10 @@ import threading
 import time
 import requests
 import base64
-
+import os
 import pynmea2
 import serial
 import utm
-#from pyubx2 import RTCMMessage
 from dotenv import load_dotenv
 
 from donkeycar.parts.serial_port import SerialPort
