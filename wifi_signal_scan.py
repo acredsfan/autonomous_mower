@@ -70,7 +70,9 @@ def scan_wifi(selected_essids):
         #    current_network['Noise Level (dBm)'] = int(noise_level_match.group(1))
         
         if bit_rate_match:
-            current_network['Bit Rate (Mb/s)'] = int(bit_rate_match.group(1))
+            # Extract individual bit rates and store as a list
+            bit_rates = [rate.strip() for rate in bit_rate_match.group(1).split(';')]
+            current_network['Bit Rates (Mb/s)'] = bit_rates
         
         if bssid_match:
             current_network['BSSID'] = bssid_match.group(1) 
