@@ -7,6 +7,9 @@ import csv
 # Load environment variables from .env file
 load_dotenv(find_dotenv())
 
+wifi_networks = os.getenv('Wifi_Networks_to_Scan')
+print(f"Wifi_Networks_to_Scan: {wifi_networks}")
+
 def get_wifi_networks_to_scan():
     networks = os.getenv('Wifi_Networks_to_Scan')
     if networks and networks.lower() != 'all':
