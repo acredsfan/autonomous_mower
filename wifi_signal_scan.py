@@ -40,10 +40,12 @@ def scan_wifi(selected_essids):
         if essid_match and signal_match:
             essid = essid_match.group(1).strip()
             signal_level = int(signal_match.group(1))
-            print(f"Found network: {essid} with signal level {signal_level} dBm")  # Debug
+            print(f"Found network: '{essid}' with signal level {signal_level} dBm")  # Debug
             if selected_essids == 'all' or essid in selected_essids:
-                print(f"Adding network: {essid} with signal level {signal_level} dBm to the list")  # Debug
+                print(f"Adding network: '{essid}' with signal level {signal_level} dBm to the list")  # Debug
                 networks.append({'SSID': essid, 'Signal Level (dBm)': signal_level})
+            else:
+                print(f"Network '{essid}' not in selected ESSIDs: {selected_essids}")  # Debug
 
     print(f"Filtered networks: {networks}")  # Debug
     return networks
