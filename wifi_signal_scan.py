@@ -27,32 +27,40 @@ def scan_wifi(selected_essids):
 
     essid_re = re.compile(r'ESSID:"(.+)"')
     signal_re = re.compile(r'Signal level=(-?\d+) dBm')
+    channel_re = re.compile(r'Channel:(\d+)')
+    frequency_re = re.compile(r'Frequency:(\d+\.?\d*) GHz')  # Match frequency with decimal
 
-    # Use `result.stderr` to check for errors
     if result.returncode != 0:
         print(f"Error running iwlist: {result.stderr}")
         return networks
     else:
-        # Print to the console only if there is output
-        print(result.stdout)  
+        print(result.stdout)
 
     current_network = {}
     for line in result.stdout.split('\n'):
         essid_match = essid_re.search(line)
         signal_match = signal_re.search(line)
+        channel_match = channel_re.search(line)
+        frequency_match = frequency_re.search(line)
 
         if essid_match:
-            current_network['SSID'] = essid_match.group(1).strip()  # Store ESSID in dictionary
+            current_network['SSID'] = essid_match.group(1).strip()
 
-        if signal_match and current_network.get('SSID'):  # Ensure ESSID was found before using it
+        if signal_match:
             current_network['Signal Level (dBm)'] = int(signal_match.group(1))
 
+        if channel_match:
+            current_network['Channel'] = int(channel_match.group(1))
+            
+        if frequency_match:
+            current_network['Frequency (GHz)'] = float(frequency_match.group(1))  # Store as float
+
+        if current_network.get('SSID') and current_network.get('Signal Level (dBm)'):
             if selected_essids == 'all' or current_network['SSID'] in selected_essids:
-                networks.append(current_network)  # Add the complete network to the list
+                networks.append(current_network)
+            current_network = {}
 
-            current_network = {}  # Reset for the next network
-
-    print(f"Filtered networks: {networks}")  
+    print(f"Filtered networks: {networks}")
     return networks
 
 
