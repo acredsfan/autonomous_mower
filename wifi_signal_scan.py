@@ -30,9 +30,8 @@ def scan_wifi(selected_essids):
     channel_re = re.compile(r'Channel:(\d+)')
     frequency_re = re.compile(r'Frequency:(\d+\.?\d*) GHz')  # Match frequency with decimal
     signal_quality_re = re.compile(r'Quality=(\d+/\d+)')
-    #noise_level_re = re.compile(r'Noise level=(-?\d+) dBm')
     #Get bit rates with outputs ranging from 1 to many (i.e, Bit Rates:1 Mb/s; 2 Mb/s; 5.5 Mb/s; 11 Mb/s; 9 Mb/s; 18 Mb/s; 36 Mb/s; 54 Mb/s)
-    bit_rate_re = re.compile(r'Bit Rates?:([\d\s\w;]+)')
+    bit_rate_re = re.compile(r'Bit Rates?:([\d\s\w;/.]+)')
     bssid_re = re.compile(r'Address: ([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})')
 
     if result.returncode != 0:
