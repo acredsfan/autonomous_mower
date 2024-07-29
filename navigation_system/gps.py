@@ -9,11 +9,19 @@ import pynmea2
 import serial
 import utm
 from pyubx2 import RTCMMessage
+from dotenv import load_dotenv
 
 from donkeycar.parts.serial_port import SerialPort
 from donkeycar.parts.text_writer import CsvLogger
 
 logger = logging.getLogger(__name__)
+
+dotenv_path = '/home/pi/autonomous_mower/.env'
+load_dotenv(dotenv_path)
+pointperfect_user = os.getenv("POINTPERFECT_USER")
+pointperfect_pass = os.getenv("POINTPERFECT_PASS")
+pointperfect_url = os.getenv("POINTPERFECT_URL")
+pointperfect_mountpoint = os.getenv("POINTPERFECT_MOUNTPOINT")
 
 class GpsNmeaPositions:
     def __init__(self, debug=False):

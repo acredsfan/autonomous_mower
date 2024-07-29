@@ -3,6 +3,10 @@ import re
 from dotenv import load_dotenv, find_dotenv
 import os
 import csv
+import math
+import time
+from navigation_system import GpsPosition
+from donkeycar.parts.serial_port import SerialPort
 
 # Load environment variables from .env file
 load_dotenv(find_dotenv())
@@ -94,13 +98,13 @@ def scan_wifi(selected_essids):
     print(f"Filtered networks: {set([network['SSID'] for network in networks])}")
     return networks
 
-def write_to_csv(networks, current_essid, current_bssid, filename='wifi_scan_results.csv'):
+def write_to_csv(networks, current_essid, current_bssid, gps_position, filename='wifi_scan_results.csv'):
     if not networks:
         print("No networks to write to CSV.")
         return
 
     # Define the order of the fields
-    field_order = ['SSID', 'BSSID', 'Frequency', 'Channel', 'Signal Quality', 'Signal Level', 'Connected']
+    field_order = ['SSID', 'BSSID', 'Frequency', 'Channel', 'Signal Quality', 'Signal Level', 'Connected', 'Latitude', 'Longitude', 'UTM Easting', 'UTM Northing']
 
     # Add the 'Connected' field to each network
     for network in networks:
@@ -109,19 +113,67 @@ def write_to_csv(networks, current_essid, current_bssid, filename='wifi_scan_res
         else:
             network['Connected'] = 'No'
 
+        # Fetch current GPS position
+        timestamp, utm_easting, utm_northing, latitude, longitude = get_current_gps_position(gps_position)
+        if utm_easting and utm_northing:
+            network['Latitude'] = latitude
+            network['Longitude'] = longitude
+            network['UTM Easting'] = utm_easting
+            network['UTM Northing'] = utm_northing
+
+    # Load existing data if the file exists
+    existing_data = []
+    if os.path.exists(filename):
+        with open(filename, mode='r') as file:
+            reader = csv.DictReader(file)
+            existing_data = list(reader)
+
+    # Update or append new data
+    for network in networks:
+        updated = False
+        for i, existing_network in enumerate(existing_data):
+            distance = math.sqrt((float(network['UTM Easting']) - float(existing_network['UTM Easting']))**2 + 
+                                 (float(network['UTM Northing']) - float(existing_network['UTM Northing']))**2)
+            if distance < 3.0:
+                existing_data[i] = network
+                updated = True
+                break
+        if not updated:
+            existing_data.append(network)
+
+    # Write updated data to CSV
     with open(filename, mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=field_order)
         writer.writeheader()
-        writer.writerows(networks)
+        writer.writerows(existing_data)
 
     print(f"Results written to {filename}")
+
+def get_current_gps_position(gps_position):
+    position = gps_position.run()
+    if position:
+        timestamp, utm_easting, utm_northing, latitude, longitude = position
+        return timestamp, utm_easting, utm_northing, latitude, longitude
+    return None, None, None, None
 
 if __name__ == "__main__":
     selected_essids = get_wifi_networks_to_scan()
 
     if selected_essids:
         current_essid, current_bssid = get_current_connection()
-        networks = scan_wifi(selected_essids)
-        write_to_csv(networks, current_essid, current_bssid)
+        
+        # Initialize GPS Position
+        serial_port = SerialPort(os.getenv('GPS_SERIAL_PORT'), baudrate=115200, timeout=0.5)
+        gps_position = GpsPosition(serial_port, os.getenv('POINTPERFECT_USER'), os.getenv('POINTPERFECT_PASS'), os.getenv('POINTPERFECT_URL'), os.getenv('POINTPERFECT_MOUNTPOINT'), debug=True)
+        
+        try:
+            while True:
+                networks = scan_wifi(selected_essids)
+                write_to_csv(networks, current_essid, current_bssid, gps_position)
+                time.sleep(10)  # Adjust the sleep time as needed
+        except KeyboardInterrupt:
+            print("Terminating...")
+        finally:
+            gps_position.shutdown()
     else:
         print("No valid WiFi networks to scan. Please check the .env file.")
