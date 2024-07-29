@@ -21,18 +21,17 @@ def get_wifi_networks_to_scan():
         return None
 
 def get_current_connection():
-    result = subprocess.run(["iwgetid"], capture_output=True, text=True)
-    essid_re = re.compile(r'ESSID:"(.+)"')
+    essid_result = subprocess.run(["iwgetid", "-r"], capture_output=True, text=True)
+    bssid_result = subprocess.run(["iwconfig", "wlan0"], capture_output=True, text=True)
+    
+    essid_re = re.compile(r'(.+)')
     bssid_re = re.compile(r'Access Point: ([0-9A-Fa-f:]{17})')
 
-    current_essid = None
+    current_essid = essid_result.stdout.strip()
     current_bssid = None
 
-    for line in result.stdout.split('\n'):
-        essid_match = essid_re.search(line)
+    for line in bssid_result.stdout.split('\n'):
         bssid_match = bssid_re.search(line)
-        if essid_match:
-            current_essid = essid_match.group(1).strip()
         if bssid_match:
             current_bssid = bssid_match.group(1).strip()
 
