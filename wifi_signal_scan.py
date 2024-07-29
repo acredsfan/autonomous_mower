@@ -2,6 +2,7 @@ import subprocess
 import re
 from dotenv import load_dotenv
 import os
+import csv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,11 +36,29 @@ def scan_wifi(selected_essids):
 
     return networks
 
+def write_to_csv(networks, filename='wifi_scan_results.csv'):
+    # Define the CSV file headers
+    headers = ['SSID', 'Signal Level (dBm)']
+
+    # Write the results to a CSV file
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=headers)
+        writer.writeheader()
+        for network in networks:
+            writer.writerow(network)
+
 if __name__ == "__main__":
     # Get the list of ESSIDs to scan from the .env file
     selected_essids = get_wifi_networks_to_scan()
 
+    # Scan the WiFi networks
     networks = scan_wifi(selected_essids)
+
+    # Print the results to the console
     for network in networks:
         print(f"SSID: {network['SSID']}, Signal Level: {network['Signal Level (dBm)']} dBm")
+
+    # Write the results to a CSV file
+    write_to_csv(networks)
+
 
