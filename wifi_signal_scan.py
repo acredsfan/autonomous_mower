@@ -30,10 +30,9 @@ def scan_wifi(selected_essids):
     channel_re = re.compile(r'Channel:(\d+)')
     frequency_re = re.compile(r'Frequency:(\d+\.?\d*) GHz')  # Match frequency with decimal
     signal_quality_re = re.compile(r'Quality=(\d+/\d+)')
-    #Get bit rates with outputs ranging from 1 to many (i.e, Bit Rates:1 Mb/s; 2 Mb/s; 5.5 Mb/s; 11 Mb/s; 9 Mb/s; 18 Mb/s; 36 Mb/s; 54 Mb/s)
-    bit_rate_re = re.compile(r'Bit Rates?:([\d\s\w;/.]+)')
     bssid_re = re.compile(r'Address: ([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})')
-
+    bit_rate_re = re.compile(r'Bit Rates?:(.+)')
+    
     if result.returncode != 0:
         print(f"Error running iwlist: {result.stderr}")
         return networks
@@ -41,14 +40,17 @@ def scan_wifi(selected_essids):
         print(result.stdout)
 
     current_network = {}
+    collecting_bit_rates = False
+    bit_rates = []
+
     for line in result.stdout.split('\n'):
         essid_match = essid_re.search(line)
         signal_match = signal_re.search(line)
         channel_match = channel_re.search(line)
         frequency_match = frequency_re.search(line)
         signal_quality_match = signal_quality_re.search(line)
-        bit_rate_match = bit_rate_re.search(line)
         bssid_match = bssid_re.search(line)
+        bit_rate_match = bit_rate_re.search(line)
 
         if essid_match:
             current_network['SSID'] = essid_match.group(1).strip()
@@ -65,13 +67,18 @@ def scan_wifi(selected_essids):
         if signal_quality_match:
             current_network['Signal Quality'] = signal_quality_match.group(1)
         
-        if bit_rate_match:
-            # Extract individual bit rates and store as a list
-            bit_rates = [rate.strip() for rate in bit_rate_match.group(1).split(';')]
-            current_network['Bit Rates (Mb/s)'] = bit_rates
-        
         if bssid_match:
-            current_network['BSSID'] = bssid_match.group(1) 
+            current_network['BSSID'] = bssid_match.group(1)
+        
+        if bit_rate_match:
+            bit_rates.extend(rate.strip() for rate in bit_rate_match.group(1).split(';'))
+            collecting_bit_rates = True
+        elif collecting_bit_rates:
+            bit_rates.extend(rate.strip() for rate in line.strip().split(';'))
+            if not line.strip().endswith(';'):
+                current_network['Bit Rates (Mb/s)'] = bit_rates
+                collecting_bit_rates = False
+                bit_rates = []
 
         if current_network.get('SSID') and current_network.get('Signal Level (dBm)'):
             if selected_essids == 'all' or current_network['SSID'] in selected_essids:
