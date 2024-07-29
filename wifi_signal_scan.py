@@ -5,7 +5,7 @@ import os
 import csv
 import math
 import time
-from navigation_system import GpsPosition
+from navigation_system.gps import GpsPosition
 from donkeycar.parts.serial_port import SerialPort
 
 # Load environment variables from .env file
