@@ -7,16 +7,18 @@ import csv
 # Load environment variables from .env file
 load_dotenv(find_dotenv())
 
-wifi_networks = os.getenv('Wifi_Networks_to_Scan')
-print(f"Wifi_Networks_to_Scan: {wifi_networks}")
-
 def get_wifi_networks_to_scan():
     networks = os.getenv('Wifi_Networks_to_Scan')
-    if networks and networks.lower() != 'all':
-        # Handle spaces and quotes correctly
-        return [network.strip().strip('"') for network in networks.split('","')]
+    if networks:
+        print(f"Raw Wifi_Networks_to_Scan: {networks}")
+        if networks.lower() != 'all':
+            # Split by comma and handle spaces and quotes
+            return [network.strip().strip('"') for network in networks.split(',')]
+        else:
+            return 'all'
     else:
-        return 'all'
+        print("Wifi_Networks_to_Scan not found or empty in the .env file.")
+        return None
 
 def scan_wifi(selected_essids):
     # Run the iwlist scan command
@@ -35,9 +37,11 @@ def scan_wifi(selected_essids):
         if essid_match and signal_match:
             essid = essid_match.group(1)
             signal_level = int(signal_match.group(1))
+            print(f"Found network: {essid} with signal level {signal_level} dBm")
             if selected_essids == 'all' or essid in selected_essids:
                 networks.append({'SSID': essid, 'Signal Level (dBm)': signal_level})
 
+    print(f"Filtered networks: {networks}")
     return networks
 
 def write_to_csv(networks, filename='wifi_scan_results.csv'):
@@ -55,13 +59,15 @@ if __name__ == "__main__":
     # Get the list of ESSIDs to scan from the .env file
     selected_essids = get_wifi_networks_to_scan()
 
-    # Scan the WiFi networks
-    networks = scan_wifi(selected_essids)
+    if selected_essids:
+        # Scan the WiFi networks
+        networks = scan_wifi(selected_essids)
 
-    # Print the results to the console
-    for network in networks:
-        print(f"SSID: {network['SSID']}, Signal Level: {network['Signal Level (dBm)']} dBm")
+        # Print the results to the console
+        for network in networks:
+            print(f"SSID: {network['SSID']}, Signal Level: {network['Signal Level (dBm)']} dBm")
 
-    # Write the results to a CSV file
-    write_to_csv(networks)
-
+        # Write the results to a CSV file
+        write_to_csv(networks)
+    else:
+        print("No valid WiFi networks to scan. Please check the .env file.")
