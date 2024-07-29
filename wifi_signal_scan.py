@@ -29,6 +29,9 @@ def scan_wifi(selected_essids):
     essid_re = re.compile(r'ESSID:"(.+)"')
     signal_re = re.compile(r'Signal level=(-?\d+) dBm')
 
+    print("iwlist command output:")
+    print(result.stdout)  # Debug: print the raw output of the iwlist command
+
     lines = result.stdout.split('\n')
     for line in lines:
         essid_match = essid_re.search(line)
@@ -37,11 +40,11 @@ def scan_wifi(selected_essids):
         if essid_match and signal_match:
             essid = essid_match.group(1)
             signal_level = int(signal_match.group(1))
-            print(f"Found network: {essid} with signal level {signal_level} dBm")
+            print(f"Found network: {essid} with signal level {signal_level} dBm")  # Debug
             if selected_essids == 'all' or essid in selected_essids:
                 networks.append({'SSID': essid, 'Signal Level (dBm)': signal_level})
 
-    print(f"Filtered networks: {networks}")
+    print(f"Filtered networks: {networks}")  # Debug
     return networks
 
 def write_to_csv(networks, filename='wifi_scan_results.csv'):
