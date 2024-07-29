@@ -8,79 +8,72 @@ import csv
 load_dotenv(find_dotenv())
 
 def get_wifi_networks_to_scan():
-    networks = os.getenv('Wifi_Networks_to_Scan')
+    networks = os.getenv("Wifi_Networks_to_Scan")
     if networks:
         print(f"Raw Wifi_Networks_to_Scan: {networks}")
-        if networks.lower() != 'all':
-            # Split by comma and handle spaces and quotes
-            return [network.strip().strip('"') for network in networks.split(',')]
+        if networks.lower() != "all":
+            # Split by comma, handle spaces and quotes, and remove empty strings
+            return [network.strip().strip('"') for network in networks.split(",") if network.strip()]
         else:
-            return 'all'
+            return "all"
     else:
         print("Wifi_Networks_to_Scan not found or empty in the .env file.")
         return None
 
+
 def scan_wifi(selected_essids):
-    # Run the iwlist scan command
-    result = subprocess.run(['sudo', 'iwlist', 'wlan0', 'scan'], capture_output=True, text=True)
+    result = subprocess.run(["sudo", "iwlist", "wlan0", "scan"], capture_output=True, text=True)
     networks = []
 
-    # Regular expressions to match ESSID and Signal level
     essid_re = re.compile(r'ESSID:"(.+)"')
     signal_re = re.compile(r'Signal level=(-?\d+) dBm')
 
-    print("iwlist command output:")
-    print(result.stdout)  # Debug: print the raw output of the iwlist command
+    # Use `result.stderr` to check for errors
+    if result.returncode != 0:
+        print(f"Error running iwlist: {result.stderr}")
+        return networks
+    else:
+        # Print to the console only if there is output
+        print(result.stdout)  
 
-    lines = result.stdout.split('\n')
-    for line in lines:
+    current_network = {}
+    for line in result.stdout.split('\n'):
         essid_match = essid_re.search(line)
         signal_match = signal_re.search(line)
 
-        if essid_match and signal_match:
-            essid = essid_match.group(1).strip()
-            signal_level = int(signal_match.group(1))
-            print(f"Found network: '{essid}' with signal level {signal_level} dBm")  # Debug
-            if selected_essids == 'all' or essid in selected_essids:
-                print(f"Adding network: '{essid}' with signal level {signal_level} dBm to the list")  # Debug
-                networks.append({'SSID': essid, 'Signal Level (dBm)': signal_level})
-            else:
-                print(f"Network '{essid}' not in selected ESSIDs: {selected_essids}")  # Debug
+        if essid_match:
+            current_network['SSID'] = essid_match.group(1).strip()  # Store ESSID in dictionary
 
-    print(f"Filtered networks: {networks}")  # Debug
+        if signal_match and current_network.get('SSID'):  # Ensure ESSID was found before using it
+            current_network['Signal Level (dBm)'] = int(signal_match.group(1))
+
+            if selected_essids == 'all' or current_network['SSID'] in selected_essids:
+                networks.append(current_network)  # Add the complete network to the list
+
+            current_network = {}  # Reset for the next network
+
+    print(f"Filtered networks: {networks}")  
     return networks
+
 
 def write_to_csv(networks, filename='wifi_scan_results.csv'):
     if not networks:
-        print("No networks to write to CSV.")  # Debug
+        print("No networks to write to CSV.")
         return
 
-    # Define the CSV file headers
-    headers = ['SSID', 'Signal Level (dBm)']
-
-    # Write the results to a CSV file
     with open(filename, mode='w', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=headers)
+        writer = csv.DictWriter(file, fieldnames=networks[0].keys())  # Get headers from the first network
         writer.writeheader()
-        for network in networks:
-            print(f"Writing network: {network}")  # Debug
-            writer.writerow(network)
-    print(f"Results written to {filename}")  # Debug
+        writer.writerows(networks)
+
+    print(f"Results written to {filename}")
+
 
 if __name__ == "__main__":
-    # Get the list of ESSIDs to scan from the .env file
     selected_essids = get_wifi_networks_to_scan()
 
     if selected_essids:
-        print(f"Selected ESSIDs: {selected_essids}")  # Debug: print the selected ESSIDs
-        # Scan the WiFi networks
         networks = scan_wifi(selected_essids)
-
-        # Print the results to the console
-        for network in networks:
-            print(f"SSID: {network['SSID']}, Signal Level: {network['Signal Level (dBm)']} dBm")
-
-        # Write the results to a CSV file
         write_to_csv(networks)
     else:
         print("No valid WiFi networks to scan. Please check the .env file.")
