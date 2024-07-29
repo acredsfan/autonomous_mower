@@ -66,8 +66,8 @@ def scan_wifi(selected_essids):
         if signal_quality_match:
             current_network['Signal Quality'] = signal_quality_match.group(1)
 
-        if noise_level_match:
-            current_network['Noise Level (dBm)'] = int(noise_level_match.group(1))
+        #if noise_level_match:
+        #    current_network['Noise Level (dBm)'] = int(noise_level_match.group(1))
         
         if bit_rate_match:
             current_network['Bit Rate (Mb/s)'] = int(bit_rate_match.group(1))
