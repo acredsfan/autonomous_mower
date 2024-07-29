@@ -42,12 +42,17 @@ def scan_wifi(selected_essids):
             signal_level = int(signal_match.group(1))
             print(f"Found network: {essid} with signal level {signal_level} dBm")  # Debug
             if selected_essids == 'all' or essid in selected_essids:
+                print(f"Adding network: {essid} with signal level {signal_level} dBm to the list")  # Debug
                 networks.append({'SSID': essid, 'Signal Level (dBm)': signal_level})
 
     print(f"Filtered networks: {networks}")  # Debug
     return networks
 
 def write_to_csv(networks, filename='wifi_scan_results.csv'):
+    if not networks:
+        print("No networks to write to CSV.")  # Debug
+        return
+
     # Define the CSV file headers
     headers = ['SSID', 'Signal Level (dBm)']
 
@@ -56,7 +61,9 @@ def write_to_csv(networks, filename='wifi_scan_results.csv'):
         writer = csv.DictWriter(file, fieldnames=headers)
         writer.writeheader()
         for network in networks:
+            print(f"Writing network: {network}")  # Debug
             writer.writerow(network)
+    print(f"Results written to {filename}")  # Debug
 
 if __name__ == "__main__":
     # Get the list of ESSIDs to scan from the .env file
