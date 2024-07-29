@@ -31,8 +31,7 @@ def scan_wifi(selected_essids):
     frequency_re = re.compile(r'Frequency:(\d+\.?\d*) GHz')  # Match frequency with decimal
     signal_quality_re = re.compile(r'Quality=(\d+/\d+)')
     bssid_re = re.compile(r'Address: ([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})')
-    bit_rate_re = re.compile(r'Bit Rates?:(.+)')
-    
+
     if result.returncode != 0:
         print(f"Error running iwlist: {result.stderr}")
         return networks
@@ -40,9 +39,6 @@ def scan_wifi(selected_essids):
         print(result.stdout)
 
     current_network = {}
-    collecting_bit_rates = False
-    bit_rates = []
-
     for line in result.stdout.split('\n'):
         essid_match = essid_re.search(line)
         signal_match = signal_re.search(line)
@@ -50,7 +46,6 @@ def scan_wifi(selected_essids):
         frequency_match = frequency_re.search(line)
         signal_quality_match = signal_quality_re.search(line)
         bssid_match = bssid_re.search(line)
-        bit_rate_match = bit_rate_re.search(line)
 
         if essid_match:
             current_network['SSID'] = essid_match.group(1).strip()
@@ -69,16 +64,6 @@ def scan_wifi(selected_essids):
         
         if bssid_match:
             current_network['BSSID'] = bssid_match.group(1)
-        
-        if bit_rate_match:
-            bit_rates.extend(rate.strip() for rate in bit_rate_match.group(1).split(';'))
-            collecting_bit_rates = True
-        elif collecting_bit_rates:
-            bit_rates.extend(rate.strip() for rate in line.strip().split(';'))
-            if not line.strip().endswith(';'):
-                current_network['Bit Rates (Mb/s)'] = bit_rates
-                collecting_bit_rates = False
-                bit_rates = []
 
         if current_network.get('SSID') and current_network.get('Signal Level (dBm)'):
             if selected_essids == 'all' or current_network['SSID'] in selected_essids:
