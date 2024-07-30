@@ -17,10 +17,11 @@ logger = logging.getLogger(__name__)
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
-pointperfect_user = os.getenv("POINTPERFECT_USER")
-pointperfect_pass = os.getenv("POINTPERFECT_PASS")
-pointperfect_url = os.getenv("POINTPERFECT_URL")
-pointperfect_mountpoint = os.getenv("POINTPERFECT_MOUNTPOINT")
+NTRIP_user = os.getenv("NTRIP_USER")
+NTRIP_pass = os.getenv("NTRIP_PASS")
+NTRIP_url = os.getenv("NTRIP_URL")
+NTRIP_mountpoint = os.getenv("NTRIP_MOUNTPOINT")
+NTRIP_port = os.getenv("NTRIP_PORT")
 
 class GpsNmeaPositions:
     def __init__(self, debug=False):
@@ -52,15 +53,16 @@ class GpsLatestPosition:
         return self.position
 
 class GpsPosition:
-    def __init__(self, serial: SerialPort, pointperfect_user, pointperfect_pass, pointperfect_url, pointperfect_mountpoint, debug=False) -> None:
+    def __init__(self, serial: SerialPort, NTRIP_user, NTRIP_pass, NTRIP_url, NTRIP_mountpoint, NTRIP_port, debug=False) -> None:
         self.line_reader = SerialLineReader(serial)
         self.debug = debug
         self.position_reader = GpsNmeaPositions()
         self.position = None
-        self.pointperfect_user = pointperfect_user
-        self.pointperfect_pass = pointperfect_pass
-        self.pointperfect_url = pointperfect_url
-        self.pointperfect_mountpoint = pointperfect_mountpoint
+        self.NTRIP_user = NTRIP_user
+        self.NTRIP_pass = NTRIP_pass
+        self.NTRIP_url = NTRIP_url
+        self.NTRIP_mountpoint = NTRIP_mountpoint
+        self.NTRIP_port = NTRIP_port
         self.correction_thread = threading.Thread(target=self.get_correction_data)
         self.correction_thread.start()
         self._start()
@@ -92,19 +94,20 @@ class GpsPosition:
     def shutdown(self):
         return self.line_reader.shutdown()
 
-    def connect_to_pointperfect(self):
-        auth = base64.b64encode(f"{self.pointperfect_user}:{self.pointperfect_pass}".encode()).decode()
+    def connect_to_NTRIP(self):
+        auth = base64.b64encode(f"{self.NTRIP_user}:{self.NTRIP_pass}".encode()).decode()
         headers = {'Authorization': f'Basic {auth}'}
-        response = requests.get(f"{self.pointperfect_url}/{self.pointperfect_mountpoint}", headers=headers, stream=True)
+        url = f"http://{self.NTRIP_url}:{self.NTRIP_port}/{self.NTRIP_mountpoint}"
+        response = requests.get(url, headers=headers, stream=True)
         if response.status_code == 200:
-            print("Connected to PointPerfect")
+            print("Connected to NTRIP")
             return response
         else:
-            print("Failed to connect to PointPerfect")
+            print(f"Failed to connect to NTRIP: {response.status_code}")
             return None
 
     def get_correction_data(self):
-        response = self.connect_to_pointperfect()
+        response = self.connect_to_NTRIP()
         if response:
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
@@ -395,10 +398,10 @@ if __name__ == "__main__":
     parser.add_argument("-nstd", "--nstd", type=float, default=1.0, help="multiple of standard deviation for ellipse.")
     parser.add_argument("-th", "--threaded", action='store_true', help="run in threaded mode.")
     parser.add_argument("-db", "--debug", action='store_true', help="Enable extra logging")
-    parser.add_argument("-u", "--user", type=str, required=True, help="PointPerfect username")
-    parser.add_argument("-p", "--password", type=str, required=True, help="PointPerfect password")
-    parser.add_argument("-url", "--url", type=str, required=True, help="PointPerfect URL")
-    parser.add_argument("-mp", "--mountpoint", type=str, required=True, help="PointPerfect mountpoint")
+    parser.add_argument("-u", "--user", type=str, required=True, help="NTRIP username")
+    parser.add_argument("-p", "--password", type=str, required=True, help="NTRIP password")
+    parser.add_argument("-url", "--url", type=str, required=True, help="NTRIP URL")
+    parser.add_argument("-mp", "--mountpoint", type=str, required=True, help="NTRIP mountpoint")
     args = parser.parse_args()
 
     if args.waypoints < 0:
