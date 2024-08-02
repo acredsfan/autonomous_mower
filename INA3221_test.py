@@ -1,7 +1,7 @@
 import time
 import board
 import busio
-from adafruit_ina3221 import INA3221, DeviceRangeError
+from barbudor_ina3221.full import INA3221, DeviceRangeError
 
 def main():
     # Initialize I2C bus and sensor
