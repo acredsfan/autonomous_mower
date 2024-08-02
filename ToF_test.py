@@ -24,37 +24,41 @@ for power_pin in xshut:
 # Initialize a list to be used for the array of VL53L0X sensors
 vl53 = []
 
-# Now change the addresses of the VL53L0X sensors
+# Turn on one sensor at a time and set its address
 for i, power_pin in enumerate(xshut):
     # Turn on the VL53L0X to allow hardware check
     power_pin.value = True
+    time.sleep(0.1)  # Delay for the sensor to power up
+    
     # Instantiate the VL53L0X sensor on the I2C bus & insert it into the "vl53" list
-    vl53.insert(i, VL53L0X(i2c))  # Also performs VL53L0X hardware check
-
-    # Start continuous mode
-    vl53[i].start_continuous()
+    sensor = VL53L0X(i2c)
+    sensor.start_continuous()
+    vl53.append(sensor)  # Also performs VL53L0X hardware check
 
     # No need to change the address of the last VL53L0X sensor
     if i < len(xshut) - 1:
         # Default address is 0x29. Change that to something else
-        vl53[i].set_address(0x30 + i)  # Address assigned should NOT be already in use
+        new_address = 0x30 + i  # Address assigned should NOT be already in use
+        sensor.set_address(new_address)
+        power_pin.value = False  # Turn off the sensor after changing the address
+        time.sleep(0.1)  # Delay to ensure proper shutdown
 
-# There is a helpful list of pre-designated I2C addresses for various I2C devices at
-# https://learn.adafruit.com/i2c-addresses/the-list
-# According to this list 0x30-0x34 are available, although the list may be incomplete.
-# In the python REPL, you can scan for all I2C devices that are attached and determine
-# their addresses using:
-#   >>> import board
-#   >>> i2c = board.I2C()  # uses board.SCL and board.SDA
-#   >>> if i2c.try_lock():
-#   >>>     [hex(x) for x in i2c.scan()]
-#   >>>     i2c.unlock()
+# Power up all sensors again with their new addresses
+for power_pin in xshut:
+    power_pin.value = True
+time.sleep(0.1)  # Delay for all sensors to power up
+
+# Confirm addresses by re-initializing sensors with new addresses
+for i, power_pin in enumerate(xshut):
+    address = 0x29 if i == 0 else 0x30 + (i - 1)
+    sensor = VL53L0X(i2c, address=address)
+    vl53[i] = sensor
 
 def detect_range(count=5):
     """Take count=5 samples"""
     while count:
         for index, sensor in enumerate(vl53):
-            print(f"Sensor {index + 1} Range: {sensor.range}mm")
+            print(f"Sensor {index + 1} Range: {sensor.range} mm")
         time.sleep(1.0)
         count -= 1
 
