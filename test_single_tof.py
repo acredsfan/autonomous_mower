@@ -9,6 +9,9 @@ import board
 import busio
 
 import adafruit_vl53l0x
+import sys
+print(sys.executable)
+
 
 # Initialize I2C bus and sensor.
 i2c = busio.I2C(board.SCL, board.SDA)
