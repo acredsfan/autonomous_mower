@@ -1,7 +1,7 @@
 import time
 import board
 import busio
-from adafruit_bno08x import BNO08X_I2C
+from adafruit_bno08x.i2c import BNO08X_I2C
 
 def main():
     # Initialize I2C bus and sensor
