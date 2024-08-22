@@ -1,32 +1,42 @@
 import time
 import board
 import busio
+from adafruit_bno08x import (
+    BNO_REPORT_ACCELEROMETER,
+    BNO_REPORT_GYROSCOPE,
+    BNO_REPORT_MAGNETOMETER,
+    BNO_REPORT_ROTATION_VECTOR,
+)
 from adafruit_bno08x.i2c import BNO08X_I2C
 
-def main():
-    # Initialize I2C bus and sensor
-    i2c = busio.I2C(board.SCL, board.SDA)
-    bno = BNO08X_I2C(i2c)
+i2c = busio.I2C(board.SCL, board.SDA, frequency=400000)
+bno = BNO08X_I2C(i2c)
 
-    # Check connection
-    try:
-        print("Checking BNO085 connection...")
-        bno.begin_calibration()
-        print("BNO085 connected successfully!")
-    except Exception as e:
-        print("Failed to connect to BNO085:", e)
-        return
+bno.enable_feature(BNO_REPORT_ACCELEROMETER)
+bno.enable_feature(BNO_REPORT_GYROSCOPE)
+bno.enable_feature(BNO_REPORT_MAGNETOMETER)
+bno.enable_feature(BNO_REPORT_ROTATION_VECTOR)
 
-    # Read and print orientation data
-    try:
-        while True:
-            quat = bno.quaternion
-            print("Quaternion: w={}, x={}, y={}, z={}".format(quat[0], quat[1], quat[2], quat[3]))
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Exiting...")
-    except Exception as e:
-        print("Error reading BNO085 data:", e)
+while True:
+    time.sleep(0.5)
+    print("Acceleration:")
+    accel_x, accel_y, accel_z = bno.acceleration  # pylint:disable=no-member
+    print("X: %0.6f  Y: %0.6f Z: %0.6f  m/s^2" % (accel_x, accel_y, accel_z))
+    print("")
 
-if __name__ == "__main__":
-    main()
+    print("Gyro:")
+    gyro_x, gyro_y, gyro_z = bno.gyro  # pylint:disable=no-member
+    print("X: %0.6f  Y: %0.6f Z: %0.6f rads/s" % (gyro_x, gyro_y, gyro_z))
+    print("")
+
+    print("Magnetometer:")
+    mag_x, mag_y, mag_z = bno.magnetic  # pylint:disable=no-member
+    print("X: %0.6f  Y: %0.6f Z: %0.6f uT" % (mag_x, mag_y, mag_z))
+    print("")
+
+    print("Rotation Vector Quaternion:")
+    quat_i, quat_j, quat_k, quat_real = bno.quaternion  # pylint:disable=no-member
+    print(
+        "I: %0.6f  J: %0.6f K: %0.6f  Real: %0.6f" % (quat_i, quat_j, quat_k, quat_real)
+    )
+    print("")
