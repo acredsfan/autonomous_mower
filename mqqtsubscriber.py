@@ -1,11 +1,28 @@
-# MQQT subscriber for optional remote RPi 5 with AI Kit to process data from Camera and Sensors and make code improvements
+from sensor_interface import get_sensor_data
+from navigation_system import GpsLatestPosition
+from hardware_interface import SensorInterface
+
 import paho.mqtt.client as mqtt
 
-def on_message(client, userdata, message):
-    print(f"Received message: {message.payload.decode()} on topic {message.topic}")
+# MQTT broker details
+MQTT_BROKER = "192.168.86.90"
+MQTT_PORT = 1883
+MQTT_KEEPALIVE = 60
 
+# Create MQTT client
 client = mqtt.Client()
-client.connect("pi5_ip_address", 1883, 60)
-client.subscribe("mower/status")
-client.on_message = on_message
-client.loop_forever()
+
+# Connect to MQTT broker
+client.connect(MQTT_BROKER, MQTT_PORT, MQTT_KEEPALIVE)
+
+# Retrieve sensor data, location, and status
+sensor_data = get_sensor_data()
+
+
+
+# Publish sensor data, location
+client.publish("sensor_data", sensor_data)
+client.publish("location", location)
+
+# Disconnect from MQTT broker
+client.disconnect()
