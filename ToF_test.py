@@ -5,40 +5,35 @@ from adafruit_vl53l0x import VL53L0X
 # Create I2C bus
 i2c = busio.I2C(board.SCL, board.SDA)
 
-# List of new addresses for the sensors
-# Ensure addresses are unique and do not conflict with other I2C devices
-NEW_ADDRESSES = [0x31, 0x32, 0x33, 0x34]
-
-def initialize_sensor(i2c, new_address):
+def set_sensor_address(sensor, new_address):
     """
-    Initializes a VL53L0X sensor and assigns it a new I2C address.
-    
-    :param i2c: I2C bus object
-    :param new_address: The new I2C address to assign to the sensor
-    :return: Initialized sensor object
+    Changes the I2C address of the VL53L0X sensor.
     """
-    # Initialize the sensor with the default address
-    sensor = VL53L0X(i2c)
-    
-    # Assign new I2C address
     sensor.set_address(new_address)
-    print(f"Sensor initialized at new address: {hex(new_address)}")
-    return sensor
+    print(f"Sensor address set to: {hex(new_address)}")
 
-# Initialize sensors and assign new addresses
-sensors = []
-for address in NEW_ADDRESSES:
-    try:
-        # Initialize and assign new address
-        sensor = initialize_sensor(i2c, address)
-        sensors.append(sensor)
-    except Exception as e:
-        print(f"Failed to initialize sensor at address {hex(address)}: {e}")
+try:
+    # Step 1: Initialize the first sensor at the default address 0x29
+    print("Initializing first sensor at address 0x29...")
+    sensor1 = VL53L0X(i2c)
+    set_sensor_address(sensor1, 0x30)  # Change to 0x30 to free up 0x29 for the next sensor
 
-# Now you can use the sensors array to interact with each sensor independently
-for idx, sensor in enumerate(sensors):
-    try:
-        distance = sensor.range
-        print(f"Sensor {idx} at address {hex(sensor.address)}: Distance = {distance} mm")
-    except Exception as e:
-        print(f"Error reading from sensor {idx}: {e}")
+    # Step 2: Power up and initialize the second sensor at 0x29 now that the first one has moved
+    print("Initializing second sensor at address 0x29...")
+    sensor2 = VL53L0X(i2c)  # This should now initialize at 0x29 since 0x30 is taken
+    set_sensor_address(sensor2, 0x31)  # Change to 0x31 or any other unique address
+
+    # Both sensors should now be initialized with unique addresses
+    print("Both sensors initialized successfully.")
+except Exception as e:
+    print(f"Error initializing sensors: {e}")
+
+# Optional: Check if the sensors respond correctly
+try:
+    distance1 = sensor1.range
+    print(f"Sensor 1 (0x30) Distance: {distance1} mm")
+
+    distance2 = sensor2.range
+    print(f"Sensor 2 (0x31) Distance: {distance2} mm")
+except Exception as e:
+    print(f"Error reading sensor distances: {e}")
