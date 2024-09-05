@@ -77,7 +77,7 @@ I'll be happy to share any details you'd be interested in just let me know.
 INSTALLATION INSTRUCTIONS:
 1. Install necessary packages:
     ```bash
-    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools gpsd gpsd-clients python3-gps python3-libgpiod
+    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools gpsd gpsd-clients python3-gps python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev
     ```
     Note: to get gpiod to work within the venv, you must run the following command after your venv is created, replacing "/path/to/venv" with the correct path to your venv:
     ```bash
