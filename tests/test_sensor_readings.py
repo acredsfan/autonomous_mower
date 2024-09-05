@@ -28,7 +28,9 @@ def test_sensor_readings():
     assert sensor_data['compass'] is not None
     assert sensor_data['gyro'] is not None
     assert sensor_data['quaternion'] is not None
-    assert sensor_data['ina3221'] is not None
+    assert sensor_data['solar'] is not None
+    assert sensor_data['battery'] is not None
+    assert sensor_data['battery_charge'] is not None
     assert sensor_data['left_distance'] is not None
     assert sensor_data['right_distance'] is not None
     print("Sensor readings are being read and reported correctly")
@@ -37,7 +39,9 @@ def test_sensor_readings():
     print("Compass: ", sensor_data['compass'])
     print("Gyroscope: ", sensor_data['gyro'])
     print("Quaternion: ", sensor_data['quaternion'])
-    print("INA3221: ", sensor_data['ina3221'])
+    print("Solar: ", sensor_data['solar'])
+    print("Battery: ", sensor_data['battery'])
+    print("Battery Charge: ", sensor_data['battery_charge'])
     print("Left Distance: ", sensor_data['left_distance'])
     print("Right Distance: ", sensor_data['right_distance'])
 
