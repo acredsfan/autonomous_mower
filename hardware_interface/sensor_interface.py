@@ -54,7 +54,7 @@ class SensorInterface:
                 self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
                 self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
                 self.sensor_data['solar'] = INA3221Sensor.read_ina3221(self.ina3221, 1)
-                self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 2)
+                self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 3)
                 self.sensor_data['battery soc'] = INA3221Sensor.battery_charge(self.ina3221)
                 self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.left_vl53l0x)
                 self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.right_vl53l0x)
