@@ -1,21 +1,23 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response, g
-import sys
 import json
-sys.path.append('/home/pi/autonomous_mower')
-from hardware_interface import BladeController, RoboHATDriver
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from hardware_interface import BladeController, RoboHATDriver, SensorInterface
 import subprocess
 import os
-from obstacle_detection import camera_processing
+from obstacle_detection import CameraProcessor, ObstacleAvoidance
 import threading
-from navigation_system import PathPlanning, GpsNmeaPositions  # Updated import
+from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition  # Updated import
 import datetime
 import logging
 import dotenv
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
-from user_interface.web_interface.camera import SingletonCamera
+from user_interface.web_interface import SingletonCamera
 import time
-from hardware_interface.sensor_interface import sensor_interface
 import cv2
 
 # Initialize logging
@@ -71,7 +73,7 @@ next_scheduled_mow = "2023-05-06 12:00:00"
 
 def update_sensors():
     global stop_sensor_thread, battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
-    sensors = sensor_interface
+    sensors = SensorInterface()
 
     while not stop_sensor_thread:
         # Update sensor values
