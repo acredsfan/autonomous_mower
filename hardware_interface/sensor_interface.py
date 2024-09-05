@@ -48,14 +48,20 @@ class SensorInterface:
     def update_sensors(self):
         while True:
             with self.sensor_data_lock:
-                self.sensor_data['bme280'] = BME280Sensor.read_bme280(self.bme280)
-                self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)
-                self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
-                self.sensor_data['magnetometer'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)
-                self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
-                self.sensor_data['solar'] = INA3221Sensor.read_ina3221(self.ina3221, 1)
-                self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 3)
-                self.sensor_data['battery soc'] = INA3221Sensor.battery_charge(self.ina3221)
-                self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.left_vl53l0x)
-                self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.right_vl53l0x)
+                self.sensor_data['temperature_f'] = BME280Sensor.read_bme280(self.bme280)['temperature_f']
+                self.sensor_data['humidity'] = BME280Sensor.read_bme280(self.bme280)['humidity']
+                self.sensor_data['pressure'] = BME280Sensor.read_bme280(self.bme280)['pressure']
+                self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)['accel']
+                self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)['gyro']
+                self.sensor_data['magnetometer'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)['magnetometer']
+                self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)['quaternion']
+                self.sensor_data['solar bus voltage'] = INA3221Sensor.read_ina3221(self.ina3221, 1)['bus_voltage']
+                self.sensor_data['solar current'] = INA3221Sensor.read_ina3221(self.ina3221, 1)['current']
+                self.sensor_data['solar shunt voltage'] = INA3221Sensor.read_ina3221(self.ina3221, 1)['shunt_voltage']
+                self.sensor_data['battery bus voltage'] = INA3221Sensor.read_ina3221(self.ina3221, 3)['bus_voltage']
+                self.sensor_data['battery current'] = INA3221Sensor.read_ina3221(self.ina3221, 3)['current']
+                self.sensor_data['battery shunt voltage'] = INA3221Sensor.read_ina3221(self.ina3221, 3)['shunt_voltage']
+                self.sensor_data['battery soc'] = INA3221Sensor.battery_charge(self.ina3221)['charge_level']
+                self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.left_vl53l0x)['distance']
+                self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.right_vl53l0x)['distance']
             time.sleep(1.0)
