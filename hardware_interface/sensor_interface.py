@@ -68,7 +68,7 @@ class SensorInterface:
                 if self.bno085:
                     self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)
                     self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
-                    self.sensor_data['magnetometer'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)
+                    self.sensor_data['compass'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)
                     self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
                 else:
                     logging.error("BNO085 sensor not available for reading.")
