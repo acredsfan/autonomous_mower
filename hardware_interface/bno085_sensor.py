@@ -29,7 +29,7 @@ class BNO085Sensor:
     def read_bno085_accel(sensor):
         try:
             accel_x, accel_y, accel_z = sensor.acceleration
-            return {'x': accel_x, 'y': accel_y, 'z': accel_z}
+            return {"X: %0.6f  Y: %0.6f Z: %0.6f  m/s^2" % (accel_x, accel_y, accel_z)}
         except Exception as e:
             logging.error(f"Error reading BNO085 accelerometer: {e}")
             return {}

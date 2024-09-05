@@ -17,9 +17,9 @@ class INA3221Sensor:
     def read_ina3221(sensor, channel):
             try:
                 if channel in [1, 3]:
-                    Voltage = round(sensor.bus_voltage(channel), 2)
-                    Shunt_Voltage = round(sensor.shunt_voltage(channel), 2)
-                    Current = round(sensor.current(channel), 2)
+                    Voltage = round(sensor.bus_voltage(channel), 1)
+                    Shunt_Voltage = round(sensor.shunt_voltage(channel), 1)
+                    Current = round(sensor.current(channel), 1)
                     sensor_data = {"bus_voltage": Voltage, "current": Current, 'shunt_voltage': Shunt_Voltage}
                     if channel == 3:
                         Charge_Level = round((Voltage - 11.5) / (13.5 - 11.5) * 100, 1)
