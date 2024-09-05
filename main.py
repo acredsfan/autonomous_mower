@@ -3,13 +3,12 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from .hardware_interface import SensorInterface
+from hardware_interface import SensorInterface, BladeController, RoboHATController
 import logging
-from .hardware_interface import BladeController, RoboHATController
-from .navigation_system import Localization, path_planning
-from .obstacle_detection import CameraProcessor, ObstacleAvoidance
-from .user_interface.web_interface.app import start_web_interface, get_schedule
-from .user_interface.web_interface.camera import SingletonCamera
+from navigation_system import Localization, path_planning
+from obstacle_detection import CameraProcessor, ObstacleAvoidance
+from user_interface.web_interface.app import start_web_interface, get_schedule
+from user_interface.web_interface.camera import SingletonCamera
 from multiprocessing import Process
 import time
 import datetime
