@@ -3,13 +3,20 @@ import board
 import busio
 from adafruit_bme280 import basic as adafruit_bme280
 
+# Initialize I2C using busio
 i2c = busio.I2C(board.SCL, board.SDA)
 
 class BME280Sensor:
     """Class to handle BME280 sensor"""
+
     @staticmethod
-    def init_bme280(i2c):
+    def init_bme280():
+        """
+        Initialize the BME280 sensor with the I2C bus.
+        Returns the sensor object if successful, otherwise None.
+        """
         try:
+            # Initialize the BME280 sensor on the specified I2C bus
             sensor = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=0x76)
             logging.info("BME280 initialized successfully.")
             return sensor
@@ -23,8 +30,9 @@ class BME280Sensor:
         if sensor is None:
             logging.error("BME280 sensor is not initialized.")
             return {}
-        
+
         try:
+            # Fetch temperature, humidity, and pressure from the sensor
             temperature_f = sensor.temperature * 9 / 5 + 32
             return {
                 'temperature_c': round(sensor.temperature, 1),
