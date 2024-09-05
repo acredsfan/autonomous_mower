@@ -20,7 +20,7 @@ def reset_sensor(xshut_pin):
     time.sleep(0.1)          # Short delay to ensure the sensor is fully powered down
     xshut_pin.value = True   # Pull XSHUT high to power the sensor back up
     time.sleep(0.1)          # Wait for the sensor to initialize
-    print(f"Sensor reset complete on GPIO pin {xshut_pin.pin}.")
+    print(f"Sensor reset complete on XSHUT pin {xshut_pin}")
 
 # Reset both sensors
 reset_sensor(XSHUT_1)  # Reset the first sensor
