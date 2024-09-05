@@ -1,4 +1,11 @@
 #Test to ensure that the sensor readings are being read and reported correctly
+#import SensorInterface from hardware_interface folder
+import sys
+import os
+
+# Add the project root to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from hardware_interface import SensorInterface
 import time
 
