@@ -40,7 +40,7 @@ class SensorInterface:
 
     def init_sensors(self):
         # Initialize sensors
-        self.bme280 = BME280Sensor.init_bme280(self.i2c)
+        self.bme280 = BME280Sensor.init_bme280()
         if self.bme280 is None:
             logging.error("BME280 failed to initialize.")
         
