@@ -39,7 +39,7 @@ class SensorInterface:
         self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(self.shutdown_pins, self.interrupt_pins)
 
     def init_sensors(self):
-        self.bme280 = BME280Sensor.init_bme280(self.bus)
+        self.bme280 = BME280Sensor.init_bme280()
         self.bno085 = BNO085Sensor.init_bno085(self.i2c)
         self.ina3221 = INA3221Sensor.init_ina3221(self.i2c)
         # Initialize both VL53L0X sensors
