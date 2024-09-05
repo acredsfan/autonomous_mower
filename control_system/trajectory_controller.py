@@ -6,7 +6,6 @@
 import time
 import numpy as np
 from hardware_interface import RoboHATController
-from control_system import direction_controller
 import logging
 from constants import MIN_DISTANCE_TO_OBSTACLE, TURN_ANGLE, SPEED, WAYPOINT_REACHED_THRESHOLD
 
