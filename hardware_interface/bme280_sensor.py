@@ -10,7 +10,6 @@ class BME280Sensor:
     @staticmethod
     def init_bme280(i2c):
         try:
-            # Initialize the BME280 sensor using busio.I2C, not smbus
             sensor = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=0x76)
             logging.info("BME280 initialized successfully.")
             return sensor
