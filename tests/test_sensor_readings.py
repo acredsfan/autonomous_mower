@@ -15,21 +15,27 @@ def test_sensor_readings():
     sensor_data = sensor_interface.sensor_data
     assert 'bme280' in sensor_data
     assert 'accel' in sensor_data
-    assert 'solar' in sensor_data
-    assert 'battery' in sensor_data
+    assert 'compass' in sensor_data
+    assert 'gyro' in sensor_data
+    assert 'quaternion' in sensor_data
+    assert 'ina3221' in sensor_data
     assert 'left_distance' in sensor_data
     assert 'right_distance' in sensor_data
     assert sensor_data['bme280'] is not None
     assert sensor_data['accel'] is not None
-    assert sensor_data['solar'] is not None
-    assert sensor_data['battery'] is not None
+    assert sensor_data['compass'] is not None
+    assert sensor_data['gyro'] is not None
+    assert sensor_data['quaternion'] is not None
+    assert sensor_data['ina3221'] is not None
     assert sensor_data['left_distance'] is not None
     assert sensor_data['right_distance'] is not None
     print("Sensor readings are being read and reported correctly")
     print("BME280: ", sensor_data['bme280'])
     print("Accelerometer: ", sensor_data['accel'])
-    print("Solar: ", sensor_data['solar'])
-    print("Battery: ", sensor_data['battery'])
+    print("Compass: ", sensor_data['compass'])
+    print("Gyroscope: ", sensor_data['gyro'])
+    print("Quaternion: ", sensor_data['quaternion'])
+    print("INA3221: ", sensor_data['ina3221'])
     print("Left Distance: ", sensor_data['left_distance'])
     print("Right Distance: ", sensor_data['right_distance'])
 

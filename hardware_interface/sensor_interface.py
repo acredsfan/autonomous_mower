@@ -49,7 +49,10 @@ class SensorInterface:
         while True:
             with self.sensor_data_lock:
                 self.sensor_data['bme280'] = BME280Sensor.read_bme280(self.bme280)
-                self.sensor_data['bno085'] = BNO085Sensor.read_bno085(self.bno085)
+                self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)
+                self.sensor_data['compass'] = BNO085Sensor.read_bno085_compass(self.bno085)
+                self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
+                self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
                 self.sensor_data['ina3221'] = INA3221Sensor.read_ina3221(self.ina3221)
                 self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.left_vl53l0x)
                 self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.right_vl53l0x)
