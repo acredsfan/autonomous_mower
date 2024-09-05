@@ -18,8 +18,6 @@ client.connect(MQTT_BROKER, MQTT_PORT, MQTT_KEEPALIVE)
 # Retrieve sensor data, location, and status
 sensor_data = get_sensor_data()
 
-
-
 # Publish sensor data, location
 client.publish("sensor_data", sensor_data)
 client.publish("location", location)
