@@ -18,7 +18,9 @@ def test_sensor_readings():
     assert 'compass' in sensor_data
     assert 'gyro' in sensor_data
     assert 'quaternion' in sensor_data
-    assert 'ina3221' in sensor_data
+    assert 'solar' in sensor_data
+    assert 'battery' in sensor_data
+    assert 'battery_charge' in sensor_data
     assert 'left_distance' in sensor_data
     assert 'right_distance' in sensor_data
     assert sensor_data['bme280'] is not None

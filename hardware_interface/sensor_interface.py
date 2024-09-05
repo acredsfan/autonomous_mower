@@ -76,6 +76,7 @@ class SensorInterface:
                 if self.ina3221:
                     self.sensor_data['solar'] = INA3221Sensor.read_ina3221(self.ina3221, 1)
                     self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 3)
+                    self.sensor_data['battery_charge'] = INA3221Sensor.battery_charge(self.ina3221)
                 else:
                     logging.error("INA3221 sensor not available for reading.")
 
