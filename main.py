@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from hardware_interface.sensor_interface import SensorInterface
 import logging
 from hardware_interface import BladeController, RoboHATController

@@ -2,6 +2,11 @@ import math
 import time
 import json
 import logging
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 from hardware_interface.sensor_interface import SensorInterface
 from hardware_interface import RoboHATController

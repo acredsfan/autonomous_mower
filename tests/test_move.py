@@ -1,4 +1,9 @@
 # Code to test motors via robohat and blade controller
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from hardware_interface import RoboHATController, BladeController
 import time
 
