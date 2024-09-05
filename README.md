@@ -121,9 +121,11 @@ INSTALLATION INSTRUCTIONS:
     ```
     Add your API key to the `.env` file and save it.
 
-9. Run `main.py` to start the program:
+9. If using roboHat, then take rp2040_code.py from the robohat_files directory and load it on the RP2040 and rename to code.py
+
+10. Run `main.py` to start the program:
     ```bash
     python main.py
     ```
 
-10. Go to the web UI at `{hostname}.local:90` to set up the robot boundaries and schedules as well as to see sensor data/controls.
+11. Go to the web UI at `{hostname}.local:90` to set up the robot boundaries and schedules as well as to see sensor data/controls.
