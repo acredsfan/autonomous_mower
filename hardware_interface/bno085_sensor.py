@@ -15,6 +15,10 @@ class BNO085Sensor:
     def init_bno085(i2c):
         try:
             sensor = BNO08X_I2C(i2c, address=0x4B)
+            sensor.soft_reset()
+            sensor.begin_calibration()
+            sensor.calibration_status()
+            print("Calibration status: ", sensor.calibration_status())
             sensor.enable_feature(BNO_REPORT_ACCELEROMETER)
             sensor.enable_feature(BNO_REPORT_GYROSCOPE)
             sensor.enable_feature(BNO_REPORT_MAGNETOMETER)
