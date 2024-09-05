@@ -26,4 +26,3 @@ requests
 pyubx2
 adafruit-circuitpython-bno08x
 utm
-gpiod

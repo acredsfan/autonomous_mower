@@ -10,11 +10,11 @@ import smbus2 as smbus
 import board
 import busio
 from constants import GRID_SIZE
-from bme280_sensor import BME280Sensor
-from vl53l0x_sensor import VL53L0XSensors
-from bno085_sensor import BNO085Sensor
-from ina3221_sensor import INA3221Sensor
-from gpio_manager import GPIOManager
+from .bme280_sensor import BME280Sensor
+from .vl53l0x_sensor import VL53L0XSensors
+from .bno085_sensor import BNO085Sensor
+from .ina3221_sensor import INA3221Sensor
+from .gpio_manager import GPIOManager
 
 class SensorInterface:
     def __init__(self):
