@@ -5,7 +5,7 @@ import logging
 class GPIOManager:
     
     def init_gpio(shutdown_pins, interrupt_pins):
-        chip = gpiod.Chip('gpiochip0')
+        chip = gpiod.Chip('gpiochip1')
         shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
         interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
 
