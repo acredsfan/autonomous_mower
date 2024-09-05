@@ -6,7 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from hardware_interface.sensor_interface import SensorInterface
 import logging
 from hardware_interface import BladeController, RoboHATController
-from control_system import trajectory_controller
 from navigation_system import Localization, path_planning
 from obstacle_detection import CameraProcessor, ObstacleAvoidance
 from user_interface.web_interface.app import start_web_interface, get_schedule
