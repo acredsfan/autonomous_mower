@@ -48,9 +48,9 @@ class SensorInterface:
     def update_sensors(self):
         while True:
             with self.sensor_data_lock:
-                self.sensor_data['temperature_f'] = BME280Sensor.read_bme280(self.bme280)['temperature_f']
-                self.sensor_data['humidity'] = BME280Sensor.read_bme280(self.bme280)['humidity']
-                self.sensor_data['pressure'] = BME280Sensor.read_bme280(self.bme280)['pressure']
+                self.sensor_data['temperature_f'] = BME280Sensor.read_bme280(self.bme280.temperature) * 9 / 5 + 32
+                self.sensor_data['humidity'] = BME280Sensor.read_bme280(self.bme280.humidity)
+                self.sensor_data['pressure'] = BME280Sensor.read_bme280(self.bme280.pressure)
                 self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)['accel']
                 self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)['gyro']
                 self.sensor_data['magnetometer'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)['magnetometer']
