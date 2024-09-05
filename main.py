@@ -16,7 +16,7 @@ import time
 import datetime
 from threading import Thread, Lock
 import subprocess
-import RPi.GPIO as GPIO
+import gpiod as GPIO
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
