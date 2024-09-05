@@ -1,7 +1,7 @@
 import logging
 import time
 import threading
-from gpio_manager import init_gpio
+from gpio_manager import GPIOManager
 
 # Initialize logging
 log_file_path = '/home/pi/autonomous_mower/main.log'
@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(leve
 # Initialize GPIO lines using gpio_manager
 shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
 interrupt_pins = []  # No interrupt lines needed here
-shutdown_lines, _ = init_gpio(shutdown_pins, interrupt_pins)
+shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, interrupt_pins)
 
 class PWM:
     def __init__(self, line, frequency):
