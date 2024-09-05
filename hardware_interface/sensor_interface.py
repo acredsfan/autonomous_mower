@@ -5,11 +5,11 @@ import smbus2 as smbus
 import board
 import busio
 from constants import GRID_SIZE
-from bme280_sensor import init_bme280, read_bme280
-from vl53l0x_sensor import init_vl53l0x, reset_sensor, read_vl53l0x
-from bno085_sensor import init_bno085, read_bno085_accel
-from ina3221_sensor import init_ina3221, read_ina3221
-from gpio_manager import init_gpio
+from bme280_sensor import BME280Sensor
+from vl53l0x_sensor import VL53L0XSensors
+from bno085_sensor import BNO085Sensor
+from ina3221_sensor import INA3221Sensor
+from gpio_manager import GPIOManager
 
 class SensorInterface:
     def __init__(self):
@@ -31,25 +31,26 @@ class SensorInterface:
         self.shutdown_pins = [22, 23]
         self.interrupt_pins = [6, 12]
         self.sensor_data = {}
-        self.shutdown_lines, self.interrupt_lines = init_gpio(self.shutdown_pins, self.interrupt_pins)
+        self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(self.shutdown_pins, self.interrupt_pins)
 
     def init_sensors(self):
-        self.bme280 = init_bme280(self.i2c)
-        self.bno085 = init_bno085(self.i2c)
-        self.ina3221 = init_ina3221(self.i2c)
-        self.init_vl53l0x_sensors()
-
-    def init_vl53l0x_sensors(self):
-        self.vl53l0x_left = init_vl53l0x(self.i2c, 0x30)
-        self.vl53l0x_right = init_vl53l0x(self.i2c, 0x31)
+        self.bme280 = BME280Sensor.init_bme280(self.bus)
+        self.bno085 = BNO085Sensor.init_bno085(self.i2c)
+        self.ina3221 = INA3221Sensor.init_ina3221(self.i2c)
+        # Initialize both VL53L0X sensors
+        self.left_vl53l0x, self.right_vl53l0x = VL53L0XSensors.init_vl53l0x_sensors(self.i2c, self.shutdown_lines)
 
     def update_sensors(self):
         while True:
             with self.sensor_data_lock:
-                self.sensor_data['bme280'] = read_bme280(self.bme280)
-                self.sensor_data['accel'] = read_bno085_accel(self.bno085)
-                self.sensor_data['solar'] = read_ina3221(self.ina3221, 1)
-                self.sensor_data['battery'] = read_ina3221(self.ina3221, 3)
-                self.sensor_data['left_distance'] = read_vl53l0x(self.vl53l0x_left)
-                self.sensor_data['right_distance'] = read_vl53l0x(self.vl53l0x_right)
+                self.sensor_data['bme280'] = BME280Sensor.read_bme280(self.bme280)
+                self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)
+                self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
+                self.sensor_data['magnetometer'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)
+                self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
+                self.sensor_data['solar'] = INA3221Sensor.read_ina3221(self.ina3221, 1)
+                self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 3)
+                self.sensor_data['battery soc'] = INA3221Sensor.battery_charge(self.ina3221)
+                self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.left_vl53l0x)
+                self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.right_vl53l0x)
             time.sleep(1.0)
