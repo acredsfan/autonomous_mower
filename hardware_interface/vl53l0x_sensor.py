@@ -50,14 +50,15 @@ class VL53L0XSensors:
         VL53L0XSensors.reset_sensor(shutdown_lines[1])  # Right sensor
         time.sleep(0.1)
 
-        # Initialize the left sensor first at the default address 0x29
-        left_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
-        if left_sensor:
-            # Reassign the left sensor to 0x30 to avoid conflict
-            left_sensor.set_address(0x30)
-            logging.info("Left VL53L0X sensor address updated to 0x30.")
-
-        # Initialize the right sensor at the default address 0x29
+        # Initialize the right sensor first at the default address 0x29
         right_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
+        if right_sensor:
+            # Reassign the right sensor to 0x30 to avoid conflict
+            right_sensor.set_address(0x30)
+            logging.info("Right VL53L0X sensor address updated to 0x30.")
+
+        # Reset and Initialize the left sensor at the default address 0x29
+        VL53L0XSensors.reset_sensor(shutdown_lines[0])
+        left_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
 
         return left_sensor, right_sensor
