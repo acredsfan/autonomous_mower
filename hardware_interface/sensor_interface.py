@@ -50,4 +50,6 @@ class SensorInterface:
                 self.sensor_data['accel'] = read_bno085_accel(self.bno085)
                 self.sensor_data['solar'] = read_ina3221(self.ina3221, 1)
                 self.sensor_data['battery'] = read_ina3221(self.ina3221, 3)
+                self.sensor_data['left_distance'] = read_vl53l0x(self.vl53l0x_left)
+                self.sensor_data['right_distance'] = read_vl53l0x(self.vl53l0x_right)
             time.sleep(1.0)

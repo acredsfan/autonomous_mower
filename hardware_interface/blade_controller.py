@@ -1,41 +1,16 @@
-import gpiod
-import time
-import os
 import logging
+import time
 import threading
+from gpio_manager import init_gpio
 
 # Initialize logging
 log_file_path = '/home/pi/autonomous_mower/main.log'
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-# Create handlers
-file_handler = logging.FileHandler(log_file_path)
-file_handler.setLevel(logging.DEBUG)
-
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
-
-# Create formatters and add them to handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-# Add handlers to the logger
-logger = logging.getLogger()
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
-
-# Print available GPIO chips
-logging.debug("Available GPIO chips: %s", os.listdir('/dev/'))
-
-# Define the GPIO chip and lines
-chip = gpiod.Chip('gpiochip0')
-IN1 = chip.get_line(24)
-IN2 = chip.get_line(25)
-
-# Configure the lines as outputs
-IN1.request(consumer='blade_controller', type=gpiod.LINE_REQ_DIR_OUT)
-IN2.request(consumer='blade_controller', type=gpiod.LINE_REQ_DIR_OUT)
+# Initialize GPIO lines using gpio_manager
+shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
+interrupt_pins = []  # No interrupt lines needed here
+shutdown_lines, _ = init_gpio(shutdown_pins, interrupt_pins)
 
 class PWM:
     def __init__(self, line, frequency):
@@ -76,8 +51,8 @@ class PWM:
 freq = 1000
 
 # Setup PWM
-pwm1 = PWM(IN1, freq)
-pwm2 = PWM(IN2, freq)
+pwm1 = PWM(shutdown_lines[0], freq)
+pwm2 = PWM(shutdown_lines[1], freq)
 
 # Start PWM with 0% duty cycle (off)
 pwm1.start(0)
@@ -86,50 +61,23 @@ pwm2.start(0)
 class BladeController:
     blades_on = False  # Class attribute to track blade state
 
-    # Function to set the motor speed
     @staticmethod
     def set_speed(speed):
         if speed > 0:
-            # Forward
             pwm1.ChangeDutyCycle(speed)
             pwm2.ChangeDutyCycle(0)
-            BladeController.blades_on = True  # Blades are on
+            BladeController.blades_on = True
         elif speed < 0:
-            # Reverse
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(-speed)
-            BladeController.blades_on = True  # Blades are on
+            BladeController.blades_on = True
         else:
-            # Stop
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(0)
-            BladeController.blades_on = False  # Blades are off
+            BladeController.blades_on = False
 
     @staticmethod
     def stop():
         pwm1.stop()
         pwm2.stop()
-        BladeController.blades_on = False  # Blades are off
-
-# # Try changing the speed
-# BladeController.set_speed(50)  # 50% speed forward
-# time.sleep(2)  # run for 2 seconds
-# BladeController.set_speed(75)
-# time.sleep(2)
-# BladeController.set_speed(100)
-# time.sleep(2)
-# BladeController.set_speed(75)
-# time.sleep(2)
-# BladeController.set_speed(50)
-# time.sleep(2)
-# BladeController.set_speed(10)
-# time.sleep(2)
-# BladeController.set_speed(0)  # stop
-# BladeController.set_speed(-50)  # 50% speed reverse
-# time.sleep(2)  # run for 2 seconds
-# BladeController.set_speed(-10)
-# time.sleep(2)
-# BladeController.set_speed(0)  # stop
-
-# # Cleanup
-# BladeController.stop()
+        BladeController.blades_on = False
