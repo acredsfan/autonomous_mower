@@ -32,6 +32,32 @@ class BNO085Sensor:
             logging.error("BNO085 sensor is not initialized or failed to initialize.")
             return False
         return True
+    
+    @staticmethod
+    def calibrate_sensor(sensor):
+        """Calibrate BNO085 sensor."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return {}
+        
+        try:
+            sensor.calibrate()
+            logging.info("BNO085 sensor calibrated successfully.")
+        except Exception as e:
+            logging.error(f"Error calibrating BNO085 sensor: {e}")
+            return
+        
+    @staticmethod
+    def reset_bno085(sensor):
+        """Reset BNO085 sensor."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return {}
+        
+        try:
+            sensor.soft_reset()
+            logging.info("BNO085 sensor reset successfully.")
+        except Exception as e:
+            logging.error(f"Error resetting BNO085 sensor: {e}")
+            return
 
     @staticmethod
     def read_bno085_accel(sensor):
