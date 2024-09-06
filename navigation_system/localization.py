@@ -8,8 +8,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
-from hardware_interface.sensor_interface import SensorInterface
-from hardware_interface import RoboHATController
+from hardware_interface import SensorInterface
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 
 # Configure logging
@@ -20,7 +19,6 @@ class Localization:
     def __init__(self, cfg):
         self.gps = GpsNmeaPositions()
         self.latest_position = GpsLatestPosition()
-        self.motor_controller = RoboHATController(cfg)
         self.position_reader = GpsNmeaPositions()
         self.position = None
         self.yard_boundary = polygon_coordinates  # Define your yard boundary coordinates here
@@ -56,7 +54,7 @@ class Localization:
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
         try:
-            compass_data = self.sensor_interface.read_mpu9250_compass()
+            compass_data = self.sensor_interface.update_sensors().get('compass')
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))
