@@ -1,3 +1,34 @@
+function fetchSensorData() {
+    fetch('/get_sensor_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            // Display data on the webpage if necessary
+            updateSensorDisplay(data);
+        })
+        .catch((error) => console.error('Error fetching sensor data:', error));
+}
+
+
+// Call the function at regular intervals, e.g., every 5 seconds
+setInterval(fetchSensorData, 5000);
+
+function updateSensorDisplay(data) {
+    document.getElementById('bme280').textContent = `BME280: ${data.bme280}`;
+    document.getElementById('accel').textContent = `Accelerometer: ${data.accel}`;
+    document.getElementById('compass').textContent = `Compass: ${data.compass}`;
+    document.getElementById('gyro').textContent = `Gyroscope: ${data.gyro}`;
+    document.getElementById('quaternion').textContent = `Quaternion: ${data.quaternion}`;
+    document.getElementById('speed').textContent = `Speed: ${data.speed}`;
+    document.getElementById('heading').textContent = `Heading: ${data.heading}`;
+    document.getElementById('pitch').textContent = `Pitch: ${data.pitch}`;
+    document.getElementById('solar').textContent = `Solar: ${data.solar}`;
+    document.getElementById('battery').textContent = `Battery: ${data.battery}`;
+    document.getElementById('battery_charge').textContent = `Battery Charge: ${data.battery_charge}`;
+    document.getElementById('left_distance').textContent = `Left Distance: ${data.left_distance}`;
+    document.getElementById('right_distance').textContent = `Right Distance: ${data.right_distance}`;
+}
+
 function move(direction) {
     fetch('/control', {
         method: 'POST',
