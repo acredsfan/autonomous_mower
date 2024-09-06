@@ -1,17 +1,48 @@
-# Code for the obstacle avoidance algorithm
-# Uses the data from the ToF sensors and the camera to calculate the best direction to move in
 
-# IMPORTS
+import sys
+import os
+
+# Add the project root to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import threading
 from obstacle_detection.tof_processing import ObstacleAvoidance as ToFAvoidance
 from obstacle_detection.camera_processing import CameraProcessor
-from hardware_interface import RoboHATController  # Updated import
+from hardware_interface import RoboHATController, SensorInterface
 import logging
 import numpy as np
-from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED
+from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED, MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
+import time
+from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 
 # Import GRID_SIZE from path_planning.py
-from navigation_system.path_planning import GRID_SIZE
+from navigation_system import path_planning
+
+# Initialize logging
+logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+
+class ObstacleAvoidance:
+    def __init__(self, camera=None):
+        self.camera = camera
+        self.obstacle_left = False
+        self.obstacle_right = False
+
+    def _update_obstacle_status(self):
+        """Update the obstacle status based on the VL53L0X sensor readings."""
+        left_distance = SensorInterface.read_vl53l0x_left()
+        right_distance = SensorInterface.read_vl53l0x_right()
+
+        self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
+        self.obstacle_right = right_distance < MIN_DISTANCE_THRESHOLD
+
+    def avoid_obstacles(self):
+        """Continuously check for obstacles and update their status."""
+        while True:
+            self._update_obstacle_status()
+            time.sleep(AVOIDANCE_DELAY)
+
+if __name__ == "__main__":
+    obstacle_avoidance = ObstacleAvoidance()
+    obstacle_avoidance.avoid_obstacles()
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')

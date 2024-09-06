@@ -1,9 +1,11 @@
-# Code for processing the data from the ToF sensors
-# Uses the VL53L0X library to get the distance to the nearest object
+import sys
+import os
 
-#IMPORTS
+# Add the project root to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import time
-from hardware_interface.sensor_interface import SensorInterface
+from hardware_interface import SensorInterface
 import logging
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 
