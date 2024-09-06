@@ -1,5 +1,5 @@
 from .blade_controller import BladeController
-from .robohat import RoboHATController, RoboHATDriver
+from .robohat import RoboHATController
 from .bme280_sensor import BME280Sensor
 from .vl53l0x_sensor import VL53L0XSensors
 from .bno085_sensor import BNO085Sensor
