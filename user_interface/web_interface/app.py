@@ -54,47 +54,11 @@ cfg = Config()
 # Initialize RoboHATDriver
 robohat_driver = RoboHATDriver(cfg, debug=True)
 
-# Define variables to hold sensor values
-battery_charge = {}
-solar_status = {}
-speed = {}
-heading = {}
-temperature = 0
-humidity = 0
-pressure = 0
-left_distance = {}
-right_distance = {}
-
 # Define a flag for stopping the sensor update thread
 stop_sensor_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
-
-def update_sensors():
-    global stop_sensor_thread, battery_charge, solar_status, speed, heading, temperature, humidity, pressure, left_distance, right_distance
-    sensors = SensorInterface()
-
-    while not stop_sensor_thread:
-        # Update sensor values
-        battery_charge = {"battery_voltage": sensors.sensor_data['battery']}
-        solar_status = {"Solar Panel Voltage": sensors.sensor_data['solar']}
-        lines = gps.run()  # Read NMEA lines from GPS
-        positions = position_reader.run(lines)  # Convert NMEA lines to positions
-        if positions:
-            ts, current_latitude, current_longitude = positions[-1]
-            speed = {"speed": 0}  # Replace with actual speed calculation if available
-            heading = {"heading": sensors.sensor_data['compass']}
-            bme280_data = sensors.sensor_data['bme280']
-            if bme280_data is not None:
-                temperature = bme280_data['temperature_f']
-                humidity = bme280_data['humidity']
-                pressure = bme280_data['pressure']
-            left_distance = {"left_distance": sensors.sensor_data['ToF_Left']}
-            right_distance = {"right_distance": sensors.sensor_data['ToF_Right']}
-        else:
-            logging.warning("GPS data is None.")
-        time.sleep(3)
 
 def gen(camera):
     while True:
@@ -112,6 +76,11 @@ def gen(camera):
 def index():
     next_scheduled_mow = calculate_next_scheduled_mow()
     return render_template('index.html', google_maps_api_key=google_maps_api_key, next_scheduled_mow=next_scheduled_mow)
+
+@app.route('get_sensor_data', methods=['GET'])
+def get_sensor_data():
+    sensor_data = SensorInterface.sensor_data
+    return jsonify(sensor_data)
 
 @app.route('/video_feed')
 def video_feed():

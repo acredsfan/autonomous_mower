@@ -7,6 +7,7 @@ from adafruit_bno08x import (
     BNO_REPORT_ROTATION_VECTOR,
 )
 import time
+import math
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor"""
@@ -110,3 +111,44 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error reading BNO085 quaternion: {e}")
             return {}
+    
+    @staticmethod
+    def calculate_speed(sensor):
+        """Calculate speed in feet per second based on accelerometer data."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return 0
+        
+        try:
+            accel_x, accel_y, accel_z = sensor.acceleration
+            return round((accel_x**2 + accel_y**2 + accel_z**2)**0.5, 2)
+        except Exception as e:
+            logging.error(f"Error calculating speed: {e}")
+            return 0
+        
+    @staticmethod
+    def calculate_heading(sensor):
+        """Calculate heading based on magnetometer data."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return 0
+        
+        try:
+            mag_x, mag_y, mag_z = sensor.magnetic
+            heading = 180 * math.atan2(mag_y, mag_x) / math.pi
+            return round(heading, 2)
+        except Exception as e:
+            logging.error(f"Error calculating heading: {e}")
+            return 0
+        
+    @staticmethod
+    def calculate_pitch(sensor):
+        """Calculate pitch based on accelerometer data."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return 0
+        
+        try:
+            accel_x, accel_y, accel_z = sensor.acceleration
+            pitch = math.atan2(accel_x, (accel_y**2 + accel_z**2)**0.5) * 180 / math.pi
+            return round(pitch, 2)
+        except Exception as e:
+            logging.error(f"Error calculating pitch: {e}")
+            return 0
