@@ -61,7 +61,7 @@ class CameraProcessor:
             label = self.process_results(detection_boxes, detection_classes, detection_scores)
             return label
         else:
-            logging.info("Surface not classified as grass, halting operation.")
+            logging.info("Surface not classified as grass, will not mow this area.")
             return None
 
     def process_results(self, detection_boxes, detection_classes, detection_scores):
@@ -74,6 +74,19 @@ class CameraProcessor:
                 label = f'Class {class_id}'  # Replace with actual label mapping
                 detected_objects.append({'label': label, 'box': box})
         return detected_objects
+    
+    def detect_obstacle(self):
+        """
+        Detect obstacles using the classify_obstacle method.
+        Returns True if an obstacle is detected, otherwise False.
+        """
+        results = self.classify_obstacle()
+        if results:
+            logging.info(f"Obstacle detected: {results}")
+            return True
+        else:
+            #logging.info("No obstacles detected.")
+            return False
 
 # Example usage
 if __name__ == "__main__":

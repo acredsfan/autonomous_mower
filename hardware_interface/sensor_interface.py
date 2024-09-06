@@ -16,6 +16,7 @@ from .vl53l0x_sensor import VL53L0XSensors
 from .bno085_sensor import BNO085Sensor
 from .ina3221_sensor import INA3221Sensor
 from .gpio_manager import GPIOManager
+import constants
 
 class SensorInterface:
     def __init__(self):
@@ -90,3 +91,12 @@ class SensorInterface:
                     logging.error("VL53L0X sensors not available for reading.")
 
             time.sleep(1.0)  # Delay between sensor updates
+        
+    
+    @staticmethod
+    def ideal_mowing_conditions():
+        #Check temperature is >0, and humidity is <85% on BME for ideal mowing conditions
+        if SensorInterface.read_bme280()['temperature'] > 0 and SensorInterface.read_bme280()['humidity'] < 85:
+            return True
+        else:
+            return False

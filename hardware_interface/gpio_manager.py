@@ -17,3 +17,12 @@ class GPIOManager:
             line.request(consumer='interrupt', type=gpiod.LINE_REQ_EV_FALLING_EDGE)
 
         return shutdown_lines, interrupt_lines
+    
+    def clean():
+        for line in shutdown_lines:
+            line.set_value(1)
+            line.release()
+        for line in interrupt_lines:
+            line.release()
+        chip.close()
+        logging.info("Cleaned up GPIOs")

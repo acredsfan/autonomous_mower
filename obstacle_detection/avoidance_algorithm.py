@@ -122,8 +122,8 @@ class AvoidanceAlgorithm:
             self.motor_controller.run(0.5, -MOTOR_SPEED)
 
     def get_current_state(self):
-        # Implement logic to get the current state based on the mower's position
-        # Placeholder example:
+        """Get the current state based on the robot's position."""
+        
         return (0, 0)
 
     def run_avoidance(self):

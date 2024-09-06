@@ -176,6 +176,24 @@ def stop():
     robohat_driver.run(0, 0)
     return jsonify({'status': 'stopped'})
 
+@app.route('/save-home-location', methods=['POST'])
+def save_home_location():
+    # Save the home location coordinates to a JSON file
+    home_location = request.get_json()
+    with open('home_location.json', 'w') as f:
+        json.dump(home_location, f)
+    return jsonify({'message': 'Home location saved.'})
+
+@app.route('/get-home-location', methods=['GET'])
+def get_home_location():
+    # Retrieve the home location from the JSON file
+    if os.path.exists('home_location.json'):
+        with open('home_location.json', 'r') as f:
+            home_location = json.load(f)
+        return jsonify(home_location)
+    else:
+        return jsonify({'message': 'No home location set yet.'})
+
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
     mow_days, mow_hours = get_schedule()

@@ -40,10 +40,11 @@ from pathfinding.finder.a_star import AStarFinder
 from shapely.geometry import Polygon, Point
 from shapely import wkt
 from navigation_system import Localization
-import json
+from dotenv import load_dotenv
 import logging
 import time
 from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
+import requests
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -51,6 +52,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 # Global variables
 user_polygon = None
 obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
+OPEN_WEATHER_MAP_API_KEY = os.getenv("OPEN_WEATHER_MAP_API")
 
 class PathPlanning:
     def __init__(self):
@@ -179,22 +181,6 @@ class PathPlanning:
 
         return path
 
-    # This function updates the obstacle map
-    def update_obstacle_map(self, new_obstacles):
-        for obstacle in new_obstacles:
-            # Add the obstacle to the map
-            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
-            minx, miny, maxx, maxy = obstacle_expanded.bounds
-            for x in range(int(minx), int(maxx) + 1):
-                for y in range(int(miny), int(maxy) + 1):
-                    point = Point(x, y)
-                    if obstacle_expanded.contains(point):
-                        self.obstacle_map[x, y] = 1
-        # Trigger a new path planning if the obstacle map has changed
-        if np.any(obstacle_map != self.obstacle_map):
-            self.plan_path(self.start, self.goal, new_obstacles)
-        self.obstacle_map = obstacle_map
-
     def reward_function(self, old_state, new_state, action):
         """
         This function calculates the reward for the given state transition.
@@ -313,6 +299,10 @@ class PathPlanning:
         grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
     
+    def find_sunny_location(self):
+        # Find a sunny location for the robot to charge by navigating to a spot defined by GPS coordinates
+        sunny_location = (37.7749, -122.4194)  # Example sunny location in San Francisco
+    
 
     
 
@@ -370,3 +360,83 @@ if __name__ == "__main__":
         goal = self.calculate_goal_position(next_section)
         
         return start, goal
+    
+    def get_weather_data(self, lat, lon):
+        """
+        Fetch current weather data from OpenWeatherMap API.
+        :param lat: Latitude of the location
+        :param lon: Longitude of the location
+        :return: Dictionary containing weather data
+        """
+        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+        try:
+            response = requests.get(url)
+            weather_data = response.json()
+            logging.info(f"Weather data: {weather_data}")
+            return weather_data
+        except Exception as e:
+            logging.error(f"Error fetching weather data: {e}")
+            return {}
+
+    def is_sunny(self, weather_data):
+        """
+        Determine if the current weather conditions are sunny.
+        :param weather_data: Weather data dictionary from OpenWeatherMap
+        :return: True if sunny, False otherwise
+        """
+        try:
+            cloud_coverage = weather_data.get("clouds", {}).get("all", 100)  # Cloud coverage percentage
+            logging.info(f"Cloud coverage: {cloud_coverage}%")
+            return cloud_coverage < 20  # Consider it sunny if cloud coverage is less than 20%
+        except Exception as e:
+            logging.error(f"Error determining sun conditions: {e}")
+            return False
+
+    def find_sunny_location(self, current_location, search_radius=10):
+        """
+        Finds a sunny location within a given radius using weather data and GPS coordinates.
+        :param current_location: Current GPS coordinates of the robot
+        :param search_radius: Radius around the current location to search for sunny spots
+        :return: Best location (lat, lng) with the highest likelihood of sunlight
+        """
+        best_location = current_location
+        lat, lng = current_location
+
+        # Fetch weather data for the current location
+        weather_data = self.get_weather_data(lat, lng)
+
+        # Check if current weather conditions are ideal for sun exposure
+        if self.is_sunny(weather_data):
+            logging.info("Current location is sunny, using current location for charging.")
+            return best_location
+
+        # Generate search grid to find the best nearby sunny location
+        search_grid = self.generate_search_grid(lat, lng, search_radius)
+
+        for location in search_grid:
+            weather_data = self.get_weather_data(location[0], location[1])
+            if self.is_sunny(weather_data):
+                logging.info(f"Found sunny location: {location}")
+                return location
+
+        logging.info("No ideal sunny location found within the search radius. Defaulting to current location.")
+        return best_location
+
+    def generate_search_grid(self, lat, lng, radius):
+        """
+        Generate a grid of points around the current location within the given radius.
+        :param lat: Current latitude
+        :param lng: Current longitude
+        :param radius: Search radius in meters
+        :return: List of (lat, lng) points to search
+        """
+        step_size = radius / self.grid_size[0]  # Define step size based on the grid size and radius
+        search_points = []
+
+        for i in range(-self.grid_size[0] // 2, self.grid_size[0] // 2):
+            for j in range(-self.grid_size[1] // 2, self.grid_size[1] // 2):
+                new_lat = lat + (i * step_size) * 0.00001  # Adjust these multipliers based on scale and lat/lng
+                new_lng = lng + (j * step_size) * 0.00001
+                search_points.append((new_lat, new_lng))
+
+        return search_points

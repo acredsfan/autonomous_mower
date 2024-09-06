@@ -1,123 +1,137 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Mowing Area</h1>
-    <div id="map"></div>
-    <button id="confirm-button">Confirm Area</button>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        let areaCoordinates = [];
-        let map;
-        let marker;
+<h1>Mowing Area and Home Location</h1>
+<div id="map"></div>
+<button id="confirm-area-button">Confirm Area</button>
+<button id="confirm-home-button">Set Home Location</button>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let areaCoordinates = [];
+    let homeLocation = null;
+    let map;
+    let areaPolygon = null;
+    let homeMarker = null;
 
-        function initMap() {
-            const defaultCoordinates = {lat: 39.03856, lng: -84.21473};
-            map = new google.maps.Map(document.getElementById('map'), {  // Use the global map variable
-                zoom: 28,  // Adjust this value as needed
-                center: defaultCoordinates,
-                tilt: 0,
-                mapTypeId: google.maps.MapTypeId.HYBRID,  // Use satellite view
-                disableDefaultUI: true,
-                center: defaultCoordinates
-            });
+    function initMap() {
+        const defaultCoordinates = {lat: 39.03856, lng: -84.21473};
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 28,
+            center: defaultCoordinates,
+            mapTypeId: google.maps.MapTypeId.HYBRID,
+            disableDefaultUI: true,
+        });
 
-            marker = new google.maps.Marker({
-                position: defaultCoordinates,
-                map: map,
-                title: 'Robot location'
-            });
-
-            const drawingManager = new google.maps.drawing.DrawingManager({
+        const drawingManager = new google.maps.drawing.DrawingManager({
             drawingMode: google.maps.drawing.OverlayType.POLYGON,
             drawingControl: true,
             drawingControlOptions: {
                 position: google.maps.ControlPosition.TOP_CENTER,
-                drawingModes: [
-                google.maps.drawing.OverlayType.POLYGON
-                ]
+                drawingModes: [google.maps.drawing.OverlayType.POLYGON]
             }
-            });
-            drawingManager.setMap(map);
-            
-            google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
-                const polygon = event.overlay;
-                areaCoordinates = polygon.getPath().getArray().map(coord => ({
-                    lat: coord.lat(),
-                    lng: coord.lng()
-                }));
-                document.getElementById('confirm-button').disabled = false;
-            });
-
-            // Fetch the polygon data and create a polygon
-            fetch('/get-mowing-area')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        const polygon = new google.maps.Polygon({
-                            paths: data,
-                            editable: true
-                        });
-                        polygon.setMap(map);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-        function saveMowingArea() {
-            fetch('/save-mowing-area', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(areaCoordinates)
-            })
-               .then(response => response.json())
-               .then(data => {
-                    if (data.status ==='success') {
-                        alert('Mowing area saved successfully');
-                    } else {
-                        alert('Error saving mowing area');
-                    }
-                })
-               .catch(error => console.error('Error:', error));
-            }
-
-        function confirm_button() {
-            document.getElementById('confirm-button').disabled = true;
-            saveMowingArea(areaCoordinates);
-        }
-    
-        function loadScript() {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
-            script.defer = true;
-            document.head.appendChild(script);
-        }
-        
-        function updateMap() {
-            fetch('/api/gps')
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.error) {
-                        var myLatLng = new google.maps.LatLng(data.latitude, data.longitude);
-                        marker.setPosition(myLatLng);
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-        // Call updateMap every 5 seconds
-        setInterval(updateMap, 5000);
-
-        window.addEventListener('load', function() {
-            loadScript();
-            document.getElementById('confirm-button').addEventListener('click', confirm_button);
         });
-    </script>
-    <style>
-        #map {
-            width: 100%;
-            height: 600px;
+        drawingManager.setMap(map);
+
+        google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+            const polygon = event.overlay;
+            areaCoordinates = polygon.getPath().getArray().map(coord => ({
+                lat: coord.lat(),
+                lng: coord.lng()
+            }));
+            document.getElementById('confirm-area-button').disabled = false;
+        });
+
+        google.maps.event.addListener(map, 'click', function(event) {
+            // Allow users to place a marker for the home location
+            if (homeMarker) {
+                homeMarker.setMap(null);
+            }
+            homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+            homeMarker = new google.maps.Marker({
+                position: homeLocation,
+                map: map,
+                title: 'Home Location'
+            });
+            document.getElementById('confirm-home-button').disabled = false;
+        });
+
+        // Fetch the saved mowing area and home location, if available
+        loadSavedData();
+    }
+
+    function saveMowingArea() {
+        fetch('/save-mowing-area', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(areaCoordinates)
+        })
+        .then(response => response.json())
+        .then(data => alert('Mowing area saved successfully.'))
+        .catch(error => console.error('Error:', error));
+    }
+
+    function saveHomeLocation() {
+        if (!homeLocation) {
+            alert('Please select a home location.');
+            return;
         }
-    </style>
+        fetch('/save-home-location', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(homeLocation)
+        })
+        .then(response => response.json())
+        .then(data => alert('Home location saved successfully.'))
+        .catch(error => console.error('Error:', error));
+    }
+
+    function loadSavedData() {
+        fetch('/get-mowing-area')
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    areaPolygon = new google.maps.Polygon({
+                        paths: data,
+                        editable: true
+                    });
+                    areaPolygon.setMap(map);
+                }
+            })
+            .catch(error => console.error('Error loading mowing area:', error));
+
+        fetch('/get-home-location')
+            .then(response => response.json())
+            .then(data => {
+                if (data.lat && data.lng) {
+                    homeLocation = { lat: data.lat, lng: data.lng };
+                    homeMarker = new google.maps.Marker({
+                        position: homeLocation,
+                        map: map,
+                        title: 'Home Location'
+                    });
+                }
+            })
+            .catch(error => console.error('Error loading home location:', error));
+    }
+
+    window.addEventListener('load', function() {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing`;
+        script.defer = true;
+        document.head.appendChild(script);
+        document.getElementById('confirm-area-button').addEventListener('click', saveMowingArea);
+        document.getElementById('confirm-home-button').addEventListener('click', saveHomeLocation);
+    });
+</script>
+
+<style>
+    #map {
+        width: 100%;
+        height: 600px;
+    }
+</style>
 {% endblock %}

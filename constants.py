@@ -19,10 +19,10 @@ DECELERATION_RATE = 3  # Decrease in motor speed per loop iteration
 TIME_INTERVAL = 0.1 # Time interval between loop iterations
 
 # For control_system/trajectory_controller.py
-MIN_DISTANCE_TO_OBSTACLE = 30  # in centimeters
+MIN_DISTANCE_TO_OBSTACLE = 3  # in centimeters
 TURN_ANGLE = 45  # in degrees
 SPEED = 50  # as a percentage of the maximum motor speed
-WAYPOINT_REACHED_THRESHOLD = 30  # in centimeters
+WAYPOINT_REACHED_THRESHOLD = 3  # in centimeters
 
 # For navigation_system/localization.py
 EARTH_RADIUS = 6371e3  # Earth's radius in meters
@@ -37,7 +37,7 @@ CAMERA_OBSTACLE_THRESHOLD = config['CAMERA_OBSTACLE_THRESHOLD'] # Minimum area t
 MOTOR_SPEED = 70
 
 # For obstacle_detection/tof_processing.py
-MIN_DISTANCE_THRESHOLD = 150  # Minimum distance to consider an obstacle in millimeters
+MIN_DISTANCE_THRESHOLD = 30  # Minimum distance to consider an obstacle in millimeters
 AVOIDANCE_DELAY = 0.5  # Time to wait between avoidance checks in seconds
 
 # For user_interface (if you add more modules here)
