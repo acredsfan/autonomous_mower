@@ -5,7 +5,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from hardware_interface import BladeController, RoboHATDriver, SensorInterface
+from hardware_interface import BladeController, SensorInterface
 import subprocess
 import os
 import threading
