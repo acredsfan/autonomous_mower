@@ -8,7 +8,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
-from hardware_interface import SensorInterface
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 
 # Configure logging
@@ -26,7 +25,6 @@ class Localization:
         self.current_longitude = 0
         self.current_altitude = 0
         self.current_heading = 0
-        self.sensor_interface = SensorInterface()
         self.min_lat = min_lat
         self.max_lat = max_lat
         self.min_lng = min_lng
@@ -53,8 +51,9 @@ class Localization:
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
+        from hardware_interface import SensorInterface
         try:
-            compass_data = self.sensor_interface.update_sensors().get('compass')
+            compass_data = SensorInterface.update_sensors().get('compass')
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))
