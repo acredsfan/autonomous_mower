@@ -8,7 +8,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from hardware_interface import BladeController, RoboHATDriver, SensorInterface
 import subprocess
 import os
-from obstacle_detection import CameraProcessor, ObstacleAvoidance
 import threading
 from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition  # Updated import
 import datetime
