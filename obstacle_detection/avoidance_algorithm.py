@@ -5,7 +5,6 @@ import os
 # Add the project root to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import threading
-from obstacle_detection.tof_processing import ObstacleAvoidance as ToFAvoidance
 from obstacle_detection.camera_processing import CameraProcessor
 from hardware_interface import RoboHATController, SensorInterface
 import logging
@@ -50,10 +49,10 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 class AvoidanceAlgorithm:
     def __init__(self, cfg):
         self.camera = CameraProcessor()
-        self.tof_avoidance = ToFAvoidance()
+        self.tof_avoidance = ObstacleAvoidance()
         self.motor_controller = RoboHATController(cfg)  # Updated to use RoboHATController
         self.obstacle_detected = False
-        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # Grid defined in path_planning, 4 directions
+        self.q_table = np.zeros((path_planning.GRID_SIZE[0], path_planning.GRID_SIZE[1], 4))  # Grid defined in path_planning, 4 directions
         self.last_action = None
         self.memory = {}
 

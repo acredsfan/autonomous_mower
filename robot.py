@@ -40,6 +40,37 @@ def initialize_resources(cfg):
 # Lock for shared resources
 lock = Lock()
 
+# Function to verify the polygon points by traveling to each one
+def verify_polygon_points():
+    try:
+        # Load the mowing area polygon coordinates from the saved JSON file
+        with open('user_polygon.json', 'r') as f:
+            polygon_points = json.load(f)
+
+        # Check if polygon points are available
+        if not polygon_points:
+            logging.error("No polygon points found. Please set the mowing area in the web interface.")
+            return
+
+        logging.info("Starting polygon verification...")
+        for index, point in enumerate(polygon_points):
+            logging.info(f"Navigating to point {index + 1}: {point}")
+            # Navigate to each point using the robot's motor controller
+            motor_controller.navigate_to_location((point['lat'], point['lng']))
+
+            # Optionally wait for confirmation or a set time at each point
+            time.sleep(5)  # Adjust the sleep time as needed for verification
+
+            # Log the robot's current position for verification
+            current_position = GpsLatestPosition.get_latest_position()
+            logging.info(f"Arrived at point {index + 1}, current GPS position: {current_position}")
+
+        logging.info("Polygon verification complete.")
+    except FileNotFoundError:
+        logging.error("Mowing area not set. Please define the area in the web interface.")
+    except Exception as e:
+        logging.exception("Error in verify_polygon_points")
+
 # Function to check mowing conditions
 def check_mowing_conditions():
     try:
@@ -170,17 +201,24 @@ if __name__ == "__main__":
         start_web_interface()
 
         while True:
+            # Add a condition to trigger the verification of the polygon points
+            # This can be modified to suit how you'd like to trigger it
+            user_input = input("Enter 'verify' to test polygon points, or press Enter to continue normal operation: ")
+            if user_input.lower() == 'verify':
+                verify_polygon_points()
+                continue
+
             # Continuously check mowing conditions
             if not check_mowing_conditions():
                 logging.info("Mowing conditions are no longer ideal. Stopping operation.")
                 stop_mowing()
                 continue  # Skip further checks and re-check conditions in the next loop
-            
+
             # Detect obstacles and update the obstacle map
             detected_obstacles = avoidance_algo.detect_and_update_obstacles()
             if detected_obstacles:
                 path_planner.update_obstacle_map(detected_obstacles)
-            
+
             # Check scheduled mowing time and start mowing if appropriate
             if check_scheduled_mowing_time():
                 start_mowing()
