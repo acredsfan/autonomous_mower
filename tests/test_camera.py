@@ -1,8 +1,7 @@
 import cv2
 
-# Try different indices
 for i in range(0, 10):
-    cap = cv2.VideoCapture(i)
+    cap = cv2.VideoCapture(i, cv2.CAP_V4L2)  # Use Video4Linux2 backend explicitly
     if cap.read()[0]:
         print(f'Camera detected at index {i}')
         ret, frame = cap.read()
