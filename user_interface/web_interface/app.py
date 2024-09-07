@@ -13,9 +13,10 @@ import datetime
 import logging
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
-import cv2
 import base64
 from flask_cors import CORS
+from io import BytesIO
+from PIL import Image
 
 from hardware_interface.camera import get_camera_instance
 
@@ -64,13 +65,18 @@ def gen():
     while True:
         frame = camera.get_frame()
         if frame is not None:
-            success, buffer = cv2.imencode('.jpg', frame)
-            if success:
-                frame = buffer.tobytes()
+            try:
+                # Convert frame (numpy array) to an image using Pillow
+                image = Image.fromarray(frame)
+                buffer = BytesIO()
+                image.save(buffer, format="JPEG")
+                frame = buffer.getvalue()
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+            except Exception as e:
+                logging.error(f"Error encoding frame for streaming: {e}")
         else:
-            print("Failed to get the frame from the camera.")
+            logging.error("Failed to get the frame from the camera.")
 
 @app.route('/')
 def index():
@@ -91,14 +97,17 @@ def handle_frame_request():
     camera = get_camera_instance()  # Retrieve SingletonCamera using the accessor function
     frame = camera.get_frame()
     if frame is not None:
-        success, buffer = cv2.imencode('.jpg', frame)
-        if success:
-            frame_data = base64.b64encode(buffer).decode('utf-8')
+        try:
+            # Convert the frame to an image and then to a base64-encoded string
+            image = Image.fromarray(frame)
+            buffer = BytesIO()
+            image.save(buffer, format="JPEG")
+            frame_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
             emit('update_frame', {'frame': frame_data})
-        else:
-            print("Failed to encode the frame as JPEG.")
+        except Exception as e:
+            logging.error(f"Error encoding frame for WebSocket transmission: {e}")
     else:
-        print("Failed to get the frame from the camera.")
+        logging.error("Failed to get the frame from the camera.")
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
