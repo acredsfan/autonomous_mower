@@ -6,32 +6,32 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from hardware_interface import BladeController, SensorInterface, RoboHATController
-import subprocess
 import os
 import threading
 from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition  # Updated import
 import datetime
 import logging
-import dotenv
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
-from user_interface.web_interface import SingletonCamera
-import time
 import cv2
+
+from user_interface.web_interface import get_singleton_camera
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
-camera = SingletonCamera()
-print(f"SingletonCamera instance in app.py: {camera}")
 
+#Initialize Flask and SocketIO
 app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', engineio_logger=True, ping_timeout=30)
 CORS(app)
 
+#Load environment variables
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+
+#Initialize other components
 position_reader = GpsLatestPosition  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
@@ -57,7 +57,8 @@ stop_sensor_thread = False
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
-def gen(camera):
+def gen():
+    camera = get_singleton_camera()
     while True:
         frame = camera.get_frame()
         if frame is not None:
@@ -81,8 +82,7 @@ def get_sensor_data():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(camera),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
@@ -157,9 +157,16 @@ def get_schedule():
 
 @socketio.on('request_frame')
 def handle_frame_request():
+    # Use the accessor function to get the camera instance
+    camera = get_singleton_camera()  # Retrieve the SingletonCamera instance when the function is called
     print(f"Using SingletonCamera instance in handle_frame_request: {camera}")
+
+    # Get the current frame from the camera
     frame = camera.get_frame()
-    emit('update_frame', {'frame': frame})
+    if frame is not None:
+        emit('update_frame', {'frame': frame})
+    else:
+        print("Failed to get the frame from the camera.")
 
 @app.route('/control', methods=['POST'])
 def control():
