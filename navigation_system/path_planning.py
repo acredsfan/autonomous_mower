@@ -1,31 +1,3 @@
-"""
-Path planning module.
-
-This module handles path planning for the autonomous mower. It divides the yard into a grid and uses A* search algorithm to find optimal path between points avoiding obstacles.
-
-Attributes:
-    localization (Localization): Localization instance to get current position
-    obstacle_map (np.ndarray): Occupancy grid map of yard with obstacles
-    obstacles (set): Set of obstacle geometries  
-    sections (list): List of yard sections 
-    min_lat (float): Minimum latitude of yard  
-    max_lat (float): Maximum latitude of yard
-    min_lng (float): Minimum longitude of yard
-    max_lng (float): Maximum longitude of yard
-    q_table (np.ndarray): Q-table for Q-learning algorithm
-    last_action (int): Last action taken  
-
-Class PathPlanning:
-    Path planning class
-    
-    Methods:
-        __init__(): Class constructor
-        set_min_max_coordinates(): Set min/max lat/lng of yard
-        set_user_polygon(): Set user defined yard polygon
-        divide_yard_into_sections(): Divide yard into sections
-        select_next_section(): Select next section to move to
-        update_obstacle_map(): Update occupancy grid map with obstacles
-"""
 import sys
 import os
 
@@ -299,68 +271,6 @@ class PathPlanning:
         grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
     
-    def find_sunny_location(self):
-        # Find a sunny location for the robot to charge by navigating to a spot defined by GPS coordinates
-        sunny_location = (37.7749, -122.4194)  # Example sunny location in San Francisco
-    
-
-    
-
-# Example usage
-if __name__ == "__main__":
-    path_planner = PathPlanning()  # Pass start and goal to the constructor
-
-    # Set user polygon
-    path_planner.set_user_polygon([(0, 0), (0, 99), (99, 99), (99, 0)])
-
-    # Test path planning
-    start = (10, 10)
-    goal = (90, 90)
-    obstacles = [Polygon([(30, 30), (30, 60), (60, 60), (60, 30)])]
-
-    path = path_planner.plan_path(start, goal, obstacles)
-    print(path)
-
-    def divide_yard_into_sections(self):
-        sections = []
-        for i in range(0, GRID_SIZE[0], SECTION_SIZE[0]):
-            for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
-                section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
-                sections.append(section)
-        return sections
-
-    def select_next_section(self, current_position, sections):
-        # Example logic to select the next section based on proximity to current position
-        # You can replace this with your specific logic
-        closest_section = min(sections, key=lambda section: abs(current_position[0] - section[0]) + abs(current_position[1] - section[1]))
-        return closest_section
-
-    def estimate_position(self):
-        # Get location of mower from Locatlization class
-        lat, lng, alt = self.localization.estimate_position()
-        # Convert lat, lng, alt to Grid Cell location
-        grid_cell = self.coord_to_grid(lat, lng)
-        return grid_cell
-    
-    def calculate_goal_position(self, next_section):
-        # Determine the boundaries of teh selected section
-        section_size = (next_section[2] - next_section[0], next_section[3] - next_section[1])
-        
-        # Calculate the goal position within the selected section
-        goal_position = (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
-        
-        return goal_position
-
-    def get_start_and_goal(self):
-        current_position = self.estimate_position()
-        sections = self.divide_yard_into_sections()
-        next_section = self.select_next_section(current_position, sections)
-        
-        start = current_position
-        goal = self.calculate_goal_position(next_section)
-        
-        return start, goal
-    
     def get_weather_data(self, lat, lon):
         """
         Fetch current weather data from OpenWeatherMap API.
@@ -440,3 +350,10 @@ if __name__ == "__main__":
                 search_points.append((new_lat, new_lng))
 
         return search_points
+    
+
+    
+
+# Example usage
+
+    
