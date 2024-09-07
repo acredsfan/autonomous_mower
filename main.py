@@ -8,7 +8,7 @@ import logging
 from navigation_system import Localization, path_planning
 from obstacle_detection import ObstacleAvoidance
 from user_interface.web_interface.app import start_web_interface, get_schedule
-from user_interface.web_interface.camera import SingletonCamera
+from hardware_interface.camera import SingletonCamera
 from multiprocessing import Process
 import time
 import datetime

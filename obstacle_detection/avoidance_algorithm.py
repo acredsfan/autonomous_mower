@@ -47,7 +47,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 
 class AvoidanceAlgorithm:
     def __init__(self, cfg):
-        from obstacle_detection.camera_processing import CameraProcessor
+        from hardware_interface import CameraProcessor
         from hardware_interface import RoboHATController
         self.camera = CameraProcessor()
         self.tof_avoidance = ObstacleAvoidance()

@@ -6,6 +6,7 @@ from .bno085_sensor import BNO085Sensor
 from .ina3221_sensor import INA3221Sensor
 from .gpio_manager import GPIOManager
 from .sensor_interface import SensorInterface
+from .camera import SingletonCamera, CameraProcessor
 
 __all__ = [
     'BladeController',
@@ -16,5 +17,7 @@ __all__ = [
     'BNO085Sensor',
     'INA3221Sensor',
     'GPIOManager',
-    'SensorInterface'
+    'SensorInterface',
+    'SingletonCamera',
+    'CameraProcessor'
 ]

@@ -9,6 +9,8 @@ import pynmea2
 import serial
 import utm
 from dotenv import load_dotenv
+from functools import reduce
+import operator
 
 from donkeycar.parts.serial_port import SerialPort
 from donkeycar.parts.text_writer import CsvLogger

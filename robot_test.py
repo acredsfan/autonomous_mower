@@ -25,7 +25,7 @@ shared_resource = []
 
 # Function to initialize all resources
 def initialize_resources(cfg):
-    from user_interface.web_interface.camera import SingletonCamera
+    from hardware_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner, avoidance_algo, localization, motor_controller
     sensor_interface = SensorInterface()
     camera = SingletonCamera()

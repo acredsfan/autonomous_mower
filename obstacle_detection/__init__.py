@@ -3,9 +3,7 @@
 
 #IMPORTS
 from .avoidance_algorithm import AvoidanceAlgorithm
-from .camera_processing import CameraProcessor
 
 __all__ = [
-    'AvoidanceAlgorithm',
-    'CameraProcessor',
+    'AvoidanceAlgorithm'
 ]
