@@ -1,21 +1,16 @@
-
 import sys
 import os
-
-# Add the project root to the system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import threading
 import logging
 import numpy as np
 from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED, MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 import time
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
-
-# Import GRID_SIZE from path_planning.py
-from navigation_system import path_planning
+from navigation_system import path_planning  # Import GRID_SIZE from path_planning.py
 
 # Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+logging.basicConfig(filename='main.log', level=logging.DEBUG, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class ObstacleAvoidance:
     def __init__(self, camera=None):
@@ -38,22 +33,17 @@ class ObstacleAvoidance:
             self._update_obstacle_status()
             time.sleep(AVOIDANCE_DELAY)
 
-if __name__ == "__main__":
-    obstacle_avoidance = ObstacleAvoidance()
-    obstacle_avoidance.avoid_obstacles()
-
-# Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-
 class AvoidanceAlgorithm:
     def __init__(self, cfg):
         from hardware_interface import CameraProcessor
         from hardware_interface import RoboHATController
+
         self.camera = CameraProcessor()
         self.tof_avoidance = ObstacleAvoidance()
-        self.motor_controller = RoboHATController(cfg)  # Updated to use RoboHATController
+        self.motor_controller = RoboHATController(cfg)
         self.obstacle_detected = False
-        self.q_table = np.zeros((path_planning.GRID_SIZE[0], path_planning.GRID_SIZE[1], 4))  # Grid defined in path_planning, 4 directions
+        self.dropoff_detected = False
+        self.q_table = np.zeros((path_planning.GRID_SIZE[0], path_planning.GRID_SIZE[1], 4))  # 4 directions
         self.last_action = None
         self.memory = {}
 
@@ -78,7 +68,6 @@ class AvoidanceAlgorithm:
     def get_next_action(self, current_state):
         # Check memory to avoid actions that led to negative outcomes
         if current_state in self.memory:
-            # Choose an action other than the one in memory
             possible_actions = [0, 1, 2, 3]  # Assuming 4 actions: up, down, left, right
             possible_actions.remove(self.memory[current_state])
             return np.argmax(self.q_table[current_state[0], current_state[1], possible_actions])
@@ -89,22 +78,29 @@ class AvoidanceAlgorithm:
         """Run the Time of Flight obstacle avoidance in a separate thread."""
         self.tof_avoidance.avoid_obstacles()
 
-    def check_camera_obstacles(self):
-        """Check for obstacles using the camera and update the obstacle_detected attribute."""
-        obstacles = self.camera.process_frame()
+    def check_camera_obstacles_and_dropoffs(self):
+        """Check for obstacles and drop-offs using the camera and update the obstacle_detected attribute."""
+        obstacles = self.camera.classify_obstacle()
+        dropoff_detected = self.camera.detect_dropoff()
 
-        for obstacle in obstacles:
+        if dropoff_detected:
+            self.dropoff_detected = True
+            logging.info("Drop-off detected! Avoiding this area.")
+            return
+
+        for obstacle in obstacles or []:
             _, _, w, h = obstacle['box']
             if w * h > CAMERA_OBSTACLE_THRESHOLD:
                 self.obstacle_detected = True
+                logging.info("Obstacle detected! Avoiding this area.")
                 return
 
         self.obstacle_detected = False
+        self.dropoff_detected = False
 
     def handle_avoidance(self):
-        """Handle the obstacle avoidance logic."""
-        logging.info("Obstacle detected, handling avoidance...")
-        # Example logic: stop, then decide new direction based on Q-learning
+        """Handle the obstacle and drop-off avoidance logic."""
+        logging.info("Handling avoidance...")
         self.motor_controller.run(0, 0)  # Stop the mower
 
         current_state = self.get_current_state()
@@ -123,20 +119,19 @@ class AvoidanceAlgorithm:
 
     def get_current_state(self):
         """Get the current state based on the robot's position."""
-        
+        # Replace this with actual logic to get the robot's position on the grid
         return (0, 0)
 
     def run_avoidance(self):
         """Continuously run the avoidance algorithm using data from ToF sensors and the camera."""
-        # Start the ToF avoidance thread
         tof_thread = threading.Thread(target=self._tof_avoidance_thread)
         tof_thread.start()
 
         try:
             while True:
-                self.check_camera_obstacles()
+                self.check_camera_obstacles_and_dropoffs()
 
-                if self.tof_avoidance.obstacle_detected or self.obstacle_detected:
+                if self.tof_avoidance.obstacle_left or self.tof_avoidance.obstacle_right or self.obstacle_detected or self.dropoff_detected:
                     self.handle_avoidance()
 
         except KeyboardInterrupt:
