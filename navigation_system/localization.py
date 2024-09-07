@@ -5,22 +5,25 @@ import logging
 import sys
 import os
 
+# Add the parent directory to the system path for importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Import necessary modules and constants
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 
-# Configure logging
+# Configure logging settings
 logging.basicConfig(filename='main.log', level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class Localization:
-    def __init__(self, cfg):
+    def __init__(self):
+        # Initialize GPS-related objects and set default values for position and boundaries
         self.gps = GpsNmeaPositions()
         self.latest_position = GpsLatestPosition()
         self.position_reader = GpsNmeaPositions()
         self.position = None
-        self.yard_boundary = polygon_coordinates  # Define your yard boundary coordinates here
+        self.yard_boundary = polygon_coordinates  # Define the yard boundary coordinates
         self.current_latitude = 0
         self.current_longitude = 0
         self.current_altitude = 0
@@ -75,22 +78,14 @@ class Localization:
         """Check if the current position is within the yard boundary."""
         return self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng
 
+# Run the Localization update loop if executed as the main script
 if __name__ == '__main__':
-    class Config:
-        MM1_SERIAL_PORT = '/dev/ttyUSB0'
-        MM1_MAX_FORWARD = 2000
-        MM1_MAX_REVERSE = 1000
-        MM1_STOPPED_PWM = 1500
-        MM1_STEERING_MID = 1500
-        AUTO_RECORD_ON_THROTTLE = True
-        JOYSTICK_DEADZONE = 0.1
-
-    cfg = Config()
-    localization = Localization(cfg)
+    localization = Localization()
     try:
         while True:
             localization.update()
-            print(f"Latitude: {localization.current_latitude}, Longitude: {localization.current_longitude}, Altitude: {localization.current_altitude}, Heading: {localization.current_heading}")
+            print(f"Latitude: {localization.current_latitude}, Longitude: {localization.current_longitude}, "
+                  f"Altitude: {localization.current_altitude}, Heading: {localization.current_heading}")
             time.sleep(1)
     except KeyboardInterrupt:
         print("Program terminated by user.")
