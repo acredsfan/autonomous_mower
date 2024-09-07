@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
-from user_interface.web_interface.camera import SingletonCamera
+
 import logging
 
 # Initialize logging
@@ -9,6 +9,7 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 
 class CameraProcessor:
     def __init__(self):
+        from user_interface.web_interface.camera import SingletonCamera
         self.camera = SingletonCamera()
         # Initialize the TFLite interpreter for obstacle detection
         self.obstacle_interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")

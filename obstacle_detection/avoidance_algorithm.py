@@ -5,8 +5,6 @@ import os
 # Add the project root to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import threading
-from obstacle_detection.camera_processing import CameraProcessor
-from hardware_interface import RoboHATController, SensorInterface
 import logging
 import numpy as np
 from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED, MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
@@ -26,6 +24,7 @@ class ObstacleAvoidance:
         self.obstacle_right = False
 
     def _update_obstacle_status(self):
+        from hardware_interface import SensorInterface
         """Update the obstacle status based on the VL53L0X sensor readings."""
         left_distance = SensorInterface.read_vl53l0x_left()
         right_distance = SensorInterface.read_vl53l0x_right()
@@ -48,6 +47,8 @@ logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)
 
 class AvoidanceAlgorithm:
     def __init__(self, cfg):
+        from obstacle_detection.camera_processing import CameraProcessor
+        from hardware_interface import RoboHATController
         self.camera = CameraProcessor()
         self.tof_avoidance = ObstacleAvoidance()
         self.motor_controller = RoboHATController(cfg)  # Updated to use RoboHATController

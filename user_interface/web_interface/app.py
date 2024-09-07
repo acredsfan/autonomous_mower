@@ -5,7 +5,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from hardware_interface import BladeController, SensorInterface
+from hardware_interface import BladeController, SensorInterface, RoboHATController
 import subprocess
 import os
 import threading
@@ -32,9 +32,7 @@ CORS(app)
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-
-gps = GPS(port='/dev/ttyUSB0', baudrate=9600)  # Initialize GPS with USB port
-position_reader = GpsNmeaPositions(debug=False)  # Initialize position reader
+position_reader = GpsLatestPosition  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
 
@@ -51,7 +49,7 @@ class Config:
 cfg = Config()
 
 # Initialize RoboHATDriver
-robohat_driver = RoboHATDriver(cfg, debug=True)
+robohat_driver = RoboHATController(cfg, debug=True)
 
 # Define a flag for stopping the sensor update thread
 stop_sensor_thread = False
@@ -125,10 +123,10 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    lines = gps.run()  # Read NMEA lines from GPS
+    lines = GpsNmeaPositions  # Read NMEA lines from GPS
     positions = position_reader.run(lines)  # Convert NMEA lines to positions
     if positions:
-        ts, latitude, longitude = positions[-1]
+        latitude, longitude = positions[-1]
         return jsonify({'latitude': latitude, 'longitude': longitude})
     else:
         return jsonify({'error': 'No GPS data available'})
