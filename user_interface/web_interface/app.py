@@ -164,7 +164,14 @@ def handle_frame_request():
     # Get the current frame from the camera
     frame = camera.get_frame()
     if frame is not None:
-        emit('update_frame', {'frame': frame})
+        # Encode the frame as a JPEG image
+        success, buffer = cv2.imencode('.jpg', frame)
+        if success:
+            # Convert the image buffer to a base64 encoded string
+            frame_data = base64.b64encode(buffer).decode('utf-8')
+            emit('update_frame', {'frame': frame_data})
+        else:
+            print("Failed to encode the frame as JPEG.")
     else:
         print("Failed to get the frame from the camera.")
 

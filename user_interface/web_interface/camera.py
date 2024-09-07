@@ -29,18 +29,21 @@ class SingletonCamera:
             if not ret:
                 logging.warning("Failed to read frame from camera")
                 continue
+            # Replace old frame with new one
             if not self.frame_queue.empty():
                 try:
-                    self.frame_queue.get_nowait()  # Discard any old frame
+                    self.frame_queue.get_nowait()  # Discard the old frame
                 except Empty:
                     pass
             self.frame_queue.put(frame)
 
     def get_frame(self):
-        if self.frame_queue.empty():
+        try:
+            # Return the latest frame without blocking
+            return self.frame_queue.get(timeout=0.1)
+        except Empty:
             logging.warning("Frame queue is empty")
             return None
-        return self.frame_queue.get()
 
     def stop_camera(self):
         self.running = False
@@ -51,17 +54,6 @@ class SingletonCamera:
         self.stop_camera()
 
     def cleanup(self):
-    # Method to release the camera resource
         if self.cap is not None:
             self.cap.release()
             print("Camera released successfully.")
-
-
-# # Test the SingletonCamera
-# if __name__ == "__main__":
-#     cam1 = SingletonCamera()
-#     frame = cam1.get_frame()
-#     if frame is not None:
-#         cv2.imwrite("test_frame.jpg", frame)
-#     else:
-#         logging.error("Failed to get frame.")
