@@ -1,15 +1,14 @@
 import cv2
 import numpy as np
 import tflite_runtime.interpreter as tflite
-
 import logging
+from user_interface.web_interface.camera import SingletonCamera
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class CameraProcessor:
     def __init__(self):
-        from user_interface.web_interface.camera import SingletonCamera
         self.camera = SingletonCamera()
         # Initialize the TFLite interpreter for obstacle detection
         self.obstacle_interpreter = tflite.Interpreter(model_path="/home/pi/autonomous_mower/obstacle_detection/lite-model_qat_mobilenet_v2_retinanet_256_1.tflite")
@@ -26,16 +25,12 @@ class CameraProcessor:
 
     @staticmethod
     def preprocess_image(image, target_size=(224, 224)):
-        # Resize the image to target size (default is 224x224)
         image = cv2.resize(image, target_size)
-        # Convert the BGR image to RGB
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # Normalize to [0,1]
         image = image / 255.0
-        # Expand dimensions to fit the model input shape
         image = np.expand_dims(image, axis=0)
         return image
-
+    
     def classify_surface(self, image):
         processed_image = self.preprocess_image(image, target_size=(224, 224))  # Ensure this matches your model's input size
         self.surface_interpreter.set_tensor(self.surface_input_details[0]['index'], processed_image)
@@ -45,6 +40,26 @@ class CameraProcessor:
         probability_of_grass = output_data[0][0]
         return probability_of_grass > 0.5  # Returns True if the surface is likely grass
 
+    def classify_obstacle(self):
+        image = self.camera.get_frame()  # Get the latest frame
+        if image is None:
+            logging.warning("No frame available for obstacle detection.")
+            return None
+
+        if self.classify_surface(image):
+            logging.info("Surface classified as grass, proceeding with obstacle detection.")
+            processed_image = self.preprocess_image(image)
+            self.obstacle_interpreter.set_tensor(self.obstacle_input_details[0]['index'], processed_image)
+            self.obstacle_interpreter.invoke()
+            detection_boxes = self.obstacle_interpreter.get_tensor(self.obstacle_output_details[0]['index'])
+            detection_classes = self.obstacle_interpreter.get_tensor(self.obstacle_output_details[1]['index'])
+            detection_scores = self.obstacle_interpreter.get_tensor(self.obstacle_output_details[2]['index'])
+            label = self.process_results(detection_boxes, detection_classes, detection_scores)
+            return label
+        else:
+            logging.info("Surface not classified as grass, will not mow this area.")
+            return None
+        
     def classify_obstacle(self):
         image = self.camera.get_frame()
         if image is None:

@@ -14,6 +14,7 @@ import logging
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 import cv2
+import base64
 
 from user_interface.web_interface import get_singleton_camera
 
@@ -83,6 +84,20 @@ def get_sensor_data():
 @app.route('/video_feed')
 def video_feed():
     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@socketio.on('request_frame')
+def handle_frame_request():
+    camera = get_singleton_camera()  # Retrieve the SingletonCamera instance when the function is called
+    frame = camera.get_frame()
+    if frame is not None:
+        success, buffer = cv2.imencode('.jpg', frame)
+        if success:
+            frame_data = base64.b64encode(buffer).decode('utf-8')
+            emit('update_frame', {'frame': frame_data})
+        else:
+            print("Failed to encode the frame as JPEG.")
+    else:
+        print("Failed to get the frame from the camera.")
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
@@ -154,26 +169,6 @@ def get_schedule():
     else:
         # Return default values if the schedule is not set
         return None, None
-
-@socketio.on('request_frame')
-def handle_frame_request():
-    # Use the accessor function to get the camera instance
-    camera = get_singleton_camera()  # Retrieve the SingletonCamera instance when the function is called
-    print(f"Using SingletonCamera instance in handle_frame_request: {camera}")
-
-    # Get the current frame from the camera
-    frame = camera.get_frame()
-    if frame is not None:
-        # Encode the frame as a JPEG image
-        success, buffer = cv2.imencode('.jpg', frame)
-        if success:
-            # Convert the image buffer to a base64 encoded string
-            frame_data = base64.b64encode(buffer).decode('utf-8')
-            emit('update_frame', {'frame': frame_data})
-        else:
-            print("Failed to encode the frame as JPEG.")
-    else:
-        print("Failed to get the frame from the camera.")
 
 @app.route('/control', methods=['POST'])
 def control():
