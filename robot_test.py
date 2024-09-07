@@ -13,7 +13,7 @@ import logging
 from navigation_system import Localization, PathPlanning, GpsLatestPosition
 from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
 from user_interface.web_interface.app import start_web_interface
-from user_interface.web_interface.camera import SingletonCamera
+
 import json
 
 # Initialize Logging
@@ -25,6 +25,7 @@ shared_resource = []
 
 # Function to initialize all resources
 def initialize_resources(cfg):
+    from user_interface.web_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner, avoidance_algo, localization, motor_controller
     sensor_interface = SensorInterface()
     camera = SingletonCamera()
