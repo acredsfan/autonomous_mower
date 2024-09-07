@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 import cv2
 import base64
+from flask_cors import CORS
 
 from user_interface.web_interface import get_singleton_camera
 
