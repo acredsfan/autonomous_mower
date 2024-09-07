@@ -5,7 +5,8 @@ import logging
 from queue import Queue, Empty
 import tflite_runtime.interpreter as tflite
 
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+logging.basicConfig(filename='main.log', level=logging.DEBUG,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class SingletonCamera:
     _instance = None
@@ -27,23 +28,19 @@ class SingletonCamera:
 
     def update(self):
         while self.running:
-            if self.frame_queue.full():
-                continue  # Skip reading new frames if the queue is full
             ret, frame = self.cap.read()
             if not ret:
                 logging.warning("Failed to read frame from camera")
                 continue
-            # Replace old frame with new one
             if not self.frame_queue.empty():
                 try:
-                    self.frame_queue.get_nowait()  # Discard the old frame
+                    self.frame_queue.get_nowait()
                 except Empty:
                     pass
             self.frame_queue.put(frame)
 
     def get_frame(self):
         try:
-            # Return the latest frame without blocking
             return self.frame_queue.get(timeout=0.1)
         except Empty:
             logging.info("Frame queue is empty")
@@ -179,6 +176,13 @@ class CameraProcessor:
             logging.info("No drop-offs detected.")
         
         return dropoff_detected
+    
+# Singleton accessor function
+camera_instance = SingletonCamera()  # Ensures the camera is initialized once
+
+def get_camera_instance():
+    """Accessor function to get the SingletonCamera instance."""
+    return camera_instance
 
 # Example usage
 if __name__ == "__main__":

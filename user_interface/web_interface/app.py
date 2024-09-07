@@ -17,7 +17,7 @@ import cv2
 import base64
 from flask_cors import CORS
 
-from user_interface.web_interface import get_singleton_camera
+from hardware_interface.camera import get_camera_instance
 
 # Initialize logging
 logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -60,7 +60,7 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
 def gen():
-    camera = get_singleton_camera()
+    camera = get_camera_instance()
     while True:
         frame = camera.get_frame()
         if frame is not None:
@@ -88,7 +88,7 @@ def video_feed():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    camera = get_singleton_camera()  # Retrieve the SingletonCamera instance when the function is called
+    camera = get_camera_instance()  # Retrieve SingletonCamera using the accessor function
     frame = camera.get_frame()
     if frame is not None:
         success, buffer = cv2.imencode('.jpg', frame)
