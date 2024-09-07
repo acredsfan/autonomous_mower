@@ -19,6 +19,15 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
 )
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.CRITICAL)  # Change level to CRITICAL or higher to suppress console output
+
+# Add the handler to the root logger
+logging.getLogger().addHandler(console_handler)
+
+# Suppress specific loggers (e.g., 'picamera2', 'libcamera') from being verbose on the console
+logging.getLogger('picamera2').setLevel(logging.WARNING)
+logging.getLogger('libcamera').setLevel(logging.ERROR)
 
 class SingletonCamera:
     _instance = None
