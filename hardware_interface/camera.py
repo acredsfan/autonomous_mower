@@ -4,6 +4,7 @@ import threading
 import logging
 from queue import Queue, Empty
 import tflite_runtime.interpreter as tflite
+import time
 
 logging.basicConfig(filename='main.log', level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
@@ -20,26 +21,66 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
+        """Initialize the camera and start the update thread."""
         self.frame_queue = Queue(maxsize=1)
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(0)  # Try opening the default camera
         self.running = True
         self.read_thread = threading.Thread(target=self.update, daemon=True)
         self.read_thread.start()
 
+        # Check if the camera opened successfully
+        if not self.cap.isOpened():
+            logging.error("Failed to open the camera. Retrying...")
+            self.reinitialize_camera()
+
+    def reinitialize_camera(self):
+        """Reinitialize the camera if it fails."""
+        # Close any existing capture object
+        if self.cap is not None:
+            self.cap.release()
+            logging.info("Releasing previous camera capture.")
+        
+        # Attempt to reopen the camera
+        attempts = 0
+        while attempts < 5 and not self.cap.isOpened():
+            self.cap = cv2.VideoCapture(0)
+            if self.cap.isOpened():
+                logging.info("Camera reinitialized successfully.")
+                break
+            attempts += 1
+            logging.warning(f"Reinitialization attempt {attempts} failed. Retrying...")
+            time.sleep(1)
+
+        if not self.cap.isOpened():
+            logging.error("Failed to reinitialize the camera after multiple attempts.")
+            self.running = False  # Stop the camera update thread if initialization fails
+
     def update(self):
+        """Continuously read frames from the camera and add them to the queue."""
         while self.running:
+            # Check if the camera is still opened
+            if not self.cap.isOpened():
+                logging.warning("Camera is not open. Attempting reinitialization.")
+                self.reinitialize_camera()
+                continue
+
             ret, frame = self.cap.read()
             if not ret:
-                logging.warning("Failed to read frame from camera")
+                logging.warning("Failed to read frame from camera. Attempting reinitialization.")
+                self.reinitialize_camera()  # Attempt to reinitialize on failure
                 continue
+
+            # Discard the old frame if the queue is full
             if not self.frame_queue.empty():
                 try:
                     self.frame_queue.get_nowait()
                 except Empty:
                     pass
+            
             self.frame_queue.put(frame)
 
     def get_frame(self):
+        """Get the latest frame from the queue."""
         try:
             return self.frame_queue.get(timeout=0.1)
         except Empty:
@@ -47,14 +88,19 @@ class SingletonCamera:
             return None
 
     def stop_camera(self):
+        """Stop the camera and release resources."""
         self.running = False
-        self.read_thread.join()
-        self.cap.release()
+        if self.read_thread.is_alive():
+            self.read_thread.join()
+        if self.cap is not None:
+            self.cap.release()
+            logging.info("Camera released successfully.")
 
     def __del__(self):
         self.stop_camera()
 
     def cleanup(self):
+        """Clean up camera resources."""
         if self.cap is not None:
             self.cap.release()
             logging.info("Camera released successfully.")
