@@ -4,7 +4,7 @@ import logging
 from queue import Queue, Empty
 import tflite_runtime.interpreter as tflite
 import time
-import cv2  # Only used for display and utility functions, not for detection
+from picamera2 import Picamera2
 from dotenv import load_dotenv
 import os
 
@@ -32,52 +32,24 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
-        """Initialize the camera and start the update thread."""
+        """Initialize the camera using Picamera2 and start the update thread."""
         self.frame_queue = Queue(maxsize=1)
-        self.cap = cv2.VideoCapture(0)  # Try opening the default camera
+        self.picam2 = Picamera2()
+        self.picam2.configure(self.picam2.create_preview_configuration())
+        self.picam2.start()
         self.running = True
         self.read_thread = threading.Thread(target=self.update, daemon=True)
         self.read_thread.start()
 
-        # Check if the camera opened successfully
-        if not self.cap.isOpened():
-            logging.error("Failed to open the camera. Retrying...")
-            self.reinitialize_camera()
-
-    def reinitialize_camera(self):
-        """Reinitialize the camera if it fails."""
-        if self.cap is not None:
-            self.cap.release()
-            logging.info("Releasing previous camera capture.")
-
-        attempts = 0
-        while attempts < 5 and not self.cap.isOpened():
-            self.cap = cv2.VideoCapture(0)
-            if self.cap.isOpened():
-                logging.info("Camera reinitialized successfully.")
-                break
-            attempts += 1
-            logging.warning(f"Reinitialization attempt {attempts} failed. Retrying...")
-            time.sleep(1)
-
-        if not self.cap.isOpened():
-            logging.error("Failed to reinitialize the camera after multiple attempts.")
-            self.running = False
-
     def update(self):
-        """Continuously read frames from the camera and add them to the queue."""
+        """Continuously read frames from Picamera2 and add them to the queue."""
         while self.running:
-            if not self.cap.isOpened():
-                logging.warning("Camera is not open. Attempting reinitialization.")
-                self.reinitialize_camera()
-                continue
-
-            ret, frame = self.cap.read()
-            if not ret:
+            frame = self.picam2.capture_array()
+            if frame is None:
                 logging.warning("Failed to read frame from camera. Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
-
+            
             if not self.frame_queue.empty():
                 try:
                     self.frame_queue.get_nowait()
@@ -85,6 +57,14 @@ class SingletonCamera:
                     pass
             
             self.frame_queue.put(frame)
+
+    def reinitialize_camera(self):
+        """Reinitialize the camera if it fails."""
+        if self.picam2 is not None:
+            self.picam2.stop()
+            logging.info("Releasing previous camera capture.")
+            self.picam2.start()
+            logging.info("Camera reinitialized successfully.")
 
     def get_frame(self):
         """Get the latest frame from the queue."""
@@ -99,18 +79,12 @@ class SingletonCamera:
         self.running = False
         if self.read_thread.is_alive():
             self.read_thread.join()
-        if self.cap is not None:
-            self.cap.release()
-            logging.info("Camera released successfully.")
+        if self.picam2 is not None:
+            self.picam2.stop()
+            logging.info("Camera stopped successfully.")
 
     def __del__(self):
         self.stop_camera()
-
-    def cleanup(self):
-        """Clean up camera resources."""
-        if self.cap is not None:
-            self.cap.release()
-            logging.info("Camera released successfully.")
 
 class CameraProcessor:
     def __init__(self):
