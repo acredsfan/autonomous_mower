@@ -8,12 +8,15 @@ import cv2  # Only used for display and utility functions, not for detection
 from dotenv import load_dotenv
 import os
 
-load_dotenv
+# Load environment variables from .env file
+load_dotenv()
+
+# Retrieve the path to the object detection model from the .env file
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 
 logging.basicConfig(
-    filename='main.log', 
-    level=logging.DEBUG, 
+    filename='main.log',
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
 )
 
@@ -46,7 +49,7 @@ class SingletonCamera:
         if self.cap is not None:
             self.cap.release()
             logging.info("Releasing previous camera capture.")
-        
+
         attempts = 0
         while attempts < 5 and not self.cap.isOpened():
             self.cap = cv2.VideoCapture(0)
@@ -113,9 +116,9 @@ class CameraProcessor:
     def __init__(self):
         self.camera = SingletonCamera()
         try:
-            # Load the MobileNetV2 model for both object detection and surface classification
+            # Load the MobileNetV2 model for object detection and surface classification
             self.interpreter = tflite.Interpreter(
-                model_path="/path/to/mobilenet_v2.tflite")  # Update the path to your MobileNetV2 model
+                model_path=PATH_TO_OBJECT_DETECTION_MODEL)
             self.interpreter.allocate_tensors()
         except (FileNotFoundError, ValueError) as e:
             logging.error(f"Failed to initialize TFLite interpreter: {e}")
