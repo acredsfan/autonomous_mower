@@ -1,21 +1,12 @@
 import cv2
 
-# Initialize the camera
-cap = cv2.VideoCapture(0)
-
-# Check if the camera opened successfully
-if not cap.isOpened():
-    print("Error: Could not open camera.")
-    exit()
-
-# Capture a single frame
-ret, frame = cap.read()
-
-# Save the frame as a JPEG file
-if ret:
-    cv2.imwrite("captured_frame.jpg", frame)
-else:
-    print("Error: Could not read frame.")
-
-# Release the camera
-cap.release()
+# Try different indices
+for i in range(0, 10):
+    cap = cv2.VideoCapture(i)
+    if cap.read()[0]:
+        print(f'Camera detected at index {i}')
+        ret, frame = cap.read()
+        cv2.imwrite(f'camera_test_{i}.jpg', frame)
+        cap.release()
+    else:
+        print(f'No camera detected at index {i}')
