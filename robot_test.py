@@ -22,6 +22,7 @@ logging.basicConfig(filename='web_test.log', level=logging.DEBUG,
 
 # Global variable for shared resource
 shared_resource = []
+motor_controller = None
 
 # Function to initialize all resources
 def initialize_resources(cfg):
@@ -113,6 +114,7 @@ if __name__ == "__main__":
     finally:
         # Cleanup
         BladeController.set_speed(0)
-        RoboHATController.stop()
+        if motor_controller:
+            motor_controller.stop()
         GPIOManager.clean()
         logging.info("Exiting the web interface test.")
