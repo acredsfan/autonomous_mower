@@ -24,6 +24,10 @@ EARTH_RADIUS = 6371e3  # Earth's radius in meters
 SECTION_SIZE = (10, 10)
 GRID_SIZE = (config['GRID_L'], config['GRID_W'])
 OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
+CAMERA_OBSTACLE_THRESHOLD = config['Camera_obstacle_threshold']
+MOTOR_SPEED = config['Motor_speed']
+MIN_DISTANCE_THRESHOLD = config['Min_distance_threshold']
+AVOIDANCE_DELAY = config['Avoidance_delay']
 
 # For RoboHATController
 MM1_MAX_FORWARD = 2000
