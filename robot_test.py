@@ -89,11 +89,12 @@ def go_home():
 # Main loop for testing web interface and sensors
 if __name__ == "__main__":
     try:
-        # Initialize resources
-        initialize_resources()
 
         # Start the web interface to test manual controls and sensors
         start_web_interface()
+
+        # Initialize resources
+        initialize_resources()
 
         while True:
             # This loop is only here to keep the program running for web interface testing

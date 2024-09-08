@@ -28,8 +28,8 @@ class SensorInterface:
         self.start_update_thread()
 
     def start_update_thread(self):
-        self.update_thread = threading.Thread(target=self.update_sensors)
-        self.update_thread.start()
+        sensor_thread = threading.Thread(target=SensorInterface.update_sensors)
+        sensor_thread.start()
 
     def init_common_attributes(self):
         self.GRID_SIZE = GRID_SIZE
