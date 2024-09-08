@@ -13,6 +13,7 @@ i2c = busio.I2C(board.SCL, board.SDA)
 bno = BNO08X_I2C(i2c, address=0x4B)  # Specify the address here
 
 bno.soft_reset()
+bno.calibration_status
 
 bno.enable_feature(BNO_REPORT_ACCELEROMETER)
 bno.enable_feature(BNO_REPORT_GYROSCOPE)
