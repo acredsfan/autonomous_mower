@@ -1,5 +1,10 @@
 # constants.py
 import json
+import os
+from dotenv import load_dotenv
+
+# Load .env variables
+load_dotenv()
 
 with open("config.json") as f:
     config = json.load(f)
@@ -8,51 +13,39 @@ try:
     with open("user_polygon.json") as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    print("config file not found")
+    print("User polygon config file not found.")
     polygon_coordinates = []
 
-# For control_system/speed_controller.py
+# Existing constants
 MIN_SPEED = 0
 MAX_SPEED = 10
-ACCELERATION_RATE = 2  # Increase in motor speed per loop iteration
-DECELERATION_RATE = 3  # Decrease in motor speed per loop iteration
-TIME_INTERVAL = 0.1 # Time interval between loop iterations
-
-# For control_system/trajectory_controller.py
-MIN_DISTANCE_TO_OBSTACLE = 3  # in centimeters
-TURN_ANGLE = 45  # in degrees
-SPEED = 50  # as a percentage of the maximum motor speed
-WAYPOINT_REACHED_THRESHOLD = 3  # in centimeters
-
-# For navigation_system/localization.py
-EARTH_RADIUS = 6371e3  # Earth's radius in meters
+ACCELERATION_RATE = 2
+DECELERATION_RATE = 3
+TIME_INTERVAL = 0.1
 
 # For navigation_system/path_planning.py
 SECTION_SIZE = (10, 10)
 GRID_SIZE = (config['GRID_L'], config['GRID_W'])
 OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
 
-# For obstacle_detection/avoidance_algorithm.py
-CAMERA_OBSTACLE_THRESHOLD = config['CAMERA_OBSTACLE_THRESHOLD'] # Minimum area to consider an obstacle from the camera
-MOTOR_SPEED = 70
+# For RoboHATController
+MM1_MAX_FORWARD = 2000
+MM1_MAX_REVERSE = 1000
+MM1_STOPPED_PWM = 1500
+MM1_STEERING_MID = 1500
+AUTO_RECORD_ON_THROTTLE = True
+JOYSTICK_DEADZONE = 0.1
+SHOW_STEERING_VALUE = True  # Update this based on your use case
 
-# For obstacle_detection/tof_processing.py
-MIN_DISTANCE_THRESHOLD = 30  # Minimum distance to consider an obstacle in millimeters
-AVOIDANCE_DELAY = 0.5  # Time to wait between avoidance checks in seconds
-
-# For user_interface (if you add more modules here)
-UI_REFRESH_RATE = 1  # UI refresh rate in Hz
-
-# Define min_lat, max_lat, min_lng, and max_lng globally
+# Derived constants for UI limits
 latitudes = [coord['lat'] for coord in polygon_coordinates]
 longitudes = [coord['lng'] for coord in polygon_coordinates]
 
-if latitudes:
-    min_lat = min(latitudes)
-    max_lat = max(latitudes)
-else:
-    min_lat = 10
-    max_lat = 11
+min_lat = min(latitudes) if latitudes else 10
+max_lat = max(latitudes) if latitudes else 11
+min_lng = min(longitudes) if longitudes else 10
+max_lng = max(longitudes) if longitudes else 11
+
 
 if longitudes:
     min_lng = min(longitudes)

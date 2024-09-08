@@ -39,20 +39,9 @@ position_reader = GpsLatestPosition  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
 
-# Configuration placeholder (replace with actual configuration)
-class Config:
-    MM1_SERIAL_PORT = '/dev/ttyUSB0'
-    MM1_MAX_FORWARD = 2000
-    MM1_MAX_REVERSE = 1000
-    MM1_STOPPED_PWM = 1500
-    MM1_STEERING_MID = 1500
-    AUTO_RECORD_ON_THROTTLE = True
-    JOYSTICK_DEADZONE = 0.1
-
-cfg = Config()
 
 # Initialize RoboHATDriver
-robohat_driver = RoboHATController(cfg, debug=True)
+robohat_driver = RoboHATController(debug=True)
 
 # Define a flag for stopping the sensor update thread
 stop_sensor_thread = False

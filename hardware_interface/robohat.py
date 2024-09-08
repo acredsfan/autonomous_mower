@@ -12,6 +12,9 @@ Note: To be used with code.py bundled in this repo. See donkeycar/contrib/roboha
 import time
 import logging
 import donkeycar as dk
+from dotenv import load_dotenv
+from constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE, MM1_STOPPED_PWM, MM1_STEERING_MID,
+                       AUTO_RECORD_ON_THROTTLE, JOYSTICK_DEADZONE, SHOW_STEERING_VALUE)
 
 try:
     import serial
@@ -23,23 +26,23 @@ from navigation_system import GpsLatestPosition
 logger = logging.getLogger(__name__)
 
 class RoboHATController:
-    def __init__(self, cfg, debug=False):
+    def __init__(self, debug=False):
         self.angle = 0.0
         self.throttle = 0.0
         self.mode = 'user'
         self.recording = False
         self.recording_latch = None
-        self.auto_record_on_throttle = cfg.AUTO_RECORD_ON_THROTTLE
-        self.STEERING_MID = cfg.MM1_STEERING_MID
-        self.MAX_FORWARD = cfg.MM1_MAX_FORWARD
-        self.STOPPED_PWM = cfg.MM1_STOPPED_PWM
-        self.MAX_REVERSE = cfg.MM1_MAX_REVERSE
-        self.SHOW_STEERING_VALUE = cfg.MM1_SHOW_STEERING_VALUE
-        self.DEAD_ZONE = cfg.JOYSTICK_DEADZONE
+        self.auto_record_on_throttle = AUTO_RECORD_ON_THROTTLE
+        self.STEERING_MID = MM1_STEERING_MID
+        self.MAX_FORWARD = MM1_MAX_FORWARD
+        self.STOPPED_PWM = MM1_STOPPED_PWM
+        self.MAX_REVERSE = MM1_MAX_REVERSE
+        self.SHOW_STEERING_VALUE = SHOW_STEERING_VALUE
+        self.DEAD_ZONE = JOYSTICK_DEADZONE
         self.debug = debug
 
         try:
-            self.serial = serial.Serial(cfg.MM1_SERIAL_PORT, 115200, timeout=1)
+            self.serial = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
         except serial.SerialException:
             print("Serial port not found! Please enable: sudo raspi-config")
         except serial.SerialTimeoutException:
