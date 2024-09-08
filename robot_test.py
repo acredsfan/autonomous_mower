@@ -89,8 +89,7 @@ def go_home():
 if __name__ == "__main__":
     try:
         # Initialize resources
-        cfg = Config()  # Ensure you have a Config class defined with necessary attributes
-        initialize_resources(cfg)
+        initialize_resources()
 
         # Start the web interface to test manual controls and sensors
         start_web_interface()
