@@ -114,5 +114,6 @@ if __name__ == "__main__":
     finally:
         # Cleanup
         BladeController.set_speed(0)
-        motor_controller.stop()
+        RoboHATController.stop()
+        GPIOManager.clean()
         logging.info("Exiting the web interface test.")
