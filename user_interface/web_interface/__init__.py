@@ -1,6 +1,6 @@
 # __init__.py
 
-from ...hardware_interface.camera import SingletonCamera
+from hardware_interface import SingletonCamera
 
 # Create a controlled accessor for SingletonCamera
 _camera_instance = None
