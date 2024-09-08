@@ -16,12 +16,9 @@ except FileNotFoundError:
     print("User polygon config file not found.")
     polygon_coordinates = []
 
-# Existing constants
-MIN_SPEED = 0
-MAX_SPEED = 10
-ACCELERATION_RATE = 2
-DECELERATION_RATE = 3
+# Constants for the project
 TIME_INTERVAL = 0.1
+EARTH_RADIUS = 6371e3  # Earth's radius in meters
 
 # For navigation_system/path_planning.py
 SECTION_SIZE = (10, 10)
