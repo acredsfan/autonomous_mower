@@ -20,13 +20,5 @@ class GPIOManager:
     
     def clean():
         chip = gpiod.Chip('gpiochip0')
-        shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
-        interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
-        
-        for line in shutdown_lines:
-            line.set_value(1)
-            line.release()
-        for line in interrupt_lines:
-            line.release()
         chip.close()
-        logging.info("Cleaned up GPIOs")
+        logging.info("GPIO cleanup complete.")
