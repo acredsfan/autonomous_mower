@@ -72,7 +72,7 @@ def index():
     next_scheduled_mow = calculate_next_scheduled_mow()
     return render_template('index.html', google_maps_api_key=google_maps_api_key, next_scheduled_mow=next_scheduled_mow)
 
-@app.route('get_sensor_data', methods=['GET'])
+@app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
     sensor_data = SensorInterface.sensor_data
     return jsonify(sensor_data)
