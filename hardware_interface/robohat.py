@@ -52,6 +52,21 @@ class RoboHATController:
         except serial.SerialTimeoutException:
             print("Serial connection timed out!")
 
+    """
+    Steering and throttle should range between -1.0 to 1.0. This function will
+    trim value great than 1.0 or less than 1.0
+    """
+
+    def trim_out_of_bound_value(self, value):
+        if value > 1:
+            print("MM1: Warning, value out of bound. Value = {}".format(value))
+            return 1.0
+        elif value < -1:
+            print("MM1: Warning, value out of bound. Value = {}".format(value))
+            return -1.0
+        else:
+            return value
+
     def shutdown(self):
         try:
             self.serial.close()
