@@ -12,6 +12,7 @@ Note: To be used with code.py bundled in this repo. See donkeycar/contrib/roboha
 import time
 import logging
 import donkeycar as dk
+import os
 from dotenv import load_dotenv
 from constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE, MM1_STOPPED_PWM, MM1_STEERING_MID,
                        AUTO_RECORD_ON_THROTTLE, JOYSTICK_DEADZONE, SHOW_STEERING_VALUE)
