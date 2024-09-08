@@ -46,6 +46,14 @@ class RoboHATController:
         except serial.SerialTimeoutException:
             print("Serial connection timed out!")
 
+    def trim_out_of_bound_value(self, value):
+        if value > 1.0:
+            return 1.0
+        elif value < -1.0:
+            return -1.0
+        else:
+            return value
+        
     def shutdown(self):
         try:
             self.pwm.close()
