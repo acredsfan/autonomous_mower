@@ -1,96 +1,77 @@
-import sys
-import os
-
-# Add the project root to the system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import threading
-import time
 import logging
-import smbus2 as smbus
 import board
 import busio
-from constants import GRID_SIZE
 from .bme280_sensor import BME280Sensor
-from .vl53l0x_sensor import VL53L0XSensors
 from .bno085_sensor import BNO085Sensor
 from .ina3221_sensor import INA3221Sensor
+from .vl53l0x_sensor import VL53L0XSensors
 from .gpio_manager import GPIOManager
-import constants
+import time
 
 class SensorInterface:
     def __init__(self):
         self.sensor_data_lock = threading.Lock()
         self.sensor_data = {}
-        self.init_common_attributes()
-        self.init_sensors()
-        time.sleep(3)  # Ensure all sensors are fully initialized before starting the update thread
-        self.start_update_thread()
-
-    def start_update_thread(self):
-        sensor_thread = threading.Thread(target=SensorInterface.update_sensors)
-        sensor_thread.start()
-
-    def init_common_attributes(self):
-        self.GRID_SIZE = GRID_SIZE
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.shutdown_pins = [22, 23]
         self.interrupt_pins = [6, 12]
-        self.sensor_data = {}
         self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(self.shutdown_pins, self.interrupt_pins)
+        self.init_sensors()
+        self.start_update_thread()
 
     def init_sensors(self):
-        # Initialize sensors
-        self.bme280 = BME280Sensor.init_bme280()
-        if self.bme280 is None:
-            logging.error("BME280 failed to initialize.")
-        
-        self.bno085 = BNO085Sensor.init_bno085(self.i2c)
-        if self.bno085 is None:
-            logging.error("BNO085 failed to initialize.")
+        """Initialize all sensors with consolidated error handling."""
+        self.sensors = {
+            'bme280': self.initialize_sensor(BME280Sensor.init_bme280, "BME280"),
+            'bno085': self.initialize_sensor(lambda: BNO085Sensor.init_bno085(self.i2c), "BNO085"),
+            'ina3221': self.initialize_sensor(lambda: INA3221Sensor.init_ina3221(self.i2c), "INA3221"),
+            'vl53l0x': self.initialize_sensor(lambda: VL53L0XSensors.init_vl53l0x_sensors(self.i2c, self.shutdown_lines), "VL53L0X"),
+        }
 
-        self.ina3221 = INA3221Sensor.init_ina3221(self.i2c)
-        if self.ina3221 is None:
-            logging.error("INA3221 failed to initialize.")
-        
-        self.vl53l0x = VL53L0XSensors.init_vl53l0x_sensors(self.i2c, self.shutdown_lines)
-        if self.vl53l0x is None:
-            logging.error("VL53L0X failed to initialize.")
+    def initialize_sensor(self, init_function, sensor_name):
+        """Utility function to initialize a sensor and log errors if any."""
+        try:
+            sensor = init_function()
+            if sensor is None:
+                raise Exception(f"{sensor_name} initialization returned None.")
+            logging.info(f"{sensor_name} initialized successfully.")
+            return sensor
+        except Exception as e:
+            logging.error(f"Error initializing {sensor_name}: {e}")
+            return None
+
+    def start_update_thread(self):
+        """Start the thread that periodically updates sensor readings."""
+        self.sensor_thread = threading.Thread(target=self.update_sensors, daemon=True)
+        self.sensor_thread.start()
 
     def update_sensors(self):
+        """Read sensor data periodically and update shared sensor data."""
         while True:
             with self.sensor_data_lock:
-                # Reading sensors sequentially with validation checks
-                if self.bme280:
-                    self.sensor_data['bme280'] = BME280Sensor.read_bme280(self.bme280)
-                else:
-                    logging.error("BME280 sensor not available for reading.")
+                self.sensor_data['bme280'] = self.read_sensor_data(self.sensors['bme280'], BME280Sensor.read_bme280, "BME280")
+                self.sensor_data['accel'] = self.read_sensor_data(self.sensors['bno085'], BNO085Sensor.read_bno085_accel, "BNO085 Accelerometer")
+                self.sensor_data['gyro'] = self.read_sensor_data(self.sensors['bno085'], BNO085Sensor.read_bno085_gyro, "BNO085 Gyroscope")
+                self.sensor_data['compass'] = self.read_sensor_data(self.sensors['bno085'], BNO085Sensor.read_bno085_magnetometer, "BNO085 Magnetometer")
+                self.sensor_data['quaternion'] = self.read_sensor_data(self.sensors['bno085'], BNO085Sensor.read_bno085_quaternion, "BNO085 Quaternion")
+                self.sensor_data['solar'] = self.read_sensor_data(self.sensors['ina3221'], lambda s: INA3221Sensor.read_ina3221(s, 1), "INA3221 Solar")
+                self.sensor_data['battery'] = self.read_sensor_data(self.sensors['ina3221'], lambda s: INA3221Sensor.read_ina3221(s, 3), "INA3221 Battery")
+                self.sensor_data['battery_charge'] = self.read_sensor_data(self.sensors['ina3221'], INA3221Sensor.battery_charge, "Battery Charge")
+                self.sensor_data['left_distance'] = self.read_sensor_data(self.sensors['vl53l0x'], lambda s: VL53L0XSensors.read_vl53l0x(s[0]), "VL53L0X Left Distance")
+                self.sensor_data['right_distance'] = self.read_sensor_data(self.sensors['vl53l0x'], lambda s: VL53L0XSensors.read_vl53l0x(s[1]), "VL53L0X Right Distance")
+            time.sleep(1.0)  # Adjust the update interval as needed
 
-                if self.bno085:
-                    self.sensor_data['accel'] = BNO085Sensor.read_bno085_accel(self.bno085)
-                    self.sensor_data['gyro'] = BNO085Sensor.read_bno085_gyro(self.bno085)
-                    self.sensor_data['compass'] = BNO085Sensor.read_bno085_magnetometer(self.bno085)
-                    self.sensor_data['quaternion'] = BNO085Sensor.read_bno085_quaternion(self.bno085)
-                    self.sensor_data['speed'] = BNO085Sensor.calculate_speed(self.bno085)
-                    self.sensor_data['heading'] = BNO085Sensor.calculate_heading(self.bno085)
-                    self.sensor_data['pitch'] = BNO085Sensor.calculate_pitch(self.bno085)
-                else:
-                    logging.error("BNO085 sensor not available for reading.")
-
-                if self.ina3221:
-                    self.sensor_data['solar'] = INA3221Sensor.read_ina3221(self.ina3221, 1)
-                    self.sensor_data['battery'] = INA3221Sensor.read_ina3221(self.ina3221, 3)
-                    self.sensor_data['battery_charge'] = INA3221Sensor.battery_charge(self.ina3221)
-                else:
-                    logging.error("INA3221 sensor not available for reading.")
-
-                if self.vl53l0x:
-                    self.sensor_data['left_distance'] = VL53L0XSensors.read_vl53l0x(self.vl53l0x[0])
-                    self.sensor_data['right_distance'] = VL53L0XSensors.read_vl53l0x(self.vl53l0x[1])
-                else:
-                    logging.error("VL53L0X sensors not available for reading.")
-
-            time.sleep(1.0)  # Delay between sensor updates
+    def read_sensor_data(self, sensor, read_function, sensor_name):
+        """Utility function to read sensor data and handle errors."""
+        if sensor is None:
+            logging.error(f"{sensor_name} is not initialized.")
+            return {}
+        try:
+            return read_function(sensor)
+        except Exception as e:
+            logging.error(f"Error reading {sensor_name}: {e}")
+            return {}
         
     
     @staticmethod
