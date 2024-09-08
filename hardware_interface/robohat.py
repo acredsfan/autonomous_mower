@@ -1,12 +1,5 @@
-#!/usr/bin/env python3
 """
 Scripts for operating the RoboHAT MM1 by Robotics Masters with the Donkeycar
-
-author: @wallarug (Cian Byrne) 2019
-contrib: @peterpanstechland 2019
-contrib: @sctse999 2020
-
-Note: To be used with code.py bundled in this repo. See donkeycar/contrib/robohat/code.py
 """
 
 import time
@@ -45,36 +38,22 @@ class RoboHATController:
         self.DEAD_ZONE = JOYSTICK_DEADZONE
         self.debug = debug
 
+        # Initialize the PWM communication
         try:
-            self.serial = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
+            self.pwm = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
         except serial.SerialException:
             print("Serial port not found! Please enable: sudo raspi-config")
         except serial.SerialTimeoutException:
             print("Serial connection timed out!")
 
-    """
-    Steering and throttle should range between -1.0 to 1.0. This function will
-    trim value great than 1.0 or less than 1.0
-    """
-
-    def trim_out_of_bound_value(self, value):
-        if value > 1:
-            print("MM1: Warning, value out of bound. Value = {}".format(value))
-            return 1.0
-        elif value < -1:
-            print("MM1: Warning, value out of bound. Value = {}".format(value))
-            return -1.0
-        else:
-            return value
-
     def shutdown(self):
         try:
-            self.serial.close()
+            self.pwm.close()
         except:
             pass
 
     def read_serial(self):
-        line = str(self.serial.readline().decode()).strip('\n').strip('\r')
+        line = str(self.pwm.readline().decode()).strip('\n').strip('\r')
         output = line.split(", ")
         if len(output) == 2:
             if self.SHOW_STEERING_VALUE:
@@ -137,17 +116,13 @@ class RoboHATController:
         return self.angle, self.throttle, self.mode, self.recording
 
     def navigate_to_location(self, target_location):
-        """
-        Navigate the robot to a specified GPS location.
-        :param target_location: A tuple of (latitude, longitude)
-        """
         try:
             current_position = GpsLatestPosition.get_latest_position()
             while not self.has_reached_location(current_position, target_location):
                 steering, throttle = self.calculate_navigation_commands(current_position, target_location)
                 self.set_pulse(steering, throttle)
                 current_position = GpsLatestPosition.get_latest_position()
-                time.sleep(0.1)  # Small delay to simulate control loop frequency
+                time.sleep(0.1)
             self.stop()
             return True
         except Exception as e:
@@ -155,63 +130,21 @@ class RoboHATController:
             self.stop()
             return False
 
-    def navigate_to_waypoint(self, current_position, next_waypoint):
-        """
-        Navigate from the current position to the next waypoint.
-        :param current_position: A tuple of (latitude, longitude)
-        :param next_waypoint: A tuple of (latitude, longitude)
-        """
-        try:
-            while not self.has_reached_location(current_position, next_waypoint):
-                steering, throttle = self.calculate_navigation_commands(current_position, next_waypoint)
-                self.set_pulse(steering, throttle)
-                current_position = GpsLatestPosition.get_latest_position()
-                time.sleep(0.1)
-            self.stop()
-            return True
-        except Exception as e:
-            logging.exception("Error in navigate_to_waypoint")
-            self.stop()
-            return False
-
     def calculate_navigation_commands(self, current_position, target_location):
-        """
-        Calculate steering and throttle commands based on the current position and target location.
-        :param current_position: Current (latitude, longitude)
-        :param target_location: Target (latitude, longitude)
-        :return: Steering and throttle values
-        """
-        # This is a placeholder for actual navigation calculations such as PID control or path vector adjustments.
-        # Replace with actual logic.
-        steering = 0.0  # Example: Calculate based on heading difference
-        throttle = 0.5  # Example: Set throttle based on distance
+        steering = 0.0
+        throttle = 0.5
         return steering, throttle
 
     def has_reached_location(self, current_position, target_location, tolerance=0.0001):
-        """
-        Check if the robot has reached the target location.
-        :param current_position: Current (latitude, longitude)
-        :param target_location: Target (latitude, longitude)
-        :param tolerance: Distance tolerance to consider the location reached
-        :return: True if reached, False otherwise
-        """
         lat1, lon1 = current_position
         lat2, lon2 = target_location
         return abs(lat1 - lat2) < tolerance and abs(lon1 - lon2) < tolerance
 
     def stop(self):
-        """
-        Stop the robot by setting steering and throttle to zero.
-        """
         self.set_pulse(0, 0)
         logging.info("Robot stopped.")
 
     def set_pulse(self, steering, throttle):
-        """
-        Send steering and throttle commands to the motor controller.
-        :param steering: Steering value between -1.0 to 1.0
-        :param throttle: Throttle value between -1.0 to 1.0
-        """
         try:
             steering = self.trim_out_of_bound_value(steering)
             throttle = self.trim_out_of_bound_value(throttle)
@@ -243,6 +176,7 @@ class RoboHATController:
 
     def write_pwm(self, steering, throttle):
         self.pwm.write(b"%d, %d\r" % (steering, throttle))
+
 
     def run(self, steering, throttle):
         self.set_pulse(steering, throttle)
