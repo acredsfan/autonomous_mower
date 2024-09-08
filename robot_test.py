@@ -22,23 +22,23 @@ logging.basicConfig(filename='web_test.log', level=logging.DEBUG,
 
 # Global variable for shared resource
 shared_resource = []
-motor_controller = None
+robohat_controller = None
 
 # Function to initialize all resources
-def initialize_resources(cfg):
+def initialize_resources():
     from hardware_interface.camera import SingletonCamera
-    global sensor_interface, camera, path_planner, avoidance_algo, localization, motor_controller
+    global sensor_interface, camera, path_planner, avoidance_algo, localization, robohat_controller
     sensor_interface = SensorInterface()
     camera = SingletonCamera()
     path_planner = PathPlanning()
     avoidance_algo = ObstacleAvoidance()
-    localization = Localization(cfg)
+    localization = Localization()
     try:
-        motor_controller = RoboHATController(cfg)
+        robohat_controller = RoboHATController()
     except RuntimeError as e:
         logging.error(f"Failed to initialize RoboHATController: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
-        motor_controller = RoboHATController(cfg)  # Retry initialization
+        robohat_controller = RoboHATController()  # Retry initialization
 
 # Lock for shared resources
 lock = Lock()
@@ -59,7 +59,7 @@ def verify_polygon_points():
         for index, point in enumerate(polygon_points):
             logging.info(f"Navigating to point {index + 1}: {point}")
             # Navigate to each point using the robot's motor controller
-            motor_controller.navigate_to_location((point['lat'], point['lng']))
+            robohat_controller.navigate_to_location((point['lat'], point['lng']))
 
             # Optionally wait for confirmation or a set time at each point
             time.sleep(5)  # Adjust the sleep time as needed for verification
@@ -80,7 +80,7 @@ def go_home():
         # Load the home location from the saved JSON file
         with open('home_location.json', 'r') as f:
             home_location = json.load(f)
-        motor_controller.navigate_to_location((home_location['lat'], home_location['lng']))
+        robohat_controller.navigate_to_location((home_location['lat'], home_location['lng']))
     except FileNotFoundError:
         logging.error("Home location not set. Please set it in the web interface.")
     except Exception as e:
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     finally:
         # Cleanup
         BladeController.set_speed(0)
-        if motor_controller:
-            motor_controller.stop()
+        if robohat_controller:
+            robohat_controller.stop()
         GPIOManager.clean()
         logging.info("Exiting the web interface test.")
