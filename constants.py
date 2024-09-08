@@ -23,11 +23,13 @@ EARTH_RADIUS = 6371e3  # Earth's radius in meters
 # For navigation_system/path_planning.py
 SECTION_SIZE = (10, 10)
 GRID_SIZE = (config['GRID_L'], config['GRID_W'])
-OBSTACLE_MARGIN = config['Obstacle_avoidance_margin']
-CAMERA_OBSTACLE_THRESHOLD = config['Camera_obstacle_threshold']
-MOTOR_SPEED = config['Motor_speed']
-MIN_DISTANCE_THRESHOLD = config['Min_distance_threshold']
-AVOIDANCE_DELAY = config['Avoidance_delay']
+
+# For obstacle_detection/avoidance_algorithm.py
+OBSTACLE_MARGIN = 10  # Margin to avoid obstacles in CM
+CAMERA_OBSTACLE_THRESHOLD = 1000  # Threshold for obstacle detection (in pixels, area w * h)
+MOTOR_SPEED = 50  # Speed of the motors in % (0-100)
+MIN_DISTANCE_THRESHOLD = 10  # Minimum distance threshold to avoid obstacles in CM
+AVOIDANCE_DELAY = 0.1  # Delay for obstacle avoidance in seconds
 
 # For RoboHATController
 MM1_MAX_FORWARD = 2000
