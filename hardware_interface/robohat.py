@@ -23,6 +23,9 @@ except ImportError:
 
 from navigation_system import GpsLatestPosition
 
+load_dotenv()
+MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
+
 logger = logging.getLogger(__name__)
 
 class RoboHATController:
