@@ -38,6 +38,7 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 position_reader = GpsLatestPosition  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
+sensor_interface = SensorInterface()
 
 
 # Initialize RoboHATDriver
@@ -245,7 +246,7 @@ def stop_motors():
 def start_web_interface():
     global stop_sensor_thread
     # Start the sensor update thread
-    sensor_thread = threading.Thread(target=SensorInterface.update_sensors)
+    sensor_thread = threading.Thread(target=sensor_interface.update_sensors)
     sensor_thread.start()
 
     socketio.run(app, host='0.0.0.0', port=90)
