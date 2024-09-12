@@ -9,16 +9,15 @@ from threading import Lock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from hardware_interface import SensorInterface, BladeController, RoboHATController, GPIOManager
-import logging
 from navigation_system import Localization, PathPlanning, GpsLatestPosition
 from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
 from user_interface.web_interface.app import start_web_interface
-
 import json
 
-# Initialize Logging
-logging.basicConfig(filename='web_test.log', level=logging.DEBUG,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 # Global variable for shared resource
 shared_resource = []

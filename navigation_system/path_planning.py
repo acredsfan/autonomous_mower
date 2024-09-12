@@ -13,13 +13,14 @@ from shapely.geometry import Polygon, Point
 from shapely import wkt
 from navigation_system import Localization
 from dotenv import load_dotenv
-import logging
 import time
 from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
 import requests
 
-# Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 # Global variables
 user_polygon = None

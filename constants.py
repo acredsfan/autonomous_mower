@@ -2,6 +2,10 @@
 import json
 import os
 from dotenv import load_dotenv
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 # Load .env variables
 load_dotenv()

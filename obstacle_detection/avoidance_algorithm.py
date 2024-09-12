@@ -1,16 +1,14 @@
-import sys
-import os
 import threading
-import logging
 import numpy as np
 from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED, MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 import time
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 from navigation_system import path_planning  # Import GRID_SIZE from path_planning.py
 
-# Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 class ObstacleAvoidance:
     def __init__(self, camera=None):

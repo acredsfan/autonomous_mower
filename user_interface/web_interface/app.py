@@ -10,18 +10,18 @@ import os
 import threading
 from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition  # Updated import
 import datetime
-import logging
 from dotenv import load_dotenv
 from flask_socketio import SocketIO, emit
 import base64
 from flask_cors import CORS
 from io import BytesIO
 from PIL import Image
-
 from hardware_interface.camera import get_camera_instance
 
-# Initialize logging
-logging.basicConfig(filename='main.log', level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 
 #Initialize Flask and SocketIO

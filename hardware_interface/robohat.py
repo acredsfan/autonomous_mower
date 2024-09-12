@@ -3,7 +3,6 @@ Scripts for operating the RoboHAT MM1 by Robotics Masters with the Donkeycar
 """
 
 import time
-import logging
 import donkeycar as dk
 import os
 from dotenv import load_dotenv
@@ -20,7 +19,10 @@ from navigation_system import GpsLatestPosition
 load_dotenv()
 MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
 
-logger = logging.getLogger(__name__)
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 class RoboHATController:
     def __init__(self, debug=False):
@@ -91,7 +93,7 @@ class RoboHATController:
                     self.recording = self.throttle > self.DEAD_ZONE
                     if was_recording != self.recording:
                         self.recording_latch = self.recording
-                        logger.debug(f"JoystickController::on_throttle_changes() setting recording = {self.recording}")
+                        logging.debug(f"JoystickController::on_throttle_changes() setting recording = {self.recording}")
 
                 time.sleep(0.01)
 
@@ -114,10 +116,10 @@ class RoboHATController:
         if mode is not None:
             self.mode = mode
         if recording is not None and recording != self.recording:
-            logger.debug(f"RoboHATController::run_threaded() setting recording from default = {recording}")
+            logging.debug(f"RoboHATController::run_threaded() setting recording from default = {recording}")
             self.recording = recording
         if self.recording_latch is not None:
-            logger.debug(f"RoboHATController::run_threaded() setting recording from latch = {self.recording_latch}")
+            logging.debug(f"RoboHATController::run_threaded() setting recording from latch = {self.recording_latch}")
             self.recording = self.recording_latch
             self.recording_latch = None
 

@@ -1,7 +1,11 @@
-import logging
+from utils import LoggerConfig
 import board
 import busio
 from adafruit_bme280 import basic as adafruit_bme280
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
+
 
 # Initialize I2C using busio
 i2c = busio.I2C(board.SCL, board.SDA)

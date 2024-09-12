@@ -1,5 +1,6 @@
 import sys
 import os
+from utils import LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -9,8 +10,8 @@ import threading
 from .gpio_manager import GPIOManager
 
 # Initialize logging
-log_file_path = '/home/pi/autonomous_mower/main.log'
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+LoggerConfig.configure_logging()
+logging = logging.getLogger(__name__)
 
 # Initialize GPIO lines using gpio_manager
 shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2

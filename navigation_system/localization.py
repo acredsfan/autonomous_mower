@@ -1,9 +1,12 @@
 import math
 import time
 import json
-import logging
 import sys
 import os
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 # Add the parent directory to the system path for importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -11,10 +14,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Import necessary modules and constants
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
-
-# Configure logging settings
-logging.basicConfig(filename='main.log', level=logging.DEBUG,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
 
 class Localization:
     def __init__(self):

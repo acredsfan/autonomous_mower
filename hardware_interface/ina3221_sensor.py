@@ -1,5 +1,9 @@
-import logging
 import barbudor_ina3221.full as INA3221
+
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 class INA3221Sensor:
 

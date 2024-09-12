@@ -1,4 +1,4 @@
-import logging
+
 from adafruit_bno08x.i2c import BNO08X_I2C
 from adafruit_bno08x import (
     BNO_REPORT_ACCELEROMETER,
@@ -8,6 +8,11 @@ from adafruit_bno08x import (
 )
 import time
 import math
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
+
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor"""

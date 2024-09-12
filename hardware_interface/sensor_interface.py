@@ -1,5 +1,5 @@
 import threading
-import logging
+from logging import getLogger
 import board
 import busio
 from .bme280_sensor import BME280Sensor
@@ -8,6 +8,9 @@ from .ina3221_sensor import INA3221Sensor
 from .vl53l0x_sensor import VL53L0XSensors
 from .gpio_manager import GPIOManager
 import time
+
+logging = getLogger(__name__)
+
 
 class SensorInterface:
     def __init__(self):

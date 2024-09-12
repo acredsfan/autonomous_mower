@@ -1,5 +1,4 @@
 import argparse
-import logging
 import threading
 import time
 import requests
@@ -15,7 +14,10 @@ import operator
 from donkeycar.parts.serial_port import SerialPort
 from donkeycar.parts.text_writer import CsvLogger
 
-logger = logging.getLogger(__name__)
+from utils import LoggerConfig
+
+# Initialize logger
+logger = LoggerConfig.get_logger(__name__)
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)

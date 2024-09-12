@@ -1,33 +1,22 @@
 import numpy as np
 import threading
-import logging
 from queue import Queue, Empty
 import tflite_runtime.interpreter as tflite
 import time
 from picamera2 import Picamera2
 from dotenv import load_dotenv
 import os
+import cv2
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Retrieve the path to the object detection model from the .env file
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
-
-logging.basicConfig(
-    filename='main.log',
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
-)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.CRITICAL)  # Change level to CRITICAL or higher to suppress console output
-
-# Add the handler to the root logger
-logging.getLogger().addHandler(console_handler)
-
-# Suppress specific loggers (e.g., 'picamera2', 'libcamera') from being verbose on the console
-logging.getLogger('picamera2').setLevel(logging.WARNING)
-logging.getLogger('libcamera').setLevel(logging.ERROR)
 
 class SingletonCamera:
     _instance = None

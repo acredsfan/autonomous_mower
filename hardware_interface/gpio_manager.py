@@ -1,6 +1,9 @@
 
 import gpiod
-import logging
+from utils import LoggerConfig
+
+# Initialize logger
+logging = LoggerConfig.get_logger(__name__)
 
 class GPIOManager:
     
