@@ -31,6 +31,13 @@ class GpsNmeaPositions:
     def __init__(self, debug=False):
         self.debug = debug
 
+    def get_lines(self):
+        lines = []
+        for _ in range(5):
+            line = self.serial_port.readline().decode('ascii', errors='replace')
+            lines.append((time.time(), line))
+        return lines
+
     def run(self, lines):
         positions = []
         if lines:
@@ -50,10 +57,16 @@ class GpsLatestPosition:
     def __init__(self, debug=False):
         self.debug = debug
         self.position = None
+        self.gps_nmea_positions = GpsNmeaPositions()
 
-    def run(self, positions):
+    def run(self):
+        lines = self.gps_nmea_positions.get_lines()
+        positions = self.gps_nmea_positions.run(lines)
         if positions is not None and len(positions) > 0:
             self.position = positions[-1]
+        return self.position
+
+    def get_latest_position(self):
         return self.position
 
 class GpsPosition:

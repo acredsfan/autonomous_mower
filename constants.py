@@ -52,13 +52,3 @@ min_lat = min(latitudes) if latitudes else 10
 max_lat = max(latitudes) if latitudes else 11
 min_lng = min(longitudes) if longitudes else 10
 max_lng = max(longitudes) if longitudes else 11
-
-
-if longitudes:
-    min_lng = min(longitudes)
-    max_lng = max(longitudes)
-else:
-    min_lng = 10
-    max_lng = 11
-
-# Add more constants as needed

@@ -35,7 +35,7 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 #Initialize other components
-position_reader = GpsLatestPosition  # Initialize position reader
+position_reader = GpsLatestPosition()  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
 sensor_interface = SensorInterface()
@@ -45,7 +45,7 @@ sensor_interface = SensorInterface()
 robohat_driver = RoboHATController(debug=True)
 
 # Define a flag for stopping the sensor update thread
-stop_sensor_thread = False
+stop_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
@@ -75,7 +75,7 @@ def index():
 
 @app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
-    sensor_data = SensorInterface.sensor_data
+    sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
 @app.route('/video_feed')
@@ -138,8 +138,10 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    lines = GpsNmeaPositions  # Read NMEA lines from GPS
-    positions = position_reader.run(lines)  # Convert NMEA lines to positions
+    gps_nmea_positions = GpsNmeaPositions()
+    lines = gps_nmea_positions.get_lines()  # Assuming you have a method to get lines
+    positions = position_reader.run(lines)
+
     if positions:
         latitude, longitude = positions[-1]
         return jsonify({'latitude': latitude, 'longitude': longitude})
@@ -148,10 +150,18 @@ def get_gps():
 
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
-    # Get the mowing days and hours from the request
     data = request.get_json()
-    mow_days = data['mowDays']
-    mow_hours = data['mowHours']
+    mow_days = data.get('mowDays', [])
+    mow_hours = data.get('mowHours', [])
+
+    # Validate mow_days
+    valid_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    if not all(day in valid_days for day in mow_days):
+        return jsonify({'message': 'Invalid days provided.'}), 400
+
+    # Validate mow_hours
+    if not all(isinstance(hour, int) and 0 <= hour <= 23 for hour in mow_hours):
+        return jsonify({'message': 'Invalid hours provided.'}), 400
 
     # Save the mowing days and hours to a JSON file
     with open('mowing_schedule.json', 'w') as f:
@@ -175,7 +185,7 @@ def control():
     data = request.json
     steering = data.get('steering', 0)
     throttle = data.get('throttle', 0)
-    robohat_driver.run(steering, throttle)
+    robohat_driver.run_threaded(steering, throttle)
     return jsonify({'status': 'success'})
 
 @app.route('/stop', methods=['POST'])
@@ -252,7 +262,8 @@ def start_web_interface():
     socketio.run(app, host='0.0.0.0', port=90)
 
     # Set the flag to stop the sensor update thread
-    stop_sensor_thread = True
+    sensor_interface.stop_thread = True
+
     sensor_thread.join() # Wait for the thread to finish
 
 if __name__ == '__main__':

@@ -43,8 +43,10 @@ class Localization:
 
     def estimate_position(self):
         """Estimate the current position using GPS data."""
-        lines = self.gps.run()  # Read NMEA lines from GPS
-        positions = self.position_reader.run(lines)  # Convert NMEA lines to positions
+        gps_nmea_positions = GpsNmeaPositions()
+        lines = gps_nmea_positions.run()
+        positions = self.position_reader.run(lines)
+ # Convert NMEA lines to positions
         if positions:
             ts, self.current_latitude, self.current_longitude = positions[-1]
             logging.info(f"Current position: {self.current_latitude}, {self.current_longitude}, {self.current_altitude}")

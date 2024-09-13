@@ -4,6 +4,7 @@ from constants import CAMERA_OBSTACLE_THRESHOLD, MOTOR_SPEED, MIN_DISTANCE_THRES
 import time
 from constants import MIN_DISTANCE_THRESHOLD, AVOIDANCE_DELAY
 from navigation_system import path_planning  # Import GRID_SIZE from path_planning.py
+from hardware_interface import SensorInterface
 
 from utils import LoggerConfig
 
@@ -15,12 +16,13 @@ class ObstacleAvoidance:
         self.camera = camera
         self.obstacle_left = False
         self.obstacle_right = False
+        self.sensor_interface = SensorInterface()
 
     def _update_obstacle_status(self):
         from hardware_interface import SensorInterface
         """Update the obstacle status based on the VL53L0X sensor readings."""
-        left_distance = SensorInterface.read_vl53l0x_left()
-        right_distance = SensorInterface.read_vl53l0x_right()
+        left_distance = self.sensor_interface.sensor_data.get('left_distance', float('inf'))
+        right_distance = self.sensor_interface.sensor_data.get('right_distance', float('inf'))
 
         self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
         self.obstacle_right = right_distance < MIN_DISTANCE_THRESHOLD
@@ -99,26 +101,23 @@ class AvoidanceAlgorithm:
     def handle_avoidance(self):
         """Handle the obstacle and drop-off avoidance logic."""
         logging.info("Handling avoidance...")
-        self.motor_controller.run(0, 0)  # Stop the mower
-
-        current_state = self.get_current_state()
-        next_action = self.get_next_action(current_state)
-        self.last_action = next_action
-
-        # Example actions; these should be replaced with actual movement logic
-        if next_action == 0:  # Up
-            self.motor_controller.run(0.5, MOTOR_SPEED)
-        elif next_action == 1:  # Down
-            self.motor_controller.run(-0.5, -MOTOR_SPEED)
-        elif next_action == 2:  # Left
-            self.motor_controller.run(-0.5, MOTOR_SPEED)
-        elif next_action == 3:  # Right
-            self.motor_controller.run(0.5, -MOTOR_SPEED)
+        self.motor_controller.stop()  # Stop the mower
+        
+        # Re-plan the path to avoid the obstacle
+        start = self.get_current_state()
+        goal = self.path_planning.goal  # Assuming you have set the goal
+        new_path = self.path_planning.plan_path(start, goal, self.obstacles)
+        
+        # Follow the new path
+        for cell in new_path:
+            coord = self.path_planning.grid_to_coord(cell)
+            self.motor_controller.navigate_to_location((coord['lat'], coord['lng']))
 
     def get_current_state(self):
         """Get the current state based on the robot's position."""
-        # Replace this with actual logic to get the robot's position on the grid
-        return (0, 0)
+        current_position = self.motor_controller.gps_latest_position.run()
+        grid_cell = self.path_planning.coord_to_grid(current_position[0], current_position[1])
+        return grid_cell
 
     def run_avoidance(self):
         """Continuously run the avoidance algorithm using data from ToF sensors and the camera."""

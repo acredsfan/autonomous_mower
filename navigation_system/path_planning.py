@@ -44,7 +44,6 @@ class PathPlanning:
     def set_min_max_coordinates(self):
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
         self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
-        pass
 
     def set_user_polygon(self, polygon_coordinates):
         """
@@ -64,7 +63,7 @@ class PathPlanning:
             for j in range(0, GRID_SIZE[1], SECTION_SIZE[1]):
                 section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
                 sections.append(section)
-        # return sections
+        return sections
         pass
 
     def select_next_section(self, current_position):
@@ -73,7 +72,8 @@ class PathPlanning:
         :param current_position:
         :return: next_section
         """
-        next_section = current_position + 1
+        next_section = (current_position[0] + 1, current_position[1])
+
         return next_section
 
     def update_obstacle_map(self, new_obstacles):
@@ -231,12 +231,7 @@ class PathPlanning:
             path_coords.append(coord)
         return path_coords
     
-    # This function converts a grid cell to a (lat, lng) coordinate
-    def grid_to_coord(self, cell):
-        lat = cell[0] * self.lat_grid_size + self.min_lat
-        lng = cell[1] * self.lng_grid_size + self.min_lng
-        return {"lat": lat, "lng": lng}
-    
+ 
     def calculate_goal_position(self, next_section):
         # Determine the boundaries of thr selected section
         if next_section is None:
@@ -260,10 +255,20 @@ class PathPlanning:
         return start, goal
     
     def coord_to_grid(self, lat, lng):
-        # Convert lat, lng to grid cell location
+        # Calculate the grid indices based on lat/lng
         grid_x = int((lat - self.min_lat) / self.lat_grid_size)
         grid_y = int((lng - self.min_lng) / self.lng_grid_size)
+        # Ensure the indices are within grid bounds
+        grid_x = max(0, min(grid_x, GRID_SIZE[0] - 1))
+        grid_y = max(0, min(grid_y, GRID_SIZE[1] - 1))
         return (grid_x, grid_y)
+
+    def grid_to_coord(self, cell):
+        # Convert grid cell back to lat/lng
+        lat = self.min_lat + cell[0] * self.lat_grid_size
+        lng = self.min_lng + cell[1] * self.lng_grid_size
+        return {"lat": lat, "lng": lng}
+    
     
     def estimate_position(self):
         # Get location of mower from Locatlization class
@@ -279,7 +284,7 @@ class PathPlanning:
         :param lon: Longitude of the location
         :return: Dictionary containing weather data
         """
-        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPEN_WEATHER_MAP_API_KEY}&units=metric"
         try:
             response = requests.get(url)
             weather_data = response.json()

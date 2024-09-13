@@ -38,23 +38,31 @@ class SingletonCamera:
         self.running = True
         self.read_thread = threading.Thread(target=self.update, daemon=True)
         self.read_thread.start()
+        self.queue_lock = threading.Lock()
 
     def update(self):
-        """Continuously read frames from Picamera2 and add them to the queue."""
         while self.running:
             frame = self.picam2.capture_array()
             if frame is None:
                 logging.warning("Failed to read frame from camera. Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
-            
-            if not self.frame_queue.empty():
-                try:
-                    self.frame_queue.get_nowait()
-                except Empty:
-                    pass
-            
-            self.frame_queue.put(frame)
+
+            with self.queue_lock:
+                if not self.frame_queue.empty():
+                    try:
+                        self.frame_queue.get_nowait()
+                    except Empty:
+                        pass
+                self.frame_queue.put(frame)
+
+    def get_frame(self):
+        with self.queue_lock:
+            try:
+                return self.frame_queue.get(timeout=0.1)
+            except Empty:
+                logging.info("Frame queue is empty")
+                return None
 
     def reinitialize_camera(self):
         """Reinitialize the camera if it fails."""
@@ -63,14 +71,6 @@ class SingletonCamera:
             logging.info("Releasing previous camera capture.")
             self.picam2.start()
             logging.info("Camera reinitialized successfully.")
-
-    def get_frame(self):
-        """Get the latest frame from the queue."""
-        try:
-            return self.frame_queue.get(timeout=0.1)
-        except Empty:
-            logging.info("Frame queue is empty")
-            return None
 
     def stop_camera(self):
         """Stop the camera and release resources."""
@@ -143,6 +143,30 @@ class CameraProcessor:
         else:
             logging.info("No obstacles detected.")
             return False
+        
+    def detect_dropoff(self):
+        """Detect if a drop-off is present."""
+        image = self.camera.get_frame()
+        if image is None:
+            logging.warning("No frame available for detection.")
+            return False
+
+        results = self.detect_objects(image)
+        if results:
+            logging.info(f"Drop-off detected: {results}")
+            return True
+        else:
+            logging.info("No drop-offs detected.")
+            return False
+                
+    def classify_obstacle(self):
+        """Classify the detected obstacle using the TFLite model."""
+        image = self.camera.get_frame()
+        if image is None:
+            logging.warning("No frame available for classification.")
+            return []
+
+        return self.detect_objects(image)
 
 # Singleton accessor function
 camera_instance = SingletonCamera()  # Ensures the camera is initialized once

@@ -157,3 +157,17 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating pitch: {e}")
             return 0
+        
+    @staticmethod
+    def calculate_roll(sensor):
+        """Calculate roll based on accelerometer data."""
+        if not BNO085Sensor.validate_sensor(sensor):
+            return 0
+        
+        try:
+            accel_x, accel_y, accel_z = sensor.acceleration
+            roll = math.atan2(accel_y, (accel_x**2 + accel_z**2)**0.5) * 180 / math.pi
+            return round(roll, 2)
+        except Exception as e:
+            logging.error(f"Error calculating roll: {e}")
+            return 0

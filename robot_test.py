@@ -4,7 +4,7 @@ import sys
 import os
 import time
 import datetime
-from threading import Lock
+import threading
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -18,6 +18,9 @@ from utils import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
+
+# Initialize GPS Latest Position
+gps_latest_position = GpsLatestPosition()
 
 # Global variable for shared resource
 shared_resource = []
@@ -40,7 +43,7 @@ def initialize_resources():
         robohat_controller = RoboHATController()  # Retry initialization
 
 # Lock for shared resources
-lock = Lock()
+lock = threading.Lock()
 
 # Function to verify the polygon points by traveling to each one
 def verify_polygon_points():
@@ -64,7 +67,7 @@ def verify_polygon_points():
             time.sleep(5)  # Adjust the sleep time as needed for verification
 
             # Log the robot's current position for verification
-            current_position = GpsLatestPosition.get_latest_position()
+            current_position = gps_latest_position.run()
             logging.info(f"Arrived at point {index + 1}, current GPS position: {current_position}")
 
         logging.info("Polygon verification complete.")
@@ -88,9 +91,8 @@ def go_home():
 # Main loop for testing web interface and sensors
 if __name__ == "__main__":
     try:
-
-        # Start the web interface to test manual controls and sensors
-        start_web_interface()
+        # Start the web interface in a separate thread
+        threading.Thread(target=start_web_interface, daemon=True).start()
 
         # Initialize resources
         initialize_resources()

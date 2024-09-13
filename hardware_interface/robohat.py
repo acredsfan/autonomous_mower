@@ -15,6 +15,8 @@ except ImportError:
     print("PySerial not found. Please install: pip install pyserial")
 
 from navigation_system import GpsLatestPosition
+import math
+from hardware_interface import SensorInterface
 
 load_dotenv()
 MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
@@ -23,6 +25,8 @@ from utils import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
+
+
 
 class RoboHATController:
     def __init__(self, debug=False):
@@ -39,6 +43,8 @@ class RoboHATController:
         self.SHOW_STEERING_VALUE = SHOW_STEERING_VALUE
         self.DEAD_ZONE = JOYSTICK_DEADZONE
         self.debug = debug
+        # Initialize GPS Latest Position
+        self.gps_latest_position = GpsLatestPosition()
 
         # Initialize the PWM communication
         try:
@@ -127,11 +133,11 @@ class RoboHATController:
 
     def navigate_to_location(self, target_location):
         try:
-            current_position = GpsLatestPosition.get_latest_position()
+            current_position = self.gps_latest_position.run()
             while not self.has_reached_location(current_position, target_location):
                 steering, throttle = self.calculate_navigation_commands(current_position, target_location)
                 self.set_pulse(steering, throttle)
-                current_position = GpsLatestPosition.get_latest_position()
+                current_position = self.gps_latest_position.get_latest_position()
                 time.sleep(0.1)
             self.stop()
             return True
@@ -140,10 +146,55 @@ class RoboHATController:
             self.stop()
             return False
 
+
     def calculate_navigation_commands(self, current_position, target_location):
-        steering = 0.0
-        throttle = 0.5
+        # Calculate bearing between current_position and target_location
+        bearing = self.calculate_bearing(current_position, target_location)
+        heading_error = SensorInterface.update_sensors('heading') - bearing
+
+        # Simple proportional controller for steering
+        Kp = 0.01  # Proportional gain; adjust as needed
+        steering = -Kp * heading_error  # Negative sign to correct the error
+
+        # Set throttle based on distance to target
+        distance = self.calculate_distance(current_position, target_location)
+        throttle = min(distance * 0.1, 1.0)  # Scale throttle; adjust as needed
+
+        # Clamp steering and throttle values
+        steering = max(min(steering, 1.0), -1.0)
+        throttle = max(min(throttle, 1.0), 0.0)
+
         return steering, throttle
+
+    def calculate_bearing(self, current_position, target_location):
+        # Calculate the bearing between two GPS coordinates
+        lat1, lon1 = map(math.radians, current_position)
+        lat2, lon2 = map(math.radians, target_location)
+        dLon = lon2 - lon1
+
+        x = math.sin(dLon) * math.cos(lat2)
+        y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
+        initial_bearing = math.atan2(x, y)
+        initial_bearing = math.degrees(initial_bearing)
+        compass_bearing = (initial_bearing + 360) % 360
+        return compass_bearing
+
+    def calculate_distance(self, current_position, target_location):
+        # Calculate the distance between two GPS coordinates
+        lat1, lon1 = current_position
+        lat2, lon2 = target_location
+        R = 6371e3  # Earth radius in meters
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        a = math.sin(delta_phi/2) ** 2 + \
+            math.cos(phi1) * math.cos(phi2) * \
+            math.sin(delta_lambda/2) ** 2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        distance = R * c
+        return distance
+
 
     def has_reached_location(self, current_position, target_location, tolerance=0.0001):
         lat1, lon1 = current_position
@@ -186,10 +237,6 @@ class RoboHATController:
 
     def write_pwm(self, steering, throttle):
         self.pwm.write(b"%d, %d\r" % (steering, throttle))
-
-
-    def run(self, steering, throttle):
-        self.set_pulse(steering, throttle)
 
     def shutdown(self):
         try:

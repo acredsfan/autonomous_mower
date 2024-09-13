@@ -22,6 +22,7 @@ function updateSensorDisplay(data) {
     document.getElementById('speed').textContent = `Speed: ${data.speed}`;
     document.getElementById('heading').textContent = `Heading: ${data.heading}`;
     document.getElementById('pitch').textContent = `Pitch: ${data.pitch}`;
+    document.getElementById('roll').textContent = `Roll: ${data.roll}`;
     document.getElementById('solar').textContent = `Solar: ${data.solar}`;
     document.getElementById('battery').textContent = `Battery: ${data.battery}`;
     document.getElementById('battery_charge').textContent = `Battery Charge: ${data.battery_charge}`;
