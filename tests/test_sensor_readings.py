@@ -2,11 +2,6 @@
 # import SensorInterface from hardware_interface folder
 import time
 from hardware_interface import SensorInterface
-import sys
-import os
-
-# Add the project root to the system path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 def test_sensor_readings():
