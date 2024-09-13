@@ -21,14 +21,11 @@
             event.preventDefault();
 
             const mowDays = Array.from(document.querySelectorAll('input[name="mowDays"]:checked')).map(checkbox => checkbox.value);
-            const mowHours = Array.from(document.querySelectorAll('input[name="mowHours"]:checked')).map(checkbox => checkbox.value);
+            const mowHours = Array.from(document.querySelectorAll('input[name="mowHours"]:checked')).map(checkbox => parseInt(checkbox.value));
 
             // Make an AJAX call to your Flask route for saving the settings
             saveSettings(mowDays, mowHours);
         });
 
-        function saveSettings(mowDays, mowHours) {
-            // Implement this function to send the settings data to the server
-        }
     </script>
 {% endblock %}

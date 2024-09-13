@@ -303,6 +303,19 @@ def stop_mower_blades():
     BladeController.set_speed(0)
 
 
+@app.route('/toggle_blades', methods=['POST'])
+def toggle_blades():
+    data = request.get_json()
+    state = data.get('state')
+    if state == 'on':
+        start_mower_blades()
+    elif state == 'off':
+        stop_mower_blades()
+    else:
+        return jsonify({'message': 'Invalid state provided.'}), 400
+    return jsonify({'message': f'Blades turned {state}.'})
+
+
 def stop_motors():
     # Stop the motors
     robohat_driver.run(0, 0)
