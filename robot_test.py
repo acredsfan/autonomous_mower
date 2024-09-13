@@ -79,10 +79,8 @@ def verify_polygon_points():
 
             # Log the robot's current position for verification
             current_position = gps_latest_position.run()
-            logging.info(
-                f"Arrived at point {
-                    index +
-                    1}, current GPS position: {current_position}")
+            logging.info(f"Arrived at point {index + 1}, "
+                         f"current GPS position: {current_position}")
 
         logging.info("Polygon verification complete.")
     except FileNotFoundError:
@@ -150,9 +148,8 @@ def start_mowing():
 
             # Log the robot's current position for verification
             current_position = gps_latest_position.run()
-            logging.info(
-                f"Mowing at point {index + 1}, "
-                f"current GPS position: {current_position}")
+            logging.info(f"Mowing at point {index + 1}, "
+                         f"current GPS position: {current_position}")
 
         logging.info("Mowing process complete.")
 
