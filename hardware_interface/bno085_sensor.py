@@ -20,10 +20,12 @@ class BNO085Sensor:
     def init_bno085(i2c):
         try:
             sensor = BNO08X_I2C(i2c, address=0x4B)
+            sensor.soft_reset()
             sensor.enable_feature(BNO_REPORT_ACCELEROMETER)
             sensor.enable_feature(BNO_REPORT_GYROSCOPE)
             sensor.enable_feature(BNO_REPORT_MAGNETOMETER)
             sensor.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+            sensor.calibrate()
             logging.info("BNO085 initialized with all features enabled.")
             return sensor
         except Exception as e:
