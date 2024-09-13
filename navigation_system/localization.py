@@ -53,21 +53,76 @@ class Localization:
             return []
 
     def estimate_position(self):
-        """Estimate the current position using GPS data."""
-        try:
-            lines = self.position_reader.get_lines()
-            positions = self.position_reader.run(lines)
-            # Convert NMEA lines to positions
-            if positions:
-                ts, self.current_latitude, self.current_longitude = positions[-1]
-                logging.info(
-                    f"Current position: {self.current_latitude}, "
-                    f"{self.current_longitude}, {self.current_altitude}"
+        """Estimate the current position using GPS UTM data
+        fused with IMU data from the BNO085."""
+        from hardware_interface.sensor_interface import SensorInterface
+        """Fuse GPS and IMU data for position estimation."""
+
+        # Get latest GPS and IMU data
+        gps_data = self.latest_position.get_latest_position()
+        imu_data = SensorInterface.update_sensors()
+
+        if gps_data and imu_data:
+            # Extract relevant data
+            gps_lat, gps_lon = gps_data['latitude'], gps_data['longitude']
+            imu_heading = imu_data['heading']
+
+            # Simple complementary filter
+            alpha = 0.95  # Adjust this value to tune the filter
+
+            # If this is the first GPS reading, initialize the fused position
+            if self.fused_position is None:
+                self.fused_position = (gps_lat, gps_lon)
+
+            # Predict position based on IMU heading and previous fused position
+            predicted_lat, predicted_lon = self.predict_position(
+                self.fused_position,
+                imu_heading,
+                self.time_since_last_update
+            )
+
+            # Update fused position using the complementary filter
+            self.fused_position = (
+                alpha * predicted_lat + (1 - alpha) * gps_lat,
+                alpha * predicted_lon + (1 - alpha) * gps_lon
+            )
+
+            self.time_since_last_update = 0  # Reset timer
+
+        else:
+            # If GPS is unavailable,
+            # rely solely on IMU for short-term prediction
+            if imu_data:
+                predicted_lat, predicted_lon = self.predict_position(
+                    self.fused_position,
+                    imu_heading,
+                    self.time_since_last_update
                 )
-            else:
-                logging.warning("GPS data is None.")
-        except Exception as e:
-            logging.exception(f"An error occurred while estimating position: {e}")
+                self.fused_position = (predicted_lat, predicted_lon)
+                self.time_since_last_update += 1  # Increment timer
+        return self.fused_position
+
+    def predict_position(self, position, heading, time_delta):
+        """Predict the next position based on the current position,
+        heading, and time."""
+        # Convert heading to radians
+        from hardware_interface import SensorInterface
+        heading_rad = math.radians(heading)
+
+        # Calculate distance traveled based on speed and time
+        speed = SensorInterface.update_sensors().get("speed")
+        distance = speed * time_delta
+
+        # Calculate the change in latitude and longitude
+        lat, lon = position
+        lat_change = distance * math.cos(heading_rad)
+        lon_change = distance * math.sin(heading_rad)
+
+        # Predict the next position
+        predicted_lat = lat + lat_change
+        predicted_lon = lon + lon_change
+
+        return predicted_lat, predicted_lon
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
@@ -83,19 +138,24 @@ class Localization:
             else:
                 logging.warning("Compass data is None.")
         except Exception:
-            logging.exception("An error occurred while estimating orientation")
+            logging.exception("An error occurred while "
+                              "estimating orientation")
 
     def update(self):
         """Update the position and orientation of the mower."""
         self.estimate_position()
         self.estimate_orientation()
-        if not self.is_within_yard(self.current_latitude, self.current_longitude):
+        if not self.is_within_yard(
+            self.current_latitude,
+            self.current_longitude
+        ):
             logging.warning("Outside yard boundary!")
 
     def is_within_yard(self, lat, lon):
         """Check if the current position is within the yard boundary."""
         return (
-            self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng
+            self.min_lat <= lat <= self.max_lat and
+            self.min_lng <= lon <= self.max_lng
         )
 
 

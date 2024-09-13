@@ -57,6 +57,7 @@ class SensorInterface:
         self.sensor_thread = threading.Thread(
             target=self.update_sensors, daemon=True)
         self.sensor_thread.start()
+        
 
     def update_sensors(self):
         """Read sensor data periodically and update shared sensor data."""
