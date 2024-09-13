@@ -162,8 +162,8 @@ def get_path():
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
-    # Save the coordinates to the file
-    coordinates = request.get_json()
+    data = request.get_json()
+    coordinates = data.get('mowingAreaCoordinates', [])
     with open('user_polygon.json', 'w') as f:
         json.dump(coordinates, f)
     return jsonify({'message': 'Area saved.'})
