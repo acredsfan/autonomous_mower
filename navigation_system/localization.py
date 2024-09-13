@@ -6,6 +6,13 @@ import json
 import sys
 import os
 from utils import LoggerConfig
+import utm
+
+
+def utm_to_latlon(easting, northing, zone_number, zone_letter):
+    lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+    return lat, lon
+
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
