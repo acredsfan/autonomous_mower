@@ -6,7 +6,6 @@ from adafruit_bno08x import (
     BNO_REPORT_MAGNETOMETER,
     BNO_REPORT_ROTATION_VECTOR,
 )
-import time
 import math
 from utils import LoggerConfig
 
