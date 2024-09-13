@@ -26,5 +26,10 @@ class GPIOManager:
 
     def clean():
         chip = gpiod.Chip('gpiochip0')
+        for line in chip.get_all_lines():
+            try:
+                line.release()
+            except Exception as e:
+                logging.error(f"Error releasing GPIO line: {e}")
         chip.close()
         logging.info("GPIO cleanup complete.")
