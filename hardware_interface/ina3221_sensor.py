@@ -40,8 +40,10 @@ class INA3221Sensor:
             logging.error(f"Error reading INA3221 data: {e}")
             return {}
 
-    """Function to determine the battery state of charge for a 12.8V 20Ah lithium-ion battery.
-    Variables may need to be changed based on the battery chemistry of the battery being used."""
+    """Function to determine the battery state of charge
+    for a 12.8V 20Ah lithium-ion battery.
+    Variables may need to be changed based on the
+    battery chemistry of the battery being used."""
     @staticmethod
     def battery_charge(sensor):
         try:
