@@ -22,7 +22,7 @@ from utils import LoggerConfig
 LoggerConfig.configure_logging()
 logger = LoggerConfig.get_logger(__name__)
 
-dotenv_path = '/home/pi/autonomous_mower/.env'
+dotenv_path = "/home/pi/autonomous_mower/.env"
 load_dotenv(dotenv_path)
 NTRIP_user = os.getenv("NTRIP_USER")
 NTRIP_pass = os.getenv("NTRIP_PASS")
@@ -42,8 +42,7 @@ class GpsNmeaPositions:
         """Reads and returns a list of NMEA lines with timestamps."""
         lines = []
         for _ in range(5):
-            line = self.serial_port.readline().decode(
-                'ascii', errors='replace')
+            line = self.serial_port.readline().decode("ascii", errors="replace")
             lines.append((time.time(), line))
         return lines
 
@@ -91,14 +90,15 @@ class GpsPosition:
     """Handles GPS position reading and NTRIP correction."""
 
     def __init__(
-            self,
-            serial: SerialPort,
-            NTRIP_user,
-            NTRIP_pass,
-            NTRIP_url,
-            NTRIP_mountpoint,
-            NTRIP_port,
-            debug=False) -> None:
+        self,
+        serial: SerialPort,
+        NTRIP_user,
+        NTRIP_pass,
+        NTRIP_url,
+        NTRIP_mountpoint,
+        NTRIP_port,
+        debug=False,
+    ) -> None:
         self.line_reader = SerialLineReader(serial)
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug)
@@ -109,7 +109,8 @@ class GpsPosition:
         self.NTRIP_mountpoint = NTRIP_mountpoint
         self.NTRIP_port = NTRIP_port
         self.correction_thread = threading.Thread(
-            target=self.get_correction_data, daemon=True)
+            target=self.get_correction_data, daemon=True
+        )
         self.correction_thread.start()
         self._start()
 
@@ -126,8 +127,7 @@ class GpsPosition:
             self.position = positions[-1]
             if self.debug:
                 logger.info(
-                    f"UTM long = {self.position[0]}, "
-                    f"UTM lat = {self.position[1]}"
+                    f"UTM long = {self.position[0]}, " f"UTM lat = {self.position[1]}"
                 )
         return self.position
 
@@ -154,20 +154,15 @@ class GpsPosition:
         auth = base64.b64encode(
             f"{self.NTRIP_user}:{self.NTRIP_pass}".encode()
         ).decode()
-        headers = {'Authorization': f'Basic {auth}'}
-        url = (
-            f"http://{self.NTRIP_url}:{self.NTRIP_port}/"
-            f"{self.NTRIP_mountpoint}"
-        )
+        headers = {"Authorization": f"Basic {auth}"}
+        url = f"http://{self.NTRIP_url}:{self.NTRIP_port}/" f"{self.NTRIP_mountpoint}"
         try:
             response = requests.get(url, headers=headers, stream=True)
             if response.status_code == 200:
                 logger.info("Connected to NTRIP")
                 return response
             else:
-                logger.error(
-                    f"Failed to connect to NTRIP: {response.status_code}"
-                )
+                logger.error(f"Failed to connect to NTRIP: {response.status_code}")
                 return None
         except requests.RequestException as e:
             logger.error(f"Request exception: {e}")
@@ -236,15 +231,11 @@ class GpsPlayer:
                         self.index += 1
                     else:
                         next_nmea_time = float(next_nmea[0])
-                        offset_nmea_time = (
-                            next_nmea_time - start_nmea_time
-                        )
+                        offset_nmea_time = next_nmea_time - start_nmea_time
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
-                            nmea_sentences.append(
-                                (next_nmea_time, next_nmea[1])
-                            )
+                            nmea_sentences.append((next_nmea_time, next_nmea[1]))
                             self.index += 1
         return nmea_sentences
 
@@ -257,11 +248,11 @@ def parseGpsPosition(line, debug=False):
     if not line:
         return None
 
-    if '$' != line[0]:
+    if "$" != line[0]:
         logger.info("NMEA Missing line start")
         return None
 
-    if '*' != line[-3]:
+    if "*" != line[-3]:
         logger.info("NMEA Missing checksum")
         return None
 
@@ -292,31 +283,22 @@ def parseGpsPosition(line, debug=False):
             try:
                 msg = pynmea2.parse(line)
             except pynmea2.ParseError as e:
-                logger.error(f'NMEA parse error detected: {e}')
+                logger.error(f"NMEA parse error detected: {e}")
                 return None
 
-        if nmea_parts[2] == 'V':
+        if nmea_parts[2] == "V":
             logger.info(
-                "GPS receiver warning; position not valid. "
-                "Ignore invalid position."
+                "GPS receiver warning; position not valid. " "Ignore invalid position."
             )
         else:
-            longitude = nmea_to_degrees(
-                nmea_parts[5], nmea_parts[6]
-            )
-            latitude = nmea_to_degrees(
-                nmea_parts[3], nmea_parts[4]
-            )
+            longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
+            latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
 
             if debug:
                 if msg.longitude != longitude:
-                    logger.debug(
-                        f"Longitude mismatch {msg.longitude} != {longitude}"
-                    )
+                    logger.debug(f"Longitude mismatch {msg.longitude} != {longitude}")
                 if msg.latitude != latitude:
-                    logger.debug(
-                        f"Latitude mismatch {msg.latitude} != {latitude}"
-                    )
+                    logger.debug(f"Latitude mismatch {msg.latitude} != {latitude}")
 
             utm_position = utm.from_latlon(latitude, longitude)
             # utm_position returns (Easting, Northing, Zone Num, Zone Letter)
@@ -324,7 +306,7 @@ def parseGpsPosition(line, debug=False):
                 float(utm_position[0]),
                 float(utm_position[1]),
                 utm_position[2],
-                utm_position[3]
+                utm_position[3],
             )
     return None
 
@@ -353,7 +335,7 @@ def nmea_to_degrees(gps_str, direction):
     degrees = float(degrees_str) if degrees_str else 0.0
     minutes = float(minutes_str) / 60 if minutes_str else 0.0
 
-    return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
+    return (degrees + minutes) * (-1 if direction in ["W", "S"] else 1)
 
 
 class Stats:
@@ -402,9 +384,7 @@ class Waypoint:
 
         self.eigenvalues, self.eigenvectors = self.eigsorted(self.cov)
 
-        self.theta = np.degrees(
-            np.arctan2(*self.eigenvectors[:, 0][::-1])
-        )
+        self.theta = np.degrees(np.arctan2(*self.eigenvectors[:, 0][::-1]))
         self.width, self.height = 2 * nstd * np.sqrt(self.eigenvalues)
 
     @staticmethod
@@ -422,32 +402,33 @@ class Waypoint:
         y_translated = y - self.y_stats.mean
 
         part1 = (
-            (cos_theta * x_translated +
-             sin_theta * y_translated) /
-            self.width
+            (cos_theta * x_translated + sin_theta * y_translated) / self.width
         ) ** 2
         part2 = (
-            (sin_theta * x_translated -
-             cos_theta * y_translated) /
-            self.height
+            (sin_theta * x_translated - cos_theta * y_translated) / self.height
         ) ** 2
         return (part1 + part2) <= 1
 
     def is_in_range(self, x, y):
         """Checks if a point is within the waypoint's range."""
-        return (self.x_stats.min <= x <= self.x_stats.max and
-                self.y_stats.min <= y <= self.y_stats.max)
+        return (
+            self.x_stats.min <= x <= self.x_stats.max
+            and self.y_stats.min <= y <= self.y_stats.max
+        )
 
     def is_in_std(self, x, y, std_multiple=1.0):
         """Checks if a point is within a multiple of standard deviations."""
         x_std = self.x_stats.std_deviation * std_multiple
         y_std = self.y_stats.std_deviation * std_multiple
-        return (self.x_stats.mean - x_std <= x <= self.x_stats.mean + x_std and
-                self.y_stats.mean - y_std <= y <= self.y_stats.mean + y_std)
+        return (
+            self.x_stats.mean - x_std <= x <= self.x_stats.mean + x_std
+            and self.y_stats.mean - y_std <= y <= self.y_stats.mean + y_std
+        )
 
     def show(self):
         """Displays the waypoint using matplotlib."""
         import matplotlib.pyplot as plt
+
         self.plot()
         plt.show()
 
@@ -455,33 +436,34 @@ class Waypoint:
         """Plots the waypoint's statistics."""
         from matplotlib.patches import Ellipse, Rectangle
         import matplotlib.pyplot as plt
-        ax = plt.subplot(111, aspect='equal')
+
+        ax = plt.subplot(111, aspect="equal")
         plt.scatter(self.x, self.y)
         plt.plot(
             self.x_stats.mean,
             self.y_stats.mean,
             marker="+",
             markeredgecolor="green",
-            markerfacecolor="green"
+            markerfacecolor="green",
         )
         bounds = Rectangle(
             (self.x_stats.min, self.y_stats.min),
             self.x_stats.max - self.x_stats.min,
             self.y_stats.max - self.y_stats.min,
             alpha=0.5,
-            edgecolor='red',
+            edgecolor="red",
             fill=False,
-            visible=True
+            visible=True,
         )
         ax.add_artist(bounds)
         ellipse = Ellipse(
             xy=(self.x_stats.mean, self.y_stats.mean),
             width=self.width,
             height=self.height,
-            angle=self.theta
+            angle=self.theta,
         )
         ellipse.set_alpha(0.25)
-        ellipse.set_facecolor('green')
+        ellipse.set_facecolor("green")
         ax.add_artist(ellipse)
 
 
@@ -512,6 +494,7 @@ def is_in_waypoint(waypoints, x, y):
 def plot_waypoints(waypoints):
     """Plots all waypoints."""
     import matplotlib.pyplot as plt
+
     for waypoint in waypoints:
         waypoint.plot()
     plt.show()
@@ -526,28 +509,20 @@ def main():
         "--serial",
         type=str,
         required=True,
-        help="Serial port address, like '/dev/ttyUSB0'"
+        help="Serial port address, like '/dev/ttyUSB0'",
     )
     parser.add_argument(
-        "-b",
-        "--baudrate",
-        type=int,
-        default=115200,
-        help="Serial port baud rate."
+        "-b", "--baudrate", type=int, default=115200, help="Serial port baud rate."
     )
     parser.add_argument(
         "-t",
         "--timeout",
         type=float,
         default=0.5,
-        help="Serial port timeout in seconds."
+        help="Serial port timeout in seconds.",
     )
     parser.add_argument(
-        "-sp",
-        '--samples',
-        type=int,
-        default=5,
-        help="Number of samples per waypoint."
+        "-sp", "--samples", type=int, default=5, help="Number of samples per waypoint."
     )
     parser.add_argument(
         "-wp",
@@ -555,54 +530,28 @@ def main():
         type=int,
         default=0,
         help="Number of waypoints to collect; "
-             "> 0 to collect waypoints, 0 to just log position"
+        "> 0 to collect waypoints, 0 to just log position",
     )
     parser.add_argument(
         "-nstd",
         "--nstd",
         type=float,
         default=1.0,
-        help="Multiple of standard deviation for ellipse."
+        help="Multiple of standard deviation for ellipse.",
     )
     parser.add_argument(
-        "-th",
-        "--threaded",
-        action='store_true',
-        help="Run in threaded mode."
+        "-th", "--threaded", action="store_true", help="Run in threaded mode."
     )
     parser.add_argument(
-        "-db",
-        "--debug",
-        action='store_true',
-        help="Enable extra logging."
+        "-db", "--debug", action="store_true", help="Enable extra logging."
     )
+    parser.add_argument("-u", "--user", type=str, required=True, help="NTRIP username.")
     parser.add_argument(
-        "-u",
-        "--user",
-        type=str,
-        required=True,
-        help="NTRIP username."
+        "-p", "--password", type=str, required=True, help="NTRIP password."
     )
+    parser.add_argument("-url", "--url", type=str, required=True, help="NTRIP URL.")
     parser.add_argument(
-        "-p",
-        "--password",
-        type=str,
-        required=True,
-        help="NTRIP password."
-    )
-    parser.add_argument(
-        "-url",
-        "--url",
-        type=str,
-        required=True,
-        help="NTRIP URL."
-    )
-    parser.add_argument(
-        "-mp",
-        "--mountpoint",
-        type=str,
-        required=True,
-        help="NTRIP mountpoint."
+        "-mp", "--mountpoint", type=str, required=True, help="NTRIP mountpoint."
     )
     args = parser.parse_args()
 
@@ -639,14 +588,10 @@ def main():
 
     try:
         serial_port = SerialPort(
-            args.serial,
-            baudrate=args.baudrate,
-            timeout=args.timeout
+            args.serial, baudrate=args.baudrate, timeout=args.timeout
         )
         line_reader = SerialLineReader(
-            serial_port,
-            max_lines=args.samples,
-            debug=args.debug
+            serial_port, max_lines=args.samples, debug=args.debug
         )
         position_reader = GpsNmeaPositions(args.debug)
 
@@ -662,7 +607,8 @@ def main():
 
         if args.threaded:
             update_thread = threading.Thread(
-                target=line_reader.update, args=(), daemon=True)
+                target=line_reader.update, args=(), daemon=True
+            )
             update_thread.start()
 
         def read_gps():
@@ -689,7 +635,7 @@ def main():
                     state = "move"
                 elif state == "move":
                     key_press = readchar.readchar()
-                    if key_press == ' ':
+                    if key_press == " ":
                         waypoint_samples = []
                         line_reader.clear()
                         state = "sampling"
@@ -728,8 +674,7 @@ def main():
                                 f"of waypoint #{index + 1}"
                             )
                         std_deviation = 1.0
-                        hit, index = is_in_waypoint_std(
-                            waypoints, x, y, std_deviation)
+                        hit, index = is_in_waypoint_std(waypoints, x, y, std_deviation)
                         if hit:
                             print(
                                 f"You are within {std_deviation} std devs "
@@ -737,9 +682,7 @@ def main():
                             )
                         hit, index = is_in_waypoint(waypoints, x, y)
                         if hit:
-                            print(
-                                f"You are at waypoint's ellipse #{index + 1}"
-                            )
+                            print(f"You are at waypoint's ellipse #{index + 1}")
                 else:
                     for position in readings:
                         ts, x, y = position

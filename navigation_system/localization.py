@@ -67,7 +67,7 @@ class Localization:
             else:
                 logging.warning("GPS data is None.")
         except Exception as e:
-            logging.exception(f"An error occurred while est position: {e}")
+            logging.exception(f"An error occurred while estimating position: {e}")
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
