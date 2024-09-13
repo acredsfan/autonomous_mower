@@ -99,6 +99,21 @@ def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
+@socketio.on('request_status')
+def handle_status_request():
+    sensor_data = sensor_interface.sensor_data
+    # Prepare the data in the format expected by the client
+    data = {
+        'battery': sensor_data.get('battery', {}),
+        'battery_charge': sensor_data.get('battery_charge', 'N/A'),
+        'solar': sensor_data.get('solar', {}),
+        'speed': sensor_data.get('speed', 'N/A'),
+        'heading': sensor_data.get('heading', 'N/A'),
+        'bme280': sensor_data.get('bme280', {}),
+        'left_distance': sensor_data.get('left_distance', 'N/A'),
+        'right_distance': sensor_data.get('right_distance', 'N/A')
+    }
+    emit('update_status', data)
 
 @app.route('/video_feed')
 def video_feed():
