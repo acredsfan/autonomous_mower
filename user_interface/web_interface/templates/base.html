@@ -19,10 +19,10 @@
         <a href="{{ url_for('camera_route') }}">Camera Stream</a> 
         </nav>
     <main>
+        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
         {% block content %}
         {% endblock %}
         {% block scripts %}
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
         {% endblock %}
     </main>
 </body>
