@@ -5,7 +5,6 @@ import requests
 import base64
 import os
 import pynmea2
-import serial
 import utm
 from dotenv import load_dotenv
 from functools import reduce
@@ -35,7 +34,8 @@ class GpsNmeaPositions:
     def get_lines(self):
         lines = []
         for _ in range(5):
-            line = self.serial_port.readline().decode('ascii', errors='replace')
+            line = self.serial_port.readline().decode(
+                'ascii', errors='replace')
             lines.append((time.time(), line))
         return lines
 
@@ -130,7 +130,10 @@ class GpsPosition:
         auth = base64.b64encode(
             f"{self.NTRIP_user}:{self.NTRIP_pass}".encode()).decode()
         headers = {'Authorization': f'Basic {auth}'}
-        url = f"http://{self.NTRIP_url}:{self.NTRIP_port}/{self.NTRIP_mountpoint}"
+        url = (
+            f"http://{self.NTRIP_url}:{self.NTRIP_port}/"
+            f"{self.NTRIP_mountpoint}"
+        )
         response = requests.get(url, headers=headers, stream=True)
         if response.status_code == 200:
             print("Connected to NTRIP")
@@ -228,7 +231,8 @@ def parseGpsPosition(line, debug=False):
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
             logger.info(
-                f"NMEA checksum does not match: {nmea_checksum} != {calculated_checksum}")
+                "NMEA checksum does not match: "
+                f"{nmea_checksum} != {calculated_checksum}")
             return None
 
         if debug:
@@ -240,7 +244,8 @@ def parseGpsPosition(line, debug=False):
 
         if nmea_parts[2] == 'V':
             logger.info(
-                "GPS receiver warning; position not valid. Ignore invalid position.")
+                "GPS receiver warning; position not valid."
+                "Ignore invalid position.")
         else:
             longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
             latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
@@ -293,10 +298,9 @@ def nmea_to_degrees(gps_str, direction):
 if __name__ == "__main__":
     import math
     import numpy as np
-    import matplotlib.pyplot as plt
     import sys
     import readchar
-    from hardware_interface import SerialPort, SerialLineReader
+    from hardware_interface import SerialPort
 
     def stats(data):
         if not data:
@@ -383,9 +387,7 @@ if __name__ == "__main__":
                    (y <= (self.y_stats.mean + y_std))
 
         def show(self):
-            from matplotlib.patches import Ellipse
             import matplotlib.pyplot as plt
-            ax = plt.subplot(111, aspect='equal')
             self.plot()
             plt.show()
 
@@ -441,9 +443,7 @@ if __name__ == "__main__":
         return False, -1
 
     def plot(waypoints):
-        from matplotlib.patches import Ellipse
         import matplotlib.pyplot as plt
-        ax = plt.subplot(111, aspect='equal')
         for waypoint in waypoints:
             waypoint.plot()
         plt.show()
@@ -479,7 +479,8 @@ if __name__ == "__main__":
         "--waypoints",
         type=int,
         default=0,
-        help="Number of waypoints to collect; > 0 to collect waypoints, 0 to just log position")
+        help="Number of waypoints to collect;"
+        "> 0 to collect waypoints, 0 to just log position")
     parser.add_argument(
         "-nstd",
         "--nstd",
@@ -524,7 +525,8 @@ if __name__ == "__main__":
 
     if args.waypoints < 0:
         print(
-            "Use waypoints > 0 to collect waypoints, use 0 waypoints to just log position")
+            "Use waypoints > 0 to collect waypoints,"
+            "use 0 waypoints to just log position")
         parser.print_help()
         sys.exit(0)
 
@@ -576,7 +578,9 @@ if __name__ == "__main__":
             update_thread.start()
 
         def read_gps():
-            lines = line_reader.run_threaded() if args.threaded else line_reader.run()
+            lines = (line_reader.run_threaded()
+                     if args.threaded
+                     else line_reader.run())
             positions = position_reader.run(lines)
             return positions
 
@@ -588,9 +592,10 @@ if __name__ == "__main__":
                 print("")
                 if state == "prompt":
                     print(
-                        f"Move to waypoint #{
-                            len(waypoints) +
-                            1} and press the space bar and enter to start sampling or any other key to just start logging.")
+                        f"Move to waypoint #{len(waypoints) + 1} "
+                        "and press the space bar and enter to start"
+                        "sampling or any other key to just start logging.")
+
                     state = "move"
                 elif state == "move":
                     key_press = readchar.readchar()
@@ -606,8 +611,10 @@ if __name__ == "__main__":
                     print(f"Collected {count} so far...")
                     if count > samples_per_waypoint:
                         print(
-                            f"...done.  Collected {count} samples for waypoint #{
-                                len(waypoints) + 1}")
+                            f"...done. Collected {count} samples "
+                            f"for waypoint "
+                            f"{len(waypoints) + 1}"
+                        )
                         waypoint = Waypoint(waypoint_samples, nstd=args.nstd)
                         waypoints.append(waypoint)
                         if len(waypoints) < waypoint_count:
@@ -618,7 +625,8 @@ if __name__ == "__main__":
                                 plot(waypoints)
                 elif state == "test_prompt":
                     print(
-                        "Waypoints are recorded.  Now walk around and see when you are in a waypoint.")
+                        "Waypoints are recorded.  Now walk around and "
+                        "see when you are in a waypoint.")
                     state = "test"
                 elif state == "test":
                     for ts, x, y in readings:
@@ -626,14 +634,16 @@ if __name__ == "__main__":
                         hit, index = is_in_waypoint_range(waypoints, x, y)
                         if hit:
                             print(
-                                f"You are within the sample range of waypoint #{
+                                f"You are within the sample range "
+                                f"of waypoint #{
                                     index + 1}")
                         std_deviation = 1.0
                         hit, index = is_in_waypoint_std(
                             waypoints, x, y, std_deviation)
                         if hit:
                             print(
-                                f"You are within {std_deviation} standard deviations of the center of waypoint #{
+                                f"You are within {std_deviation} std devs "
+                                f"of the center of waypoint #{
                                     index + 1}")
                         hit, index = is_in_waypoint(waypoints, x, y)
                         if hit:
