@@ -99,6 +99,7 @@ def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
+
 @socketio.on('request_status')
 def handle_status_request():
     sensor_data = sensor_interface.sensor_data
@@ -114,6 +115,7 @@ def handle_status_request():
         'right_distance': sensor_data.get('right_distance', 'N/A')
     }
     emit('update_status', data)
+
 
 @app.route('/video_feed')
 def video_feed():
