@@ -109,6 +109,62 @@ def go_home():
         logging.exception("Error in go_home")
 
 
+def start_mowing():
+    # Start the mowing process
+    logging.info("Starting the mowing process...")
+    try:
+        # Load the mowing area polygon coordinates from the saved JSON file
+        with open('user_polygon.json', 'r') as f:
+            polygon_points = json.load(f)
+
+        # Check if polygon points are available
+        if not polygon_points:
+            logging.error(
+                "No polygon points found."
+                "Please set the mowing area in the web interface.")
+            return
+    except FileNotFoundError:
+        logging.error(
+            "Mowing area not set. Please define the area "
+            "in the web interface.")
+        # Check for Ideal mowing conditions
+        SensorInterface.ideal_mowing_conditions()
+    except Exception:
+        logging.exception("Error in start_mowing")
+        
+        # Start the mowing process by navigating to the first point
+        logging.info("Navigating to the starting point...")
+        robohat_controller.navigate_to_location(
+            (polygon_points[0]['lat'], polygon_points[0]['lng']))
+
+        # Start mowing along the polygon boundary
+        for index, point in enumerate(polygon_points):
+            logging.info(f"Mowing at point {index + 1}: {point}")
+            # Perform mowing operations at each point
+            # For example, activate the blade and move forward
+            BladeController.set_speed(100)
+            time.sleep(5)  # Adjust the mowing time as needed
+            BladeController.set_speed(0)
+
+            # Optionally wait for confirmation or a set time at each point
+            time.sleep(5)  # Adjust the sleep time as needed for mowing
+
+            # Log the robot's current position for verification
+            current_position = gps_latest_position.run()
+            logging.info(
+                f"Mowing at point {
+                    index +
+                    1}, current GPS position: {current_position}")
+
+        logging.info("Mowing process complete.")
+
+
+def stop_mowing():
+    # Stop the mowing process
+    logging.info("Stopping the mowing process...")
+    BladeController.set_speed(0)
+
+
 # Main loop for testing web interface and sensors
 if __name__ == "__main__":
     try:

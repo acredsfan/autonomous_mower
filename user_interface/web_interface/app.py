@@ -147,14 +147,15 @@ def handle_frame_request():
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
-    # Example: robohat_driver.run(0.5, 0.5) for forward movement at half speed
+    import robot_test
+    robot_test.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    # Trigger stop mowing actions
-    robohat_driver.run(0, 0)
+    import robot_test
+    robot_test.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
 
 
