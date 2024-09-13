@@ -251,8 +251,8 @@ class RoboHATController:
                 self.write_pwm(output_steering, output_throttle)
             else:
                 print(
-                    f"Warning: steering = {output_steering}, STEERING_MID = {
-                        self.STEERING_MID}")
+                    f"Warning: steering = {output_steering}, STEERING_MID = "
+                    f"{self.STEERING_MID}")
                 print(
                     f"Warning: throttle = {output_throttle}, MAX_FORWARD = {
                         self.MAX_FORWARD}, STOPPED_PWM = {
