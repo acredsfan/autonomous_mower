@@ -2,3 +2,4 @@
 *.log
 *.tflite
 .vscode
+.__pycache__
