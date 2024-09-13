@@ -18,6 +18,7 @@ from flask import Flask, render_template, request, jsonify, Response
 import json
 import sys
 import os
+import utm
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -59,6 +60,11 @@ stop_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
+
+
+def utm_to_latlon(easting, northing, zone_number, zone_letter):
+    lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+    return lat, lon
 
 
 def gen():
@@ -166,13 +172,13 @@ def save_mowing_area():
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
     gps_nmea_positions = GpsNmeaPositions()
-    # Assuming you have a method to get lines
     lines = gps_nmea_positions.get_lines()
     positions = position_reader.run(lines)
 
     if positions:
-        latitude, longitude = positions[-1]
-        return jsonify({'latitude': latitude, 'longitude': longitude})
+        ts, easting, northing, zone_number, zone_letter = positions[-1]
+        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+        return jsonify({'latitude': lat, 'longitude': lon})
     else:
         return jsonify({'error': 'No GPS data available'})
 
