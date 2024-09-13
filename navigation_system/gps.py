@@ -214,7 +214,7 @@ def parseGpsPosition(line, debug=False):
     line = line.strip()
     if not line:
         return None
-
+    
     if '$' != line[0]:
         logger.info("NMEA Missing line start")
         return None
@@ -257,12 +257,13 @@ def parseGpsPosition(line, debug=False):
                     print(f"Latitude mismatch {msg.latitude} != {latitude}")
 
             utm_position = utm.from_latlon(latitude, longitude)
-            if debug:
-                logger.info(
-                    f"UTM easting = {
-                        utm_position[0]}, UTM northing = {
-                        utm_position[1]}")
-            return float(utm_position[0]), float(utm_position[1])
+            # utm_position returns (Easting, Northing, Zone Num, Zone Letter)
+            return (
+                float(utm_position[0]),
+                float(utm_position[1]),
+                utm_position[2],
+                utm_position[3]
+            )
     return None
 
 

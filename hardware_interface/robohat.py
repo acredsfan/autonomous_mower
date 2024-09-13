@@ -197,33 +197,17 @@ class RoboHATController:
         return steering, throttle
 
     def calculate_bearing(self, current_position, target_location):
-        # Calculate the bearing between two GPS coordinates
-        lat1, lon1 = map(math.radians, current_position)
-        lat2, lon2 = map(math.radians, target_location)
-        dLon = lon2 - lon1
-
-        x = math.sin(dLon) * math.cos(lat2)
-        y = math.cos(lat1) * math.sin(lat2) - \
-            (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
-        initial_bearing = math.atan2(x, y)
-        initial_bearing = math.degrees(initial_bearing)
-        compass_bearing = (initial_bearing + 360) % 360
-        return compass_bearing
+        x1, y1 = current_position[:2]
+        x2, y2 = target_location[:2]
+        angle_rad = math.atan2(y2 - y1, x2 - x1)
+        # Normalize to 0-360 degrees
+        bearing = (math.degrees(angle_rad) + 360) % 360
+        return bearing
 
     def calculate_distance(self, current_position, target_location):
-        # Calculate the distance between two GPS coordinates
-        lat1, lon1 = current_position
-        lat2, lon2 = target_location
-        R = 6371e3  # Earth radius in meters
-        phi1 = math.radians(lat1)
-        phi2 = math.radians(lat2)
-        delta_phi = math.radians(lat2 - lat1)
-        delta_lambda = math.radians(lon2 - lon1)
-        a = math.sin(delta_phi / 2) ** 2 + \
-            math.cos(phi1) * math.cos(phi2) * \
-            math.sin(delta_lambda / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        distance = R * c
+        x1, y1 = current_position[:2]
+        x2, y2 = target_location[:2]
+        distance = math.hypot(x2 - x1, y2 - y1)
         return distance
 
     def has_reached_location(
