@@ -16,8 +16,7 @@ class VL53L0XSensors:
             return sensor
         except Exception as e:
             logging.error(
-                f"Error initializing VL53L0X at address {
-                    hex(address)}: {e}")
+                f"Error initializing VL53L0X at address {hex(address)}: {e}")
             return None
 
     @staticmethod
