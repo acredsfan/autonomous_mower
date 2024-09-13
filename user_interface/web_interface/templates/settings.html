@@ -17,15 +17,7 @@
         <button type="submit">Save Settings</button>
     </form>
     <script>
-        document.getElementById('settings-form').addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            const mowDays = Array.from(document.querySelectorAll('input[name="mowDays"]:checked')).map(checkbox => checkbox.value);
-            const mowHours = Array.from(document.querySelectorAll('input[name="mowHours"]:checked')).map(checkbox => parseInt(checkbox.value));
-
-            // Make an AJAX call to your Flask route for saving the settings
-            saveSettings(mowDays, mowHours);
-        });
+        
 
     </script>
 {% endblock %}

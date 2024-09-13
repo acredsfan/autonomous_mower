@@ -30,6 +30,22 @@ function updateSensorDisplay(data) {
     document.getElementById('right_distance').textContent = `Right Distance: ${data.right_distance}`;
 }
 
+//get GOOGLE_MAPS_API_KEY from config.json
+fetch('/get_google_maps_api_key')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data);
+        loadScript(data.GOOGLE_MAPS_API_KEY);
+    })
+    .catch((error) => console.error('Error fetching Google Maps API key:', error));
+
+function loadScript() {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap&libraries=drawing`;
+    script.defer = true;
+    document.head.appendChild(script);
+}
+
 function move(direction) {
     fetch('/control', {
         method: 'POST',
@@ -49,6 +65,8 @@ function getSteering(direction) {
             return -1;
         case 'right':
             return 1;
+        case 'stop':
+            return 0;
         default:
             return 0;
     }
@@ -60,6 +78,8 @@ function getThrottle(direction) {
             return 1;
         case 'backward':
             return -1;
+        case 'stop':
+            return 0;
         default:
             return 0;
     }
