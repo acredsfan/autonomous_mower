@@ -28,25 +28,34 @@ gps_latest_position = GpsLatestPosition()
 shared_resource = []
 robohat_controller = None
 
+
 # Function to initialize all resources
-
-
 def initialize_resources():
     from hardware_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner
     global avoidance_algo, localization, robohat_controller
     
     sensor_interface = SensorInterface()
+    time.sleep(0.2)  # Adding delay to allow I2C bus stabilization
     camera = SingletonCamera()
+    time.sleep(0.2)
     path_planner = PathPlanning()
+    time.sleep(0.2)
     avoidance_algo = ObstacleAvoidance()
+    time.sleep(0.2)
     localization = Localization()
+    
     try:
         robohat_controller = RoboHATController()
     except RuntimeError as e:
         logging.error(f"Failed to initialize RoboHATController: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
-        robohat_controller = RoboHATController()  # Retry initialization
+        time.sleep(0.5)  # Adding delay before retrying
+        try:
+            robohat_controller = RoboHATController()  # Retry initialization
+        except RuntimeError as e:
+            logging.error(f"Retry failed for RoboHATController: {e}")
+            robohat_controller = None
 
 
 # Lock for shared resources

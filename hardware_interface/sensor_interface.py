@@ -16,6 +16,7 @@ class SensorInterface:
     def __init__(self):
         self.sensor_data_lock = threading.Lock()
         self.sensor_data = {}
+        self.i2c_lock = threading.Lock()  # Added lock for I2C access
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.shutdown_pins = [22, 23]
         self.interrupt_pins = [6, 12]
@@ -26,24 +27,24 @@ class SensorInterface:
         self.stop_thread = False
 
     def init_sensors(self):
-        """Initialize all sensors with consolidated error handling."""
+        # Initialize all sensors with consolidated error handling and retries
         self.sensors = {
             'bme280': self.initialize_sensor(
                 BME280Sensor.init_bme280, "BME280"),
-            'bno085': self.initialize_sensor(
+            'bno085': self.initialize_sensor_with_retry(
                 lambda: BNO085Sensor.init_bno085(self.i2c), "BNO085"),
-            'ina3221': self.initialize_sensor(
+            'ina3221': self.initialize_sensor_with_retry(
                 lambda: INA3221Sensor.init_ina3221(self.i2c), "INA3221"),
-            'vl53l0x': self.initialize_sensor(
+            'vl53l0x': self.initialize_sensor_with_retry(
                 lambda: VL53L0XSensors.init_vl53l0x_sensors(
-                    self.i2c, self.shutdown_lines
-                ), "VL53L0X"),
+                    self.i2c, self.shutdown_lines), "VL53L0X"),
         }
 
     def initialize_sensor(self, init_function, sensor_name):
-        """Utility function to initialize a sensor and log errors if any."""
+        # Utility function to initialize a sensor and log errors if any
         try:
-            sensor = init_function()
+            with self.i2c_lock:  # Ensure I2C access is synchronized
+                sensor = init_function()
             if sensor is None:
                 raise Exception(f"{sensor_name} initialization returned None.")
             logging.info(f"{sensor_name} initialized successfully.")
@@ -51,6 +52,18 @@ class SensorInterface:
         except Exception as e:
             logging.error(f"Error initializing {sensor_name}: {e}")
             return None
+
+    def initialize_sensor_with_retry(self, init_function, sensor_name, retries=3, delay=0.5):
+        # Improved initialization with retries
+        for attempt in range(retries):
+            sensor = self.initialize_sensor(init_function, sensor_name)
+            if sensor is not None:
+                return sensor
+            logging.warning(f"Retrying {sensor_name} initialization (attempt {attempt + 1})")
+            time.sleep(delay)
+        logging.error(f"Failed to initialize {sensor_name} after {retries} attempts")
+        return None
+
 
     def start_update_thread(self):
         """Start the thread that periodically updates sensor readings."""
