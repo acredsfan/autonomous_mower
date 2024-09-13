@@ -56,8 +56,9 @@ class SensorInterface:
     def initialize_sensor_with_retry(self, init_function, sensor_name, retries=3, delay=0.5):
         # Improved initialization with retries
         for attempt in range(retries):
-            BNO085Sensor.reset_bno085(self.sensors['bno085'])
-            time.sleep(0.1)
+            if sensor_name == "BNO085":
+                BNO085Sensor.reset_bno085()
+                time.sleep(0.1)
             sensor = self.initialize_sensor(init_function, sensor_name)
             if sensor is not None:
                 return sensor
@@ -65,7 +66,6 @@ class SensorInterface:
             time.sleep(delay)
         logging.error(f"Failed to initialize {sensor_name} after {retries} attempts")
         return None
-
 
     def start_update_thread(self):
         """Start the thread that periodically updates sensor readings."""
