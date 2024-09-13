@@ -58,9 +58,13 @@ class RoboHATController:
         # Initialize the PWM communication
         try:
             self.pwm = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
-            logging.info(f"Serial port {MM1_SERIAL_PORT} opened successfully.")
+            logging.info(
+                f"Serial port {MM1_SERIAL_PORT} opened successfully."
+            )
         except serial.SerialException:
-            logging.error("Serial port not found! Please enable: sudo raspi-config")
+            logging.error(
+                "Serial port not found! Please enable: sudo raspi-config"
+            )
             self.pwm = None
         except serial.SerialTimeoutException:
             logging.error("Serial connection timed out!")
@@ -78,7 +82,9 @@ class RoboHATController:
                 self.pwm.close()
                 logging.info("PWM serial connection closed.")
             except Exception as e:
-                logging.error(f"Error closing PWM serial connection: {e}")
+                logging.error(
+                    f"Error closing PWM serial connection: {e}"
+                )
 
     def read_serial(self):
         """Reads and processes data from the serial port."""
@@ -97,21 +103,28 @@ class RoboHATController:
                 throttle_pwm = float(output[1])
 
                 if self.debug:
-                    print(f"angle_pwm = {angle_pwm}, throttle_pwm= {throttle_pwm}")
+                    print(
+                        f"angle_pwm = {angle_pwm}, throttle_pwm= "
+                        f"{throttle_pwm}"
+                    )
 
                 if throttle_pwm >= self.STOPPED_PWM:
                     throttle_pwm = Utils.map_range_float(
-                        throttle_pwm, 1500, 2000, self.STOPPED_PWM, self.MAX_FORWARD
+                        throttle_pwm, 1500, 2000,
+                        self.STOPPED_PWM, self.MAX_FORWARD
                     )
                     self.throttle = Utils.map_range_float(
-                        throttle_pwm, self.STOPPED_PWM, self.MAX_FORWARD, 0, 1.0
+                        throttle_pwm, self.STOPPED_PWM, self.MAX_FORWARD,
+                        0, 1.0
                     )
                 else:
                     throttle_pwm = Utils.map_range_float(
-                        throttle_pwm, 1000, 1500, self.MAX_REVERSE, self.STOPPED_PWM
+                        throttle_pwm, 1000, 1500,
+                        self.MAX_REVERSE, self.STOPPED_PWM
                     )
                     self.throttle = Utils.map_range_float(
-                        throttle_pwm, self.MAX_REVERSE, self.STOPPED_PWM, -1.0, 0
+                        throttle_pwm, self.MAX_REVERSE, self.STOPPED_PWM,
+                        -1.0, 0
                     )
 
                 if angle_pwm >= self.STEERING_MID:
@@ -144,7 +157,9 @@ class RoboHATController:
             try:
                 self.read_serial()
             except Exception as e:
-                logging.error(f"MM1: Error reading serial input: {e}")
+                logging.error(
+                    f"MM1: Error reading serial input: {e}"
+                )
                 break
 
     def run(self, img_arr=None, mode=None, recording=None):
@@ -164,7 +179,8 @@ class RoboHATController:
             self.recording = recording
         if self.recording_latch is not None:
             logging.debug(
-                f"RoboHATController::run_threaded() setting recording from latch = {self.recording_latch}"
+                f"RoboHATController::run_threaded() setting recording "
+                f"from latch = {self.recording_latch}"
             )
             self.recording = self.recording_latch
             self.recording_latch = None
@@ -176,35 +192,46 @@ class RoboHATController:
         try:
             ts, lat, lon = self.gps_latest_position.run()
             current_position = (lat, lon)
-            while not self.has_reached_location(current_position, target_location):
+            while not self.has_reached_location(
+                    current_position, target_location):
                 steering, throttle = self.calculate_navigation_commands(
                     current_position, target_location
                 )
                 self.set_pulse(steering, throttle)
-                ts, lat, lon = self.gps_latest_position.get_latest_position()
+                ts, lat, lon = (
+                    self.gps_latest_position
+                    .get_latest_position()
+                )
                 current_position = (lat, lon)
                 time.sleep(0.1)
             self.stop()
             return True
-        except Exception as e:
+        except Exception:
             logging.exception("Error in navigate_to_location")
             self.stop()
             return False
 
     def calculate_navigation_commands(self, current_position, target_location):
         """
-        Calculates steering and throttle commands based on current and target positions.
+        Calculates steering and throttle commands based on current and
+        target positions.
         """
         # Calculate bearing between current_position and target_location
-        bearing = self.calculate_bearing(current_position, target_location)
-        heading_error = SensorInterface.update_sensors('heading') - bearing
+        bearing = self.calculate_bearing(
+            current_position, target_location
+        )
+        heading_error = (
+            SensorInterface.update_sensors('heading') - bearing
+        )
 
         # Simple proportional controller for steering
         Kp = 0.01  # Proportional gain; adjust as needed
         steering = -Kp * heading_error  # Negative sign to correct the error
 
         # Set throttle based on distance to target
-        distance = self.calculate_distance(current_position, target_location)
+        distance = self.calculate_distance(
+            current_position, target_location
+        )
         throttle = min(distance * 0.1, 1.0)  # Scale throttle; adjust as needed
 
         # Clamp steering and throttle values
@@ -225,20 +252,24 @@ class RoboHATController:
 
     @staticmethod
     def calculate_distance(current_position, target_location):
-        """Calculates the Euclidean distance between current and target positions."""
+        """Calculates the Euclidean distance
+        between current and target positions."""
         lat1, lon1 = current_position
         lat2, lon2 = target_location
         distance = math.hypot(lat2 - lat1, lon2 - lon1)
         return distance
 
     @staticmethod
-    def has_reached_location(current_position, target_location, tolerance=0.0001):
+    def has_reached_location(current_position, target_location,
+                             tolerance=0.0001):
         """
-        Determines if the current_position is within the tolerance of the target_location.
+        Determines if the current_position is within the tolerance of the
+        target_location.
         """
         lat1, lon1 = current_position
         lat2, lon2 = target_location
-        return abs(lat1 - lat2) < tolerance and abs(lon1 - lon2) < tolerance
+        return (abs(lat1 - lat2) < tolerance and
+                abs(lon1 - lon2) < tolerance)
 
     def stop(self):
         """Stops the robot by setting throttle and steering to zero."""
@@ -253,39 +284,51 @@ class RoboHATController:
 
             if throttle > 0:
                 output_throttle = Utils.map_range(
-                    throttle, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD
+                    throttle, 0, 1.0,
+                    self.STOPPED_PWM, self.MAX_FORWARD
                 )
             else:
                 output_throttle = Utils.map_range(
-                    throttle, -1, 0, self.MAX_REVERSE, self.STOPPED_PWM
+                    throttle, -1, 0,
+                    self.MAX_REVERSE, self.STOPPED_PWM
                 )
 
             if steering > 0:
                 output_steering = Utils.map_range(
-                    steering, 0, 1.0, self.STEERING_MID, 1000
+                    steering, 0, 1.0,
+                    self.STEERING_MID, 1000
                 )
             else:
                 output_steering = Utils.map_range(
-                    steering, -1, 0, 2000, self.STEERING_MID
+                    steering, -1, 0,
+                    2000, self.STEERING_MID
                 )
 
-            if self.is_valid_pwm_value(output_steering) and self.is_valid_pwm_value(output_throttle):
+            if (self.is_valid_pwm_value(output_steering) and
+                    self.is_valid_pwm_value(output_throttle)):
                 if self.debug:
-                    print(f"output_steering={output_steering}, output_throttle={output_throttle}")
-                self.write_pwm(output_steering, output_throttle)
+                    print(
+                        f"output_steering={output_steering}, "
+                        f"output_throttle={output_throttle}"
+                    )
+                self.write_pwm(output_steering, throttle)
             else:
                 logging.warning(
-                    f"Warning: steering = {output_steering}, STEERING_MID = {self.STEERING_MID}"
+                    f"Warning: steering = {output_steering}, "
+                    f"STEERING_MID = {self.STEERING_MID}"
                 )
                 logging.warning(
-                    f"Warning: throttle = {output_throttle}, MAX_FORWARD = {self.MAX_FORWARD}, "
-                    f"STOPPED_PWM = {self.STOPPED_PWM}, MAX_REVERSE = {self.MAX_REVERSE}"
+                    f"Warning: throttle = {output_throttle}, "
+                    f"MAX_FORWARD = {self.MAX_FORWARD}, "
+                    f"STOPPED_PWM = {self.STOPPED_PWM}, "
+                    f"MAX_REVERSE = {self.MAX_REVERSE}"
                 )
                 logging.warning("Not sending PWM value to MM1")
 
         except OSError as err:
             logging.error(
-                f"Unexpected issue setting PWM (check wires to motor board): {err}"
+                f"Unexpected issue setting PWM (check wires to motor "
+                f"board): {err}"
             )
 
     @staticmethod
