@@ -103,7 +103,8 @@ class SerialPort:
         try:
             input = ''
             waiting = self.buffered() >= count
-            if waiting:   # read the serial port and see if there's any data there
+            # read the serial port and see if there's any data there
+            if waiting:
                 input = self.ser.read(count)
             return (waiting, input)
         except (serial.serialutil.SerialException, TypeError):
@@ -145,7 +146,8 @@ class SerialPort:
         try:
             input = ''
             waiting = self.buffered() > 0
-            if waiting:   # read the serial port and see if there's any data there
+            # read the serial port and see if there's any data there
+            if waiting:
                 buffer = self.ser.readline()
                 input = buffer.decode(self.charset)
             return (waiting, input)
@@ -335,7 +337,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.samples < 0:
-        print("Samples per read cycle, greater than zero OR zero for unlimited")
+        print("Samples per read cycle,"
+              "greater than zero OR zero for unlimited")
         parser.print_help()
         sys.exit(0)
 
@@ -367,7 +370,10 @@ if __name__ == "__main__":
             update_thread.start()
 
         def read_lines():
-            return line_reader.run_threaded() if args.threaded else line_reader.run()
+            if args.threaded:
+                return line_reader.run_threaded()
+            else:
+                return line_reader.run()
 
         while line_reader.running:
             readings = read_lines()

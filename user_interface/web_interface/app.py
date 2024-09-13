@@ -10,8 +10,11 @@ import datetime
 # Updated import
 from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition
 import threading
-from hardware_interface import BladeController, SensorInterface, RoboHATController
-from flask import Flask, render_template, request, jsonify, send_from_directory, Response, g
+from hardware_interface import (
+    BladeController,
+    SensorInterface,
+    RoboHATController)
+from flask import Flask, render_template, request, jsonify, Response
 import json
 import sys
 import os
@@ -22,11 +25,12 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-
 # Initialize Flask and SocketIO
 app = Flask(
     __name__,
-    template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
+    template_folder=(
+        '/home/pi/autonomous_mower/user_interface/web_interface/templates')
+)
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
@@ -255,7 +259,7 @@ def calculate_next_scheduled_mow():
     mow_days, mow_hours = get_schedule()
 
     # Calculate the next scheduled mow
-    next_mow = datetime.datetime.now()
+    next_mow_date = datetime.datetime.now()
     if mow_days is None or mow_hours is None:
         return "Not scheduled"
 

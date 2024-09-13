@@ -5,11 +5,15 @@ import json
 from user_interface.web_interface.app import start_web_interface
 from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
 from navigation_system import Localization, PathPlanning, GpsLatestPosition
-from hardware_interface import SensorInterface, BladeController, RoboHATController, GPIOManager
+from hardware_interface import (
+    SensorInterface,
+    BladeController,
+    RoboHATController,
+    GPIOManager
+)
 import sys
 import os
 import time
-import datetime
 import threading
 
 
@@ -29,14 +33,9 @@ robohat_controller = None
 
 def initialize_resources():
     from hardware_interface.camera import SingletonCamera
-    global (
-        sensor_interface,
-        camera,
-        path_planner,
-        avoidance_algo,
-        localization,
-        robohat_controller
-    )
+    global sensor_interface, camera, path_planner
+    global avoidance_algo, localization, robohat_controller
+    
     sensor_interface = SensorInterface()
     camera = SingletonCamera()
     path_planner = PathPlanning()
@@ -52,6 +51,7 @@ def initialize_resources():
 
 # Lock for shared resources
 lock = threading.Lock()
+
 
 # Function to verify the polygon points by traveling to each one
 def verify_polygon_points():

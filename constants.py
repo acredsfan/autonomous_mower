@@ -1,6 +1,5 @@
 # constants.py
 import json
-import os
 from dotenv import load_dotenv
 from utils import LoggerConfig
 
@@ -33,7 +32,10 @@ OBSTACLE_MARGIN = 10  # Margin to avoid obstacles in CM
 # Threshold for obstacle detection (in pixels, area w * h)
 CAMERA_OBSTACLE_THRESHOLD = 1000
 MOTOR_SPEED = 50  # Speed of the motors in % (0-100)
-MIN_DISTANCE_THRESHOLD = 10  # Minimum distance threshold to avoid obstacles in CM
+MIN_DISTANCE_THRESHOLD = 10
+""" Minimum distance threshold
+to avoid obstacles in CM"""
+
 AVOIDANCE_DELAY = 0.1  # Delay for obstacle avoidance in seconds
 
 # For RoboHATController

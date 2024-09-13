@@ -31,6 +31,7 @@ MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+
 class RoboHATController:
     def __init__(self, debug=False):
         self.angle = 0.0
