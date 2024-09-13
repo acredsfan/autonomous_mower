@@ -2,7 +2,6 @@ import numpy as np
 import threading
 from queue import Queue, Empty
 import tflite_runtime.interpreter as tflite
-import time
 from picamera2 import Picamera2
 from dotenv import load_dotenv
 import os
@@ -31,7 +30,8 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
-        """Initialize the camera using Picamera2 and start the update thread."""
+        """Initialize the camera using Picamera2
+        and start the update thread."""
         self.frame_queue = Queue(maxsize=1)
         self.picam2 = Picamera2()
         self.picam2.configure(self.picam2.create_preview_configuration())
@@ -46,7 +46,8 @@ class SingletonCamera:
             frame = self.picam2.capture_array()
             if frame is None:
                 logging.warning(
-                    "Failed to read frame from camera. Attempting reinitialization.")
+                    "Failed to read frame from camera. "
+                    "Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
 
@@ -112,7 +113,8 @@ class CameraProcessor:
         return image
 
     def detect_objects(self, image):
-        """Run object detection and surface classification using MobileNetV2."""
+        """Run object detection and surface
+        classification using MobileNetV2."""
         processed_image = self.preprocess_image(image)
         self.interpreter.set_tensor(
             self.input_details[0]['index'],
@@ -134,7 +136,8 @@ class CameraProcessor:
             detection_boxes,
             detection_classes,
             detection_scores):
-        """Process the results from the TFLite model to extract detected objects and surfaces."""
+        """Process the results from the TFLite model
+        to extract detected objects and surfaces."""
         threshold = 0.5
         detected_objects = []
         for i in range(len(detection_scores[0])):
