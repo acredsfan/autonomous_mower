@@ -59,7 +59,7 @@ class BNO085Sensor:
             return {}
 
         try:
-            sensor.soft_reset()
+            sensor.hard_reset()
             logging.info("BNO085 sensor reset successfully.")
         except Exception as e:
             logging.error(f"Error resetting BNO085 sensor: {e}")
