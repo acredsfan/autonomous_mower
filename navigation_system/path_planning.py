@@ -1,8 +1,16 @@
 from utils import LoggerConfig
 import requests
-from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
+from constants import (
+    SECTION_SIZE,
+    GRID_SIZE,
+    OBSTACLE_MARGIN,
+    polygon_coordinates,
+    min_lat,
+    max_lat,
+    min_lng,
+    max_lng
+)
 import time
-from dotenv import load_dotenv
 from navigation_system import Localization
 from shapely import wkt
 from shapely.geometry import Polygon, Point
@@ -21,7 +29,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 logging = LoggerConfig.get_logger(__name__)
 
 # Global variables
-user_polygon = None
+user_polygon = polygon_coordinates
 obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
 OPEN_WEATHER_MAP_API_KEY = os.getenv("OPEN_WEATHER_MAP_API")
 
@@ -263,7 +271,6 @@ class PathPlanning:
 
     def get_start_and_goal(self):
         current_position = self.estimate_position()
-        sections = self.divide_yard_into_sections()
         next_section = self.select_next_section(current_position)
 
         start = current_position
@@ -300,7 +307,10 @@ class PathPlanning:
         :param lon: Longitude of the location
         :return: Dictionary containing weather data
         """
-        url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPEN_WEATHER_MAP_API_KEY}&units=metric"
+        url = (
+            f"http://api.openweathermap.org/data/2.5/weather?lat={lat}"
+            f"&lon={lon}&appid={OPEN_WEATHER_MAP_API_KEY}&units=metric"
+        )
         try:
             response = requests.get(url)
             weather_data = response.json()
@@ -321,17 +331,19 @@ class PathPlanning:
                 "clouds", {}).get(
                 "all", 100)  # Cloud coverage percentage
             logging.info(f"Cloud coverage: {cloud_coverage}%")
-            return cloud_coverage < 20  # Consider it sunny if cloud coverage is less than 20%
+            # Consider it sunny if cloud coverage is less than 20%
+            return cloud_coverage < 20
         except Exception as e:
             logging.error(f"Error determining sun conditions: {e}")
             return False
 
     def find_sunny_location(self, current_location, search_radius=10):
         """
-        Finds a sunny location within a given radius using weather data and GPS coordinates.
+        Finds a sunny location within a given radius
+        using weather data and GPS coordinates.
         :param current_location: Current GPS coordinates of the robot
-        :param search_radius: Radius around the current location to search for sunny spots
-        :return: Best location (lat, lng) with the highest likelihood of sunlight
+        :param search_radius: Radius around the current location to search
+        :return: Best location with the highest likelihood of sunlight
         """
         best_location = current_location
         lat, lng = current_location
@@ -342,7 +354,8 @@ class PathPlanning:
         # Check if current weather conditions are ideal for sun exposure
         if self.is_sunny(weather_data):
             logging.info(
-                "Current location is sunny, using current location for charging.")
+                "Current location is sunny, "
+                "using current location for charging.")
             return best_location
 
         # Generate search grid to find the best nearby sunny location
@@ -355,19 +368,22 @@ class PathPlanning:
                 return location
 
         logging.info(
-            "No ideal sunny location found within the search radius. Defaulting to current location.")
+            "No ideal sunny location found within the search radius. "
+            "Defaulting to current location.")
         return best_location
 
     def generate_search_grid(self, lat, lng, radius):
         """
-        Generate a grid of points around the current location within the given radius.
+        Generate a grid of points around the current
+        location within the given radius.
         :param lat: Current latitude
         :param lng: Current longitude
         :param radius: Search radius in meters
         :return: List of (lat, lng) points to search
         """
-        step_size = radius / \
-            self.grid_size[0]  # Define step size based on the grid size and radius
+        step_size = radius / (
+            self.grid_size[0]
+        )  # Define step size based on the grid size and radius
         search_points = []
 
         for i in range(-self.grid_size[0] // 2, self.grid_size[0] // 2):
