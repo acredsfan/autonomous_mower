@@ -131,7 +131,6 @@ def start_mowing():
         SensorInterface.ideal_mowing_conditions()
     except Exception:
         logging.exception("Error in start_mowing")
-        
         # Start the mowing process by navigating to the first point
         logging.info("Navigating to the starting point...")
         robohat_controller.navigate_to_location(
@@ -152,9 +151,8 @@ def start_mowing():
             # Log the robot's current position for verification
             current_position = gps_latest_position.run()
             logging.info(
-                f"Mowing at point {
-                    index +
-                    1}, current GPS position: {current_position}")
+                f"Mowing at point {index + 1}, "
+                f"current GPS position: {current_position}")
 
         logging.info("Mowing process complete.")
 
