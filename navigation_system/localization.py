@@ -1,14 +1,5 @@
-from constants import (
-    polygon_coordinates,
-    min_lat,
-    max_lat,
-    min_lng,
-    max_lng
-)
-from navigation_system.gps import (
-    GpsNmeaPositions,
-    GpsLatestPosition
-)
+from constants import polygon_coordinates, min_lat, max_lat, min_lng, max_lng
+from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 import math
 import time
 import json
@@ -29,7 +20,7 @@ LoggerConfig.configure_logging()
 logging = LoggerConfig.get_logger(__name__)
 
 # Add the parent directory to the system path for importing modules
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class Localization:
@@ -58,7 +49,7 @@ class Localization:
             with open(file_name) as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            logging.exception('An error occurred while loading JSON file')
+            logging.exception("An error occurred while loading JSON file")
             return []
 
     def estimate_position(self):
@@ -76,13 +67,14 @@ class Localization:
             else:
                 logging.warning("GPS data is None.")
         except Exception as e:
-            logging.exception(f"An error occurred while estimating position: {e}")
+            logging.exception(f"An error occurred while est position: {e}")
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
         from hardware_interface import SensorInterface
+
         try:
-            compass_data = SensorInterface.update_sensors().get('compass')
+            compass_data = SensorInterface.update_sensors().get("compass")
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))
@@ -91,23 +83,19 @@ class Localization:
             else:
                 logging.warning("Compass data is None.")
         except Exception:
-            logging.exception('An error occurred while estimating orientation')
+            logging.exception("An error occurred while estimating orientation")
 
     def update(self):
         """Update the position and orientation of the mower."""
         self.estimate_position()
         self.estimate_orientation()
-        if not self.is_within_yard(
-            self.current_latitude,
-            self.current_longitude
-        ):
+        if not self.is_within_yard(self.current_latitude, self.current_longitude):
             logging.warning("Outside yard boundary!")
 
     def is_within_yard(self, lat, lon):
         """Check if the current position is within the yard boundary."""
         return (
-            self.min_lat <= lat <= self.max_lat and
-            self.min_lng <= lon <= self.max_lng
+            self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng
         )
 
 
@@ -128,5 +116,5 @@ def main():
         print("Program terminated by user.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
