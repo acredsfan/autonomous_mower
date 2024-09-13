@@ -57,7 +57,7 @@ class SensorInterface:
         # Improved initialization with retries
         for attempt in range(retries):
             if sensor_name == "BNO085":
-                BNO085Sensor.reset_bno085()
+                BNO085Sensor.reset_bno085('bno085')
                 time.sleep(0.1)
             sensor = self.initialize_sensor(init_function, sensor_name)
             if sensor is not None:
