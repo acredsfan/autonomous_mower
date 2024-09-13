@@ -35,29 +35,30 @@ class BNO085Sensor:
     def validate_sensor(sensor):
         """Validates the sensor object."""
         if sensor is None:
-            logging.error("BNO085 sensor is not initialized or failed to initialize.")
+            logging.error(
+                "BNO085 sensor is not initialized or failed to initialize.")
             return False
         return True
-    
+
     @staticmethod
     def calibrate_sensor(sensor):
         """Calibrate BNO085 sensor."""
         if not BNO085Sensor.validate_sensor(sensor):
             return {}
-        
+
         try:
             sensor.calibrate()
             logging.info("BNO085 sensor calibrated successfully.")
         except Exception as e:
             logging.error(f"Error calibrating BNO085 sensor: {e}")
             return
-        
+
     @staticmethod
     def reset_bno085(sensor):
         """Reset BNO085 sensor."""
         if not BNO085Sensor.validate_sensor(sensor):
             return {}
-        
+
         try:
             sensor.soft_reset()
             logging.info("BNO085 sensor reset successfully.")
@@ -116,26 +117,26 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error reading BNO085 quaternion: {e}")
             return {}
-    
+
     @staticmethod
     def calculate_speed(sensor):
         """Calculate speed in feet per second based on accelerometer data."""
         if not BNO085Sensor.validate_sensor(sensor):
             return 0
-        
+
         try:
             accel_x, accel_y, accel_z = sensor.acceleration
             return round((accel_x**2 + accel_y**2 + accel_z**2)**0.5, 2)
         except Exception as e:
             logging.error(f"Error calculating speed: {e}")
             return 0
-        
+
     @staticmethod
     def calculate_heading(sensor):
         """Calculate heading based on magnetometer data."""
         if not BNO085Sensor.validate_sensor(sensor):
             return 0
-        
+
         try:
             mag_x, mag_y, mag_z = sensor.magnetic
             heading = 180 * math.atan2(mag_y, mag_x) / math.pi
@@ -143,30 +144,32 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating heading: {e}")
             return 0
-        
+
     @staticmethod
     def calculate_pitch(sensor):
         """Calculate pitch based on accelerometer data."""
         if not BNO085Sensor.validate_sensor(sensor):
             return 0
-        
+
         try:
             accel_x, accel_y, accel_z = sensor.acceleration
-            pitch = math.atan2(accel_x, (accel_y**2 + accel_z**2)**0.5) * 180 / math.pi
+            pitch = math.atan2(
+                accel_x, (accel_y**2 + accel_z**2)**0.5) * 180 / math.pi
             return round(pitch, 2)
         except Exception as e:
             logging.error(f"Error calculating pitch: {e}")
             return 0
-        
+
     @staticmethod
     def calculate_roll(sensor):
         """Calculate roll based on accelerometer data."""
         if not BNO085Sensor.validate_sensor(sensor):
             return 0
-        
+
         try:
             accel_x, accel_y, accel_z = sensor.acceleration
-            roll = math.atan2(accel_y, (accel_x**2 + accel_z**2)**0.5) * 180 / math.pi
+            roll = math.atan2(
+                accel_y, (accel_x**2 + accel_z**2)**0.5) * 180 / math.pi
             return round(roll, 2)
         except Exception as e:
             logging.error(f"Error calculating roll: {e}")

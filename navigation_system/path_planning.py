@@ -1,23 +1,21 @@
+from utils import LoggerConfig
+import requests
+from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
+import time
+from dotenv import load_dotenv
+from navigation_system import Localization
+from shapely import wkt
+from shapely.geometry import Polygon, Point
+from pathfinding.finder.a_star import AStarFinder
+from pathfinding.core.grid import Grid
+from pathfinding.core.diagonal_movement import DiagonalMovement
+import random
+import numpy as np
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
-import numpy as np
-import random
-from pathfinding.core.diagonal_movement import DiagonalMovement
-from pathfinding.core.grid import Grid
-from pathfinding.finder.a_star import AStarFinder
-from shapely.geometry import Polygon, Point
-from shapely import wkt
-from navigation_system import Localization
-from dotenv import load_dotenv
-import time
-from constants import SECTION_SIZE, GRID_SIZE, OBSTACLE_MARGIN, polygon_coordinates, config, min_lat, max_lat, min_lng, max_lng
-import requests
-
-from utils import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -26,6 +24,7 @@ logging = LoggerConfig.get_logger(__name__)
 user_polygon = None
 obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
 OPEN_WEATHER_MAP_API_KEY = os.getenv("OPEN_WEATHER_MAP_API")
+
 
 class PathPlanning:
     def __init__(self):
@@ -38,7 +37,8 @@ class PathPlanning:
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
         self.set_min_max_coordinates()
-        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))  # 4 actions: up, down, left, right
+        # 4 actions: up, down, left, right
+        self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))
         self.last_action = None
 
     def set_min_max_coordinates(self):
@@ -113,8 +113,10 @@ class PathPlanning:
 
         # Trigger a new path planning if the obstacle map has changed
         if np.any(obstacle_map != self.obstacle_map):
-            self.plan_path(self.start, self.goal, [wkt.loads(wkt) for wkt in self.obstacles])
-        self.obstacle_map = obstacle_map          
+            self.plan_path(
+                self.start, self.goal, [
+                    wkt.loads(wkt) for wkt in self.obstacles])
+        self.obstacle_map = obstacle_map
 
     # This function generates a grid with marked obstacles
     def generate_grid(self, obstacles):
@@ -186,7 +188,7 @@ class PathPlanning:
 
         # Make sure the new state is within the grid
         new_state = (max(min(new_state[0], GRID_SIZE[0] - 1), 0),
-                    max(min(new_state[1], GRID_SIZE[1] - 1), 0))
+                     max(min(new_state[1], GRID_SIZE[1] - 1), 0))
 
         # Check if the new state is an obstacle
         if self.obstacle_map[new_state] == 1:
@@ -195,7 +197,16 @@ class PathPlanning:
         return new_state
 
     # This function implements the Q-Learning algorithm
-    def q_learning(self, start, goal, episodes=1000, learning_rate=0.1, discount_factor=0.9, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.1):
+    def q_learning(
+            self,
+            start,
+            goal,
+            episodes=1000,
+            learning_rate=0.1,
+            discount_factor=0.9,
+            epsilon=1.0,
+            epsilon_decay=0.995,
+            epsilon_min=0.1):
         """"""
         for episode in range(episodes):
             state = start
@@ -210,7 +221,8 @@ class PathPlanning:
 
                 old_value = self.q_table[state][action]
                 next_max = np.max(self.q_table[new_state])
-                new_value = (1 - learning_rate) * old_value + learning_rate * (reward + discount_factor * next_max)
+                new_value = (1 - learning_rate) * old_value + \
+                    learning_rate * (reward + discount_factor * next_max)
                 self.q_table[state][action] = new_value
 
                 state = new_state
@@ -230,30 +242,35 @@ class PathPlanning:
             coord = self.grid_to_coord(cell)
             path_coords.append(coord)
         return path_coords
-    
- 
+
     def calculate_goal_position(self, next_section):
         # Determine the boundaries of thr selected section
         if next_section is None:
             logging.error("Next section is None.  Waiting for result...")
             time.sleep(1)
-        section_size = (next_section[2] - next_section[0], next_section[3] - next_section[1])
-        
+        section_size = (
+            next_section[2] -
+            next_section[0],
+            next_section[3] -
+            next_section[1])
+
         # Calculate the goal position within the selected section
-        goal_position = (next_section[0] + section_size[0] // 2, next_section[1] + section_size[1] // 2)
-        
-        return goal_position  
-    
+        goal_position = (
+            next_section[0] + section_size[0] // 2,
+            next_section[1] + section_size[1] // 2)
+
+        return goal_position
+
     def get_start_and_goal(self):
         current_position = self.estimate_position()
         sections = self.divide_yard_into_sections()
         next_section = self.select_next_section(current_position)
-        
+
         start = current_position
         goal = self.calculate_goal_position(next_section)
-        
+
         return start, goal
-    
+
     def coord_to_grid(self, lat, lng):
         # Calculate the grid indices based on lat/lng
         grid_x = int((lat - self.min_lat) / self.lat_grid_size)
@@ -268,15 +285,14 @@ class PathPlanning:
         lat = self.min_lat + cell[0] * self.lat_grid_size
         lng = self.min_lng + cell[1] * self.lng_grid_size
         return {"lat": lat, "lng": lng}
-    
-    
+
     def estimate_position(self):
         # Get location of mower from Locatlization class
         lat, lng, alt = self.localization.estimate_position()
         # Convert lat, lng, alt to Grid Cell location
         grid_cell = self.coord_to_grid(lat, lng)
         return grid_cell
-    
+
     def get_weather_data(self, lat, lon):
         """
         Fetch current weather data from OpenWeatherMap API.
@@ -301,7 +317,9 @@ class PathPlanning:
         :return: True if sunny, False otherwise
         """
         try:
-            cloud_coverage = weather_data.get("clouds", {}).get("all", 100)  # Cloud coverage percentage
+            cloud_coverage = weather_data.get(
+                "clouds", {}).get(
+                "all", 100)  # Cloud coverage percentage
             logging.info(f"Cloud coverage: {cloud_coverage}%")
             return cloud_coverage < 20  # Consider it sunny if cloud coverage is less than 20%
         except Exception as e:
@@ -323,7 +341,8 @@ class PathPlanning:
 
         # Check if current weather conditions are ideal for sun exposure
         if self.is_sunny(weather_data):
-            logging.info("Current location is sunny, using current location for charging.")
+            logging.info(
+                "Current location is sunny, using current location for charging.")
             return best_location
 
         # Generate search grid to find the best nearby sunny location
@@ -335,7 +354,8 @@ class PathPlanning:
                 logging.info(f"Found sunny location: {location}")
                 return location
 
-        logging.info("No ideal sunny location found within the search radius. Defaulting to current location.")
+        logging.info(
+            "No ideal sunny location found within the search radius. Defaulting to current location.")
         return best_location
 
     def generate_search_grid(self, lat, lng, radius):
@@ -346,20 +366,18 @@ class PathPlanning:
         :param radius: Search radius in meters
         :return: List of (lat, lng) points to search
         """
-        step_size = radius / self.grid_size[0]  # Define step size based on the grid size and radius
+        step_size = radius / \
+            self.grid_size[0]  # Define step size based on the grid size and radius
         search_points = []
 
         for i in range(-self.grid_size[0] // 2, self.grid_size[0] // 2):
             for j in range(-self.grid_size[1] // 2, self.grid_size[1] // 2):
-                new_lat = lat + (i * step_size) * 0.00001  # Adjust these multipliers based on scale and lat/lng
+                # Adjust these multipliers based on scale and lat/lng
+                new_lat = lat + (i * step_size) * 0.00001
                 new_lng = lng + (j * step_size) * 0.00001
                 search_points.append((new_lat, new_lng))
 
         return search_points
-    
 
-    
 
 # Example usage
-
-    

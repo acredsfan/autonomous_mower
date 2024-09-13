@@ -18,6 +18,7 @@ load_dotenv()
 # Retrieve the path to the object detection model from the .env file
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 
+
 class SingletonCamera:
     _instance = None
     _lock = threading.Lock()
@@ -44,7 +45,8 @@ class SingletonCamera:
         while self.running:
             frame = self.picam2.capture_array()
             if frame is None:
-                logging.warning("Failed to read frame from camera. Attempting reinitialization.")
+                logging.warning(
+                    "Failed to read frame from camera. Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
 
@@ -84,11 +86,13 @@ class SingletonCamera:
     def __del__(self):
         self.stop_camera()
 
+
 class CameraProcessor:
     def __init__(self):
         self.camera = SingletonCamera()
         try:
-            # Load the MobileNetV2 model for object detection and surface classification
+            # Load the MobileNetV2 model for object detection and surface
+            # classification
             self.interpreter = tflite.Interpreter(
                 model_path=PATH_TO_OBJECT_DETECTION_MODEL)
             self.interpreter.allocate_tensors()
@@ -110,14 +114,26 @@ class CameraProcessor:
     def detect_objects(self, image):
         """Run object detection and surface classification using MobileNetV2."""
         processed_image = self.preprocess_image(image)
-        self.interpreter.set_tensor(self.input_details[0]['index'], processed_image)
+        self.interpreter.set_tensor(
+            self.input_details[0]['index'],
+            processed_image)
         self.interpreter.invoke()
-        detection_boxes = self.interpreter.get_tensor(self.output_details[0]['index'])
-        detection_classes = self.interpreter.get_tensor(self.output_details[1]['index'])
-        detection_scores = self.interpreter.get_tensor(self.output_details[2]['index'])
-        return self.process_results(detection_boxes, detection_classes, detection_scores)
+        detection_boxes = self.interpreter.get_tensor(
+            self.output_details[0]['index'])
+        detection_classes = self.interpreter.get_tensor(
+            self.output_details[1]['index'])
+        detection_scores = self.interpreter.get_tensor(
+            self.output_details[2]['index'])
+        return self.process_results(
+            detection_boxes,
+            detection_classes,
+            detection_scores)
 
-    def process_results(self, detection_boxes, detection_classes, detection_scores):
+    def process_results(
+            self,
+            detection_boxes,
+            detection_classes,
+            detection_scores):
         """Process the results from the TFLite model to extract detected objects and surfaces."""
         threshold = 0.5
         detected_objects = []
@@ -125,7 +141,8 @@ class CameraProcessor:
             if detection_scores[0][i] > threshold:
                 class_id = int(detection_classes[0][i])
                 box = detection_boxes[0][i]
-                label = f'Class {class_id}'  # Replace with actual label mapping if available
+                # Replace with actual label mapping if available
+                label = f'Class {class_id}'
                 detected_objects.append({'label': label, 'box': box})
         return detected_objects
 
@@ -143,7 +160,7 @@ class CameraProcessor:
         else:
             logging.info("No obstacles detected.")
             return False
-        
+
     def detect_dropoff(self):
         """Detect if a drop-off is present."""
         image = self.camera.get_frame()
@@ -158,7 +175,7 @@ class CameraProcessor:
         else:
             logging.info("No drop-offs detected.")
             return False
-                
+
     def classify_obstacle(self):
         """Classify the detected obstacle using the TFLite model."""
         image = self.camera.get_frame()
@@ -168,12 +185,15 @@ class CameraProcessor:
 
         return self.detect_objects(image)
 
+
 # Singleton accessor function
 camera_instance = SingletonCamera()  # Ensures the camera is initialized once
+
 
 def get_camera_instance():
     """Accessor function to get the SingletonCamera instance."""
     return camera_instance
+
 
 # Example usage
 if __name__ == "__main__":

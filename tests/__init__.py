@@ -1,7 +1,7 @@
 # init code for the tests
 # Path: tests\__init__.py
 
-#IMPORTS
+# IMPORTS
 from navigation_system import TestNavigationSystem
 from hardware_interface import TestHardwareInterface
 from obstacle_detection import TestObstacleDetection

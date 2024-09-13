@@ -14,13 +14,22 @@ class SerialPort:
     """
     Wrapper for serial port connect/read/write.
     Use this rather than raw pyserial api.
-    It provides a layer that automatically 
+    It provides a layer that automatically
     catches exceptions and encodes/decodes
-    between bytes and str.  
-    It also provides a layer of indirection 
+    between bytes and str.
+    It also provides a layer of indirection
     so that we can mock this for testing.
     """
-    def __init__(self, port:str='/dev/ttyACM0', baudrate:int=115200, bits:int=8, parity:str='N', stop_bits:int=1, charset:str='ascii', timeout:float=0.1):
+
+    def __init__(
+            self,
+            port: str = '/dev/ttyACM0',
+            baudrate: int = 115200,
+            bits: int = 8,
+            parity: str = 'N',
+            stop_bits: int = 1,
+            charset: str = 'ascii',
+            timeout: float = 0.1):
         self.port = port
         self.baudrate = baudrate
         self.bits = bits
@@ -33,7 +42,13 @@ class SerialPort:
     def start(self):
         for item in serial.tools.list_ports.comports():
             logger.info(item)  # list all the serial ports
-        self.ser = serial.Serial(self.port, self.baudrate, self.bits, self.parity, self.stop_bits, timeout=self.timeout)
+        self.ser = serial.Serial(
+            self.port,
+            self.baudrate,
+            self.bits,
+            self.parity,
+            self.stop_bits,
+            timeout=self.timeout)
         logger.debug("Opened serial port " + self.ser.name)
         return self
 
@@ -71,15 +86,15 @@ class SerialPort:
             pass
         return self
 
-    def readBytes(self, count:int=0) -> Tuple[bool, bytes]:
+    def readBytes(self, count: int = 0) -> Tuple[bool, bytes]:
         """
-        if there are characters waiting, 
+        if there are characters waiting,
         then read them from the serial port
-        bytes: number of bytes to read 
+        bytes: number of bytes to read
         return: tuple of
-                bool: True if count bytes were available to read, 
+                bool: True if count bytes were available to read,
                       false if not enough bytes were avaiable
-                bytes: string string if count bytes read (may be blank), 
+                bytes: string string if count bytes read (may be blank),
                        blank if count bytes are not available
         """
         if self.ser is None or not self.ser.is_open:
@@ -95,15 +110,15 @@ class SerialPort:
             logger.warning("failed reading bytes from serial port")
             return (False, b'')
 
-    def read(self, count:int=0) -> Tuple[bool, str]:
+    def read(self, count: int = 0) -> Tuple[bool, str]:
         """
-        if there are characters waiting, 
+        if there are characters waiting,
         then read them from the serial port
-        bytes: number of bytes to read 
+        bytes: number of bytes to read
         return: tuple of
-                bool: True if count bytes were available to read, 
+                bool: True if count bytes were available to read,
                       false if not enough bytes were available
-                str: ascii string if count bytes read (may be blank), 
+                str: ascii string if count bytes read (may be blank),
                      blank if count bytes are not available
         """
         ok, bytestring = self.readBytes(count)
@@ -115,13 +130,13 @@ class SerialPort:
 
     def readln(self) -> Tuple[bool, str]:
         """
-        if there are characters waiting, 
+        if there are characters waiting,
         then read a line from the serial port.
         This will block until end-of-line can be read.
         The end-of-line is included in the return value.
         return: tuple of
                 bool: True if line was read, false if not
-                str: line if read (may be blank), 
+                str: line if read (may be blank),
                      blank if not read
         """
         if self.ser is None or not self.ser.is_open:
@@ -142,23 +157,23 @@ class SerialPort:
             logger.warning("failed decoding unicode line from serial port")
             return (False, "")
 
-    def writeBytes(self, value:bytes):
+    def writeBytes(self, value: bytes):
         """
         write byte string to serial port
         """
         if self.ser is not None and self.ser.is_open:
             try:
-                self.ser.write(value)  
+                self.ser.write(value)
             except (serial.serialutil.SerialException, TypeError):
                 logger.warning("Can't write to serial port")
 
-    def write(self, value:str):
+    def write(self, value: str):
         """
         write string to serial port
         """
         self.writeBytes(value.encode())
 
-    def writeln(self, value:str):
+    def writeln(self, value: str):
         """
         write line to serial port
         """
@@ -169,7 +184,12 @@ class SerialLineReader:
     """
     Donkeycar part for reading lines from a serial port
     """
-    def __init__(self, serial:SerialPort, max_lines:int = 0, debug:bool = False):
+
+    def __init__(
+            self,
+            serial: SerialPort,
+            max_lines: int = 0,
+            debug: bool = False):
         self.serial = serial
         self.max_lines = max_lines  # max number of lines per read cycle
         self.debug = debug
@@ -221,7 +241,8 @@ class SerialLineReader:
             while line is not None:
                 lines.append((time.time(), line))
                 line = None
-                if self.max_lines is None or self.max_lines == 0 or len(lines) < self.max_lines:
+                if self.max_lines is None or self.max_lines == 0 or len(
+                        lines) < self.max_lines:
                     line = self._readline()
             return lines
         return []
@@ -237,7 +258,6 @@ class SerialLineReader:
             lines = self.lines
             self.lines = []
             return lines
-
 
     def update(self):
         #
@@ -278,13 +298,40 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--serial", type=str, required=True,
-                        help="Serial port address, like '/dev/tty.usbmodem1411'")
-    parser.add_argument("-b", "--baudrate", type=int, default=9600, help="Serial port baud rate.")
-    parser.add_argument("-t", "--timeout", type=float, default=0.5, help="Serial port timeout in seconds.")
-    parser.add_argument("-sp", '--samples', type=int, default=5, help="Number of samples per read cycle; 0 for unlimited.")
-    parser.add_argument("-th", "--threaded", action='store_true', help="run in threaded mode.")
-    parser.add_argument("-db", "--debug", action='store_true', help="Enable extra logging")
+    parser.add_argument(
+        "-s",
+        "--serial",
+        type=str,
+        required=True,
+        help="Serial port address, like '/dev/tty.usbmodem1411'")
+    parser.add_argument(
+        "-b",
+        "--baudrate",
+        type=int,
+        default=9600,
+        help="Serial port baud rate.")
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=float,
+        default=0.5,
+        help="Serial port timeout in seconds.")
+    parser.add_argument(
+        "-sp",
+        '--samples',
+        type=int,
+        default=5,
+        help="Number of samples per read cycle; 0 for unlimited.")
+    parser.add_argument(
+        "-th",
+        "--threaded",
+        action='store_true',
+        help="run in threaded mode.")
+    parser.add_argument(
+        "-db",
+        "--debug",
+        action='store_true',
+        help="Enable extra logging")
     args = parser.parse_args()
 
     if args.samples < 0:
@@ -301,17 +348,23 @@ if __name__ == "__main__":
     reader = None
 
     try:
-        serial_port = SerialPort(args.serial, baudrate=args.baudrate, timeout=args.timeout)
-        line_reader = SerialLineReader(serial_port, max_lines=args.samples, debug=args.debug)
+        serial_port = SerialPort(
+            args.serial,
+            baudrate=args.baudrate,
+            timeout=args.timeout)
+        line_reader = SerialLineReader(
+            serial_port,
+            max_lines=args.samples,
+            debug=args.debug)
 
         #
         # start the threaded part
         # and a threaded window to show plot
         #
         if args.threaded:
-            update_thread = threading.Thread(target=line_reader.update, args=())
+            update_thread = threading.Thread(
+                target=line_reader.update, args=())
             update_thread.start()
-
 
         def read_lines():
             return line_reader.run_threaded() if args.threaded else line_reader.run()
@@ -327,4 +380,3 @@ if __name__ == "__main__":
             line_reader.shutdown()
         if update_thread is not None:
             update_thread.join()  # wait for thread to end
-

@@ -1,13 +1,13 @@
+from .gpio_manager import GPIOManager
+import threading
+import time
+import logging
 import sys
 import os
 from utils import LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-import logging
-import time
-import threading
-from .gpio_manager import GPIOManager
 
 # Initialize logging
 LoggerConfig.configure_logging()
@@ -17,6 +17,7 @@ logging = logging.getLogger(__name__)
 shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
 interrupt_pins = []  # No interrupt lines needed here
 shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, interrupt_pins)
+
 
 class PWM:
     def __init__(self, line, frequency):
@@ -53,6 +54,7 @@ class PWM:
             self.thread.join()
         self.line.set_value(0)
 
+
 # Set the frequency for PWM (adjust as needed)
 freq = 1000
 
@@ -63,6 +65,7 @@ pwm2 = PWM(shutdown_lines[1], freq)
 # Start PWM with 0% duty cycle (off)
 pwm1.start(0)
 pwm2.start(0)
+
 
 class BladeController:
     blades_on = False  # Class attribute to track blade state

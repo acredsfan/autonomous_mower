@@ -10,6 +10,7 @@ logging = LoggerConfig.get_logger(__name__)
 # Initialize I2C using busio
 i2c = busio.I2C(board.SCL, board.SDA)
 
+
 class BME280Sensor:
     """Class to handle BME280 sensor"""
 

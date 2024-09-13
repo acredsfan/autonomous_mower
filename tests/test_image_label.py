@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 from hardware_interface.camera import CameraProcessor, SingletonCamera
 
+
 class TestCameraDetectionLabels(unittest.TestCase):
 
     @patch.object(SingletonCamera, 'get_frame')
@@ -29,14 +30,27 @@ class TestCameraDetectionLabels(unittest.TestCase):
             detected_objects = camera_processor.detect_objects(mock_frame)
 
             # Verify the returned labels and boxes
-            self.assertEqual(len(detected_objects), 2, "Should detect two objects.")
+            self.assertEqual(
+                len(detected_objects),
+                2,
+                "Should detect two objects.")
 
             # Check the details of each detected object
-            self.assertEqual(detected_objects[0]['label'], 'Class 1', "First object label should be 'Class 1'.")
-            self.assertEqual(detected_objects[0]['box'], [0.1, 0.1, 0.2, 0.2], "First object box should match.")
+            self.assertEqual(
+                detected_objects[0]['label'],
+                'Class 1',
+                "First object label should be 'Class 1'.")
+            self.assertEqual(
+                detected_objects[0]['box'], [
+                    0.1, 0.1, 0.2, 0.2], "First object box should match.")
 
-            self.assertEqual(detected_objects[1]['label'], 'Class 2', "Second object label should be 'Class 2'.")
-            self.assertEqual(detected_objects[1]['box'], [0.3, 0.3, 0.4, 0.4], "Second object box should match.")
+            self.assertEqual(
+                detected_objects[1]['label'],
+                'Class 2',
+                "Second object label should be 'Class 2'.")
+            self.assertEqual(
+                detected_objects[1]['box'], [
+                    0.3, 0.3, 0.4, 0.4], "Second object box should match.")
 
     @patch.object(SingletonCamera, 'get_frame')
     def test_detected_object_labels_with_model(self, mock_get_frame):
@@ -59,7 +73,11 @@ class TestCameraDetectionLabels(unittest.TestCase):
         print("Detected Objects:", detected_objects)
 
         # Basic assertion to ensure the list is returned
-        self.assertIsInstance(detected_objects, list, "Detected objects should be a list.")
+        self.assertIsInstance(
+            detected_objects,
+            list,
+            "Detected objects should be a list.")
+
 
 if __name__ == '__main__':
     unittest.main()

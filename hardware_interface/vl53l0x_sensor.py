@@ -5,6 +5,7 @@ from utils import LoggerConfig
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+
 class VL53L0XSensors:
 
     @staticmethod
@@ -14,7 +15,9 @@ class VL53L0XSensors:
             logging.info(f"VL53L0X initialized at address {hex(address)}.")
             return sensor
         except Exception as e:
-            logging.error(f"Error initializing VL53L0X at address {hex(address)}: {e}")
+            logging.error(
+                f"Error initializing VL53L0X at address {
+                    hex(address)}: {e}")
             return None
 
     @staticmethod

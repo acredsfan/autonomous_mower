@@ -1,13 +1,13 @@
-#Test to ensure that the sensor readings are being read and reported correctly
-#import SensorInterface from hardware_interface folder
+# Test to ensure that the sensor readings are being read and reported correctly
+# import SensorInterface from hardware_interface folder
+import time
+from hardware_interface import SensorInterface
 import sys
 import os
 
 # Add the project root to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from hardware_interface import SensorInterface
-import time
 
 def test_sensor_readings():
     sensor_interface = SensorInterface()
@@ -20,7 +20,7 @@ def test_sensor_readings():
     assert 'quaternion' in sensor_data
     assert 'speed' in sensor_data
     assert 'heading' in sensor_data
-    assert 'pitch' in sensor_data  
+    assert 'pitch' in sensor_data
     assert 'solar' in sensor_data
     assert 'battery' in sensor_data
     assert 'battery_charge' in sensor_data
@@ -53,6 +53,7 @@ def test_sensor_readings():
     print("Battery Charge: ", sensor_data['battery_charge'])
     print("Left Distance: ", sensor_data['left_distance'])
     print("Right Distance: ", sensor_data['right_distance'])
+
 
 if __name__ == '__main__':
     test_sensor_readings()

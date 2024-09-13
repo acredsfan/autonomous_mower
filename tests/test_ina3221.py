@@ -37,31 +37,32 @@ ina3221.enable_channel(3)
 # pylint: disable=bad-whitespace
 
 while True:
-    if INA3221.IS_FULL_API: # is_ready available only in "full" variant
+    if INA3221.IS_FULL_API:  # is_ready available only in "full" variant
         while not ina3221.is_ready:
-            print(".",end='')
+            print(".", end='')
             time.sleep(0.1)
         print("")
 
     print("------------------------------")
-    line_title =         "Measurement   "
-    line_psu_voltage =   "PSU voltage   "
-    line_load_voltage =  "Load voltage  "
+    line_title = "Measurement   "
+    line_psu_voltage = "PSU voltage   "
+    line_load_voltage = "Load voltage  "
     line_shunt_voltage = "Shunt voltage "
-    line_current =       "Current       "
+    line_current = "Current       "
 
-    for chan in range(1,4):
+    for chan in range(1, 4):
         if ina3221.is_channel_enabled(chan):
             #
             bus_voltage = ina3221.bus_voltage(chan)
             shunt_voltage = ina3221.shunt_voltage(chan)
             current = ina3221.current(chan)
             #
-            line_title +=         "| Chan#{:d}      ".format(chan)
-            line_psu_voltage +=   "| {:6.3f}    V ".format(bus_voltage + shunt_voltage)
-            line_load_voltage +=  "| {:6.3f}    V ".format(bus_voltage)
+            line_title += "| Chan#{:d}      ".format(chan)
+            line_psu_voltage += "| {:6.3f}    V ".format(
+                bus_voltage + shunt_voltage)
+            line_load_voltage += "| {:6.3f}    V ".format(bus_voltage)
             line_shunt_voltage += "| {:9.6f} V ".format(shunt_voltage)
-            line_current +=       "| {:9.6f} A ".format(current)
+            line_current += "| {:9.6f} A ".format(current)
 
     print(line_title)
     print(line_psu_voltage)

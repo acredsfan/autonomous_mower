@@ -5,8 +5,9 @@ from utils import LoggerConfig
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+
 class GPIOManager:
-    
+
     def init_gpio(shutdown_pins, interrupt_pins):
         chip = gpiod.Chip('gpiochip0')
         shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
@@ -17,10 +18,12 @@ class GPIOManager:
             line.set_value(1)
 
         for line in interrupt_lines:
-            line.request(consumer='interrupt', type=gpiod.LINE_REQ_EV_FALLING_EDGE)
+            line.request(
+                consumer='interrupt',
+                type=gpiod.LINE_REQ_EV_FALLING_EDGE)
 
         return shutdown_lines, interrupt_lines
-    
+
     def clean():
         chip = gpiod.Chip('gpiochip0')
         chip.close()

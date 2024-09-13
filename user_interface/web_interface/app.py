@@ -1,3 +1,16 @@
+from utils import LoggerConfig
+from hardware_interface.camera import get_camera_instance
+from PIL import Image
+from io import BytesIO
+from flask_cors import CORS
+import base64
+from flask_socketio import SocketIO, emit
+from dotenv import load_dotenv
+import datetime
+# Updated import
+from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition
+import threading
+from hardware_interface import BladeController, SensorInterface, RoboHATController
 from flask import Flask, render_template, request, jsonify, send_from_directory, Response, g
 import json
 import sys
@@ -5,36 +18,29 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from hardware_interface import BladeController, SensorInterface, RoboHATController
-import os
-import threading
-from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition  # Updated import
-import datetime
-from dotenv import load_dotenv
-from flask_socketio import SocketIO, emit
-import base64
-from flask_cors import CORS
-from io import BytesIO
-from PIL import Image
-from hardware_interface.camera import get_camera_instance
-
-from utils import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
 
-#Initialize Flask and SocketIO
-app = Flask(__name__, template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', engineio_logger=True, ping_timeout=30)
+# Initialize Flask and SocketIO
+app = Flask(
+    __name__,
+    template_folder='/home/pi/autonomous_mower/user_interface/web_interface/templates')
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='threading',
+    engineio_logger=True,
+    ping_timeout=30)
 CORS(app)
 
-#Load environment variables
+# Load environment variables
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-#Initialize other components
+# Initialize other components
 position_reader = GpsLatestPosition()  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
@@ -49,6 +55,7 @@ stop_thread = False
 
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
+
 
 def gen():
     camera = get_camera_instance()
@@ -68,23 +75,32 @@ def gen():
         else:
             logging.error("Failed to get the frame from the camera.")
 
+
 @app.route('/')
 def index():
     next_scheduled_mow = calculate_next_scheduled_mow()
-    return render_template('index.html', google_maps_api_key=google_maps_api_key, next_scheduled_mow=next_scheduled_mow)
+    return render_template('index.html',
+                           google_maps_api_key=google_maps_api_key,
+                           next_scheduled_mow=next_scheduled_mow)
+
 
 @app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
+
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        gen(),
+        mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    camera = get_camera_instance()  # Retrieve SingletonCamera using the accessor function
+    # Retrieve SingletonCamera using the accessor function
+    camera = get_camera_instance()
     frame = camera.get_frame()
     if frame is not None:
         try:
@@ -95,9 +111,11 @@ def handle_frame_request():
             frame_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
             emit('update_frame', {'frame': frame_data})
         except Exception as e:
-            logging.error(f"Error encoding frame for WebSocket transmission: {e}")
+            logging.error(
+                f"Error encoding frame for WebSocket transmission: {e}")
     else:
         logging.error("Failed to get the frame from the camera.")
+
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
@@ -105,11 +123,13 @@ def start_mowing():
     # Example: robohat_driver.run(0.5, 0.5) for forward movement at half speed
     return jsonify({'message': 'Mower started.'})
 
+
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
     # Trigger stop mowing actions
     robohat_driver.run(0, 0)
     return jsonify({'message': 'Mower stopped.'})
+
 
 @app.route('/get-mowing-area', methods=['GET'])
 def get_mowing_area():
@@ -121,12 +141,14 @@ def get_mowing_area():
         return jsonify(coordinates)
     else:
         return jsonify({'message': 'No area saved yet.'})
-    
+
+
 @app.route('/get-path', methods=['GET'])
 def get_path():
     start, goal = path_planning.get_start_and_goal()
     path = path_planning.get_path(start, goal)
     return jsonify(path)
+
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
@@ -136,10 +158,12 @@ def save_mowing_area():
         json.dump(coordinates, f)
     return jsonify({'message': 'Area saved.'})
 
+
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
     gps_nmea_positions = GpsNmeaPositions()
-    lines = gps_nmea_positions.get_lines()  # Assuming you have a method to get lines
+    # Assuming you have a method to get lines
+    lines = gps_nmea_positions.get_lines()
     positions = position_reader.run(lines)
 
     if positions:
@@ -148,6 +172,7 @@ def get_gps():
     else:
         return jsonify({'error': 'No GPS data available'})
 
+
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
     data = request.get_json()
@@ -155,12 +180,20 @@ def save_settings():
     mow_hours = data.get('mowHours', [])
 
     # Validate mow_days
-    valid_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    valid_days = [
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+        'Sunday']
     if not all(day in valid_days for day in mow_days):
         return jsonify({'message': 'Invalid days provided.'}), 400
 
     # Validate mow_hours
-    if not all(isinstance(hour, int) and 0 <= hour <= 23 for hour in mow_hours):
+    if not all(isinstance(hour, int) and 0 <=
+               hour <= 23 for hour in mow_hours):
         return jsonify({'message': 'Invalid hours provided.'}), 400
 
     # Save the mowing days and hours to a JSON file
@@ -168,6 +201,7 @@ def save_settings():
         json.dump({'mowDays': mow_days, 'mowHours': mow_hours}, f)
 
     return jsonify({'message': 'Settings saved.'})
+
 
 def get_schedule():
     # Check if the schedule file exists
@@ -180,6 +214,7 @@ def get_schedule():
         # Return default values if the schedule is not set
         return None, None
 
+
 @app.route('/control', methods=['POST'])
 def control():
     data = request.json
@@ -188,10 +223,12 @@ def control():
     robohat_driver.run_threaded(steering, throttle)
     return jsonify({'status': 'success'})
 
+
 @app.route('/stop', methods=['POST'])
 def stop():
     robohat_driver.run(0, 0)
     return jsonify({'status': 'stopped'})
+
 
 @app.route('/save-home-location', methods=['POST'])
 def save_home_location():
@@ -200,6 +237,7 @@ def save_home_location():
     with open('home_location.json', 'w') as f:
         json.dump(home_location, f)
     return jsonify({'message': 'Home location saved.'})
+
 
 @app.route('/get-home-location', methods=['GET'])
 def get_home_location():
@@ -211,6 +249,7 @@ def get_home_location():
     else:
         return jsonify({'message': 'No home location set yet.'})
 
+
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
     mow_days, mow_hours = get_schedule()
@@ -221,7 +260,8 @@ def calculate_next_scheduled_mow():
         return "Not scheduled"
 
     # Convert mow_days to a list of integers (0 = Monday, 1 = Tuesday, etc.)
-    mow_days_int = [datetime.datetime.strptime(day, "%A").weekday() for day in mow_days]
+    mow_days_int = [datetime.datetime.strptime(
+        day, "%A").weekday() for day in mow_days]
 
     # Get the current date and time
     now = datetime.datetime.now()
@@ -231,32 +271,38 @@ def calculate_next_scheduled_mow():
         next_day = (now.weekday() + day_offset) % 7
         if next_day in mow_days_int:
             next_mow_date = now + datetime.timedelta(days=day_offset)
-            
+
             # Use the first hour in the list as an example; adjust as needed
             first_hour = int(mow_hours[0])
-            next_mow_date = next_mow_date.replace(hour=first_hour, minute=0, second=0, microsecond=0)
-            
+            next_mow_date = next_mow_date.replace(
+                hour=first_hour, minute=0, second=0, microsecond=0)
+
             if next_mow_date > now:
                 return next_mow_date.strftime("%Y-%m-%d %H:%M:%S")
 
     return "Not scheduled"
 
+
 def start_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(75)
+
 
 def stop_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(0)
 
+
 def stop_motors():
     # Stop the motors
     robohat_driver.run(0, 0)
 
+
 def start_web_interface():
     global stop_sensor_thread
     # Start the sensor update thread
-    sensor_thread = threading.Thread(target=sensor_interface.update_sensors, daemon=True)
+    sensor_thread = threading.Thread(
+        target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
 
     socketio.run(app, host='0.0.0.0', port=90)
@@ -264,7 +310,8 @@ def start_web_interface():
     # Set the flag to stop the sensor update thread
     sensor_interface.stop_thread = True
 
-    sensor_thread.join() # Wait for the thread to finish
+    sensor_thread.join()  # Wait for the thread to finish
+
 
 if __name__ == '__main__':
     start_web_interface()

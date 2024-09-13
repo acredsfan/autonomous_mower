@@ -1,5 +1,6 @@
 import logging
 
+
 class LoggerConfig:
     @staticmethod
     def configure_logging(log_file='main.log'):

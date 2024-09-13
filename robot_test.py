@@ -1,21 +1,19 @@
 # robot_web_test.py
 
+from utils import LoggerConfig
+import json
+from user_interface.web_interface.app import start_web_interface
+from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
+from navigation_system import Localization, PathPlanning, GpsLatestPosition
+from hardware_interface import SensorInterface, BladeController, RoboHATController, GPIOManager
 import sys
 import os
 import time
 import datetime
 import threading
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from hardware_interface import SensorInterface, BladeController, RoboHATController, GPIOManager
-from navigation_system import Localization, PathPlanning, GpsLatestPosition
-from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
-from user_interface.web_interface.app import start_web_interface
-import json
-
-from utils import LoggerConfig
-
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
@@ -27,9 +25,18 @@ shared_resource = []
 robohat_controller = None
 
 # Function to initialize all resources
+
+
 def initialize_resources():
     from hardware_interface.camera import SingletonCamera
-    global sensor_interface, camera, path_planner, avoidance_algo, localization, robohat_controller
+    global (
+        sensor_interface,
+        camera,
+        path_planner,
+        avoidance_algo,
+        localization,
+        robohat_controller
+    )
     sensor_interface = SensorInterface()
     camera = SingletonCamera()
     path_planner = PathPlanning()
@@ -41,6 +48,7 @@ def initialize_resources():
         logging.error(f"Failed to initialize RoboHATController: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
         robohat_controller = RoboHATController()  # Retry initialization
+
 
 # Lock for shared resources
 lock = threading.Lock()
@@ -54,39 +62,52 @@ def verify_polygon_points():
 
         # Check if polygon points are available
         if not polygon_points:
-            logging.error("No polygon points found. Please set the mowing area in the web interface.")
+            logging.error(
+                "No polygon points found."
+                "Please set the mowing area in the web interface.")
             return
 
         logging.info("Starting polygon verification...")
         for index, point in enumerate(polygon_points):
             logging.info(f"Navigating to point {index + 1}: {point}")
             # Navigate to each point using the robot's motor controller
-            robohat_controller.navigate_to_location((point['lat'], point['lng']))
+            robohat_controller.navigate_to_location(
+                (point['lat'], point['lng']))
 
             # Optionally wait for confirmation or a set time at each point
             time.sleep(5)  # Adjust the sleep time as needed for verification
 
             # Log the robot's current position for verification
             current_position = gps_latest_position.run()
-            logging.info(f"Arrived at point {index + 1}, current GPS position: {current_position}")
+            logging.info(
+                f"Arrived at point {
+                    index +
+                    1}, current GPS position: {current_position}")
 
         logging.info("Polygon verification complete.")
     except FileNotFoundError:
-        logging.error("Mowing area not set. Please define the area in the web interface.")
-    except Exception as e:
+        logging.error(
+            "Mowing area not set. Please define the area "
+            "in the web interface.")
+    except Exception:
         logging.exception("Error in verify_polygon_points")
 
 # Function to send robot to home location
+
+
 def go_home():
     try:
         # Load the home location from the saved JSON file
         with open('home_location.json', 'r') as f:
             home_location = json.load(f)
-        robohat_controller.navigate_to_location((home_location['lat'], home_location['lng']))
+        robohat_controller.navigate_to_location(
+            (home_location['lat'], home_location['lng']))
     except FileNotFoundError:
-        logging.error("Home location not set. Please set it in the web interface.")
-    except Exception as e:
+        logging.error(
+            "Home location not set. Please set it in the web interface.")
+    except Exception:
         logging.exception("Error in go_home")
+
 
 # Main loop for testing web interface and sensors
 if __name__ == "__main__":
@@ -98,8 +119,11 @@ if __name__ == "__main__":
         initialize_resources()
 
         while True:
-            # This loop is only here to keep the program running for web interface testing
-            user_input = input("Enter 'verify' to test polygon points, 'home' to go home, or 'exit' to quit: ")
+            # This loop is only here to keep the program running for web
+            # interface testing
+            user_input = input(
+                "Enter 'verify' to test polygon points, "
+                "'home' to go home, or 'exit' to quit: ")
             if user_input.lower() == 'verify':
                 verify_polygon_points()
             elif user_input.lower() == 'home':
@@ -107,12 +131,15 @@ if __name__ == "__main__":
             elif user_input.lower() == 'exit':
                 break
             else:
-                logging.info("Web interface test running. Use the web UI to test sensors and controls.")
+                logging.info(
+                    "Test running. Use the webUI to test features.")
 
     except KeyboardInterrupt:
         logging.info("KeyboardInterrupt: Stopping the web test loop.")
-    except Exception as e:
+
+    except Exception:
         logging.exception("An error occurred during the web interface test.")
+
     finally:
         # Cleanup
         BladeController.set_speed(0)
