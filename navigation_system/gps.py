@@ -214,7 +214,7 @@ def parseGpsPosition(line, debug=False):
     line = line.strip()
     if not line:
         return None
-    
+
     if '$' != line[0]:
         logger.info("NMEA Missing line start")
         return None
