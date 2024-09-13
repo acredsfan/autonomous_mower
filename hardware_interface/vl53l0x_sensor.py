@@ -47,7 +47,8 @@ class VL53L0XSensors:
     def init_vl53l0x_sensors(i2c, shutdown_lines):
         """
         Initializes both VL53L0X sensors, setting their addresses correctly.
-        This assumes one sensor is reset to 0x29 and the other is assigned to 0x30.
+        This assumes one sensor is reset to 0x29 
+        and the other is assigned to 0x30.
         """
         # Reset both sensors to ensure they start at the default address
         VL53L0XSensors.reset_sensor(shutdown_lines[0])  # Left sensor
