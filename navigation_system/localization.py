@@ -1,4 +1,4 @@
-from constants import EARTH_RADIUS, polygon_coordinates, min_lat, max_lat, min_lng, max_lng
+from constants import polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 import math
 import time
@@ -40,7 +40,7 @@ class Localization:
         try:
             with open(file_name) as f:
                 return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
+        except (FileNotFoundError, json.JSONDecodeError):
             logging.exception('An error occurred while loading JSON file')
             return []
 
@@ -49,7 +49,7 @@ class Localization:
         gps_nmea_positions = GpsNmeaPositions()
         lines = gps_nmea_positions.run()
         positions = self.position_reader.run(lines)
- # Convert NMEA lines to positions
+        # Convert NMEA lines to positions
         if positions:
             ts, self.current_latitude, self.current_longitude = positions[-1]
             logging.info(
@@ -72,7 +72,7 @@ class Localization:
                     self.current_heading += 360
             else:
                 logging.warning("Compass data is None.")
-        except Exception as e:
+        except Exception:
             logging.exception('An error occurred while estimating orientation')
 
     def update(self):
@@ -86,7 +86,8 @@ class Localization:
 
     def is_within_yard(self, lat, lon):
         """Check if the current position is within the yard boundary."""
-        return self.min_lat <= lat <= self.max_lat and self.min_lng <= lon <= self.max_lng
+        return (self.min_lat <= lat <= self.max_lat and
+                self.min_lng <= lon <= self.max_lng)
 
 
 # Run the Localization update loop if executed as the main script
