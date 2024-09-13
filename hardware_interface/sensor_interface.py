@@ -56,6 +56,7 @@ class SensorInterface:
     def initialize_sensor_with_retry(self, init_function, sensor_name, retries=3, delay=1.0):
         # Improved initialization with retries
         for attempt in range(retries):
+            BNO085Sensor.reset_bno085(self.sensors['bno085'])
             sensor = self.initialize_sensor(init_function, sensor_name)
             if sensor is not None:
                 return sensor
