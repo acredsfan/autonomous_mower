@@ -4,7 +4,7 @@ Scripts for operating the RoboHAT MM1 by Robotics Masters with the Donkeycar
 
 from utils import LoggerConfig
 import time
-import donkeycar as dk
+from utils import Utils
 import os
 from dotenv import load_dotenv
 from constants import (
@@ -89,26 +89,26 @@ class RoboHATController:
                     ))
 
                 if throttle_pwm >= self.STOPPED_PWM:
-                    throttle_pwm = dk.utils.map_range_float(
+                    throttle_pwm = Utils.utils.map_range_float(
                         throttle_pwm, 1500, 2000,
                         self.STOPPED_PWM, self.MAX_FORWARD)
-                    self.throttle = dk.utils.map_range_float(
+                    self.throttle = Utils.utils.map_range_float(
                         throttle_pwm, self.STOPPED_PWM, self.MAX_FORWARD,
                         0, 1.0)
                 else:
-                    throttle_pwm = dk.utils.map_range_float(
+                    throttle_pwm = Utils.utils.map_range_float(
                         throttle_pwm, 1000, 1500,
                         self.MAX_REVERSE, self.STOPPED_PWM)
-                    self.throttle = dk.utils.map_range_float(
+                    self.throttle = Utils.utils.map_range_float(
                         throttle_pwm, self.MAX_REVERSE, self.STOPPED_PWM,
                         -1.0, 0)
 
                 if angle_pwm >= self.STEERING_MID:
-                    self.angle = dk.utils.map_range_float(
+                    self.angle = Utils.utils.map_range_float(
                         angle_pwm, 2000, self.STEERING_MID, -1, 0
                     )
                 else:
-                    self.angle = dk.utils.map_range_float(
+                    self.angle = Utils.utils.map_range_float(
                         angle_pwm, self.STEERING_MID, 1000, 0, 1
                     )
 
@@ -229,17 +229,17 @@ class RoboHATController:
             throttle = self.trim_out_of_bound_value(throttle)
 
             if throttle > 0:
-                output_throttle = dk.utils.map_range(
+                output_throttle = Utils.utils.map_range(
                     throttle, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD)
             else:
-                output_throttle = dk.utils.map_range(
+                output_throttle = Utils.utils.map_range(
                     throttle, -1, 0, self.MAX_REVERSE, self.STOPPED_PWM)
 
             if steering > 0:
-                output_steering = dk.utils.map_range(
+                output_steering = Utils.utils.map_range(
                     steering, 0, 1.0, self.STEERING_MID, 1000)
             else:
-                output_steering = dk.utils.map_range(
+                output_steering = Utils.utils.map_range(
                     steering, -1, 0, 2000, self.STEERING_MID)
 
             if (self.is_valid_pwm_value(output_steering) and
