@@ -121,7 +121,7 @@ class AvoidanceAlgorithm:
 
     def run_avoidance(self):
         """Continuously run the avoidance algorithm using data from ToF sensors and the camera."""
-        tof_thread = threading.Thread(target=self._tof_avoidance_thread)
+        tof_thread = threading.Thread(target=self._tof_avoidance_thread, daemon=True)
         tof_thread.start()
 
         try:

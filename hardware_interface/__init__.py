@@ -7,6 +7,7 @@ from .ina3221_sensor import INA3221Sensor
 from .gpio_manager import GPIOManager
 from .sensor_interface import SensorInterface
 from .camera import SingletonCamera, CameraProcessor
+from .serial_port import SerialLineReader, SerialPort
 
 __all__ = [
     'BladeController',
@@ -19,5 +20,7 @@ __all__ = [
     'GPIOManager',
     'SensorInterface',
     'SingletonCamera',
-    'CameraProcessor'
+    'CameraProcessor',
+    'SerialLineReader',
+    'SerialPort'
 ]

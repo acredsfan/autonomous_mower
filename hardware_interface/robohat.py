@@ -80,26 +80,43 @@ class RoboHATController:
                 throttle_pwm = float(output[1])
 
                 if self.debug:
-                    print("angle_pwm = {}, throttle_pwm= {}".format(angle_pwm, throttle_pwm))
+                    print("angle_pwm = {}, throttle_pwm= {}".format(
+                        angle_pwm, throttle_pwm
+                    ))
 
                 if throttle_pwm >= self.STOPPED_PWM:
-                    throttle_pwm = dk.utils.map_range_float(throttle_pwm, 1500, 2000, self.STOPPED_PWM, self.MAX_FORWARD)
-                    self.throttle = dk.utils.map_range_float(throttle_pwm, self.STOPPED_PWM, self.MAX_FORWARD, 0, 1.0)
+                    throttle_pwm = dk.utils.map_range_float(
+                        throttle_pwm, 1500, 2000, self.STOPPED_PWM, self.MAX_FORWARD
+                    )
+                    self.throttle = dk.utils.map_range_float(
+                        throttle_pwm, self.STOPPED_PWM, self.MAX_FORWARD, 0, 1.0
+                    )
                 else:
-                    throttle_pwm = dk.utils.map_range_float(throttle_pwm, 1000, 1500, self.MAX_REVERSE, self.STOPPED_PWM)
-                    self.throttle = dk.utils.map_range_float(throttle_pwm, self.MAX_REVERSE, self.STOPPED_PWM, -1.0, 0)
+                    throttle_pwm = dk.utils.map_range_float(
+                        throttle_pwm, 1000, 1500, self.MAX_REVERSE, self.STOPPED_PWM
+                    )
+                    self.throttle = dk.utils.map_range_float(
+                        throttle_pwm, self.MAX_REVERSE, self.STOPPED_PWM, -1.0, 0
+                    )
 
                 if angle_pwm >= self.STEERING_MID:
-                    self.angle = dk.utils.map_range_float(angle_pwm, 2000, self.STEERING_MID, -1, 0)
+                    self.angle = dk.utils.map_range_float(
+                        angle_pwm, 2000, self.STEERING_MID, -1, 0
+                    )
                 else:
-                    self.angle = dk.utils.map_range_float(angle_pwm, self.STEERING_MID, 1000, 0, 1)
+                    self.angle = dk.utils.map_range_float(
+                        angle_pwm, self.STEERING_MID, 1000, 0, 1
+                    )
 
                 if self.auto_record_on_throttle:
                     was_recording = self.recording
                     self.recording = self.throttle > self.DEAD_ZONE
                     if was_recording != self.recording:
                         self.recording_latch = self.recording
-                        logging.debug(f"JoystickController::on_throttle_changes() setting recording = {self.recording}")
+                        logging.debug(
+                            "JoystickController::on_throttle_changes() setting recording = "
+                            + str(self.recording)
+                        )
 
                 time.sleep(0.01)
 
@@ -110,8 +127,8 @@ class RoboHATController:
         while True:
             try:
                 self.read_serial()
-            except:
-                print("MM1: Error reading serial input!")
+            except Exception as e:
+                logging.error(f"MM1: Error reading serial input: {e}")
                 break
 
     def run(self, img_arr=None, mode=None, recording=None):
@@ -122,10 +139,13 @@ class RoboHATController:
         if mode is not None:
             self.mode = mode
         if recording is not None and recording != self.recording:
-            logging.debug(f"RoboHATController::run_threaded() setting recording from default = {recording}")
+            logging.debug(
+                f"RoboHATController::run_threaded() setting recording from default = {recording}"
+            )
             self.recording = recording
         if self.recording_latch is not None:
-            logging.debug(f"RoboHATController::run_threaded() setting recording from latch = {self.recording_latch}")
+            logging.debug("RoboHATController::run_threaded() setting recording from latch = " +
+                          str(self.recording_latch))
             self.recording = self.recording_latch
             self.recording_latch = None
 
@@ -133,11 +153,13 @@ class RoboHATController:
 
     def navigate_to_location(self, target_location):
         try:
-            current_position = self.gps_latest_position.run()
+            ts, lat, lon = self.gps_latest_position.run()
+            current_position = (lat, lon)
             while not self.has_reached_location(current_position, target_location):
                 steering, throttle = self.calculate_navigation_commands(current_position, target_location)
                 self.set_pulse(steering, throttle)
-                current_position = self.gps_latest_position.get_latest_position()
+                ts, lat, lon = self.gps_latest_position.get_latest_position()
+                current_position = (lat, lon)
                 time.sleep(0.1)
             self.stop()
             return True
@@ -145,7 +167,6 @@ class RoboHATController:
             logging.exception("Error in navigate_to_location")
             self.stop()
             return False
-
 
     def calculate_navigation_commands(self, current_position, target_location):
         # Calculate bearing between current_position and target_location
@@ -194,7 +215,6 @@ class RoboHATController:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         distance = R * c
         return distance
-
 
     def has_reached_location(self, current_position, target_location, tolerance=0.0001):
         lat1, lon1 = current_position

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from functools import reduce
 import operator
 
-from donkeycar.parts.serial_port import SerialPort
+from hardware_interface import SerialPort, SerialLineReader
 from donkeycar.parts.text_writer import CsvLogger
 
 from utils import LoggerConfig
@@ -80,7 +80,7 @@ class GpsPosition:
         self.NTRIP_url = NTRIP_url
         self.NTRIP_mountpoint = NTRIP_mountpoint
         self.NTRIP_port = NTRIP_port
-        self.correction_thread = threading.Thread(target=self.get_correction_data)
+        self.correction_thread = threading.Thread(target=self.get_correction_data, daemon=True)
         self.correction_thread.start()
         self._start()
 
@@ -236,6 +236,7 @@ def parseGpsPosition(line, debug=False):
             return float(utm_position[0]), float(utm_position[1])
     return None
 
+
 def parse_nmea_checksum(nmea_line):
     return int(nmea_line[-2:], 16)
 
@@ -268,7 +269,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import sys
     import readchar
-    from donkeycar.parts.serial_port import SerialPort, SerialLineReader
+    from hardware_interface import SerialPort, SerialLineReader
 
     def stats(data):
         if not data:
@@ -457,7 +458,7 @@ if __name__ == "__main__":
         gps_position = GpsPosition(serial_port, args.user, args.password, args.url, args.mountpoint, debug=args.debug)
 
         if args.threaded:
-            update_thread = threading.Thread(target=line_reader.update, args=())
+            update_thread = threading.Thread(target=line_reader.update, args=(), daemon=True)
             update_thread.start()
 
         def read_gps():

@@ -256,7 +256,7 @@ def stop_motors():
 def start_web_interface():
     global stop_sensor_thread
     # Start the sensor update thread
-    sensor_thread = threading.Thread(target=sensor_interface.update_sensors)
+    sensor_thread = threading.Thread(target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
 
     socketio.run(app, host='0.0.0.0', port=90)
