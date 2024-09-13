@@ -27,3 +27,4 @@ pyubx2
 adafruit-circuitpython-bno08x
 utm
 neopixel
+readchar
