@@ -9,7 +9,7 @@ import math
 
 from dotenv import load_dotenv
 from navigation_system import GpsLatestPosition
-from hardware_interface import SensorInterface
+import sensor_interface as SensorInterface
 from utils import LoggerConfig, Utils
 from constants import (
     MM1_MAX_FORWARD,

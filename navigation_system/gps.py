@@ -7,7 +7,7 @@ import sys
 import threading
 import time
 from functools import reduce
-
+import readchar
 import numpy as np
 import pynmea2
 import requests
@@ -15,7 +15,7 @@ import utm
 from dotenv import load_dotenv
 from donkeycar.parts.text_writer import CsvLogger
 
-from hardware_interface import SerialPort, SerialLineReader
+from hardware_interface.serial_port import SerialPort, SerialLineReader
 from utils import LoggerConfig
 
 # Initialize logger
@@ -650,15 +650,15 @@ def main():
         )
         position_reader = GpsNmeaPositions(args.debug)
 
-        gps_position = GpsPosition(
-            serial_port,
-            args.user,
-            args.password,
-            args.url,
-            args.mountpoint,
-            args.NTRIP_port,
-            debug=args.debug
-        )
+        # gps_position = GpsPosition(
+        #     serial_port,
+        #     args.user,
+        #     args.password,
+        #     args.url,
+        #     args.mountpoint,
+        #     args.NTRIP_port,
+        #     debug=args.debug
+        # )
 
         if args.threaded:
             update_thread = threading.Thread(
