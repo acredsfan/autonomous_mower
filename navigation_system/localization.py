@@ -57,10 +57,10 @@ class Localization:
         fused with IMU data from the BNO085."""
         from hardware_interface.sensor_interface import SensorInterface
         """Fuse GPS and IMU data for position estimation."""
-
+        sensor_interface = SensorInterface()
         # Get latest GPS and IMU data
         gps_data = self.latest_position.get_latest_position()
-        imu_data = SensorInterface.update_sensors()
+        imu_data = sensor_interface.update_sensors()
 
         if gps_data and imu_data:
             # Extract relevant data
@@ -108,9 +108,10 @@ class Localization:
         # Convert heading to radians
         from hardware_interface import SensorInterface
         heading_rad = math.radians(heading)
+        sensor_interface = SensorInterface()
 
         # Calculate distance traveled based on speed and time
-        speed = SensorInterface.update_sensors().get("speed")
+        speed = sensor_interface.update_sensors().get("speed")
         distance = speed * time_delta
 
         # Calculate the change in latitude and longitude
@@ -127,9 +128,9 @@ class Localization:
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
         from hardware_interface import SensorInterface
-
+        sensor_interface = SensorInterface()
         try:
-            compass_data = SensorInterface.update_sensors().get("compass")
+            compass_data = sensor_interface.update_sensors().get("compass")
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))

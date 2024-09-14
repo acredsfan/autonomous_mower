@@ -118,6 +118,7 @@ def go_home():
 
 def start_mowing():
     # Start the mowing process
+    sensor_interface = SensorInterface()
     logging.info("Starting the mowing process...")
     try:
         # Load the mowing area polygon coordinates from the saved JSON file
@@ -135,7 +136,7 @@ def start_mowing():
             "Mowing area not set. Please define the area "
             "in the web interface.")
         # Check for Ideal mowing conditions
-        SensorInterface.ideal_mowing_conditions()
+        sensor_interface.ideal_mowing_conditions()
     except Exception:
         logging.exception("Error in start_mowing")
         # Start the mowing process by navigating to the first point

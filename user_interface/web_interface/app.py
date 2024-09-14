@@ -346,7 +346,7 @@ def start_web_interface():
         target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
 
-    socketio.run(app, host='0.0.0.0', port=90)
+    socketio.run(app, host='0.0.0.0', port=5000)
 
     # Set the flag to stop the sensor update thread
     sensor_interface.stop_thread = True
