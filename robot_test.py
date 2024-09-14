@@ -34,7 +34,7 @@ def initialize_resources():
     from hardware_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner
     global avoidance_algo, localization, robohat_controller
-    
+
     sensor_interface = SensorInterface()
     time.sleep(0.2)  # Adding delay to allow I2C bus stabilization
     camera = SingletonCamera()
@@ -118,7 +118,6 @@ def go_home():
 
 def start_mowing():
     # Start the mowing process
-    sensor_interface = SensorInterface()
     logging.info("Starting the mowing process...")
     try:
         # Load the mowing area polygon coordinates from the saved JSON file

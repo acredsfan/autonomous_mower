@@ -7,6 +7,8 @@ import sys
 import os
 from utils import LoggerConfig
 import utm
+from hardware_interface.sensor_interface import SensorInterface
+sensor_interface = SensorInterface()
 
 
 def utm_to_latlon(easting, northing, zone_number, zone_letter):
@@ -55,9 +57,7 @@ class Localization:
     def estimate_position(self):
         """Estimate the current position using GPS UTM data
         fused with IMU data from the BNO085."""
-        from hardware_interface.sensor_interface import SensorInterface
         """Fuse GPS and IMU data for position estimation."""
-        sensor_interface = SensorInterface()
         # Get latest GPS and IMU data
         gps_data = self.latest_position.get_latest_position()
         imu_data = sensor_interface.update_sensors()
@@ -106,9 +106,7 @@ class Localization:
         """Predict the next position based on the current position,
         heading, and time."""
         # Convert heading to radians
-        from hardware_interface import SensorInterface
         heading_rad = math.radians(heading)
-        sensor_interface = SensorInterface()
 
         # Calculate distance traveled based on speed and time
         speed = sensor_interface.update_sensors().get("speed")
@@ -127,8 +125,6 @@ class Localization:
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
-        from hardware_interface import SensorInterface
-        sensor_interface = SensorInterface()
         try:
             compass_data = sensor_interface.update_sensors().get("compass")
             if compass_data is not None:
