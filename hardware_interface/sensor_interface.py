@@ -8,6 +8,8 @@ from .ina3221_sensor import INA3221Sensor
 from .vl53l0x_sensor import VL53L0XSensors
 from .gpio_manager import GPIOManager
 import time
+import signal
+import sys
 
 logging = getLogger(__name__)
 
@@ -52,9 +54,8 @@ class SensorInterface:
         }
 
     def initialize_sensor(self, init_function, sensor_name):
-        # Utility function to initialize a sensor and log errors if any
         try:
-            with self.i2c_lock:  # Ensure I2C access is synchronized
+            with self.i2c_lock:
                 sensor = init_function()
             if sensor is None:
                 raise Exception(f"{sensor_name} initialization returned None.")
@@ -65,10 +66,8 @@ class SensorInterface:
             return None
 
     def initialize_sensor_with_retry(self, init_function, sensor_name, retries=3, delay=0.5):
-        # Improved initialization with retries
         for attempt in range(retries):
-            if sensor_name == "BNO085":
-                time.sleep(0.1)
+            time.sleep(0.1)
             sensor = self.initialize_sensor(init_function, sensor_name)
             if sensor is not None:
                 return sensor
@@ -78,9 +77,7 @@ class SensorInterface:
         return None
 
     def start_update_thread(self):
-        """Start the thread that periodically updates sensor readings."""
-        self.sensor_thread = threading.Thread(
-            target=self.update_sensors, daemon=True)
+        self.sensor_thread = threading.Thread(target=self.update_sensors, daemon=True)
         self.sensor_thread.start()
 
     def update_sensors(self):
@@ -163,7 +160,6 @@ class SensorInterface:
                 time.sleep(1.0)  # Wait before retrying
 
     def read_sensor_data(self, sensor, read_function, sensor_name):
-        """Utility function to read sensor data and handle errors."""
         if sensor is None:
             logging.error(f"{sensor_name} is not initialized.")
             return {}
@@ -172,6 +168,14 @@ class SensorInterface:
         except Exception as e:
             logging.error(f"Error reading {sensor_name}: {e}")
             return {}
+
+     def shutdown(self):
+         # Ensure sensors and threads are properly cleaned up
+        self.stop_thread = True
+        if self.sensor_thread.is_alive():
+            self.sensor_thread.join()
+        GPIOManager.clean()
+        logging.info("SensorInterface shutdown complete.")
 
     @staticmethod
     def ideal_mowing_conditions():
@@ -182,3 +186,12 @@ class SensorInterface:
             return True
         else:
             return False
+        
+    # Graceful shutdown handling with signal
+    def signal_handler(sig, frame):
+        logging.info("Received shutdown signal. Cleaning up...")
+        SensorInterface().shutdown()  # Clean up sensors and threads
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
