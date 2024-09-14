@@ -13,18 +13,29 @@ logging = getLogger(__name__)
 
 
 class SensorInterface:
-    def __init__(self):
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(SensorInterface, cls).__new__(cls)
+                    cls._instance.init()
+        return cls._instance
+
+    def init(self):
         self.sensor_data_lock = threading.Lock()
         self.sensor_data = {}
-        self.i2c_lock = threading.Lock()  # Added lock for I2C access
+        self.i2c_lock = threading.Lock()  # Lock for I2C access
         self.i2c = busio.I2C(board.SCL, board.SDA)
         self.shutdown_pins = [22, 23]
         self.interrupt_pins = [6, 12]
         self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(
             self.shutdown_pins, self.interrupt_pins)
         self.init_sensors()
-        self.start_update_thread()
         self.stop_thread = False
+        self.start_update_thread()
 
     def init_sensors(self):
         # Initialize all sensors with consolidated error handling and retries
