@@ -169,8 +169,8 @@ class SensorInterface:
             logging.error(f"Error reading {sensor_name}: {e}")
             return {}
 
-     def shutdown(self):
-         # Ensure sensors and threads are properly cleaned up
+    def shutdown(self):
+        # Ensure sensors and threads are properly cleaned up
         self.stop_thread = True
         if self.sensor_thread.is_alive():
             self.sensor_thread.join()
@@ -186,7 +186,7 @@ class SensorInterface:
             return True
         else:
             return False
-        
+
     # Graceful shutdown handling with signal
     def signal_handler(sig, frame):
         logging.info("Received shutdown signal. Cleaning up...")
