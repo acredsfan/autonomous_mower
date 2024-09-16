@@ -395,5 +395,45 @@ class PathPlanning:
 
         return search_points
 
+class FollowOutline:
+    # Path to follow outline of user generated polygon/yard
 
-# Example usage
+    def __init__(self):
+        self.path_planning = PathPlanning()
+        self.path = []
+        self.current_position = None
+        self.goal_position = None
+
+    def follow_outline(self):
+        # Follow the outline of the user generated polygon/yard
+        self.path_planning.set_user_polygon(polygon_coordinates)
+        self.current_position = self.path_planning.estimate_position()
+        self.goal_position = self.path_planning.get_goal_position()
+        self.path = self.path_planning.plan_path(
+            self.current_position, self.goal_position)
+        for point in self.path:
+            self.move_to_point(point)
+
+    def move_to_point(self, point):
+        # Move the robot to the specified point while avoiding obstacles and drop-offs.
+        from hardware_interface import RoboHATController
+        robohat_controller = RoboHATController()
+        from obstacle_detection import ObstacleDetection
+        obstacle_detection = ObstacleDetection()
+        robohat_controller.navigate_to_location(point)
+        obstacle_detection.avoid_obstacles()
+
+    def get_current_position(self):
+        return self.current_position
+    
+    def get_goal_position(self):
+        return self.goal_position
+    
+    def get_path(self):
+        return self.path
+    
+    def set_current_position(self, current_position):
+
+
+        pass
+

@@ -2,8 +2,9 @@
 # Path: obstacle_detection\__init__.py
 
 # IMPORTS
-from .avoidance_algorithm import AvoidanceAlgorithm
+from .avoidance_algorithm import AvoidanceAlgorithm, ObstacleAvoidance
 
 __all__ = [
-    'AvoidanceAlgorithm'
+    'AvoidanceAlgorithm',
+    'ObstacleAvoidance'
 ]

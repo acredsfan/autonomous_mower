@@ -1,6 +1,8 @@
 import json
 import time
-from hardware_interface import RoboHATController, GpsLatestPosition
+from hardware_interface import RoboHATController
+from navigation_system import GpsLatestPosition
+from obstacle_detection import ObstacleAvoidance
 from utils import LoggerConfig
 
 # Initialize logger
@@ -9,6 +11,8 @@ logging = LoggerConfig.get_logger(__name__)
 # Initialize GPS Latest Position and RoboHAT Controller
 gps_latest_position = GpsLatestPosition()
 robohat_controller = RoboHATController()
+obstacle_detection = ObstacleAvoidance()
+
 
 def navigate_and_confirm_polygon_points():
     try:
@@ -26,8 +30,9 @@ def navigate_and_confirm_polygon_points():
         for index, point in enumerate(polygon_points):
             logging.info(f"Navigating to point {index + 1}: {point}")
 
-            # Navigate to the point
+            # Navigate to the point while avoiding obstacles
             robohat_controller.navigate_to_location((point['lat'], point['lng']))
+            obstacle_detection.avoid_obstacles()
 
             # Wait for a moment to stabilize and get current GPS position
             time.sleep(5)
@@ -54,6 +59,7 @@ def navigate_and_confirm_polygon_points():
         logging.error("Mowing area not set. Please define the area in the web interface.")
     except Exception as e:
         logging.exception(f"Error during perimeter navigation: {e}")
+
 
 # Main loop for testing the feature
 if __name__ == "__main__":
