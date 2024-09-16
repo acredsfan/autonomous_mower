@@ -36,7 +36,7 @@ class GpsNmeaPositions:
 
     def __init__(self, debug=False):
         self.debug = debug
-        self.serial_port = None  # Assuming initialization elsewhere
+        self.serial_port = SerialPort
 
     def get_lines(self):
         """Reads and returns a list of NMEA lines with timestamps."""
