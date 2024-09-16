@@ -37,12 +37,13 @@ class GpsNmeaPositions:
     def __init__(self, debug=False):
         self.debug = debug
         self.serial_port = SerialPort
+        self.read_lines = SerialLineReader
 
     def get_lines(self):
         """Reads and returns a list of NMEA lines with timestamps."""
         lines = []
         for _ in range(5):
-            line = self.serial_port.readline().decode("ascii", errors="replace")
+            line = self.read_lines.run()
             lines.append((time.time(), line))
         return lines
 
