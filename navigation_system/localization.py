@@ -8,14 +8,6 @@ import os
 from utils import LoggerConfig
 import utm
 from hardware_interface.sensor_interface import SensorInterface
-sensor_interface = SensorInterface()
-
-
-def utm_to_latlon(easting, northing, zone_number, zone_letter):
-    """Convert UTM coordinates to latitude and longitude."""
-    lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-    return lat, lon
-
 
 # Initialize logger
 LoggerConfig.configure_logging()
@@ -23,7 +15,6 @@ logging = LoggerConfig.get_logger(__name__)
 
 # Add the parent directory to the system path for importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 
 class Localization:
     """Handles localization by estimating position and orientation."""
@@ -33,6 +24,7 @@ class Localization:
         # and boundaries
         self.position_reader = GpsNmeaPositions(debug=False)
         self.latest_position = GpsLatestPosition(debug=False)
+        self.sensor_interface = None  # Lazy initialization of SensorInterface
         self.position = None
         # Define the yard boundary coordinates
         self.yard_boundary = polygon_coordinates
@@ -45,6 +37,12 @@ class Localization:
         self.min_lng = min_lng
         self.max_lng = max_lng
 
+    def get_sensor_interface(self):
+        """Initialize the SensorInterface if not already initialized."""
+        if self.sensor_interface is None:
+            self.sensor_interface = SensorInterface()
+        return self.sensor_interface
+
     def load_json_file(self, file_name):
         """Load data from a JSON file."""
         try:
@@ -55,12 +53,10 @@ class Localization:
             return []
 
     def estimate_position(self):
-        """Estimate the current position using GPS UTM data
-        fused with IMU data from the BNO085."""
-        """Fuse GPS and IMU data for position estimation."""
+        """Estimate the current position using GPS UTM data fused with IMU data from the BNO085."""
         # Get latest GPS and IMU data
         gps_data = self.latest_position.get_latest_position()
-        imu_data = sensor_interface.update_sensors()
+        imu_data = self.get_sensor_interface().update_sensors()
 
         if gps_data and imu_data:
             # Extract relevant data
@@ -90,8 +86,7 @@ class Localization:
             self.time_since_last_update = 0  # Reset timer
 
         else:
-            # If GPS is unavailable,
-            # rely solely on IMU for short-term prediction
+            # If GPS is unavailable, rely solely on IMU for short-term prediction
             if imu_data:
                 predicted_lat, predicted_lon = self.predict_position(
                     self.fused_position,
@@ -103,13 +98,12 @@ class Localization:
         return self.fused_position
 
     def predict_position(self, position, heading, time_delta):
-        """Predict the next position based on the current position,
-        heading, and time."""
+        """Predict the next position based on the current position, heading, and time."""
         # Convert heading to radians
         heading_rad = math.radians(heading)
 
         # Calculate distance traveled based on speed and time
-        speed = sensor_interface.update_sensors().get("speed")
+        speed = self.get_sensor_interface().update_sensors().get("speed")
         distance = speed * time_delta
 
         # Calculate the change in latitude and longitude
@@ -126,7 +120,7 @@ class Localization:
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
         try:
-            compass_data = sensor_interface.update_sensors().get("compass")
+            compass_data = self.get_sensor_interface().update_sensors().get("compass")
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))
@@ -135,8 +129,7 @@ class Localization:
             else:
                 logging.warning("Compass data is None.")
         except Exception:
-            logging.exception("An error occurred while "
-                              "estimating orientation")
+            logging.exception("An error occurred while estimating orientation")
 
     def update(self):
         """Update the position and orientation of the mower."""
