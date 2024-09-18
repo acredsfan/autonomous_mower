@@ -22,17 +22,21 @@ shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, interrupt_pins)
 class PWM:
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(PWM, cls).__new__(cls)
-        return cls
+        return cls._instance
 
     def __init__(self, line, frequency):
+        # Check if instance has already been initialized to avoid re-initialization
+        if hasattr(self, 'initialized') and self.initialized:
+            return
         self.line = line
         self.frequency = frequency
         self.duty_cycle = 0
         self.running = False
         self.thread = None
+        self.initialized = True
 
     def start(self, duty_cycle):
         self.duty_cycle = duty_cycle
