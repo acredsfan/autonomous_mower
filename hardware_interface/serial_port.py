@@ -20,6 +20,12 @@ class SerialPort:
     It also provides a layer of indirection
     so that we can mock this for testing.
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(SerialPort, cls).__new__(cls)
+        return cls._instance
 
     def __init__(
             self,
@@ -186,6 +192,12 @@ class SerialLineReader:
     """
     Donkeycar part for reading lines from a serial port
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(SerialLineReader, cls).__new__(cls)
+        return cls._instance
 
     def __init__(
             self,

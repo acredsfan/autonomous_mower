@@ -113,3 +113,4 @@ class BladeController:
 if __name__ == "__main__":
     # Start the blade controller
     blade_controller = BladeController()
+    debug.log("Blade controller started as main.")
