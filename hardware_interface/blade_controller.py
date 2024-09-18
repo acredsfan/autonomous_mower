@@ -25,7 +25,6 @@ class PWM:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(PWM, cls).__new__(cls)
-            cls.__init__(cls._instance)
         return cls
 
     def __init__(self, line, frequency):
