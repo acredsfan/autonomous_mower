@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     finally:
         # Cleanup
-        BladeController.set_speed(0)
+        BladeController.stop()
         if robohat_controller:
             robohat_controller.stop()
         GPIOManager.clean()
