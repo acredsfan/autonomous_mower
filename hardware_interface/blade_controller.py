@@ -113,10 +113,3 @@ class BladeController:
 if __name__ == "__main__":
     # Start the blade controller
     blade_controller = BladeController()
-    blade_controller.set_speed(50)
-
-    # Wait for 5 seconds
-    time.sleep(5)
-
-    # Stop the blade controller
-    blade_controller.stop()
