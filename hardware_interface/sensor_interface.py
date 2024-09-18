@@ -24,6 +24,8 @@ class SensorInterface:
                 if cls._instance is None:
                     cls._instance = super(SensorInterface, cls).__new__(cls)
                     cls._instance.init()
+                    cls._instance.init_sensors()
+                    cls._instance.start_update_thread()
         return cls._instance
 
     def init(self):
@@ -35,7 +37,6 @@ class SensorInterface:
         self.interrupt_pins = [6, 12]
         self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(
             self.shutdown_pins, self.interrupt_pins)
-        self.init_sensors()
         self.stop_thread = False
         self.start_update_thread()
 
@@ -188,6 +189,7 @@ class SensorInterface:
             return False
 
     # Graceful shutdown handling with signal
+    @staticmethod
     def signal_handler(sig, frame):
         logging.info("Received shutdown signal. Cleaning up...")
         SensorInterface().shutdown()  # Clean up sensors and threads
@@ -195,3 +197,9 @@ class SensorInterface:
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
+if __name__ == "__main__":
+    sensor_interface = SensorInterface()
+    while True:
+        print(sensor_interface.sensor_data)
+        time.sleep(1)

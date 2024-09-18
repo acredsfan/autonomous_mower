@@ -20,6 +20,14 @@ shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, interrupt_pins)
 
 
 class PWM:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(PWM, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls
+
     def __init__(self, line, frequency):
         self.line = line
         self.frequency = frequency
@@ -69,6 +77,13 @@ pwm2.start(0)
 
 class BladeController:
     blades_on = False  # Class attribute to track blade state
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(BladeController, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
 
     @staticmethod
     def set_speed(speed):
@@ -90,3 +105,14 @@ class BladeController:
         pwm1.stop()
         pwm2.stop()
         BladeController.blades_on = False
+
+if __name__ = "__main__":
+    # Start the blade controller
+    blade_controller = BladeController()
+    blade_controller.set_speed(50)
+
+    # Wait for 5 seconds
+    time.sleep(5)
+
+    # Stop the blade controller
+    blade_controller.stop()

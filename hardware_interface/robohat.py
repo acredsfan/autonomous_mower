@@ -26,6 +26,7 @@ try:
 except ImportError:
     print("PySerial not found. Please install: pip install pyserial")
 
+sensor_interface = SensorInterface()
 
 load_dotenv()
 MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
@@ -37,6 +38,13 @@ logging = logging.getLogger(__name__)
 
 class RoboHATController:
     """Controller for the RoboHAT MM1 hardware interface."""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(RoboHATController, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls
 
     def __init__(self, debug=False):
         self.angle = 0.0
@@ -221,7 +229,7 @@ class RoboHATController:
             current_position, target_location
         )
         heading_error = (
-            SensorInterface.update_sensors('heading') - bearing
+            sensor_interface.update_sensors('heading') - bearing
         )
 
         # Simple proportional controller for steering
@@ -347,3 +355,10 @@ class RoboHATController:
                 logging.error(f"Failed to write PWM command: {e}")
         else:
             logging.error("Cannot write PWM command. Serial port is not open.")
+
+
+if __name__ == "__main__":
+    # Initialize the RoboHAT controller
+    robohat_controller = RoboHATController()
+    robohat_controller.update()
+    robohat_controller.shutdown()

@@ -13,6 +13,13 @@ i2c = busio.I2C(board.SCL, board.SDA)
 
 class BME280Sensor:
     """Class to handle BME280 sensor"""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(BME280Sensor, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
 
     @staticmethod
     def init_bme280():
@@ -48,3 +55,16 @@ class BME280Sensor:
         except Exception as e:
             logging.error(f"Error during BME280 read: {e}")
             return {}
+
+
+if __name__ == "__main__":
+    # Initialize the BME280 sensor
+    bme280_sensor = BME280Sensor()
+    bme280 = bme280_sensor.init_bme280()
+
+    if bme280 is not None:
+        # Read BME280 sensor data
+        sensor_data = bme280_sensor.read_bme280(bme280)
+        logging.info(f"BME280 sensor data: {sensor_data}")
+    else:
+        logging.error("BME280 sensor initialization failed.")

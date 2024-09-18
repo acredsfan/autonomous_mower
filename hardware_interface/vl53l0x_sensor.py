@@ -7,6 +7,15 @@ logging = LoggerConfig.get_logger(__name__)
 
 
 class VL53L0XSensors:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(VL53L0XSensors, cls).__new__(cls)
+            cls.__init__(cls._instance)
+            cls.init_vl53l0x(cls._instance)
+            cls.init_vl53l0x_sensors(cls._instance)
+        return cls._instance
 
     @staticmethod
     def init_vl53l0x(i2c, address):
@@ -67,3 +76,14 @@ class VL53L0XSensors:
         left_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
 
         return left_sensor, right_sensor
+
+if __name__ == "__main__":
+    # Initialize the VL53L0X sensors
+    vl53l0x_sensors = VL53L0XSensors()
+    left_sensor, right_sensor = vl53l0x_sensors.init_vl53l0x_sensors()
+    if left_sensor is not None and right_sensor is not None:
+        # Read VL53L0X sensor data
+        left_distance = vl53l0x_sensors.read_vl53l0x(left_sensor)
+        right_distance = vl53l0x_sensors.read_vl53l0x(right_sensor)
+        logging.info(f"Left sensor distance: {left_distance} mm")
+        logging.info(f"Right sensor distance: {right_distance} mm")

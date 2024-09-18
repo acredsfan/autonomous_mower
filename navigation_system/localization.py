@@ -9,6 +9,8 @@ from utils import LoggerConfig
 import utm
 from hardware_interface.sensor_interface import SensorInterface
 
+sensor_interface = SensorInterface()
+
 # Initialize logger
 LoggerConfig.configure_logging()
 logging = LoggerConfig.get_logger(__name__)
@@ -18,6 +20,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 class Localization:
     """Handles localization by estimating position and orientation."""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Localization, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
 
     def __init__(self):
         # Initialize GPS-related objects and set default values for position
@@ -55,7 +64,7 @@ class Localization:
     def estimate_position(self):
         """Estimate the current position using GPS UTM data fused with IMU data from the BNO085."""
         # Get latest GPS and IMU data
-        gps_data = self.latest_position.get_latest_position()
+        gps_data = self.latest_position.run()
         imu_data = self.get_sensor_interface().update_sensors()
 
         if gps_data and imu_data:

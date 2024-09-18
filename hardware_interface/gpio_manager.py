@@ -7,6 +7,13 @@ logging = LoggerConfig.get_logger(__name__)
 
 
 class GPIOManager:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(GPIOManager, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
 
     def init_gpio(shutdown_pins, interrupt_pins):
         chip = gpiod.Chip('gpiochip0')
@@ -33,3 +40,7 @@ class GPIOManager:
                 logging.error(f"Error releasing GPIO line: {e}")
         chip.close()
         logging.info("GPIO cleanup complete.")
+
+if __name__ == "__main__":
+    GPIOManager.init_gpio([22, 23], [6, 12])
+    GPIOManager.clean()

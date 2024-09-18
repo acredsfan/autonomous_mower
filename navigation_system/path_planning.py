@@ -35,6 +35,14 @@ OPEN_WEATHER_MAP_API_KEY = os.getenv("OPEN_WEATHER_MAP_API")
 
 
 class PathPlanning:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(PathPlanning, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
+
     def __init__(self):
         self.min_lng = min_lng
         self.max_lng = max_lng
@@ -418,8 +426,8 @@ class FollowOutline:
         # Move the robot to the specified point while avoiding obstacles and drop-offs.
         from hardware_interface import RoboHATController
         robohat_controller = RoboHATController()
-        from obstacle_detection import ObstacleDetection
-        obstacle_detection = ObstacleDetection()
+        from obstacle_detection import ObstacleAvoidance
+        obstacle_detection = ObstacleAvoidance()
         robohat_controller.navigate_to_location(point)
         obstacle_detection.avoid_obstacles()
 
@@ -433,7 +441,8 @@ class FollowOutline:
         return self.path
     
     def set_current_position(self, current_position):
+        self.current_position = current_position
+        
 
-
-        pass
-
+if __name__ == "__main__":
+    __init__()

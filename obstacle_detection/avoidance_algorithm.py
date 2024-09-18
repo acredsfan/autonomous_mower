@@ -17,6 +17,16 @@ logging = LoggerConfig.get_logger(__name__)
 
 
 class ObstacleAvoidance:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ObstacleAvoidance, cls).__new__(cls)
+            cls.__init__(cls._instance)
+            cls._update_obstacle_status(cls._instance)
+            cls.avoid_obstacles(cls._instance)
+        return cls._instance
+
     def __init__(self, camera=None):
         self.camera = camera
         self.obstacle_left = False
@@ -41,6 +51,14 @@ class ObstacleAvoidance:
 
 
 class AvoidanceAlgorithm:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(AvoidanceAlgorithm, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
+
     def __init__(self, cfg):
         from hardware_interface import CameraProcessor
         from hardware_interface import RoboHATController

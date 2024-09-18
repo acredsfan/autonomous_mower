@@ -15,6 +15,13 @@ logging = LoggerConfig.get_logger(__name__)
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor"""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(BNO085Sensor, cls).__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
 
     @staticmethod
     def init_bno085(i2c):
@@ -173,3 +180,22 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating roll: {e}")
             return 0
+
+if __name__ == "__main__":
+    # Initialize the BNO085 sensor
+    bno085_sensor = BNO085Sensor()
+    bno085 = bno085_sensor.init_bno085(i2c)
+
+    if bno085 is not None:
+        # Read BNO085 sensor data
+        sensor_data = {
+            'accel': bno085_sensor.read_bno085_accel(bno085),
+            'gyro': bno085_sensor.read_bno085_gyro(bno085),
+            'mag': bno085_sensor.read_bno085_magnetometer(bno085),
+            'quat': bno085_sensor.read_bno085_quaternion(bno085),
+            'speed': bno085_sensor.calculate_speed(bno085),
+            'heading': bno085_sensor.calculate_heading(bno085),
+            'pitch': bno085_sensor.calculate_pitch(bno085),
+            'roll': bno085_sensor.calculate_roll(bno085)
+        }
+        print(sensor_data)

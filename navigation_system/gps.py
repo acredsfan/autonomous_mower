@@ -11,13 +11,21 @@ from hardware_interface import SerialPort
 from utils import CsvLogger
 from utils import LoggerConfig
 
-logger = LoggerConfig.get_logger(__name__)
-
+logger_config = LoggerConfig()
+logger = logger_config.get_logger(__name__)
 
 class GpsNmeaPositions:
     """
     Donkeycar part to convert array of NMEA sentences into array of (x,y) positions
     """
+    _instance = None
+
+    def __new__(cls, debug=False):
+        if cls._instance is None:
+            cls._instance = super(GpsNmeaPositions, cls).__new__(cls)
+            cls._instance.__init__(debug)
+        return cls._instance
+
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -41,6 +49,14 @@ class GpsLatestPosition:
     """
     Return most recent valid GPS position
     """
+    _instance = None
+
+    def __new__(cls, debug=False):
+        if cls._instance is None:
+            cls._instance = super(GpsLatestPosition, cls).__new__(cls)
+            cls._instance.__init__(debug)
+        return cls._instance
+
     def __init__(self, debug=False):
         self.debug = debug
         self.position = None
@@ -54,7 +70,15 @@ class GpsPosition:
     """
     Donkeycar part to read NMEA lines from serial port and convert a position
     """
-    def __init__(self, serial:SerialPort, debug = False) -> None:
+    _instance = None
+
+    def __new__(cls, serial: SerialPort, debug = False):
+        if cls._instance is None:
+            cls._instance = super(GpsPosition, cls).__new__(cls)
+            cls._instance.__init__(serial, debug)
+        return cls._instance
+    
+    def __init__(self, serial: SerialPort, debug = False) -> None:
         self.line_reader = SerialLineReader(serial)
         self.debug = debug
         self.position_reader = GpsNmeaPositions()
@@ -95,6 +119,14 @@ class GpsPlayer:
     Part that plays back the NMEA sentences that have been recorded
     by the nmea logger that is passed to the constructor.
     """
+    _instance = None
+
+    def __new__(cls, nmea_logger:CsvLogger):
+        if cls._instance is None:
+            cls._instance = super(GpsPlayer, cls).__new__(cls)
+            cls._instance.__init__(nmea_logger)
+        return cls._instance
+
     def __init__(self, nmea_logger:CsvLogger):
         self.nmea = nmea_logger
         self.index = -1
@@ -186,6 +218,14 @@ def parseGpsPosition(line, debug=False):
             If it cannot be parsed or is not a position message, 
             then return None.
     """
+    _instance = None
+
+    def __new__(cls, debug=False):
+        if cls._instance is None:
+            cls._instance = super(GpsNmeaPositions, cls).__new__(cls)
+            cls._instance.__init__(debug)
+        return cls._instance
+
     if not line:
         return None
     line = line.strip()
