@@ -1,4 +1,4 @@
-from utils import LoggerConfig
+from utilities import LoggerConfig
 import requests
 from constants import (
     SECTION_SIZE,
@@ -403,6 +403,7 @@ class PathPlanning:
 
         return search_points
 
+
 class FollowOutline:
     # Path to follow outline of user generated polygon/yard
 
@@ -423,7 +424,8 @@ class FollowOutline:
             self.move_to_point(point)
 
     def move_to_point(self, point):
-        # Move the robot to the specified point while avoiding obstacles and drop-offs.
+        # Move the robot to the specified point while
+        #  avoiding obstacles and drop-offs.
         from hardware_interface import RoboHATController
         robohat_controller = RoboHATController()
         from obstacle_detection import ObstacleAvoidance
@@ -433,16 +435,12 @@ class FollowOutline:
 
     def get_current_position(self):
         return self.current_position
-    
+
     def get_goal_position(self):
         return self.goal_position
-    
+
     def get_path(self):
         return self.path
-    
+
     def set_current_position(self, current_position):
         self.current_position = current_position
-        
-
-if __name__ == "__main__":
-    __init__()

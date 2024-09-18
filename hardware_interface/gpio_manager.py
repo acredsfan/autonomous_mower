@@ -1,6 +1,6 @@
 
 import gpiod
-from utils import LoggerConfig
+from utilities import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

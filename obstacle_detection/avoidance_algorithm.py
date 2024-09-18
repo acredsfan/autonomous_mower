@@ -10,7 +10,7 @@ import time
 from navigation_system import path_planning
 from hardware_interface import SensorInterface
 
-from utils import LoggerConfig
+from utilities import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

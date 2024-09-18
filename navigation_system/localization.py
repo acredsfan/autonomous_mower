@@ -5,7 +5,7 @@ import time
 import json
 import sys
 import os
-from utils import LoggerConfig
+from utilities import LoggerConfig
 from hardware_interface.sensor_interface import SensorInterface
 
 sensor_interface = SensorInterface()

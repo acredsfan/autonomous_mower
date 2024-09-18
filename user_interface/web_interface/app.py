@@ -1,4 +1,4 @@
-from utils import LoggerConfig
+from utilities import LoggerConfig
 from hardware_interface.camera import get_camera_instance
 from PIL import Image
 from io import BytesIO

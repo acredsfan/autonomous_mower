@@ -8,8 +8,8 @@ import pynmea2
 import utm
 
 from hardware_interface import SerialPort
-from utils import CsvLogger
-from utils import LoggerConfig
+from utilities import CsvLogger
+from utilities import LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)

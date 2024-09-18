@@ -1,7 +1,7 @@
 # constants.py
 import json
 from dotenv import load_dotenv
-from utils import LoggerConfig
+from utilities import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

@@ -1,4 +1,4 @@
-from utils import LoggerConfig
+from utilities import LoggerConfig
 import board
 import busio
 from adafruit_bme280 import basic as adafruit_bme280

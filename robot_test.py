@@ -1,6 +1,6 @@
 # robot_web_test.py
 
-from utils import LoggerConfig
+from utilities import LoggerConfig
 import json
 from user_interface.web_interface.app import start_web_interface
 from obstacle_detection.avoidance_algorithm import ObstacleAvoidance

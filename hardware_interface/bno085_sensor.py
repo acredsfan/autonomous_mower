@@ -7,7 +7,7 @@ from adafruit_bno08x import (
     BNO_REPORT_ROTATION_VECTOR,
 )
 import math
-from utils import LoggerConfig
+from utilities import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -181,10 +181,11 @@ class BNO085Sensor:
             logging.error(f"Error calculating roll: {e}")
             return 0
 
+
 if __name__ == "__main__":
     # Initialize the BNO085 sensor
     bno085_sensor = BNO085Sensor()
-    bno085 = bno085_sensor.init_bno085(i2c)
+    bno085 = bno085_sensor.init_bno085()
 
     if bno085 is not None:
         # Read BNO085 sensor data

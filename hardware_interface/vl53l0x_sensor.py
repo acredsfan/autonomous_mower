@@ -1,6 +1,6 @@
 import time
 import adafruit_vl53l0x
-from utils import LoggerConfig
+from utilities import LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -76,6 +76,7 @@ class VL53L0XSensors:
         left_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
 
         return left_sensor, right_sensor
+
 
 if __name__ == "__main__":
     # Initialize the VL53L0X sensors

@@ -1,5 +1,5 @@
-from utils import LoggerConfig
-from user_interface.web_interface.app import start_web_interface, app
+from utilities import LoggerConfig
+from user_interface.web_interface.app import start_web_interface
 import sys
 import os
 
