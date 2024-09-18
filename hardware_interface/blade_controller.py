@@ -106,7 +106,8 @@ class BladeController:
         pwm2.stop()
         BladeController.blades_on = False
 
-if __name__ = "__main__":
+
+if __name__ == "__main__":
     # Start the blade controller
     blade_controller = BladeController()
     blade_controller.set_speed(50)
