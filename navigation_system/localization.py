@@ -6,7 +6,6 @@ import json
 import sys
 import os
 from utils import LoggerConfig
-import utm
 from hardware_interface.sensor_interface import SensorInterface
 
 sensor_interface = SensorInterface()
@@ -17,6 +16,7 @@ logging = LoggerConfig.get_logger(__name__)
 
 # Add the parent directory to the system path for importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 
 class Localization:
     """Handles localization by estimating position and orientation."""
@@ -62,7 +62,8 @@ class Localization:
             return []
 
     def estimate_position(self):
-        """Estimate the current position using GPS UTM data fused with IMU data from the BNO085."""
+        """Estimate the current position using GPS UTM data
+          fused with IMU data from the BNO085."""
         # Get latest GPS and IMU data
         gps_data = self.latest_position.run()
         imu_data = self.get_sensor_interface().update_sensors()
@@ -95,7 +96,8 @@ class Localization:
             self.time_since_last_update = 0  # Reset timer
 
         else:
-            # If GPS is unavailable, rely solely on IMU for short-term prediction
+            # If GPS is unavailable, rely solely on IMU
+            # for short-term prediction
             if imu_data:
                 predicted_lat, predicted_lon = self.predict_position(
                     self.fused_position,
@@ -107,7 +109,8 @@ class Localization:
         return self.fused_position
 
     def predict_position(self, position, heading, time_delta):
-        """Predict the next position based on the current position, heading, and time."""
+        """Predict the next position based on the current position,
+          heading, and time."""
         # Convert heading to radians
         heading_rad = math.radians(heading)
 
@@ -129,7 +132,8 @@ class Localization:
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
         try:
-            compass_data = self.get_sensor_interface().update_sensors().get("compass")
+            sensor_data = self.get_sensor_interface().update_sensors()
+            compass_data = sensor_data.get("compass")
             if compass_data is not None:
                 x, y, z = compass_data
                 self.current_heading = math.degrees(math.atan2(y, x))

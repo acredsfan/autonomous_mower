@@ -4,7 +4,7 @@ from .text_writer import TextLogger, CsvLogger
 
 __all__ = [
     'LoggerConfig',
-    'Utils'
+    'Utils',
     'TextLogger',
     'CsvLogger'
 ]
