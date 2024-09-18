@@ -12,6 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Initialize logging
 LoggerConfig.configure_logging()
 logging = logging.getLogger(__name__)
+debug = LoggerConfig.get_logger("debug")
 
 # Initialize GPIO lines using gpio_manager
 shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
@@ -28,7 +29,8 @@ class PWM:
         return cls._instance
 
     def __init__(self, line, frequency):
-        # Check if instance has already been initialized to avoid re-initialization
+        ''' Check if instance has already been initialized
+            to avoid re-initialization'''
         if hasattr(self, 'initialized') and self.initialized:
             return
         self.line = line

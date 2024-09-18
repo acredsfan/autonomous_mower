@@ -14,9 +14,11 @@ from utils import LoggerConfig
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
 
+
 class GpsNmeaPositions:
     """
-    Donkeycar part to convert array of NMEA sentences into array of (x,y) positions
+    Donkeycar part to convert array of
+    NMEA sentences into array of (x,y) positions
     """
     _instance = None
 
@@ -33,6 +35,11 @@ class GpsNmeaPositions:
         positions = []
         if lines:
             for ts, nmea in lines:
+                # Add your logic here to process each line
+                # For example, you might want to parse the NMEA sentence
+                position = parseGpsPosition(nmea, self.debug)
+                if position:
+                    positions.append((ts, *position))
                 position = parseGpsPosition(nmea, self.debug)
                 if position:
                     # output (ts,x,y) - so long is x, lat is y
@@ -44,6 +51,7 @@ class GpsNmeaPositions:
 
     def run_threaded(self, lines):
         return self.run(lines)
+
 
 class GpsLatestPosition:
     """
@@ -66,19 +74,20 @@ class GpsLatestPosition:
             self.position = positions[-1]
         return self.position
 
+
 class GpsPosition:
     """
     Donkeycar part to read NMEA lines from serial port and convert a position
     """
     _instance = None
 
-    def __new__(cls, serial: SerialPort, debug = False):
+    def __new__(cls, serial: SerialPort, debug=False):
         if cls._instance is None:
             cls._instance = super(GpsPosition, cls).__new__(cls)
             cls._instance.__init__(serial, debug)
         return cls._instance
-    
-    def __init__(self, serial: SerialPort, debug = False) -> None:
+
+    def __init__(self, serial: SerialPort, debug=False) -> None:
         self.line_reader = SerialLineReader(serial)
         self.debug = debug
         self.position_reader = GpsNmeaPositions()
@@ -96,7 +105,8 @@ class GpsPosition:
         if positions is not None and len(positions) > 0:
             self.position = positions[-1]
             if self.debug:
-                logger.info(f"UTM long = {self.position[0]}, UTM lat = {self.position[1]}")
+                logger.info(f"UTM long = {self.position[0]},"
+                            f"UTM lat = {self.position[1]}")
         return self.position
 
     def run(self):
@@ -121,13 +131,13 @@ class GpsPlayer:
     """
     _instance = None
 
-    def __new__(cls, nmea_logger:CsvLogger):
+    def __new__(cls, nmea_logger: CsvLogger):
         if cls._instance is None:
             cls._instance = super(GpsPlayer, cls).__new__(cls)
             cls._instance.__init__(nmea_logger)
         return cls._instance
 
-    def __init__(self, nmea_logger:CsvLogger):
+    def __init__(self, nmea_logger: CsvLogger):
         self.nmea = nmea_logger
         self.index = -1
         self.starttime = None
@@ -205,58 +215,52 @@ class GpsPlayer:
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
-                            nmea_sentences.append((next_nmea_time, next_nmea[1]))
+                            nmea_sentences.append((next_nmea_time,
+                                                   next_nmea[1]))
                             self.index += 1
         return nmea_sentences
 
 
 def parseGpsPosition(line, debug=False):
     """
-    Given a line emitted by a GPS module, 
-    Parse out the position and return as a 
+    Given a line emitted by a GPS module,
+    Parse out the position and return as a
     return: tuple of float (longitude, latitude) as meters.
-            If it cannot be parsed or is not a position message, 
+            If it cannot be parsed or is not a position message,
             then return None.
     """
-    _instance = None
-
-    def __new__(cls, debug=False):
-        if cls._instance is None:
-            cls._instance = super(GpsNmeaPositions, cls).__new__(cls)
-            cls._instance.__init__(debug)
-        return cls._instance
-
     if not line:
         return None
     line = line.strip()
     if not line:
         return None
-        
-    #
+
     # must start with $ and end with checksum
-    #
+
     if '$' != line[0]:
         logger.info("NMEA Missing line start")
         return None
-        
+
     if '*' != line[-3]:
         logger.info("NMEA Missing checksum")
         return None
-        
-    nmea_checksum = parse_nmea_checksum(line) # ## checksum hex digits as int
+
+    nmea_checksum = parse_nmea_checksum(line)  # ## checksum hex digits as int
     nmea_msg = line[1:-3]      # msg without $ and *## checksum
     nmea_parts = nmea_msg.split(",")
     message = nmea_parts[0]
-    if (message == "GPRMC") or (message == "GNRMC"):   
-        #     
-        # like '$GPRMC,003918.00,A,3806.92281,N,12235.64362,W,0.090,,060322,,,D*67'
+    if (message == "GPRMC") or (message == "GNRMC"):
+
+        # like:
+        # '$GPRMC,003918.00,A,3806.92281,N,12235.64362,W,0.090,,060322,,,D*67'
         # GPRMC = Recommended minimum specific GPS/Transit data
         #
         # make sure the checksum checks out
         #
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
-            logger.info(f"NMEA checksum does not match: {nmea_checksum} != {calculated_checksum}")
+            logger.info(f"NMEA checksum does not match:"
+                        f"{nmea_checksum} != {calculated_checksum}")
             return None
 
         #
@@ -276,7 +280,8 @@ def parseGpsPosition(line, debug=False):
         # Reading the GPS fix data is an alternative approach that also works
         if nmea_parts[2] == 'V':
             # V = Warning, most likely, there are no satellites in view...
-            logger.info("GPS receiver warning; position not valid. Ignore invalid position.")
+            logger.info("GPS receiver warning; position not valid."
+                        "Ignore invalid position.")
         else:
             #
             # Convert the textual nmea position into degrees
@@ -295,9 +300,9 @@ def parseGpsPosition(line, debug=False):
             #
             utm_position = utm.from_latlon(latitude, longitude)
             if debug:
-                logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
-            
-            # return (longitude, latitude) as float degrees
+                logger.info(f"UTM easting = {utm_position[0]},"
+                            f"UTM northing = {utm_position[1]}")
+                # return (longitude, latitude) as float degrees
             return float(utm_position[0]), float(utm_position[1])
     else:
         # Non-position message OR invalid string
@@ -308,24 +313,26 @@ def parseGpsPosition(line, debug=False):
 
 def parse_nmea_checksum(nmea_line):
     """
-    Given the complete nmea line (including starting '$' and ending checksum '*##')
+    Given the complete nmea line
+    (including starting '$' and ending checksum '*##')
     calculate the checksum from the body of the line.
     NOTE: this does not check for structural correctness, so you
           should check that '$' and '*##' checksum are present before
           calling this function.
     """
-    return int(nmea_line[-2:], 16) # checksum hex digits as int
-    
-    
+    return int(nmea_line[-2:], 16)  # checksum hex digits as int
+
+
 def calculate_nmea_checksum(nmea_line):
     """
-    Given the complete nmea line (including starting '$' and ending checksum '*##')
+    Given the complete nmea line
+    (including starting '$' and ending checksum '*##')
     calculate the checksum from the body of the line.
     NOTE: this does not check for structural correctness, so you
           should check that '$' and '*##' checksum are present
           and that the checksum matches before calling this function.
     """
-    # 
+    #
     # xor all characters in the message to get a one byte checksum.
     # don't include starting '$' or trailing checksum '*##'
     #
@@ -335,55 +342,49 @@ def calculate_nmea_checksum(nmea_line):
 def nmea_to_degrees(gps_str, direction):
     """
     Convert a gps coordinate string formatted as:
-    DDDMM.MMMMM, where DDD denotes the degrees (which may have zero to 3 digits)
+    DDDMM.MMMMM, where DDD denotes the degrees
+    (which may have zero to 3 digits)
     and MM.MMMMM denotes the minutes
     to a float in degrees.
     """
     if not gps_str or gps_str == "0":
         return 0
-        
-    #
+
     # pull out the degrees and minutes
     # and then combine the minutes
-    #
+
     parts = gps_str.split(".")
     degrees_str = parts[0][:-2]        # results in zero to 3 digits
     minutes_str = parts[0][-2:]        # always results in 2 digits
     if 2 == len(parts):
         minutes_str += "." + parts[1]  # combine whole and fractional minutes
-    
-    #
+
     # convert degrees to a float
-    #
+
     degrees = 0.0
     if len(degrees_str) > 0:
         degrees = float(degrees_str)
-    
-    #
+
     # convert minutes a float in degrees
-    #
+
     minutes = 0.0
     if len(minutes_str) > 0:
         minutes = float(minutes_str) / 60
-        
-    #
-    # sum up the degrees and apply the direction as a sign
-    #
-    return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
-    
 
-#
-# The __main__ self test can log position or optionally record a set of waypoints
-#
+    # sum up the degrees and apply the direction as a sign
+
+    return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
+
+
+''' The __main__ self test can log position
+or optionally record a set of waypoints'''
+
 if __name__ == "__main__":
     import math
     import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Ellipse
     import sys
     import readchar
-    from donkeycar.parts.serial_port import SerialPort, SerialLineReader
-
+    from donkeycar.parts.serial_port import SerialPort
 
     def stats(data):
         """
@@ -429,25 +430,24 @@ if __name__ == "__main__":
         like GPS, where x and y values may not be completely
         independent values.
         """
-        def __init__(self, samples, nstd = 1.0):
+        def __init__(self, samples, nstd=1.0):
             """
             Fit an ellipsoid to the given samples at the
             given multiple of the standard deviation of the samples.
             """
-            
+
             # separate out the points by axis
             self.x = [w[1] for w in samples]
             self.y = [w[2] for w in samples]
-            
+
             # calculate the stats for each axis
             self.x_stats = stats(self.x)
             self.y_stats = stats(self.y)
 
-            #
             # calculate a rotated ellipse that best fits the samples.
-            # We use a rotated ellipse because the x and y values 
-            # of each point are not independent.  
-            # 
+            # We use a rotated ellipse because the x and y values
+            # of each point are not independent.
+
             def eigsorted(cov):
                 """
                 Calculate eigenvalues and eigenvectors
@@ -463,7 +463,8 @@ if __name__ == "__main__":
             # get eigenvalues and vectors from covariance matrix
             self.eigenvalues, self.eigenvectors = eigsorted(self.cov)
 
-            # calculate the ellipsoid at the given multiple of the standard deviation.
+            # calculate the ellipsoid at the
+            # given multiple of the standard deviation.
             self.theta = np.degrees(np.arctan2(*self.eigenvectors[:, 0][::-1]))
             self.width, self.height = 2 * nstd * np.sqrt(self.eigenvalues)
 
@@ -476,8 +477,10 @@ if __name__ == "__main__":
             #     if (y >= self.y_stats.min) and (y <= self.y_stats.max):
             #         return True
             # return False
-            # if (x >= (self.x_stats.mean - self.x_stats.std_deviation)) and (x <= (self.x_stats.mean + self.x_stats.std_deviation)):
-            #     if (y >= (self.y_stats.mean - self.y_stats.std_deviation)) and (y <= (self.y_stats.mean + self.y_stats.std_deviation)):
+            # if (x >= (self.x_stats.mean - self.x_stats.std_deviation))
+            # and (x <= (self.x_stats.mean + self.x_stats.std_deviation)):
+            #     if (y >= (self.y_stats.mean - self.y_stats.std_deviation))
+            # and (y <= (self.y_stats.mean + self.y_stats.std_deviation)):
             #         return True
             # return False
             cos_theta = math.cos(self.theta)
@@ -489,8 +492,10 @@ if __name__ == "__main__":
             # coordinate system of the ellipse (it's center)
             # and then rotate the point and do a normal ellipse test
             #
-            part1 = ((cos_theta * x_translated + sin_theta * y_translated) / self.width)**2
-            part2 = ((sin_theta * x_translated - cos_theta * y_translated) / self.height)**2
+            part1 = ((cos_theta * x_translated + sin_theta * y_translated)
+                     / self.width)**2
+            part2 = ((sin_theta * x_translated - cos_theta * y_translated)
+                     / self.height)**2
             return (part1 + part2) <= 1
 
         def is_in_range(self, x, y):
@@ -502,7 +507,7 @@ if __name__ == "__main__":
                    (x <= self.x_stats.max) and \
                    (y >= self.y_stats.min) and \
                    (y <= self.y_stats.max)
-            
+
         def is_in_std(self, x, y, std_multiple=1.0):
             """
             Determine if the given (x, y) point is within a given
@@ -520,31 +525,30 @@ if __name__ == "__main__":
             """
             Draw the waypoint ellipsoid
             """
-            from matplotlib.patches import Ellipse
             import matplotlib.pyplot as plt
-            ax = plt.subplot(111, aspect='equal')
             self.plot()
             plt.show()
-            
+
         def plot(self):
             """
             Draw the waypoint ellipsoid
             """
             from matplotlib.patches import Ellipse, Rectangle
             import matplotlib.pyplot as plt
-            #define Matplotlib figure and axis
+            # define Matplotlib figure and axis
             ax = plt.subplot(111, aspect='equal')
-            
+
             # plot the collected readings
             plt.scatter(self.x, self.y)
-            
+
             # plot the centroid
-            plt.plot(self.x_stats.mean, self.y_stats.mean, marker="+", markeredgecolor="green", markerfacecolor="green")
-            
+            plt.plot(self.x_stats.mean, self.y_stats.mean, marker="+",
+                     markeredgecolor="green", markerfacecolor="green")
+
             # plot the range
             bounds = Rectangle(
-                (self.x_stats.min, self.y_stats.min), 
-                self.x_stats.max - self.x_stats.min, 
+                (self.x_stats.min, self.y_stats.min),
+                self.x_stats.max - self.x_stats.min,
                 self.y_stats.max - self.y_stats.min,
                 alpha=0.5,
                 edgecolor='red',
@@ -552,10 +556,10 @@ if __name__ == "__main__":
                 visible=True)
             ax.add_artist(bounds)
 
-            # plot the ellipsoid 
+            # plot the ellipsoid
             ellipse = Ellipse(xy=(self.x_stats.mean, self.y_stats.mean),
-                          width=self.width, height=self.height,
-                          angle=self.theta)
+                              width=self.width, height=self.height,
+                              angle=self.theta)
             ellipse.set_alpha(0.25)
             ellipse.set_facecolor('green')
             ax.add_artist(ellipse)
@@ -584,33 +588,40 @@ if __name__ == "__main__":
             i += 1
         return False, -1
 
-
     def plot(waypoints):
         """
         Draw the waypoint ellipsoid
         """
-        from matplotlib.patches import Ellipse
         import matplotlib.pyplot as plt
-        ax = plt.subplot(111, aspect='equal')
         for waypoint in waypoints:
             waypoint.plot()
         plt.show()
 
-
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-s", "--serial", type=str, required=True, help="Serial port address, like '/dev/tty.usbmodem1411'")
-    parser.add_argument("-b", "--baudrate", type=int, default=9600, help="Serial port baud rate.")
-    parser.add_argument("-t", "--timeout", type=float, default=0.5, help="Serial port timeout in seconds.")
-    parser.add_argument("-sp", '--samples', type=int, default = 5, help = "Number of samples per waypoint.")
-    parser.add_argument("-wp", "--waypoints", type=int, default = 0, help = "Number of waypoints to collect; > 0 to collect waypoints, 0 to just log position")
-    parser.add_argument("-nstd", "--nstd", type=float, default=1.0, help="multiple of standard deviation for ellipse.")
-    parser.add_argument("-th", "--threaded", action='store_true', help = "run in threaded mode.")
-    parser.add_argument("-db", "--debug", action='store_true', help = "Enable extra logging")
+    parser.add_argument("-s", "--serial", type=str,
+                        required=True, help="Serial port address,"
+                        "like '/dev/tty.usbmodem1411'")
+    parser.add_argument("-b", "--baudrate", type=int,
+                        default=9600, help="Serial port baud rate.")
+    parser.add_argument("-t", "--timeout", type=float,
+                        default=0.5, help="Serial port timeout in seconds.")
+    parser.add_argument("-sp", '--samples', type=int,
+                        default=5, help="Number of samples per waypoint.")
+    parser.add_argument("-wp", "--waypoints", type=int, default=0,
+                        help="Number of waypoints to collect; > 0 to collect"
+                        "waypoints, 0 to just log position")
+    parser.add_argument("-nstd", "--nstd", type=float, default=1.0,
+                        help="multiple of standard deviation for ellipse.")
+    parser.add_argument("-th", "--threaded", action='store_true',
+                        help="run in threaded mode.")
+    parser.add_argument("-db", "--debug", action='store_true',
+                        help="Enable extra logging")
     args = parser.parse_args()
 
     if args.waypoints < 0:
-        print("Use waypoints > 0 to collect waypoints, use 0 waypoints to just log position")
+        print("Use waypoints > 0 to collect waypoints"
+              "use 0 waypoints to just log position")
         parser.print_help()
         sys.exit(0)
 
@@ -637,21 +648,29 @@ if __name__ == "__main__":
     waypoints = []
     waypoint_samples = []
 
+    from hardware_interface import SerialLineReader
+
     try:
-        serial_port = SerialPort(args.serial, baudrate=args.baudrate, timeout=args.timeout)
-        line_reader = SerialLineReader(serial_port, max_lines=args.samples, debug=args.debug)
+        serial_port = SerialPort(args.serial, baudrate=args.baudrate,
+                                 timeout=args.timeout)
+        line_reader = SerialLineReader(serial_port, max_lines=args.samples,
+                                       debug=args.debug)
         position_reader = GpsNmeaPositions(args.debug)
 
-        #
         # start the threaded part
         # and a threaded window to show plot
-        #
+
         if args.threaded:
-            update_thread = threading.Thread(target=line_reader.update, args=())
-            update_thread.start()
+            def start_thread():
+                update_thread = threading.Thread(target=line_reader.update,
+                                                 args=())
+                update_thread.start()
+            start_thread()
 
         def read_gps():
-            lines = line_reader.run_threaded() if args.threaded else line_reader.run()
+            lines = (line_reader.run_threaded()
+                     if args.threaded
+                     else line_reader.run())
             positions = position_reader.run(lines)
             return positions
 
@@ -662,7 +681,9 @@ if __name__ == "__main__":
             if readings:
                 print("")
                 if state == "prompt":
-                    print(f"Move to waypoint #{len(waypoints)+1} and press the space bar and enter to start sampling or any other key to just start logging.")
+                    print(f"Move to waypoint #{len(waypoints)+1} and"
+                          f"press the space barand enter to start sampling"
+                          f"or any other key to just start logging.")
                     state = "move"
                 elif state == "move":
                     key_press = readchar.readchar()  # sys.stdin.read(1)
@@ -677,10 +698,11 @@ if __name__ == "__main__":
                     count = len(waypoint_samples)
                     print(f"Collected {count} so far...")
                     if count > samples_per_waypoint:
-                        print(f"...done.  Collected {count} samples for waypoint #{len(waypoints)+1}")
+                        print(f"...done.  Collected {count} samples"
+                              f"for waypoint #{len(waypoints)+1}")
                         #
                         # model a waypoint as a rotated ellipsoid
-                        # that represents a 95% confidence interval 
+                        # that represents a 95% confidence interval
                         # around the points measured at the waypoint.
                         #
                         waypoint = Waypoint(waypoint_samples, nstd=args.nstd)
@@ -692,21 +714,25 @@ if __name__ == "__main__":
                             if args.debug:
                                 plot(waypoints)
                 elif state == "test_prompt":
-                    print("Waypoints are recorded.  Now walk around and see when you are in a waypoint.")
+                    print("Waypoints are recorded."
+                          "Now walk around and see when in a waypoint.")
                     state = "test"
                 elif state == "test":
                     for ts, x, y in readings:
                         print(f"Your position is ({x}, {y})")
                         hit, index = is_in_waypoint_range(waypoints, x, y)
                         if hit:
-                            print(f"You are within the sample range of waypoint #{index + 1}")
+                            print(f"You are within the sample"
+                                  f"range of waypoint #{index + 1}")
                         std_deviation = 1.0
-                        hit, index = is_in_waypoint_std(waypoints, x, y, std_deviation)
+                        hit, index = is_in_waypoint_std(waypoints, x, y,
+                                                        std_deviation)
                         if hit:
-                            print(f"You are within {std_deviation} standard deviations of the center of waypoint #{index + 1}")
+                            print(f"You are within {std_deviation} std devs"
+                                  f"of the center of waypoint #{index + 1}")
                         hit, index = is_in_waypoint(waypoints, x, y)
                         if hit:
-                            print(f"You are at waypoint's ellipse #{index + 1}")
+                            print(f"You are at waypoint ellipse #{index + 1}")
                 else:
                     # just log the readings
                     for position in readings:
@@ -721,4 +747,3 @@ if __name__ == "__main__":
             line_reader.shutdown()
         if update_thread is not None:
             update_thread.join()  # wait for thread to end
-

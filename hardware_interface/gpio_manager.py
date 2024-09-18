@@ -41,6 +41,7 @@ class GPIOManager:
         chip.close()
         logging.info("GPIO cleanup complete.")
 
+
 if __name__ == "__main__":
     GPIOManager.init_gpio([22, 23], [6, 12])
     GPIOManager.clean()
