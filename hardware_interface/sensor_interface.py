@@ -66,19 +66,23 @@ class SensorInterface:
             logging.error(f"Error initializing {sensor_name}: {e}")
             return None
 
-    def initialize_sensor_with_retry(self, init_function, sensor_name, retries=3, delay=0.5):
+    def initialize_sensor_with_retry(self, init_function, sensor_name,
+                                     retries=3, delay=0.5):
         for attempt in range(retries):
             time.sleep(0.1)
             sensor = self.initialize_sensor(init_function, sensor_name)
             if sensor is not None:
                 return sensor
-            logging.warning(f"Retrying {sensor_name} initialization (attempt {attempt + 1})")
+            logging.warning(f"Retrying {sensor_name}"
+                            f"initialization (attempt {attempt + 1})")
             time.sleep(delay)
-        logging.error(f"Failed to initialize {sensor_name} after {retries} attempts")
+        logging.error(f"Failed to initialize {sensor_name}"
+                      f" after {retries} attempts")
         return None
 
     def start_update_thread(self):
-        self.sensor_thread = threading.Thread(target=self.update_sensors, daemon=True)
+        self.sensor_thread = threading.Thread(target=self.update_sensors,
+                                              daemon=True)
         self.sensor_thread.start()
 
     def update_sensors(self):
@@ -197,6 +201,7 @@ class SensorInterface:
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
+
 
 if __name__ == "__main__":
     sensor_interface = SensorInterface()
