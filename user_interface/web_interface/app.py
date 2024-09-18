@@ -1,5 +1,3 @@
-from utilities import LoggerConfig
-from hardware_interface.camera import get_camera_instance
 from PIL import Image
 from io import BytesIO
 from flask_cors import CORS
@@ -7,20 +5,23 @@ import base64
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 import datetime
-# Updated import
-from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition
 import threading
-from hardware_interface import (
-    BladeController,
-    SensorInterface,
-    RoboHATController)
 from flask import Flask, render_template, request, jsonify, Response
 import json
 import sys
 import os
 import utm
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
+
+from utilities import LoggerConfig
+from hardware_interface.camera import get_camera_instance
+from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition
+from hardware_interface import (
+    BladeController,
+    SensorInterface,
+    RoboHATController)
 
 
 # Initialize logger
