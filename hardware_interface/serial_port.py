@@ -4,7 +4,7 @@ import serial
 import serial.tools.list_ports
 import threading
 import time
-import donkeycar.utilities.dk_platform as dk_platform
+import platform
 
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,9 @@ class SerialPort:
             sp.close()
         return self
 
+    def is_mac():
+        return "Darwin" == platform.system()
+
     def buffered(self) -> int:
         """
         return: the number of buffered characters
@@ -73,7 +76,7 @@ class SerialPort:
             return 0
 
         # ser.in_waiting is always zero on mac, so act like we are buffered
-        if dk_platform.is_mac():
+        if SerialPort.is_mac():
             return 1
 
         try:
@@ -229,6 +232,9 @@ class SerialLineReader:
             self.lines = []
             self.serial.clear()
 
+    def is_mac():
+        return "Darwin" == platform.system()
+
     def _readline(self) -> str:
         """
         Read a line from the serial port in a threadsafe manner
@@ -237,7 +243,7 @@ class SerialLineReader:
         if self.lock.acquire(blocking=False):
             try:
                 # TODO: Serial.in_waiting _always_ returns 0 in Macintosh
-                if dk_platform.is_mac() or (self.serial.buffered() > 0):
+                if SerialLineReader.is_mac() or (self.serial.buffered() > 0):
                     success, buffer = self.serial.readln()
                     if success:
                         return buffer

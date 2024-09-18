@@ -110,11 +110,11 @@ class GpsPosition:
         return self.position
 
     def run(self):
-        lines = line_reader.run()
+        lines = self.line_reader.run()
         return self.run_once(lines)
 
     def run_threaded(self):
-        lines = line_reader.run_threaded()
+        lines = self.line_reader.run_threaded()
         return self.run_once(lines)
 
     def update(self):
