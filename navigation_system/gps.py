@@ -6,8 +6,6 @@ import time
 
 import pynmea2
 import utm
-
-from hardware_interface import SerialPort
 from utilities import CsvLogger
 from utilities import LoggerConfig
 
@@ -80,6 +78,8 @@ class GpsPosition:
     Donkeycar part to read NMEA lines from serial port and convert a position
     """
     _instance = None
+
+    from hardware_interface import SerialLineReader, SerialPort
 
     def __new__(cls, serial: SerialPort, debug=False):
         if cls._instance is None:
@@ -384,7 +384,7 @@ if __name__ == "__main__":
     import numpy as np
     import sys
     import readchar
-    from donkeycar.parts.serial_port import SerialPort
+    from hardware_interface import SerialPort
 
     def stats(data):
         """
