@@ -79,7 +79,7 @@ class GpsPosition:
     """
     _instance = None
 
-    from hardware_interface import SerialLineReader, SerialPort
+    from hardware_interface import SerialPort
 
     def __new__(cls, serial: SerialPort, debug=False):
         if cls._instance is None:
@@ -88,6 +88,7 @@ class GpsPosition:
         return cls._instance
 
     def __init__(self, serial: SerialPort, debug=False) -> None:
+        from hardware_interface import SerialLineReader
         self.line_reader = SerialLineReader(serial)
         self.debug = debug
         self.position_reader = GpsNmeaPositions()
