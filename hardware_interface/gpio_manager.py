@@ -22,7 +22,7 @@ class GPIOManager:
 
         for line in shutdown_lines:
             line.request(consumer='shutdown', type=gpiod.LINE_REQ_DIR_OUT)
-            line.set_value(1)
+            line.set_value(0)
 
         for line in interrupt_lines:
             line.request(
