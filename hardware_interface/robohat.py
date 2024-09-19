@@ -8,7 +8,6 @@ import time
 import math
 
 from dotenv import load_dotenv
-from navigation_system import GpsLatestPosition
 from .sensor_interface import SensorInterface
 from utilities import LoggerConfig, Utils
 from constants import (
@@ -46,7 +45,7 @@ class RoboHATController:
             cls.__init__(cls._instance)
         return cls
 
-    def __init__(self, debug=False):
+    def __init__(self, gps_latest_position=None, debug=False):
         self.angle = 0.0
         self.throttle = 0.0
         self.mode = 'user'
@@ -61,7 +60,7 @@ class RoboHATController:
         self.DEAD_ZONE = JOYSTICK_DEADZONE
         self.debug = debug
         # Initialize GPS Latest Position
-        self.gps_latest_position = GpsLatestPosition()
+        self.gps_latest_position = gps_latest_position
 
         # Initialize the PWM communication
         try:
