@@ -3,3 +3,4 @@
 *.tflite
 .vscode
 .__pycache__
+.tflite
