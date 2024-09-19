@@ -1,7 +1,7 @@
 from utilities import LoggerConfigInfo as LoggerConfig
 import os
 
-logger = LoggerConfig.getLogger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 
 class TextLogger:
