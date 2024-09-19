@@ -3,7 +3,7 @@ import time
 from hardware_interface import RoboHATController
 from navigation_system import GpsLatestPosition
 from obstacle_detection import ObstacleAvoidance
-from utilities import LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

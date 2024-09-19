@@ -1,7 +1,7 @@
-import logging
+from utilities import LoggerConfigInfo as LoggerConfig
 import os
 
-logger = logging.getLogger(__name__)
+logger = LoggerConfig.getLogger(__name__)
 
 
 class TextLogger:
@@ -12,7 +12,9 @@ class TextLogger:
     an overwrite row_to_line() and line_to_row() to save structured data,
     like tuples or arrays as CSV.
     """
-    def __init__(self, file_path:str, append:bool=False, allow_empty_file:bool=False, allow_empty_line:bool=True):
+    def __init__(self, file_path: str, append: bool = False,
+                 allow_empty_file: bool = False,
+                 allow_empty_line: bool = True):
         self.file_path = file_path
         self.append = append
         self.allow_empty_file = allow_empty_file

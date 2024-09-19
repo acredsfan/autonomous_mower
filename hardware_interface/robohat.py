@@ -28,8 +28,7 @@ load_dotenv()
 MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
 
 # Initialize logger
-LoggerConfig.configure_logging()
-logging = LoggerConfig.getLogger(__name__)
+logging = LoggerConfig.get_logger(__name__)
 
 
 class RoboHATController:
