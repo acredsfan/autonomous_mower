@@ -4,7 +4,6 @@
 # IMPORTS
 from .gps import GpsNmeaPositions, GpsLatestPosition, GpsPosition, GpsPlayer
 from .localization import Localization
-from .path_planning import PathPlanning
 
 __all__ = [
     'GpsNmeaPositions',
@@ -12,5 +11,4 @@ __all__ = [
     'GpsPosition',
     'GpsPlayer',
     'Localization',
-    'PathPlanning'
 ]

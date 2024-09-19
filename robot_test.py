@@ -1,10 +1,12 @@
-# robot_web_test.py
+# robot_test.py
 
 from utilities import LoggerConfig
 import json
 from user_interface.web_interface.app import start_web_interface
-from obstacle_detection.avoidance_algorithm import ObstacleAvoidance
-from navigation_system import Localization, PathPlanning, GpsLatestPosition
+from obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from navigation_system.localization import Localization
+from navigation_system.gps import GpsLatestPosition
+from path_planning import PathPlanning  # Import directly
 from hardware_interface import (
     SensorInterface,
     BladeController,
@@ -15,7 +17,6 @@ import sys
 import os
 import time
 import threading
-
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Initialize logger
@@ -33,87 +34,33 @@ robohat_controller = None
 def initialize_resources():
     from hardware_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner
-    global avoidance_algo, localization, robohat_controller
+    global avoidance_algorithm, localization, robohat_controller
 
     sensor_interface = SensorInterface()
     time.sleep(0.2)  # Adding delay to allow I2C bus stabilization
     camera = SingletonCamera()
     time.sleep(0.2)
-    path_planner = PathPlanning()
-    time.sleep(0.2)
-    avoidance_algo = ObstacleAvoidance()
-    time.sleep(0.2)
     localization = Localization()
-    
+    time.sleep(0.2)
+    path_planner = PathPlanning(localization)
+    time.sleep(0.2)
     try:
-        robohat_controller = RoboHATController()
+        # Pass gps_latest_position to RoboHATController
+        robohat_controller = RoboHATController(gps_latest_position)
     except RuntimeError as e:
         logging.error(f"Failed to initialize RoboHATController: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
         time.sleep(0.5)  # Adding delay before retrying
         try:
-            robohat_controller = RoboHATController()  # Retry initialization
+            robohat_controller = RoboHATController(gps_latest_position)
         except RuntimeError as e:
             logging.error(f"Retry failed for RoboHATController: {e}")
             robohat_controller = None
 
-
-# Lock for shared resources
-lock = threading.Lock()
-
-
-# Function to verify the polygon points by traveling to each one
-def verify_polygon_points():
-    try:
-        # Load the mowing area polygon coordinates from the saved JSON file
-        with open('user_polygon.json', 'r') as f:
-            polygon_points = json.load(f)
-
-        # Check if polygon points are available
-        if not polygon_points:
-            logging.error(
-                "No polygon points found."
-                "Please set the mowing area in the web interface.")
-            return
-
-        logging.info("Starting polygon verification...")
-        for index, point in enumerate(polygon_points):
-            logging.info(f"Navigating to point {index + 1}: {point}")
-            # Navigate to each point using the robot's motor controller
-            robohat_controller.navigate_to_location(
-                (point['lat'], point['lng']))
-
-            # Optionally wait for confirmation or a set time at each point
-            time.sleep(5)  # Adjust the sleep time as needed for verification
-
-            # Log the robot's current position for verification
-            current_position = gps_latest_position.run()
-            logging.info(f"Arrived at point {index + 1}, "
-                         f"current GPS position: {current_position}")
-
-        logging.info("Polygon verification complete.")
-    except FileNotFoundError:
-        logging.error(
-            "Mowing area not set. Please define the area "
-            "in the web interface.")
-    except Exception:
-        logging.exception("Error in verify_polygon_points")
-
-# Function to send robot to home location
-
-
-def go_home():
-    try:
-        # Load the home location from the saved JSON file
-        with open('home_location.json', 'r') as f:
-            home_location = json.load(f)
-        robohat_controller.navigate_to_location(
-            (home_location['lat'], home_location['lng']))
-    except FileNotFoundError:
-        logging.error(
-            "Home location not set. Please set it in the web interface.")
-    except Exception:
-        logging.exception("Error in go_home")
+    # Initialize AvoidanceAlgorithm with dependencies
+    avoidance_algorithm = AvoidanceAlgorithm(
+        path_planner, robohat_controller, sensor_interface
+    )
 
 
 def start_mowing():
@@ -130,43 +77,49 @@ def start_mowing():
                 "No polygon points found."
                 "Please set the mowing area in the web interface.")
             return
+
+        # Set the user-defined polygon in PathPlanning
+        path_planner.set_user_polygon(polygon_points)
+
+        # Start the AvoidanceAlgorithm in a separate thread
+        avoidance_thread = threading.Thread(
+            target=avoidance_algorithm.run_avoidance, daemon=True)
+        avoidance_thread.start()
+
+        # Generate the path using PathPlanning
+        start_point, goal_point = path_planner.get_start_and_goal()
+
+        path = path_planner.get_path(start_point, goal_point)
+
+        # Start mowing along the planned path
+        BladeController.set_speed(100)  # Start the blades
+
+        for coord in path:
+            logging.info(f"Mowing at coordinate: {coord}")
+            # Navigate to each coordinate while checking for obstacles
+            robohat_controller.navigate_to_location((coord['lat'], coord['lng']))
+            time.sleep(0.1)  # Adjust as needed
+
+        logging.info("Mowing process complete.")
+
     except FileNotFoundError:
         logging.error(
             "Mowing area not set. Please define the area "
             "in the web interface.")
-        # Check for Ideal mowing conditions
-        sensor_interface.ideal_mowing_conditions()
     except Exception:
         logging.exception("Error in start_mowing")
-        # Start the mowing process by navigating to the first point
-        logging.info("Navigating to the starting point...")
-        robohat_controller.navigate_to_location(
-            (polygon_points[0]['lat'], polygon_points[0]['lng']))
-
-        # Start mowing along the polygon boundary
-        for index, point in enumerate(polygon_points):
-            logging.info(f"Mowing at point {index + 1}: {point}")
-            # Perform mowing operations at each point
-            # For example, activate the blade and move forward
-            BladeController.set_speed(100)
-            time.sleep(5)  # Adjust the mowing time as needed
-            BladeController.set_speed(0)
-
-            # Optionally wait for confirmation or a set time at each point
-            time.sleep(5)  # Adjust the sleep time as needed for mowing
-
-            # Log the robot's current position for verification
-            current_position = gps_latest_position.run()
-            logging.info(f"Mowing at point {index + 1}, "
-                         f"current GPS position: {current_position}")
-
-        logging.info("Mowing process complete.")
+    finally:
+        # Stop the blades and avoidance algorithm
+        BladeController.set_speed(0)
+        avoidance_algorithm.obstacle_avoidance.stop()
 
 
 def stop_mowing():
     # Stop the mowing process
     logging.info("Stopping the mowing process...")
     BladeController.set_speed(0)
+    robohat_controller.stop()
+    avoidance_algorithm.obstacle_avoidance.stop()
 
 
 # Main loop for testing web interface and sensors
@@ -182,12 +135,11 @@ if __name__ == "__main__":
             # This loop is only here to keep the program running for web
             # interface testing
             user_input = input(
-                "Enter 'verify' to test polygon points, "
-                "'home' to go home, or 'exit' to quit: ")
-            if user_input.lower() == 'verify':
-                verify_polygon_points()
-            elif user_input.lower() == 'home':
-                go_home()
+                "Enter 'start' to begin mowing, 'stop' to stop mowing, 'exit' to quit: ")
+            if user_input.lower() == 'start':
+                start_mowing()
+            elif user_input.lower() == 'stop':
+                stop_mowing()
             elif user_input.lower() == 'exit':
                 break
             else:

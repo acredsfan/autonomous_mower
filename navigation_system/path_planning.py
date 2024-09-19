@@ -3,52 +3,35 @@ import requests
 from constants import (
     SECTION_SIZE,
     GRID_SIZE,
-    OBSTACLE_MARGIN,
     polygon_coordinates,
     min_lat,
     max_lat,
     min_lng,
     max_lng
 )
-import time
-from navigation_system import Localization
-from shapely import wkt
-from shapely.geometry import Polygon, Point
+from shapely.geometry import Polygon
 from pathfinding.finder.a_star import AStarFinder
 from pathfinding.core.grid import Grid
 from pathfinding.core.diagonal_movement import DiagonalMovement
 import random
 import numpy as np
-import sys
 import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
 # Global variables
-user_polygon = polygon_coordinates
-obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
+user_polygon = None  # Will be set by set_user_polygon method
 OPEN_WEATHER_MAP_API_KEY = os.getenv("OPEN_WEATHER_MAP_API")
 
 
 class PathPlanning:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(PathPlanning, cls).__new__(cls)
-            cls.__init__(cls._instance)
-        return cls._instance
-
-    def __init__(self):
+    def __init__(self, localization):
         self.min_lng = min_lng
         self.max_lng = max_lng
         self.min_lat = min_lat
         self.max_lat = max_lat
-        self.localization = Localization()
+        self.localization = localization  # Accept localization instance
         self.obstacle_map = np.zeros(GRID_SIZE, dtype=np.uint8)
         self.obstacles = set()
         self.sections = self.divide_yard_into_sections()
@@ -56,19 +39,18 @@ class PathPlanning:
         # 4 actions: up, down, left, right
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))
         self.last_action = None
+        self.goal = None  # Define goal attribute
 
     def set_min_max_coordinates(self):
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
         self.lng_grid_size = (self.max_lng - self.min_lng) / GRID_SIZE[1]
 
-    def set_user_polygon(self, polygon_coordinates):
+    def set_user_polygon(self, polygon_points):
         """
-        Sets the user polygon.
-        :param polygon_coordinates:
-        :return:
+        Sets the user-defined polygon (mowing area).
         """
         global user_polygon
-        user_polygon = Polygon(polygon_coordinates)
+        user_polygon = Polygon([(p['lng'], p['lat']) for p in polygon_points])
 
     def divide_yard_into_sections(self):
         """
@@ -80,88 +62,36 @@ class PathPlanning:
                 section = (i, j, i + SECTION_SIZE[0], j + SECTION_SIZE[1])
                 sections.append(section)
         return sections
-        pass
 
     def select_next_section(self, current_position):
         """
         Selects the next section to go to.
-        :param current_position:
-        :return: next_section
         """
-        next_section = (current_position[0] + 1, current_position[1])
-
+        # Implement logic to select the next section
+        # For simplicity, we'll select a random section not yet visited
+        next_section = random.choice(self.sections)
         return next_section
 
-    def update_obstacle_map(self, new_obstacles):
+    def update_obstacle_map(self, obstacle_positions):
         """
-        Updates the obstacle map.
-        :param new_obstacles:
-        :return:
+        Updates the obstacle map with new obstacles.
         """
-        new_obstacle_set = set([obstacle.wkt for obstacle in new_obstacles])
+        for obstacle_position in obstacle_positions:
+            grid_cell = self.coord_to_grid(obstacle_position[0],
+                                           obstacle_position[1])
+            self.obstacle_map[grid_cell[0], grid_cell[1]] = 1
 
-        # Find obstacles that were removed
-        removed_obstacles = self.obstacles - new_obstacle_set
-
-        # Remove the removed obstacles from the map
-        for obstacle_wkt in removed_obstacles:
-            obstacle = wkt.loads(obstacle_wkt)
-            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
-            minx, miny, maxx, maxy = obstacle_expanded.bounds
-            for x in range(int(minx), int(maxx) + 1):
-                for y in range(int(miny), int(maxy) + 1):
-                    point = Point(x, y)
-                    if obstacle_expanded.contains(point):
-                        self.obstacle_map[x, y] = 0
-
-        # Add the new obstacles to the map
-        for obstacle in new_obstacles:
-            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
-            minx, miny, maxx, maxy = obstacle_expanded.bounds
-            for x in range(int(minx), int(maxx) + 1):
-                for y in range(int(miny), int(maxy) + 1):
-                    point = Point(x, y)
-                    if obstacle_expanded.contains(point):
-                        self.obstacle_map[x, y] = 1
-
-        # Update the set of known obstacles
-        self.obstacles = new_obstacle_set
-
-        # Trigger a new path planning if the obstacle map has changed
-        if np.any(obstacle_map != self.obstacle_map):
-            self.plan_path(
-                self.start, self.goal, [
-                    wkt.loads(wkt) for wkt in self.obstacles])
-        self.obstacle_map = obstacle_map
-
-    # This function generates a grid with marked obstacles
-    def generate_grid(self, obstacles):
+    def generate_grid(self):
         """
         Generates a grid with marked obstacles.
-        :param obstacles:
-        :return:
         """
-        grid = np.zeros(GRID_SIZE, dtype=np.uint8)
+        return self.obstacle_map.copy()
 
-        # Mark the obstacles on the grid
-        for obstacle in obstacles:
-            # Add margins around the obstacles
-            obstacle_expanded = obstacle.buffer(OBSTACLE_MARGIN)
-            minx, miny, maxx, maxy = obstacle_expanded.bounds
-            for x in range(int(minx), int(maxx) + 1):
-                for y in range(int(miny), int(maxy) + 1):
-                    point = Point(x, y)
-                    if obstacle_expanded.contains(point):
-                        grid[x, y] = 1
-
-        return grid
-
-    # This function plans the path using A* algorithm
-    def plan_path(self, start, goal, obstacles):
-        if not user_polygon:
+    def plan_path(self, start, goal):
+        if user_polygon is None:
             raise Exception("User polygon not set")
 
-        grid_data = self.generate_grid(obstacles)
+        grid_data = self.generate_grid()
         grid = Grid(matrix=grid_data)
 
         finder = AStarFinder(diagonal_movement=DiagonalMovement.always)
@@ -172,87 +102,8 @@ class PathPlanning:
 
         return path
 
-    def reward_function(self, old_state, new_state, action):
-        """
-        This function calculates the reward for the given state transition.
-        :param old_state:
-        :param new_state:
-        :param action:
-        :return:
-        """
-        if new_state == 'goal':
-            return 100
-        elif self.obstacle_map[new_state[0], new_state[1]] == 1:
-            return -100
-        elif action != self.last_action:
-            return -10  # Penalty for not moving in a straight line
-        else:
-            return 1  # Reward for moving in a straight line
-
-    # This function determines the new state based on the action taken
-    def take_action(self, state, action):
-        if action == 'up':
-            new_state = (state[0] - 1, state[1])
-        elif action == 'down':
-            new_state = (state[0] + 1, state[1])
-        elif action == 'left':
-            new_state = (state[0], state[1] - 1)
-        elif action == 'right':
-            new_state = (state[0], state[1] + 1)
-        else:
-            raise ValueError(f"Invalid action: {action}")
-
-        # Make sure the new state is within the grid
-        new_state = (max(min(new_state[0], GRID_SIZE[0] - 1), 0),
-                     max(min(new_state[1], GRID_SIZE[1] - 1), 0))
-
-        # Check if the new state is an obstacle
-        if self.obstacle_map[new_state] == 1:
-            return state
-
-        return new_state
-
-    # This function implements the Q-Learning algorithm
-    def q_learning(
-            self,
-            start,
-            goal,
-            episodes=1000,
-            learning_rate=0.1,
-            discount_factor=0.9,
-            epsilon=1.0,
-            epsilon_decay=0.995,
-            epsilon_min=0.1):
-        """"""
-        for episode in range(episodes):
-            state = start
-            for step in range(100):
-                if random.uniform(0, 1) < epsilon:
-                    action = random.choice(['up', 'down', 'left', 'right'])
-                else:
-                    action = np.argmax(self.q_table[state])
-
-                new_state = self.take_action(state, action)
-                reward = self.reward_function(state, new_state, action)
-
-                old_value = self.q_table[state][action]
-                next_max = np.max(self.q_table[new_state])
-                new_value = (1 - learning_rate) * old_value + \
-                    learning_rate * (reward + discount_factor * next_max)
-                self.q_table[state][action] = new_value
-
-                state = new_state
-                self.last_action = action
-
-                if state == goal:
-                    break
-
-            if epsilon > epsilon_min:
-                epsilon *= epsilon_decay
-
-    # This function returns the path to the goal
     def get_path(self, start, goal):
-        path = self.q_learning(start, goal)
+        path = self.plan_path(start, goal)
         path_coords = []
         for cell in path:
             coord = self.grid_to_coord(cell)
@@ -260,15 +111,10 @@ class PathPlanning:
         return path_coords
 
     def calculate_goal_position(self, next_section):
-        # Determine the boundaries of thr selected section
-        if next_section is None:
-            logging.error("Next section is None.  Waiting for result...")
-            time.sleep(1)
+        # Determine the center of the selected section
         section_size = (
-            next_section[2] -
-            next_section[0],
-            next_section[3] -
-            next_section[1])
+            next_section[2] - next_section[0],
+            next_section[3] - next_section[1])
 
         # Calculate the goal position within the selected section
         goal_position = (
@@ -283,6 +129,7 @@ class PathPlanning:
 
         start = current_position
         goal = self.calculate_goal_position(next_section)
+        self.goal = goal  # Update the goal attribute
 
         return start, goal
 
@@ -302,11 +149,16 @@ class PathPlanning:
         return {"lat": lat, "lng": lng}
 
     def estimate_position(self):
-        # Get location of mower from Locatlization class
-        lat, lng, alt = self.localization.estimate_position()
-        # Convert lat, lng, alt to Grid Cell location
-        grid_cell = self.coord_to_grid(lat, lng)
-        return grid_cell
+        # Get location of mower from Localization class
+        position = self.localization.estimate_position()
+        if position:
+            lat, lng = position[0], position[1]
+            # Convert lat, lng to Grid Cell location
+            grid_cell = self.coord_to_grid(lat, lng)
+            return grid_cell
+        else:
+            # Default position if localization fails
+            return (0, 0)
 
     def get_weather_data(self, lat, lon):
         """
