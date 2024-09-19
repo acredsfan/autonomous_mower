@@ -17,7 +17,6 @@ sys.path.append(project_root)
 
 from utilities import LoggerConfig
 from hardware_interface.camera import get_camera_instance
-from navigation_system import PathPlanning, GpsNmeaPositions, GpsLatestPosition
 from hardware_interface import (
     BladeController,
     SensorInterface,
@@ -47,6 +46,7 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Initialize other components
+from navigation_system import PathPlanning, GpsLatestPosition
 position_reader = GpsLatestPosition()  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()
@@ -190,6 +190,7 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
+    from navigation_system import GpsNmeaPositions
     gps_nmea_positions = GpsNmeaPositions()
     lines = gps_nmea_positions.get_lines()
     positions = position_reader.run(lines)
