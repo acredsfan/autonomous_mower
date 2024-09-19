@@ -277,6 +277,17 @@ def save_settings():
     return jsonify({'message': 'Settings saved.'})
 
 
+@app.route('/get_google_maps_api_key', methods=['GET'])
+def get_google_maps_api_key():
+    # Fetch the API key from environment or configuration
+    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    
+    if google_maps_api_key:
+        return jsonify({"GOOGLE_MAPS_API_KEY": google_maps_api_key})
+    else:
+        return jsonify({"error": "API key not found"}), 404
+    
+
 def get_schedule():
     # Check if the schedule file exists
     if os.path.exists('mowing_schedule.json'):

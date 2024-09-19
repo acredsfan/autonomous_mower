@@ -40,6 +40,7 @@ class PathPlanning:
         self.q_table = np.zeros((GRID_SIZE[0], GRID_SIZE[1], 4))
         self.last_action = None
         self.goal = None  # Define goal attribute
+        self.latest_position = None  # Define latest_position attribute
 
     def set_min_max_coordinates(self):
         self.lat_grid_size = (self.max_lat - self.min_lat) / GRID_SIZE[0]
@@ -149,16 +150,9 @@ class PathPlanning:
         return {"lat": lat, "lng": lng}
 
     def estimate_position(self):
-        # Get location of mower from Localization class
-        position = self.localization.estimate_position()
-        if position:
-            lat, lng = position[0], position[1]
-            # Convert lat, lng to Grid Cell location
-            grid_cell = self.coord_to_grid(lat, lng)
-            return grid_cell
-        else:
-            # Default position if localization fails
-            return (0, 0)
+        # Estimmate where on grid the robot is using localization
+        lat, lng = self.localization.estimmate_position()
+        return self.coord_to_grid(lat, lng)
 
     def get_weather_data(self, lat, lon):
         """
