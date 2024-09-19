@@ -1,14 +1,13 @@
 # download_and_convert_model.py
 
 import os
-import tempfile
+import flatbuffers
 import tensorflow as tf
 import kagglehub
 import argparse
 import logging
 
 logging.basicConfig(level=logging.INFO)
-
 
 def download_model():
     logging.info("Downloading the model using kagglehub...")
@@ -19,10 +18,10 @@ def download_model():
     logging.info(f"Model downloaded to {model_path}")
     return model_path
 
-
 def convert_model(saved_model_dir, tflite_model_path):
     logging.info("Converting the model to TFLite format...")
     converter = tf.lite.TFLiteConverter.from_saved_model(saved_model_dir)
+    # Optional: Set optimizations
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     try:
         tflite_model = converter.convert()
@@ -32,15 +31,11 @@ def convert_model(saved_model_dir, tflite_model_path):
     except Exception as e:
         logging.error(f"Model conversion failed: {e}")
 
-
 def main(output_path):
-    # Use a temporary directory for any intermediate files
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Download the model
-        saved_model_dir = download_model()
-        # Convert and save the model
-        convert_model(saved_model_dir, output_path)
-
+    # Download the model
+    saved_model_dir = download_model()
+    # Convert and save the model
+    convert_model(saved_model_dir, output_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Download and convert model to TFLite.')
