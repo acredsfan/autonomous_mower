@@ -96,16 +96,30 @@ class SensorInterface:
                       f" after {retries} attempts")
         return None
 
+    def read_sensor_data(self, sensor, read_function, sensor_name):
+        if sensor is None:
+            logging.error(f"{sensor_name} is not initialized.")
+            return {}
+        try:
+            return read_function(sensor)
+        except Exception as e:
+            logging.error(f"Error reading {sensor_name}: {e}")
+            return {}
+
     def update_sensors(self):
-        """Read sensor data periodically and update shared sensor data."""
+        """Read sensor data periodically 
+        and update shared sensor data."""
         while not self.stop_thread:
             try:
                 with self.sensor_data_lock:
+                    # Read and store BME280 data
                     self.sensor_data['bme280'] = self.read_sensor_data(
                         self.sensors['bme280'],
                         BME280Sensor.read_bme280,
                         "BME280"
                     )
+                    
+                    # Read and store BNO085 sensor data
                     self.sensor_data['accel'] = self.read_sensor_data(
                         self.sensors['bno085'],
                         BNO085Sensor.read_bno085_accel,
@@ -145,45 +159,39 @@ class SensorInterface:
                         BNO085Sensor.read_bno085_quaternion,
                         "BNO085 Quaternion"
                     )
+                
+                    # Read and store INA3221 sensor data
                     self.sensor_data['solar'] = self.read_sensor_data(
                         self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(
-                            s, 1), "INA3221 Solar"
+                        lambda s: INA3221Sensor.read_ina3221(s, 1), 
+                        "INA3221 Solar"
                     )
                     self.sensor_data['battery'] = self.read_sensor_data(
                         self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(
-                            s, 3), "INA3221 Battery"
+                        lambda s: INA3221Sensor.read_ina3221(s, 3), 
+                        "INA3221 Battery"
                     )
                     self.sensor_data['battery_charge'] = self.read_sensor_data(
                         self.sensors['ina3221'],
                         INA3221Sensor.battery_charge,
                         "Battery Charge"
                     )
+                
+                    # Read and store VL53L0X sensor data
                     self.sensor_data['left_distance'] = self.read_sensor_data(
                         self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(
-                            s[0]), "VL53L0X Left Distance"
+                        lambda s: VL53L0XSensors.read_vl53l0x(s[0]), 
+                        "VL53L0X Left Distance"
                     )
                     self.sensor_data['right_distance'] = self.read_sensor_data(
                         self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(
-                            s[1]), "VL53L0X Right Distance"
+                        lambda s: VL53L0XSensors.read_vl53l0x(s[1]), 
+                        "VL53L0X Right Distance"
                     )
                 time.sleep(1.0)  # Adjust the update interval as needed
             except Exception as e:
                 logging.error(f"Error updating sensors: {e}")
                 time.sleep(1.0)  # Wait before retrying
-
-    def read_sensor_data(self, sensor, read_function, sensor_name):
-        if sensor is None:
-            logging.error(f"{sensor_name} is not initialized.")
-            return {}
-        try:
-            return read_function(sensor)
-        except Exception as e:
-            logging.error(f"Error reading {sensor_name}: {e}")
-            return {}
 
     def shutdown(self):
         # Ensure sensors and threads are properly cleaned up
