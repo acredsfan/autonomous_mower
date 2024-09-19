@@ -124,6 +124,7 @@ def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
+
 @app.route('/control', methods=['POST'])
 def control():
     data = request.get_json()
@@ -131,6 +132,7 @@ def control():
     throttle = data.get('throttle', 0)
     robohat_driver.run_threaded(steering, throttle)
     return jsonify({'status': 'success'})
+
 
 @socketio.on('request_status')
 def handle_status_request():
@@ -202,12 +204,14 @@ def get_mowing_area():
         return jsonify(coordinates)
     else:
         return jsonify({'message': 'No area saved yet.'})
-    
+
+
 @app.route('/area', methods=['GET'])
 def area():
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
-app.route('/settings', methods=['GET'])
+
+@app.route('/settings', methods=['GET'])
 def settings():
     return render_template('settings.html')
 
