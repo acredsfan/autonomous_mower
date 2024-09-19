@@ -7,6 +7,8 @@ from adafruit_bno08x import (
 )
 from utilities import LoggerConfigInfo as LoggerConfig
 from .gpio_manager import GPIOManager
+import board
+import busio
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -14,6 +16,7 @@ logging = LoggerConfig.get_logger(__name__)
 interrupt_pin = [8]  # GPIO line for interrupt
 shutdown_pin = []  # No shutdown line needed
 interrupt_lines, _ = GPIOManager.init_gpio(shutdown_pin, interrupt_pin)
+i2c = busio.I2C(board.SCL, board.SDA)
 
 
 class BNO085Sensor:
