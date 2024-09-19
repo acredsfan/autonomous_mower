@@ -6,6 +6,7 @@ from utilities import LoggerConfigInfo as LoggerConfig
 import os
 import time
 import math
+import threading
 
 from dotenv import load_dotenv
 from utilities import Utils
@@ -34,14 +35,19 @@ logging = LoggerConfig.get_logger(__name__)
 class RoboHATController:
     """Controller for the RoboHAT MM1 hardware interface."""
     _instance = None
+    _lock = threading.Lock()
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(RoboHATController, cls).__new__(cls)
-            cls.__init__(cls._instance)
-        return cls
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(RoboHATController, cls).__new__(cls)
+                cls._instance._initialized = False
+        return cls._instance
 
     def __init__(self, gps_latest_position=None, debug=False):
+        if getattr(self, '_initialized', False):
+            return
+        self._initialized = True
         self.angle = 0.0
         self.throttle = 0.0
         self.mode = 'user'
