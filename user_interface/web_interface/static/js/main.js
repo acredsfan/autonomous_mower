@@ -276,7 +276,7 @@ window.addEventListener('load', function() {
 var socket = io.connect('http://' + document.domain + ':' + location.port);
 
 socket.on('update_frame', function(data) {
-    var image = document.getElementById('camera_feed');
+    var image = document.getElementById('video_feed');
     image.src = 'data:image/jpeg;base64,' + data.frame;
 });
 

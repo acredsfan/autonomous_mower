@@ -2,14 +2,14 @@
 
 {% block content %}
     <h1>Camera Stream</h1>
-    <img id="camera_feed" alt="Camera Feed">
+    <img id="video_feed" alt="Camera Feed">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
         var socket = io.connect('http://' + document.domain + ':' + location.port)
 
         socket.on('update_frame', function(data) {
-            var image = document.getElementById('camera_feed');
+            var image = document.getElementById('video_feed');
             image.src = 'data:image/jpeg;base64,' + data.frame;
         });
 

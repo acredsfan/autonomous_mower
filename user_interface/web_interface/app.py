@@ -148,6 +148,10 @@ def video_feed():
         gen(),
         mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/camera_route')
+def camera_route():
+    return render_template('camera.html')
+
 
 @socketio.on('request_frame')
 def handle_frame_request():
@@ -198,6 +202,10 @@ def get_mowing_area():
 @app.route('/area', methods=['GET'])
 def area():
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
+
+app.route('/settings', methods=['GET'])
+def settings():
+    return render_template('settings.html')
 
 @app.route('/get-path', methods=['GET'])
 def get_path():
