@@ -66,7 +66,7 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error reading BNO085 quaternion: {e}")
             return {}
-        
+
     @staticmethod
     def calculate_heading(sensor):
         """Calculate heading from BNO085 sensor data."""
