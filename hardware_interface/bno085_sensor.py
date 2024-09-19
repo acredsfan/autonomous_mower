@@ -7,7 +7,7 @@ from adafruit_bno08x import (
     BNO_REPORT_ROTATION_VECTOR,
 )
 import math
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

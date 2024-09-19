@@ -1,5 +1,5 @@
 import barbudor_ina3221.full as INA3221
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

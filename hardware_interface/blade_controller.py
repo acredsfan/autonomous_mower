@@ -4,7 +4,7 @@ import time
 import logging
 import sys
 import os
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 

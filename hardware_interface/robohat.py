@@ -2,13 +2,13 @@
 Scripts for operating the RoboHAT MM1 by Robotics Masters with the Donkeycar
 """
 
-import logging
+from utilities import LoggerConfigInfo as LoggerConfig
 import os
 import time
 import math
 
 from dotenv import load_dotenv
-from utilities import LoggerConfig, Utils
+from utilities import Utils
 from constants import (
     MM1_MAX_FORWARD,
     MM1_MAX_REVERSE,
@@ -29,7 +29,7 @@ MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
 
 # Initialize logger
 LoggerConfig.configure_logging()
-logging = logging.getLogger(__name__)
+logging = LoggerConfig.getLogger(__name__)
 
 
 class RoboHATController:

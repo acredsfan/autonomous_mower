@@ -1,4 +1,4 @@
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 from adafruit_bme280 import basic as adafruit_bme280
 
 # Initialize logger
