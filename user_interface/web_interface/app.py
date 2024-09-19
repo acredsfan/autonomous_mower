@@ -124,6 +124,13 @@ def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
 
+@app.route('/control', methods=['POST'])
+def control():
+    data = request.get_json()
+    steering = data.get('steering', 0)
+    throttle = data.get('throttle', 0)
+    robohat_driver.run_threaded(steering, throttle)
+    return jsonify({'status': 'success'})
 
 @socketio.on('request_status')
 def handle_status_request():
@@ -145,7 +152,7 @@ def handle_status_request():
 @app.route('/video_feed')
 def video_feed():
     return Response(
-        gen(),
+        gen(),  # Calls the gen() function that yields camera frames
         mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/camera_route')
@@ -155,20 +162,17 @@ def camera_route():
 
 @socketio.on('request_frame')
 def handle_frame_request():
-    # Retrieve SingletonCamera using the accessor function
     camera = get_camera_instance()
     frame = camera.get_frame()
     if frame is not None:
         try:
-            # Convert the frame to an image and then to a base64-encoded string
             image = Image.fromarray(frame)
             buffer = BytesIO()
             image.save(buffer, format="JPEG")
             frame_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
             emit('update_frame', {'frame': frame_data})
         except Exception as e:
-            logging.error(
-                f"Error encoding frame for WebSocket transmission: {e}")
+            logging.error(f"Error encoding frame for WebSocket transmission: {e}")
     else:
         logging.error("Failed to get the frame from the camera.")
 

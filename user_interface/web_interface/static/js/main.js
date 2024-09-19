@@ -148,13 +148,18 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const form = document.getElementById('settings-form');
     console.log(form); // Log the form element to check if it exists
     form.addEventListener('submit', function (event) {
-        const mowDays = document.getElementById('mow-days').value;
-        const mowHours = document.getElementById('mow-hours').value;
-        // Get other settings inputs here
+        event.preventDefault();  // Prevent page reload
+        const mowDays = document.querySelectorAll('input[name="mowDays"]:checked');
+        const mowHours = document.querySelectorAll('input[name="mowHours"]:checked');
+        
+        // Convert selected values to arrays
+        const selectedDays = Array.from(mowDays).map(input => input.value);
+        const selectedHours = Array.from(mowHours).map(input => input.value);
 
-        saveSettings(mowDays, mowHours);
+        saveSettings(selectedDays, selectedHours);  // Trigger save settings
     });
 });
+
 
 let map;
 let coordinates = [];
@@ -282,5 +287,5 @@ socket.on('update_frame', function(data) {
 
 // Request a new frame every 500ms (or whatever interval you prefer)
 setInterval(function() {
-    socket.emit('request_frame');
+    socket.emit('request_frame');  // Request a frame every 500ms
 }, 500);
