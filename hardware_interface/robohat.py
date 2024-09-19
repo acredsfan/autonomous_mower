@@ -8,7 +8,6 @@ import time
 import math
 
 from dotenv import load_dotenv
-from .sensor_interface import SensorInterface
 from utilities import LoggerConfig, Utils
 from constants import (
     MM1_MAX_FORWARD,
@@ -24,8 +23,6 @@ try:
     import serial
 except ImportError:
     print("PySerial not found. Please install: pip install pyserial")
-
-sensor_interface = SensorInterface()
 
 load_dotenv()
 MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT")
@@ -223,6 +220,10 @@ class RoboHATController:
         Calculates steering and throttle commands based on current and
         target positions.
         """
+        from hardware_interface.sensor_interface import SensorInterface
+
+        sensor_interface = SensorInterface()
+
         # Calculate bearing between current_position and target_location
         bearing = self.calculate_bearing(
             current_position, target_location

@@ -6,9 +6,8 @@ from user_interface.web_interface.app import start_web_interface
 from obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from navigation_system.localization import Localization
 from navigation_system.gps import GpsLatestPosition
-from path_planning import PathPlanning  # Import directly
+from navigation_system.path_planning import PathPlanning
 from hardware_interface import (
-    SensorInterface,
     BladeController,
     RoboHATController,
     GPIOManager
@@ -35,6 +34,7 @@ def initialize_resources():
     from hardware_interface.camera import SingletonCamera
     global sensor_interface, camera, path_planner
     global avoidance_algorithm, localization, robohat_controller
+    from hardware_interface.sensor_interface import SensorInterface
 
     sensor_interface = SensorInterface()
     time.sleep(0.2)  # Adding delay to allow I2C bus stabilization
@@ -97,7 +97,8 @@ def start_mowing():
         for coord in path:
             logging.info(f"Mowing at coordinate: {coord}")
             # Navigate to each coordinate while checking for obstacles
-            robohat_controller.navigate_to_location((coord['lat'], coord['lng']))
+            robohat_controller.navigate_to_location((coord['lat'],
+                                                     coord['lng']))
             time.sleep(0.1)  # Adjust as needed
 
         logging.info("Mowing process complete.")
@@ -135,7 +136,9 @@ if __name__ == "__main__":
             # This loop is only here to keep the program running for web
             # interface testing
             user_input = input(
-                "Enter 'start' to begin mowing, 'stop' to stop mowing, 'exit' to quit: ")
+                "Enter 'start' to begin mowing,"
+                "'stop' to stop mowing,"
+                "'exit' to quit: ")
             if user_input.lower() == 'start':
                 start_mowing()
             elif user_input.lower() == 'stop':

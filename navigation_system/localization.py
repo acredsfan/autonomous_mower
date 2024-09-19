@@ -6,9 +6,6 @@ import json
 import sys
 import os
 from utilities import LoggerConfig
-from hardware_interface.sensor_interface import SensorInterface
-
-sensor_interface = SensorInterface()
 
 # Initialize logger
 LoggerConfig.configure_logging()
@@ -21,6 +18,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 class Localization:
     """Handles localization by estimating position and orientation."""
     _instance = None
+    from hardware_interface.sensor_interface import SensorInterface
+
+    sensor_interface = SensorInterface()
 
     def __new__(cls):
         if cls._instance is None:
@@ -45,12 +45,6 @@ class Localization:
         self.max_lat = max_lat
         self.min_lng = min_lng
         self.max_lng = max_lng
-
-    def get_sensor_interface(self):
-        """Initialize the SensorInterface if not already initialized."""
-        if self.sensor_interface is None:
-            self.sensor_interface = SensorInterface()
-        return self.sensor_interface
 
     def load_json_file(self, file_name):
         """Load data from a JSON file."""

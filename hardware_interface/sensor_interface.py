@@ -1,15 +1,18 @@
+# sensor_interface.py
+
 import threading
 from logging import getLogger
 import board
 import busio
+import time
+import signal
+import sys
+
 from .bme280_sensor import BME280Sensor
 from .bno085_sensor import BNO085Sensor
 from .ina3221_sensor import INA3221Sensor
 from .vl53l0x_sensor import VL53L0XSensors
 from .gpio_manager import GPIOManager
-import time
-import signal
-import sys
 
 logging = getLogger(__name__)
 
@@ -19,14 +22,20 @@ class SensorInterface:
     _lock = threading.Lock()
 
     def __new__(cls):
+        # Implement thread-safe singleton pattern
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super(SensorInterface, cls).__new__(cls)
-                    cls._instance.init()
-                    cls._instance.init_sensors()
-                    cls._instance.start_update_thread()
+                    cls._instance._initialized = False
         return cls._instance
+
+    def __init__(self):
+        # Ensure that __init__ only runs once
+        if self._initialized:
+            return
+        self._initialized = True
+        self.init()
 
     def init(self):
         self.sensor_data_lock = threading.Lock()
@@ -38,8 +47,9 @@ class SensorInterface:
         self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(
             self.shutdown_pins, self.interrupt_pins)
         self.stop_thread = False
-        self.start_update_thread()
         self.sensors = {}
+        self.init_sensors()
+        self.start_update_thread()
 
     def init_sensors(self):
         # Initialize all sensors with consolidated error handling and retries
@@ -54,6 +64,11 @@ class SensorInterface:
                 lambda: VL53L0XSensors.init_vl53l0x_sensors(
                     self.i2c, self.shutdown_lines), "VL53L0X"),
         }
+
+    def start_update_thread(self):
+        self.sensor_thread = threading.Thread(target=self.update_sensors,
+                                              daemon=True)
+        self.sensor_thread.start()
 
     def initialize_sensor(self, init_function, sensor_name):
         try:
@@ -80,11 +95,6 @@ class SensorInterface:
         logging.error(f"Failed to initialize {sensor_name}"
                       f" after {retries} attempts")
         return None
-
-    def start_update_thread(self):
-        self.sensor_thread = threading.Thread(target=self.update_sensors,
-                                              daemon=True)
-        self.sensor_thread.start()
 
     def update_sensors(self):
         """Read sensor data periodically and update shared sensor data."""

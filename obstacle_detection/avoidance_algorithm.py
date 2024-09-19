@@ -15,8 +15,7 @@ logging = LoggerConfig.get_logger(__name__)
 
 class ObstacleAvoidance:
     def __init__(self, sensor_interface):
-        from hardware_interface.sensor_interface import SensorInterface
-        self.sensor_interface = SensorInterface
+        self.sensor_interface = sensor_interface
         self.obstacle_left = False
         self.obstacle_right = False
         self.stop_thread = False

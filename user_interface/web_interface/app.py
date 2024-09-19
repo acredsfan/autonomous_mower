@@ -46,7 +46,8 @@ load_dotenv(dotenv_path)
 google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Initialize other components
-from navigation_system import PathPlanning, GpsLatestPosition
+from navigation_system.path_planning import PathPlanning
+from navigation_system.gps import GpsLatestPosition
 position_reader = GpsLatestPosition()  # Initialize position reader
 blade_controller = BladeController()
 path_planning = PathPlanning()

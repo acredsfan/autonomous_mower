@@ -10,5 +10,5 @@ __all__ = [
     'GpsLatestPosition',
     'GpsPosition',
     'GpsPlayer',
-    'Localization',
+    'Localization'
 ]
