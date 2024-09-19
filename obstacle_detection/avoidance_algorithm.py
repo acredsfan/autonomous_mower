@@ -7,7 +7,7 @@ from constants import (
     AVOIDANCE_DELAY
 )
 import time
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

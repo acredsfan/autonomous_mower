@@ -1,4 +1,4 @@
-import logging
+from utilities import LoggerConfigInfo
 from typing import Tuple
 import serial
 import serial.tools.list_ports
@@ -7,7 +7,7 @@ import time
 import platform
 
 
-logger = logging.getLogger(__name__)
+logger = LoggerConfigInfo.getLogger(__name__)
 
 
 class SerialPort:

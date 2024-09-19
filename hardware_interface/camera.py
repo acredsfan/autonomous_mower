@@ -6,7 +6,7 @@ from picamera2 import Picamera2
 from dotenv import load_dotenv
 import os
 import cv2
-from utilities import LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

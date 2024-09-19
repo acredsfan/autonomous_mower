@@ -15,7 +15,7 @@ import utm
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
 
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 from hardware_interface.camera import get_camera_instance
 from hardware_interface import (
     BladeController,
@@ -57,7 +57,7 @@ sensor_interface = SensorInterface()
 
 
 # Initialize RoboHATDriver
-robohat_driver = RoboHATController(debug=True)
+robohat_driver = RoboHATController()
 
 # Define a flag for stopping the sensor update thread
 stop_thread = False

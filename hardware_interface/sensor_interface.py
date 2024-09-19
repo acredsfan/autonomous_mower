@@ -1,7 +1,7 @@
 # sensor_interface.py
 
 import threading
-from logging import getLogger
+from utilities import LoggerConfigDebug
 import board
 import busio
 import time
@@ -14,7 +14,7 @@ from .ina3221_sensor import INA3221Sensor
 from .vl53l0x_sensor import VL53L0XSensors
 from .gpio_manager import GPIOManager
 
-logging = getLogger(__name__)
+logging = LoggerConfigDebug.get_logger(__name__)
 
 
 class SensorInterface:

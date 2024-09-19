@@ -7,7 +7,7 @@ import time
 import pynmea2
 import utm
 from utilities import CsvLogger
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)

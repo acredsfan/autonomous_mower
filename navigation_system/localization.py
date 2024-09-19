@@ -5,7 +5,7 @@ import time
 import json
 import sys
 import os
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logger
 LoggerConfig.configure_logging()

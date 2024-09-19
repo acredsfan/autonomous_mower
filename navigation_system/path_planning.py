@@ -1,4 +1,4 @@
-from utilities import LoggerConfig
+from utilities import LoggerConfigDebug as LoggerConfig
 import requests
 from constants import (
     SECTION_SIZE,
