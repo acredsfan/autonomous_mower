@@ -223,12 +223,13 @@ def get_path():
 
 
 @app.route('/save-mowing-area', methods=['POST'])
+# Save coordinates of Polygon drawn on Google Maps
 def save_mowing_area():
     data = request.get_json()
-    coordinates = data.get('mowingAreaCoordinates', [])
+    coordinates = data if isinstance(data, list) else data.get('mowingAreaCoordinates', [])
     with open('user_polygon.json', 'w') as f:
         json.dump(coordinates, f)
-    return jsonify({'message': 'Area saved.'})
+    return jsonify({'message': 'Mowing area saved.'})
 
 
 @app.route('/api/gps', methods=['GET'])

@@ -9,7 +9,6 @@ function fetchSensorData() {
         .catch((error) => console.error('Error fetching sensor data:', error));
 }
 
-
 // Call the function at regular intervals, e.g., every 5 seconds
 setInterval(fetchSensorData, 5000);
 
@@ -30,107 +29,7 @@ function updateSensorDisplay(data) {
     document.getElementById('right_distance').textContent = `Right Distance: ${data.right_distance}`;
 }
 
-//get GOOGLE_MAPS_API_KEY from config.json
-fetch('/get_google_maps_api_key')
-    .then(response => response.json())
-    .then(data => {
-        console.log(data);
-        loadScript(data.GOOGLE_MAPS_API_KEY);
-    })
-    .catch((error) => console.error('Error fetching Google Maps API key:', error));
-
-function loadScript() {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap&libraries=drawing`;
-    script.defer = true;
-    document.head.appendChild(script);
-}
-
-function move(direction) {
-    fetch('/control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ steering: getSteering(direction), throttle: getThrottle(direction) }),
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
-
-function getSteering(direction) {
-    switch (direction) {
-        case 'left':
-            return -1;
-        case 'right':
-            return 1;
-        case 'stop':
-            return 0;
-        default:
-            return 0;
-    }
-}
-
-function getThrottle(direction) {
-    switch (direction) {
-        case 'forward':
-            return 1;
-        case 'backward':
-            return -1;
-        case 'stop':
-            return 0;
-        default:
-            return 0;
-    }
-}
-
-function toggleBlades(state) {
-    fetch('/toggle_blades', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ state: state }),
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
-
-function startMowing() {
-    fetch('/start-mowing', {
-        method: 'POST',
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
-
-function stopMowing() {
-    fetch('/stop-mowing', {
-        method: 'POST',
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
-
-
-function saveMowingArea(mowingAreaCoordinates) {
-    // Make an AJAX POST request to the server to save the mowing area as an polygon array
-    fetch('/save-mowing-area', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ mowingAreaCoordinates: mowingAreaCoordinates }),
-    })
-    .then(response => response.json())
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
-
+// Save settings for mowing days and hours
 function saveSettings(mowDays, mowHours) {
     fetch('/save_settings', {
         method: 'POST',
@@ -160,16 +59,20 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 });
 
-
+let areaCoordinates = [];
+let homeLocation = null;
 let map;
-let coordinates = [];
+let areaPolygon = null;
+let homeMarker = null;
 
+// Initialize map
 function initMap() {
+    const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 20,
-        tilt: 0,
-        mapTypeId: 'satellite',
-        center: {lat: 39.038542, lng: -84.214696}
+        zoom: 28,
+        center: defaultCoordinates,
+        mapTypeId: google.maps.MapTypeId.HYBRID,
+        disableDefaultUI: true,
     });
 
     const drawingManager = new google.maps.drawing.DrawingManager({
@@ -180,73 +83,116 @@ function initMap() {
             drawingModes: [google.maps.drawing.OverlayType.POLYGON]
         }
     });
-
     drawingManager.setMap(map);
 
-    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
-        const path = polygon.getPath();
-        coordinates.length = 0;  // Clear the array
-        for (let i = 0; i < path.getLength(); i++) {
-            const lat = path.getAt(i).lat();
-            const lng = path.getAt(i).lng();
-            coordinates.push({lat: lat, lng: lng});
-        }
-        console.log(coordinates);
-        // Save coordinates to server
-        saveMowingArea(coordinates);
+    google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
+        const polygon = event.overlay;
+        areaCoordinates = polygon.getPath().getArray().map(coord => ({
+            lat: coord.lat(),
+            lng: coord.lng()
+        }));
+        document.getElementById('confirm-area-button').disabled = false;
     });
 
-    const submitBtn = document.getElementById('confirm-button');
-    console.log(submitBtn); // Log the button element to check if it exists
-    submitBtn.addEventListener('click', function() {
-        console.log('Submit button clicked');
-        // Now the click listener has access to the coordinates array
-        saveMowingArea(coordinates);
+    google.maps.event.addListener(map, 'click', function (event) {
+        if (homeMarker) {
+            homeMarker.setMap(null);
+        }
+        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+        homeMarker = new google.maps.Marker({
+            position: homeLocation,
+            map: map,
+            title: 'Home Location'
+        });
+        document.getElementById('confirm-home-button').disabled = false;
     });
+
+    // Load saved data
+    loadSavedData();
 }
 
-function getAndDrawMowingArea() {
-    fetch('/get-mowing-area', {
-        method: 'GET',
+// Save the mowing area
+function saveMowingArea() {
+    fetch('/save-mowing-area', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ mowingAreaCoordinates: areaCoordinates })
     })
     .then(response => response.json())
-    .then(data => {
-        drawMowingArea(data);
-    })
-    .catch((error) => console.error('Error:', error));
+    .then(() => alert('Mowing area saved successfully.'))
+    .catch(error => console.error('Error:', error));
 }
 
-function drawMowingArea(coordinates) {
-    var polygon = new google.maps.Polygon({
-        paths: coordinates,
-        strokeColor: '#FF0000',
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: '#FF0000',
-        fillOpacity: 0.35,
-        editable: true
-    });
-    polygon.setMap(map);
-    google.maps.event.addListener(polygon.getPath(), 'set_at', function() {
-        updateMowingArea(polygon);
-    });
-    google.maps.event.addListener(polygon.getPath(), 'insert_at', function() {
-        updateMowingArea(polygon);
-    });
-}
-
-function updateMowingArea(polygon) {
-    var path = polygon.getPath();
-    coordinates.length = 0;  // Clear the array
-    for (var i = 0; i < path.getLength(); i++) {
-        var lat = path.getAt(i).lat();
-        var lng = path.getAt(i).lng();
-        coordinates.push({lat: lat, lng: lng});
+// Save the home location
+function saveHomeLocation() {
+    if (!homeLocation) {
+        alert('Please select a home location.');
+        return;
     }
-    console.log(coordinates);
-    // Save the new coordinates to the server
-    saveMowingArea(coordinates);
+    fetch('/save-home-location', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(homeLocation)
+    })
+    .then(response => response.json())
+    .then(() => alert('Home location saved successfully.'))
+    .catch(error => console.error('Error:', error));
 }
+
+// Load saved data from the server
+function loadSavedData() {
+    fetch('/get-mowing-area')
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                areaPolygon = new google.maps.Polygon({
+                    paths: data,
+                    editable: true
+                });
+                areaPolygon.setMap(map);
+            }
+        })
+        .catch(error => console.error('Error loading mowing area:', error));
+
+    fetch('/get-home-location')
+        .then(response => response.json())
+        .then(data => {
+            if (data.lat && data.lng) {
+                homeLocation = { lat: data.lat, lng: data.lng };
+                homeMarker = new google.maps.Marker({
+                    position: homeLocation,
+                    map: map,
+                    title: 'Home Location'
+                });
+            }
+        })
+        .catch(error => console.error('Error loading home location:', error));
+}
+
+// Load the Google Maps script dynamically
+function loadMapScript(apiKey) {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing`;
+    script.defer = true;
+    document.head.appendChild(script);
+}
+
+// Handle loading of maps and other features when the page is ready
+window.addEventListener('load', function () {
+    fetch('/get_google_maps_api_key')
+        .then(response => response.json())
+        .then(data => {
+            loadMapScript(data.GOOGLE_MAPS_API_KEY);
+        })
+        .catch(error => console.error('Error fetching Google Maps API key:', error));
+
+    document.getElementById('confirm-area-button').addEventListener('click', saveMowingArea);
+    document.getElementById('confirm-home-button').addEventListener('click', saveHomeLocation);
+});
 
 function getPathAndDraw() {
     fetch('/get-path', {
@@ -272,11 +218,6 @@ function drawPath(coordinates) {
 
 // Call this function when you want to update the path
 getPathAndDraw();
-
-window.addEventListener('load', function() {
-    loadScript();
-    getAndDrawMowingArea();
-});
 
 var socket = io.connect('http://' + document.domain + ':' + location.port);
 
