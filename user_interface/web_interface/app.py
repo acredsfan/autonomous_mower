@@ -284,15 +284,6 @@ def get_schedule():
         return None, None
 
 
-@app.route('/control', methods=['POST'])
-def control():
-    data = request.json
-    steering = data.get('steering', 0)
-    throttle = data.get('throttle', 0)
-    robohat_driver.run_threaded(steering, throttle)
-    return jsonify({'status': 'success'})
-
-
 @app.route('/stop', methods=['POST'])
 def stop():
     robohat_driver.run(0, 0)
