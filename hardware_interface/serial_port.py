@@ -7,7 +7,7 @@ import time
 import platform
 
 
-logger = LoggerConfigInfo.getLogger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class SerialPort:

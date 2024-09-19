@@ -1,7 +1,6 @@
 from .gpio_manager import GPIOManager
 import threading
 import time
-import logging
 import sys
 import os
 from utilities import LoggerConfigDebug as LoggerConfig
@@ -10,9 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 # Initialize logging
-LoggerConfig.configure_logging()
-logging = logging.getLogger(__name__)
-debug = LoggerConfig.get_logger("debug")
+logging = LoggerConfig.get_logger(__name__)
+
 
 # Initialize GPIO lines using gpio_manager
 shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
@@ -115,4 +113,3 @@ class BladeController:
 if __name__ == "__main__":
     # Start the blade controller
     blade_controller = BladeController()
-    debug.log("Blade controller started as main.")

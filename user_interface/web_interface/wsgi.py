@@ -1,4 +1,4 @@
-from utilities import LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 from user_interface.web_interface.app import start_web_interface
 import sys
 import os
