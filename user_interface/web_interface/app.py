@@ -97,6 +97,27 @@ def index():
                            google_maps_api_key=google_maps_api_key,
                            next_scheduled_mow=next_scheduled_mow)
 
+@app.route('/status')
+def status():
+    # Collect status information from your sensors or system
+    status_info = {
+        'mowing_status': mowing_status,
+        'next_scheduled_mow': next_scheduled_mow,
+        'battery-voltage': sensor_interface.sensor_data.get('battery', {}).get('voltage', 'N/A'),
+        'battery-current': sensor_interface.sensor_data.get('battery', {}).get('current', 'N/A'),
+        'battery-charge-level': sensor_interface.sensor_data.get('battery_charge', 'N/A'),
+        'solar-voltage': sensor_interface.sensor_data.get('solar', {}).get('voltage', 'N/A'),
+        'solar-current': sensor_interface.sensor_data.get('solar', {}).get('current', 'N/A'),
+        'speed': sensor_interface.sensor_data.get('speed', 'N/A'),
+        'heading': sensor_interface.sensor_data.get('heading', 'N/A'),
+        'temperature': sensor_interface.sensor_data.get('bme280', {}).get('temperature', 'N/A'),
+        'humidity': sensor_interface.sensor_data.get('bme280', {}).get('humidity', 'N/A'),
+        'pressure': sensor_interface.sensor_data.get('bme280', {}).get('pressure', 'N/A'),
+        'left-distance': sensor_interface.sensor_data.get('left_distance', 'N/A'),
+        'right-distance': sensor_interface.sensor_data.get('right_distance', 'N/A')
+    }
+    return render_template('status.html', status=status_info)
+
 
 @app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
@@ -181,10 +202,6 @@ def get_path():
     path = path_planning.get_path(start, goal)
     return jsonify(path)
 
-@app.route('/status', methods=['GET'])
-def get_status():
-    global mowing_status
-    return jsonify({'status': mowing_status})
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
