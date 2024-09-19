@@ -39,6 +39,7 @@ class SensorInterface:
             self.shutdown_pins, self.interrupt_pins)
         self.stop_thread = False
         self.start_update_thread()
+        self.sensors = {}
 
     def init_sensors(self):
         # Initialize all sensors with consolidated error handling and retries
