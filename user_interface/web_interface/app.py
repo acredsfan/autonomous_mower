@@ -181,6 +181,10 @@ def get_path():
     path = path_planning.get_path(start, goal)
     return jsonify(path)
 
+@app.route('/status', methods=['GET'])
+def get_status():
+    global mowing_status
+    return jsonify({'status': mowing_status})
 
 @app.route('/save-mowing-area', methods=['POST'])
 def save_mowing_area():
