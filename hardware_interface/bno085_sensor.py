@@ -79,6 +79,39 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating heading: {e}")
             return -1
+    
+    @staticmethod
+    def calculate_pitch(sensor):
+        """Calculate pitch from BNO085 sensor data."""
+        try:
+            x, y, z = sensor.acceleration
+            pitch = math.degrees(math.asin(-x))
+            return pitch
+        except Exception as e:
+            logging.error(f"Error calculating pitch: {e}")
+            return -1
+        
+    @staticmethod
+    def calculate_roll(sensor):
+        """Calculate roll from BNO085 sensor data."""
+        try:
+            x, y, z = sensor.acceleration
+            roll = math.degrees(math.asin(y))
+            return roll
+        except Exception as e:
+            logging.error(f"Error calculating roll: {e}")
+            return -1
+        
+    @staticmethod
+    def calculate_speed(sensor):
+        """Calculate speed from BNO085 sensor data."""
+        try:
+            x, y, z = sensor.acceleration
+            speed = math.sqrt(x**2 + y**2 + z**2)
+            return speed
+        except Exception as e:
+            logging.error(f"Error calculating speed: {e}")
+            return -1
 
     @staticmethod
     def cleanup():
