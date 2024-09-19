@@ -194,7 +194,10 @@ def get_mowing_area():
         return jsonify(coordinates)
     else:
         return jsonify({'message': 'No area saved yet.'})
-
+    
+@app.route('/area', methods=['GET'])
+def area():
+    return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
 @app.route('/get-path', methods=['GET'])
 def get_path():
