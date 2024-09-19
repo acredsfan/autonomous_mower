@@ -150,8 +150,8 @@ class PathPlanning:
         return {"lat": lat, "lng": lng}
 
     def estimate_position(self):
-        # Estimmate where on grid the robot is using localization
-        lat, lng = self.localization.estimmate_position()
+        # Estimate where on grid the robot is using localization
+        lat, lng = self.localization.estimate_position()
         return self.coord_to_grid(lat, lng)
 
     def get_weather_data(self, lat, lon):

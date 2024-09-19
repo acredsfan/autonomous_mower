@@ -1,4 +1,3 @@
-
 from adafruit_bno08x.i2c import BNO08X_I2C
 from adafruit_bno08x import (
     BNO_REPORT_ACCELEROMETER,
@@ -6,17 +5,28 @@ from adafruit_bno08x import (
     BNO_REPORT_MAGNETOMETER,
     BNO_REPORT_ROTATION_VECTOR,
 )
-import math
 from utilities import LoggerConfigDebug as LoggerConfig
+from .gpio_manager import GPIOManager
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+interrupt_pin = [8]  # GPIO line for interrupt
+shutdown_pin = []  # No shutdown line needed
+interrupt_lines, _ = GPIOManager.init_gpio(shutdown_pin, interrupt_pin)
+
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor"""
-    @staticmethod
-    def init_bno085(i2c):
+
+    def __init__(self, i2c):
+        self.sensor = self.init_bno085(i2c)
+        if self.sensor:
+            # Add interrupt handler for INT pin
+            GPIOManager.wait_for_interrupt(interrupt_lines,
+                                           self.read_sensor_callback)
+
+    def init_bno085(self, i2c):
         try:
             sensor = BNO08X_I2C(i2c, address=0x4B)
             sensor.enable_feature(BNO_REPORT_ACCELEROMETER)
@@ -29,47 +39,22 @@ class BNO085Sensor:
             logging.error(f"Error initializing BNO085: {e}")
             return None
 
-    @staticmethod
-    def validate_sensor(sensor):
-        """Validates the sensor object."""
-        if sensor is None:
-            logging.error(
-                "BNO085 sensor is not initialized or failed to initialize.")
-            return False
-        return True
-
-    @staticmethod
-    def calibrate_sensor(sensor):
-        """Calibrate BNO085 sensor."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
+    def read_sensor_callback(self, pin):
+        """Callback to read sensor data when INT pin is triggered."""
+        logging.info(f"Interrupt received on GPIO pin {pin}."
+                     f" Reading sensor data...")
         try:
-            sensor.calibrate()
-            logging.info("BNO085 sensor calibrated successfully.")
+            # Read sensor data on interrupt trigger
+            accel_data = self.read_bno085_accel(self.sensor)
+            gyro_data = self.read_bno085_gyro(self.sensor)
+            logging.info(f"Accelerometer data: {accel_data}")
+            logging.info(f"Gyroscope data: {gyro_data}")
         except Exception as e:
-            logging.error(f"Error calibrating BNO085 sensor: {e}")
-            return
-
-    @staticmethod
-    def reset_bno085(sensor):
-        """Reset BNO085 sensor."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
-        try:
-            sensor.hard_reset()
-            logging.info("BNO085 sensor reset successfully.")
-        except Exception as e:
-            logging.error(f"Error resetting BNO085 sensor: {e}")
-            return
+            logging.error(f"Error in sensor callback: {e}")
 
     @staticmethod
     def read_bno085_accel(sensor):
         """Read BNO085 accelerometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
         try:
             accel_x, accel_y, accel_z = sensor.acceleration
             return {'x': accel_x, 'y': accel_y, 'z': accel_z}
@@ -80,9 +65,6 @@ class BNO085Sensor:
     @staticmethod
     def read_bno085_gyro(sensor):
         """Read BNO085 gyroscope data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
         try:
             gyro_x, gyro_y, gyro_z = sensor.gyro
             return {'x': gyro_x, 'y': gyro_y, 'z': gyro_z}
@@ -90,105 +72,20 @@ class BNO085Sensor:
             logging.error(f"Error reading BNO085 gyroscope: {e}")
             return {}
 
-    @staticmethod
-    def read_bno085_magnetometer(sensor):
-        """Read BNO085 magnetometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
-        try:
-            mag_x, mag_y, mag_z = sensor.magnetic
-            return {'x': mag_x, 'y': mag_y, 'z': mag_z}
-        except Exception as e:
-            logging.error(f"Error reading BNO085 magnetometer: {e}")
-            return {}
-
-    @staticmethod
-    def read_bno085_quaternion(sensor):
-        """Read BNO085 rotation vector quaternion data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return {}
-
-        try:
-            quat_i, quat_j, quat_k, quat_real = sensor.quaternion
-            return {'i': quat_i, 'j': quat_j, 'k': quat_k, 'real': quat_real}
-        except Exception as e:
-            logging.error(f"Error reading BNO085 quaternion: {e}")
-            return {}
-
-    @staticmethod
-    def calculate_speed(sensor):
-        """Calculate speed in feet per second based on accelerometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return 0
-
-        try:
-            accel_x, accel_y, accel_z = sensor.acceleration
-            return round((accel_x**2 + accel_y**2 + accel_z**2)**0.5, 2)
-        except Exception as e:
-            logging.error(f"Error calculating speed: {e}")
-            return 0
-
-    @staticmethod
-    def calculate_heading(sensor):
-        """Calculate heading based on magnetometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return 0
-
-        try:
-            mag_x, mag_y, mag_z = sensor.magnetic
-            heading = 180 * math.atan2(mag_y, mag_x) / math.pi
-            return round(heading, 2)
-        except Exception as e:
-            logging.error(f"Error calculating heading: {e}")
-            return 0
-
-    @staticmethod
-    def calculate_pitch(sensor):
-        """Calculate pitch based on accelerometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return 0
-
-        try:
-            accel_x, accel_y, accel_z = sensor.acceleration
-            pitch = math.atan2(
-                accel_x, (accel_y**2 + accel_z**2)**0.5) * 180 / math.pi
-            return round(pitch, 2)
-        except Exception as e:
-            logging.error(f"Error calculating pitch: {e}")
-            return 0
-
-    @staticmethod
-    def calculate_roll(sensor):
-        """Calculate roll based on accelerometer data."""
-        if not BNO085Sensor.validate_sensor(sensor):
-            return 0
-
-        try:
-            accel_x, accel_y, accel_z = sensor.acceleration
-            roll = math.atan2(
-                accel_y, (accel_x**2 + accel_z**2)**0.5) * 180 / math.pi
-            return round(roll, 2)
-        except Exception as e:
-            logging.error(f"Error calculating roll: {e}")
-            return 0
+    def cleanup(self):
+        """Cleanup GPIO pins when done."""
+        GPIOManager.clean()
 
 
 if __name__ == "__main__":
     # Initialize the BNO085 sensor
     bno085_sensor = BNO085Sensor()
-    bno085 = bno085_sensor.init_bno085()
-
-    if bno085 is not None:
-        # Read BNO085 sensor data
-        sensor_data = {
-            'accel': bno085_sensor.read_bno085_accel(bno085),
-            'gyro': bno085_sensor.read_bno085_gyro(bno085),
-            'mag': bno085_sensor.read_bno085_magnetometer(bno085),
-            'quat': bno085_sensor.read_bno085_quaternion(bno085),
-            'speed': bno085_sensor.calculate_speed(bno085),
-            'heading': bno085_sensor.calculate_heading(bno085),
-            'pitch': bno085_sensor.calculate_pitch(bno085),
-            'roll': bno085_sensor.calculate_roll(bno085)
-        }
-        print(sensor_data)
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        logging.info("KeyboardInterrupt: Stopping the application.")
+    except Exception:
+        logging.exception("An error occurred during the application.")
+    finally:
+        bno085_sensor.cleanup()
