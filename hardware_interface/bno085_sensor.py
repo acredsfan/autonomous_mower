@@ -1,4 +1,3 @@
-from adafruit_bno08x.i2c import BNO08X_I2C
 from adafruit_bno08x import (
     BNO_REPORT_ACCELEROMETER,
     BNO_REPORT_GYROSCOPE,
@@ -7,53 +6,25 @@ from adafruit_bno08x import (
 )
 from utilities import LoggerConfigInfo as LoggerConfig
 from .gpio_manager import GPIOManager
-import board
-import busio
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-interrupt_pin = [8]  # GPIO line for interrupt
-shutdown_pin = []  # No shutdown line needed
-interrupt_lines, _ = GPIOManager.init_gpio(shutdown_pin, interrupt_pin)
-i2c = busio.I2C(board.SCL, board.SDA)
-
 
 class BNO085Sensor:
-    """Class to handle BNO085 sensor"""
+    """Class to handle BNO085 sensor interaction"""
 
-    def __init__(self, i2c):
-        self.sensor = self.init_bno085(i2c)
-        if self.sensor:
-            # Add interrupt handler for INT pin
-            GPIOManager.wait_for_interrupt(interrupt_lines,
-                                           self.read_sensor_callback)
-
-    def init_bno085(self, i2c):
+    @staticmethod
+    def enable_features(sensor):
+        """Enable BNO085 sensor features."""
         try:
-            sensor = BNO08X_I2C(i2c, address=0x4B)
             sensor.enable_feature(BNO_REPORT_ACCELEROMETER)
             sensor.enable_feature(BNO_REPORT_GYROSCOPE)
             sensor.enable_feature(BNO_REPORT_MAGNETOMETER)
             sensor.enable_feature(BNO_REPORT_ROTATION_VECTOR)
-            logging.info("BNO085 initialized with all features enabled.")
-            return sensor
+            logging.info("BNO085 features enabled.")
         except Exception as e:
-            logging.error(f"Error initializing BNO085: {e}")
-            return None
-
-    def read_sensor_callback(self, pin):
-        """Callback to read sensor data when INT pin is triggered."""
-        logging.info(f"Interrupt received on GPIO pin {pin}."
-                     f" Reading sensor data...")
-        try:
-            # Read sensor data on interrupt trigger
-            accel_data = self.read_bno085_accel(self.sensor)
-            gyro_data = self.read_bno085_gyro(self.sensor)
-            logging.info(f"Accelerometer data: {accel_data}")
-            logging.info(f"Gyroscope data: {gyro_data}")
-        except Exception as e:
-            logging.error(f"Error in sensor callback: {e}")
+            logging.error(f"Error enabling features on BNO085: {e}")
 
     @staticmethod
     def read_bno085_accel(sensor):
@@ -75,20 +46,27 @@ class BNO085Sensor:
             logging.error(f"Error reading BNO085 gyroscope: {e}")
             return {}
 
-    def cleanup(self):
+    @staticmethod
+    def read_bno085_magnetometer(sensor):
+        """Read BNO085 magnetometer data."""
+        try:
+            mag_x, mag_y, mag_z = sensor.magnetic
+            return {'x': mag_x, 'y': mag_y, 'z': mag_z}
+        except Exception as e:
+            logging.error(f"Error reading BNO085 magnetometer: {e}")
+            return {}
+
+    @staticmethod
+    def read_bno085_quaternion(sensor):
+        """Read BNO085 rotation vector quaternion data."""
+        try:
+            quat_i, quat_j, quat_k, quat_real = sensor.quaternion
+            return {'i': quat_i, 'j': quat_j, 'k': quat_k, 'real': quat_real}
+        except Exception as e:
+            logging.error(f"Error reading BNO085 quaternion: {e}")
+            return {}
+
+    @staticmethod
+    def cleanup():
         """Cleanup GPIO pins when done."""
         GPIOManager.clean()
-
-
-if __name__ == "__main__":
-    # Initialize the BNO085 sensor
-    bno085_sensor = BNO085Sensor()
-    try:
-        while True:
-            pass
-    except KeyboardInterrupt:
-        logging.info("KeyboardInterrupt: Stopping the application.")
-    except Exception:
-        logging.exception("An error occurred during the application.")
-    finally:
-        bno085_sensor.cleanup()

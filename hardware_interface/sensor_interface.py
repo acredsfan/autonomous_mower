@@ -16,7 +16,6 @@ from .gpio_manager import GPIOManager
 
 logging = LoggerConfigDebug.get_logger(__name__)
 
-
 class SensorInterface:
     _instance = None
     _lock = threading.Lock()
@@ -57,13 +56,20 @@ class SensorInterface:
             'bme280': self.initialize_sensor(
                 lambda: BME280Sensor.init_bme280(self.i2c), "BME280"),
             'bno085': self.initialize_sensor_with_retry(
-                lambda: BNO085Sensor.init_bno085(self.i2c), "BNO085"),
+                self.init_bno085_sensor, "BNO085"),
             'ina3221': self.initialize_sensor_with_retry(
                 lambda: INA3221Sensor.init_ina3221(self.i2c), "INA3221"),
             'vl53l0x': self.initialize_sensor_with_retry(
                 lambda: VL53L0XSensors.init_vl53l0x_sensors(
                     self.i2c, self.shutdown_lines), "VL53L0X"),
         }
+
+    def init_bno085_sensor(self):
+        """Initialize and configure the BNO085 sensor."""
+        from adafruit_bno08x.i2c import BNO08X_I2C
+        sensor = BNO08X_I2C(self.i2c, address=0x4B)
+        BNO085Sensor.enable_features(sensor)  # Enable features in the BNO085
+        return sensor
 
     def start_update_thread(self):
         self.sensor_thread = threading.Thread(target=self.update_sensors,
