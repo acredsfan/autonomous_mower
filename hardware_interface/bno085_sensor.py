@@ -6,6 +6,7 @@ from adafruit_bno08x import (
 )
 from utilities import LoggerConfigInfo as LoggerConfig
 from .gpio_manager import GPIOManager
+import math
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -65,6 +66,19 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error reading BNO085 quaternion: {e}")
             return {}
+        
+    @staticmethod
+    def calculate_heading(sensor):
+        """Calculate heading from BNO085 sensor data."""
+        try:
+            x, y, z = sensor.magnetic
+            heading = math.degrees(math.atan2(y, x))
+            if heading < 0:
+                heading += 360
+            return heading
+        except Exception as e:
+            logging.error(f"Error calculating heading: {e}")
+            return -1
 
     @staticmethod
     def cleanup():
