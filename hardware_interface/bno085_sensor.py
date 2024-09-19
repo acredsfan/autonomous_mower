@@ -5,7 +5,7 @@ from adafruit_bno08x import (
     BNO_REPORT_MAGNETOMETER,
     BNO_REPORT_ROTATION_VECTOR,
 )
-from utilities import LoggerConfigDebug as LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 from .gpio_manager import GPIOManager
 
 # Initialize logger
