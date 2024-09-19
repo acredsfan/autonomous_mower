@@ -55,7 +55,7 @@ class SensorInterface:
         # Initialize all sensors with consolidated error handling and retries
         self.sensors = {
             'bme280': self.initialize_sensor(
-                BME280Sensor.init_bme280(self.i2c), "BME280"),
+                lambda: BME280Sensor.init_bme280(self.i2c), "BME280"),
             'bno085': self.initialize_sensor_with_retry(
                 lambda: BNO085Sensor.init_bno085(self.i2c), "BNO085"),
             'ina3221': self.initialize_sensor_with_retry(
