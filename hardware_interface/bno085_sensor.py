@@ -15,14 +15,6 @@ logging = LoggerConfig.get_logger(__name__)
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor"""
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(BNO085Sensor, cls).__new__(cls)
-            cls.__init__(cls._instance)
-        return cls._instance
-
     @staticmethod
     def init_bno085(i2c):
         try:

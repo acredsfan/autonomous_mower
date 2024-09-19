@@ -7,15 +7,6 @@ logging = LoggerConfig.get_logger(__name__)
 
 
 class VL53L0XSensors:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(VL53L0XSensors, cls).__new__(cls)
-            cls.__init__(cls._instance)
-            cls.init_vl53l0x(cls._instance)
-            cls.init_vl53l0x_sensors(cls._instance)
-        return cls._instance
 
     @staticmethod
     def init_vl53l0x(i2c, address):

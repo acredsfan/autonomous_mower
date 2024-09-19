@@ -6,7 +6,7 @@ class LoggerConfig:
     def configure_logging(log_file="main.log"):
         logging.basicConfig(
             filename=log_file,
-            level=logging.DEBUG,
+            level=logging.ERROR,
             format=(
                 "%(asctime)s - %(name)s - %(levelname)s - "
                 "%(filename)s:%(lineno)d - %(message)s"
