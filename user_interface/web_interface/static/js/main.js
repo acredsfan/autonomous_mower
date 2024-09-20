@@ -72,7 +72,7 @@ let mapId = null;
 function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     const mapOptions = {
-        zoom: 35,
+        zoom: 25,
         center: defaultCoordinates,
         mapTypeId: 'satellite',
         tilt: 0,
