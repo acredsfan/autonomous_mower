@@ -96,10 +96,6 @@ async function initMap() {
         position: defaultCoordinates,
         gmpDraggable: true,
         title: "Drag to Robot's Home Location.",
-        gmpIcon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-            scaledSize: new google.maps.Size(32, 32),
-        },
     });
 
     draggableMarker.addListener("dragend", (event) => {
