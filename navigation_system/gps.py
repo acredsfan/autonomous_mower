@@ -1,4 +1,4 @@
-# gps.py - Location: autonomous_mower\navigation_system\gps.py
+# gps.py - Location: autonomous_mower/navigation_system/gps.py
 
 import argparse
 from functools import reduce
@@ -22,7 +22,6 @@ class SingletonMeta(type):
     _lock: threading.Lock = threading.Lock()
 
     def __call__(cls, *args, **kwargs):
-        # Now, imagine that the program is simultaneously trying to create multiple instances
         with cls._lock:
             if cls not in cls._instances:
                 instance = super().__call__(*args, **kwargs)
@@ -31,8 +30,7 @@ class SingletonMeta(type):
 
 class GpsNmeaPositions(metaclass=SingletonMeta):
     """
-    Donkeycar part to convert array of
-    NMEA sentences into array of (x,y) positions
+    Converts array of NMEA sentences into array of (easting, northing) positions.
     """
     def __init__(self, debug=False):
         self.debug = debug
@@ -41,35 +39,38 @@ class GpsNmeaPositions(metaclass=SingletonMeta):
         positions = []
         if lines:
             for ts, nmea in lines:
-                # Add your logic here to process each line
-                # For example, you might want to parse the NMEA sentence
                 position = parseGpsPosition(nmea, self.debug)
                 if position:
                     positions.append((ts, *position))
         return positions
 
-    def update(self):
-        pass
-
-    def run_threaded(self, lines):
-        return self.run(lines)
-
 class GpsLatestPosition(metaclass=SingletonMeta):
     """
-    Return most recent valid GPS position
+    Provides the most recent valid GPS position and status.
     """
     def __init__(self, gps_position_instance, debug=False):
         self.debug = debug
         self.gps_position = gps_position_instance
         self.position = None
+        self.status = "Initializing GPS..."
+        self.lock = threading.Lock()
 
     def run(self):
-        self.position = self.gps_position.run()
-        return self.position
+        with self.lock:
+            self.position = self.gps_position.get_latest_position()
+            if self.position:
+                self.status = "GPS fix acquired."
+            else:
+                self.status = "Waiting for GPS fix..."
+            return self.position
+
+    def get_status(self):
+        with self.lock:
+            return self.status
 
 class GpsPosition(metaclass=SingletonMeta):
     """
-    Donkeycar part to read NMEA lines from serial port and convert a position
+    Reads NMEA lines from serial port and converts them into positions.
     """
     def __init__(self, serial_port, debug=False):
         from hardware_interface import SerialLineReader
@@ -77,41 +78,47 @@ class GpsPosition(metaclass=SingletonMeta):
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
         self.position = None
-        self._start()
+        self.running = True
+        self.lock = threading.Lock()
+        self.thread = threading.Thread(target=self._read_gps, daemon=True)
+        self.thread.start()
 
-    def _start(self):
-        # wait until we get at least one gps position
-        while self.position is None:
-            logger.info("Waiting for GPS fix...")
-            self.position = self.run()
-
-    def run_once(self, lines):
-        positions = self.position_reader.run(lines)
-        if positions:
-            self.position = positions[-1]
-            if self.debug:
-                logger.info(f"UTM easting = {self.position[0]}, "
-                            f"UTM northing = {self.position[1]}")
-        return self.position
+    def _read_gps(self):
+        while self.running:
+            try:
+                positions = self.run()
+                if positions:
+                    with self.lock:
+                        self.position = positions
+                    logger.debug(f"New GPS position: {positions}")
+                else:
+                    logger.debug("No valid GPS position received.")
+                time.sleep(1)  # Adjust as needed
+            except Exception as e:
+                logger.error(f"Error reading GPS data: {e}")
+                time.sleep(5)  # Wait before retrying
 
     def run(self):
         lines = self.line_reader.run()
         return self.run_once(lines)
 
-    def run_threaded(self):
-        lines = self.line_reader.run_threaded()
-        return self.run_once(lines)
+    def run_once(self, lines):
+        positions = self.position_reader.run(lines)
+        return positions[-1] if positions else None
 
-    def update(self):
-        self.line_reader.update()
+    def get_latest_position(self):
+        with self.lock:
+            return self.position
 
     def shutdown(self):
-        return self.line_reader.shutdown()
+        self.running = False
+        self.line_reader.shutdown()
+        self.thread.join()
+        logger.info("GPS Position shut down successfully.")
 
 class GpsPlayer(metaclass=SingletonMeta):
     """
-    Part that plays back the NMEA sentences that have been recorded
-    by the nmea logger that is passed to the constructor.
+    Plays back recorded NMEA sentences.
     """
     def __init__(self, nmea_logger: CsvLogger):
         self.nmea = nmea_logger
@@ -121,60 +128,33 @@ class GpsPlayer(metaclass=SingletonMeta):
 
     def start(self):
         self.running = True
-        self.starttime = None  # will get set on first call to run()
+        self.starttime = None
         self.index = -1
-        return self
 
     def stop(self):
         self.running = False
-        return self
 
     def run(self, playing, nmea_sentences):
-        """
-        Play NMEA if running and in autopilot mode.
-        Collect NMEA sentences within the time limit,
-        arguments:
-        - playing:bool True if we are to play recorded nmea,
-                       False if we pass through given nmea
-        - nmea_sentences:[str] list of live nmea from gps module
-                                to pass through if not playing
-        returns:
-        - playing:bool True if playing, False if not
-        - nmea:[str] the resulting sentences as a list
-        """
         if self.running and playing:
-            # if playing, then return the recorded nmea
             nmea = self.run_once(time.time())
             return True, nmea
-
-        # if not playing, pass through the given nmea
         return False, nmea_sentences
 
     def run_once(self, now):
-        """
-        Collect all nmea sentences up to and including the given time
-        """
         nmea_sentences = []
         if self.running:
-            # reset start time if None
             if self.starttime is None:
-                print("Resetting GPS player start time.")
+                logger.info("Resetting GPS player start time.")
                 self.starttime = now
 
-            # get first nmea sentence so we can get its recorded time
             start_nmea = self.nmea.get(0)
-            if start_nmea is not None:
-                # get next nmea sentence and play it if
-                # it is within time.
-                # if there is no next sentence, then wrap
-                # around back to first sentence
+            if start_nmea:
                 start_nmea_time = float(start_nmea[0])
                 offset_nmea_time = 0
                 within_time = True
                 while within_time:
                     next_nmea = None
                     if self.index >= self.nmea.length():
-                        # wrap around from end to start
                         self.index = 0
                         self.starttime += offset_nmea_time
                         next_nmea = self.nmea.get(0)
@@ -182,10 +162,10 @@ class GpsPlayer(metaclass=SingletonMeta):
                         next_nmea = self.nmea.get(self.index + 1)
 
                     if next_nmea is None:
-                        self.index += 1  # skip the invalid nmea sentence
+                        self.index += 1
                     else:
                         next_nmea_time = float(next_nmea[0])
-                        offset_nmea_time = (next_nmea_time - start_nmea_time)
+                        offset_nmea_time = next_nmea_time - start_nmea_time
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
@@ -196,20 +176,12 @@ class GpsPlayer(metaclass=SingletonMeta):
 # Parsing and Utility Functions (unchanged)
 
 def parseGpsPosition(line, debug=False):
-    """
-    Given a line emitted by a GPS module,
-    Parse out the position and return as a
-    return: tuple of float (easting, northing) in UTM meters.
-            If it cannot be parsed or is not a position message,
-            then return None.
-    """
     if not line:
         return None
     line = line.strip()
     if not line:
         return None
 
-    # must start with $ and end with checksum
     if '$' != line[0]:
         logger.info("NMEA Missing line start")
         return None
@@ -218,46 +190,41 @@ def parseGpsPosition(line, debug=False):
         logger.info("NMEA Missing checksum")
         return None
 
-    nmea_checksum = parse_nmea_checksum(line)  # checksum as int
-    nmea_msg = line[1:-3]      # msg without $ and *## checksum
+    try:
+        nmea_checksum = parse_nmea_checksum(line)
+    except ValueError:
+        logger.info("Invalid checksum format")
+        return None
+
+    nmea_msg = line[1:-3]
     nmea_parts = nmea_msg.split(",")
     message = nmea_parts[0]
     if message in ["GPRMC", "GNRMC"]:
-        # like:
-        # '$GPRMC,003918.00,A,3806.92281,N,12235.64362,W,0.090,,060322,,,D*67'
-        # GPRMC = Recommended minimum specific GPS/Transit data
-
-        # verify checksum
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
             logger.info(f"NMEA checksum does not match: {nmea_checksum} != {calculated_checksum}")
             return None
 
-        # parse using pynmea2 for debugging
         if debug:
             try:
                 msg = pynmea2.parse(line)
             except pynmea2.ParseError as e:
-                logger.error('NMEA parse error detected: {}'.format(e))
+                logger.error(f'NMEA parse error detected: {e}')
                 return None
 
-        # Check GPS fix
         if nmea_parts[2] == 'V':
-            # V = Warning, no satellites in view
             logger.info("GPS receiver warning; position not valid. Ignoring invalid position.")
             return None
 
-        # Convert NMEA to degrees
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
         latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
 
         if debug:
             if hasattr(msg, 'longitude') and msg.longitude != longitude:
-                print(f"Longitude mismatch {msg.longitude} != {longitude}")
+                logger.info(f"Longitude mismatch {msg.longitude} != {longitude}")
             if hasattr(msg, 'latitude') and msg.latitude != latitude:
-                print(f"Latitude mismatch {msg.latitude} != {latitude}")
+                logger.info(f"Latitude mismatch {msg.latitude} != {latitude}")
 
-        # Convert degrees to UTM
         utm_position = utm.from_latlon(latitude, longitude)
         if debug:
             logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
@@ -265,53 +232,33 @@ def parseGpsPosition(line, debug=False):
         return float(utm_position[0]), float(utm_position[1])
 
     else:
-        # Non-position message OR invalid string
         pass
     return None
 
 def parse_nmea_checksum(nmea_line):
-    """
-    Given the complete NMEA line
-    (including starting '$' and ending checksum '*##')
-    calculate the checksum from the body of the line.
-    """
-    return int(nmea_line[-2:], 16)  # checksum hex digits as int
+    try:
+        return int(nmea_line[-2:], 16)
+    except ValueError:
+        logger.error("Failed to parse NMEA checksum.")
+        return None
 
 def calculate_nmea_checksum(nmea_line):
-    """
-    Given the complete NMEA line
-    (including starting '$' and ending checksum '*##')
-    calculate the checksum from the body of the line.
-    """
-    # XOR all characters in the message to get a one-byte checksum.
-    # Don't include starting '$' or trailing checksum '*##'
     return reduce(operator.xor, map(ord, nmea_line[1:-3]), 0)
 
 def nmea_to_degrees(gps_str, direction):
-    """
-    Convert a GPS coordinate string formatted as:
-    DDDMM.MMMMM, where DDD denotes the degrees
-    (which may have zero to 3 digits)
-    and MM.MMMMM denotes the minutes
-    to a float in degrees.
-    """
     if not gps_str or gps_str == "0":
         return 0
 
-    # Split into degrees and minutes
     parts = gps_str.split(".")
-    degrees_str = parts[0][:-2]        # results in zero to 3 digits
-    minutes_str = parts[0][-2:]        # always results in 2 digits
+    degrees_str = parts[0][:-2]
+    minutes_str = parts[0][-2:]
     if len(parts) == 2:
-        minutes_str += "." + parts[1]  # combine whole and fractional minutes
+        minutes_str += "." + parts[1]
 
-    # Convert to float
     degrees = float(degrees_str) if degrees_str else 0.0
     minutes = float(minutes_str) / 60 if minutes_str else 0.0
 
-    # Apply direction
     return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
-
 
 
 ''' The __main__ self test can log position
