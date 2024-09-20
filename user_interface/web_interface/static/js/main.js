@@ -9,8 +9,8 @@ function fetchSensorData() {
         .catch((error) => console.error('Error fetching sensor data:', error));
 }
 
-// Call the function at regular intervals, e.g., every 5 seconds
-setInterval(fetchSensorData, 5000);
+// Call the function at regular intervals, e.g., every 1 seconds
+setInterval(fetchSensorData, 1000);
 
 function updateSensorDisplay(data) {
     document.getElementById('bme280').textContent = `BME280: ${data.bme280}`;
