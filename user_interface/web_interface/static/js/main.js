@@ -72,9 +72,10 @@ let mapId = null;
 function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     const mapOptions = {
-        zoom: 28,
+        zoom: 35,
         center: defaultCoordinates,
         mapTypeId: 'satellite',
+        tilt: 0,
         disableDefaultUI: true,
     };
     map = new google.maps.Map(document.getElementById('map'), mapOptions);
