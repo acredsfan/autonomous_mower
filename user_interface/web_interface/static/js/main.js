@@ -13,20 +13,28 @@ function fetchSensorData() {
 setInterval(fetchSensorData, 1000);
 
 function updateSensorDisplay(data) {
-    document.getElementById('bme280').textContent = `BME280: ${data.bme280}`;
-    document.getElementById('accel').textContent = `Accelerometer: ${data.accel}`;
-    document.getElementById('compass').textContent = `Compass: ${data.compass}`;
-    document.getElementById('gyro').textContent = `Gyroscope: ${data.gyro}`;
-    document.getElementById('quaternion').textContent = `Quaternion: ${data.quaternion}`;
-    document.getElementById('speed').textContent = `Speed: ${data.speed}`;
-    document.getElementById('heading').textContent = `Heading: ${data.heading}`;
-    document.getElementById('pitch').textContent = `Pitch: ${data.pitch}`;
-    document.getElementById('roll').textContent = `Roll: ${data.roll}`;
-    document.getElementById('solar').textContent = `Solar: ${data.solar}`;
-    document.getElementById('battery').textContent = `Battery: ${data.battery}`;
-    document.getElementById('battery_charge').textContent = `Battery Charge: ${data.battery_charge}`;
-    document.getElementById('left_distance').textContent = `Left Distance: ${data.left_distance}`;
-    document.getElementById('right_distance').textContent = `Right Distance: ${data.right_distance}`;
+    const elements = {
+        'bme280': `BME280: ${JSON.stringify(data.bme280)}`,
+        'accel': `Accelerometer: ${JSON.stringify(data.accel)}`,
+        'compass': `Compass: ${JSON.stringify(data.compass)}`,
+        'gyro': `Gyroscope: ${JSON.stringify(data.gyro)}`,
+        'quaternion': `Quaternion: ${JSON.stringify(data.quaternion)}`,
+        'speed': `Speed: ${data.speed}`,
+        'heading': `Heading: ${data.heading}`,
+        'pitch': `Pitch: ${data.pitch}`,
+        'roll': `Roll: ${data.roll}`,
+        'solar': `Solar: ${JSON.stringify(data.solar)}`,
+        'battery': `Battery: ${JSON.stringify(data.battery)}`,
+        'battery_charge': `Battery Charge: ${data.battery_charge}`,
+        'left_distance': `Left Distance: ${data.left_distance}`,
+        'right_distance': `Right Distance: ${data.right_distance}`,
+    };
+    for (const [id, text] of Object.entries(elements)) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = text;
+        }
+    }
 }
 
 // Save settings for mowing days and hours
@@ -103,8 +111,8 @@ function initMap() {
 
     draggableMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
-        infoWindow.open(map, draggableMarker);
+        google.maps.infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+        google.maps.infoWindow.open(map, draggableMarker);
         document.getElementById('confirm-home-button').disabled = false;
     });
 
@@ -228,7 +236,7 @@ function loadMapScript(apiKey, mapId) {
 
 // function to get and draw the path on the map, if no path is available, it will not show anything
 function getPathAndDraw() {
-    fetch('/get_path')
+    fetch('/get-path')
         .then(response => response.json())
         .then(data => {
             if (data.path) {
