@@ -1,3 +1,5 @@
+# gps.py - Location: autonomous_mower\navigation_system\gps.py
+
 import argparse
 from functools import reduce
 import operator
@@ -12,20 +14,26 @@ from utilities import LoggerConfigDebug as LoggerConfig
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
 
+class SingletonMeta(type):
+    """
+    A thread-safe implementation of Singleton.
+    """
+    _instances = {}
+    _lock: threading.Lock = threading.Lock()
 
-class GpsNmeaPositions:
+    def __call__(cls, *args, **kwargs):
+        # Now, imagine that the program is simultaneously trying to create multiple instances
+        with cls._lock:
+            if cls not in cls._instances:
+                instance = super().__call__(*args, **kwargs)
+                cls._instances[cls] = instance
+        return cls._instances[cls]
+
+class GpsNmeaPositions(metaclass=SingletonMeta):
     """
     Donkeycar part to convert array of
     NMEA sentences into array of (x,y) positions
     """
-    _instance = None
-
-    def __new__(cls, debug=False):
-        if cls._instance is None:
-            cls._instance = super(GpsNmeaPositions, cls).__new__(cls)
-            cls._instance.__init__(debug)
-        return cls._instance
-
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -38,10 +46,6 @@ class GpsNmeaPositions:
                 position = parseGpsPosition(nmea, self.debug)
                 if position:
                     positions.append((ts, *position))
-                position = parseGpsPosition(nmea, self.debug)
-                if position:
-                    # output (ts,x,y) - so long is x, lat is y
-                    positions.append((ts, position[0], position[1]))
         return positions
 
     def update(self):
@@ -50,43 +54,23 @@ class GpsNmeaPositions:
     def run_threaded(self, lines):
         return self.run(lines)
 
-
-class GpsLatestPosition:
+class GpsLatestPosition(metaclass=SingletonMeta):
     """
     Return most recent valid GPS position
     """
-    _instance = None
-
-    def __new__(cls, debug=False):
-        if cls._instance is None:
-            cls._instance = super(GpsLatestPosition, cls).__new__(cls)
-            cls._instance.__init__(debug)
-        return cls._instance
-
-    def __init__(self, debug=False):
+    def __init__(self, gps_position_instance, debug=False):
         self.debug = debug
+        self.gps_position = gps_position_instance
         self.position = None
 
-    def run(self, positions):
-        if positions is not None and len(positions) > 0:
-            self.position = positions[-1]
+    def run(self):
+        self.position = self.gps_position.run()
         return self.position
 
-
-class GpsPosition:
+class GpsPosition(metaclass=SingletonMeta):
     """
     Donkeycar part to read NMEA lines from serial port and convert a position
     """
-    _instance = None
-
-    from hardware_interface import SerialPort
-
-    def __new__(cls, serial: SerialPort, debug=False):
-        if cls._instance is None:
-            cls._instance = super(GpsPosition, cls).__new__(cls)
-            cls._instance.__init__(serial, debug)
-        return cls._instance
-
     def __init__(self, serial_port, debug=False):
         from hardware_interface import SerialLineReader
         self.line_reader = SerialLineReader(serial_port)
@@ -124,20 +108,11 @@ class GpsPosition:
     def shutdown(self):
         return self.line_reader.shutdown()
 
-
-class GpsPlayer:
+class GpsPlayer(metaclass=SingletonMeta):
     """
     Part that plays back the NMEA sentences that have been recorded
     by the nmea logger that is passed to the constructor.
     """
-    _instance = None
-
-    def __new__(cls, nmea_logger: CsvLogger):
-        if cls._instance is None:
-            cls._instance = super(GpsPlayer, cls).__new__(cls)
-            cls._instance.__init__(nmea_logger)
-        return cls._instance
-
     def __init__(self, nmea_logger: CsvLogger):
         self.nmea = nmea_logger
         self.index = -1
@@ -183,18 +158,16 @@ class GpsPlayer:
         if self.running:
             # reset start time if None
             if self.starttime is None:
-                print("Resetting gps player start time.")
+                print("Resetting GPS player start time.")
                 self.starttime = now
 
-            # get first nmea sentence so we can get it's recorded time
+            # get first nmea sentence so we can get its recorded time
             start_nmea = self.nmea.get(0)
             if start_nmea is not None:
-                #
                 # get next nmea sentence and play it if
                 # it is within time.
                 # if there is no next sentence, then wrap
                 # around back to first sentence
-                #
                 start_nmea_time = float(start_nmea[0])
                 offset_nmea_time = 0
                 within_time = True
@@ -216,17 +189,17 @@ class GpsPlayer:
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
-                            nmea_sentences.append((next_nmea_time,
-                                                   next_nmea[1]))
+                            nmea_sentences.append((next_nmea_time, next_nmea[1]))
                             self.index += 1
         return nmea_sentences
 
+# Parsing and Utility Functions (unchanged)
 
 def parseGpsPosition(line, debug=False):
     """
     Given a line emitted by a GPS module,
     Parse out the position and return as a
-    return: tuple of float (longitude, latitude) as meters.
+    return: tuple of float (easting, northing) in UTM meters.
             If it cannot be parsed or is not a position message,
             then return None.
     """
@@ -237,7 +210,6 @@ def parseGpsPosition(line, debug=False):
         return None
 
     # must start with $ and end with checksum
-
     if '$' != line[0]:
         logger.info("NMEA Missing line start")
         return None
@@ -246,31 +218,22 @@ def parseGpsPosition(line, debug=False):
         logger.info("NMEA Missing checksum")
         return None
 
-    nmea_checksum = parse_nmea_checksum(line)  # ## checksum hex digits as int
+    nmea_checksum = parse_nmea_checksum(line)  # checksum as int
     nmea_msg = line[1:-3]      # msg without $ and *## checksum
     nmea_parts = nmea_msg.split(",")
     message = nmea_parts[0]
-    if (message == "GPRMC") or (message == "GNRMC"):
-
+    if message in ["GPRMC", "GNRMC"]:
         # like:
         # '$GPRMC,003918.00,A,3806.92281,N,12235.64362,W,0.090,,060322,,,D*67'
         # GPRMC = Recommended minimum specific GPS/Transit data
-        #
-        # make sure the checksum checks out
-        #
+
+        # verify checksum
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
-            logger.info(f"NMEA checksum does not match:"
-                        f"{nmea_checksum} != {calculated_checksum}")
+            logger.info(f"NMEA checksum does not match: {nmea_checksum} != {calculated_checksum}")
             return None
 
-        #
-        # parse against a known parser to check our parser
-        # TODO: if we hit a lot of corner cases that cause our
-        #       parser to fail, then switch over to the libarry.
-        #       Conversely, if our parser works then use it as
-        #       it is very lightweight.
-        #
+        # parse using pynmea2 for debugging
         if debug:
             try:
                 msg = pynmea2.parse(line)
@@ -278,71 +241,55 @@ def parseGpsPosition(line, debug=False):
                 logger.error('NMEA parse error detected: {}'.format(e))
                 return None
 
-        # Reading the GPS fix data is an alternative approach that also works
+        # Check GPS fix
         if nmea_parts[2] == 'V':
-            # V = Warning, most likely, there are no satellites in view...
-            logger.info("GPS receiver warning; position not valid."
-                        "Ignore invalid position.")
-        else:
-            #
-            # Convert the textual nmea position into degrees
-            #
-            longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
-            latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
+            # V = Warning, no satellites in view
+            logger.info("GPS receiver warning; position not valid. Ignoring invalid position.")
+            return None
 
-            if debug:
-                if msg.longitude != longitude:
-                    print(f"Longitude mismatch {msg.longitude} != {longitude}")
-                if msg.latitude != latitude:
-                    print(f"Latitude mismatch {msg.latitude} != {latitude}")
+        # Convert NMEA to degrees
+        longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
+        latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
 
-            #
-            # convert position in degrees to local meters
-            #
-            utm_position = utm.from_latlon(latitude, longitude)
-            if debug:
-                logger.info(f"UTM easting = {utm_position[0]},"
-                            f"UTM northing = {utm_position[1]}")
-                # return (longitude, latitude) as float degrees
-            return float(utm_position[0]), float(utm_position[1])
+        if debug:
+            if hasattr(msg, 'longitude') and msg.longitude != longitude:
+                print(f"Longitude mismatch {msg.longitude} != {longitude}")
+            if hasattr(msg, 'latitude') and msg.latitude != latitude:
+                print(f"Latitude mismatch {msg.latitude} != {latitude}")
+
+        # Convert degrees to UTM
+        utm_position = utm.from_latlon(latitude, longitude)
+        if debug:
+            logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
+
+        return float(utm_position[0]), float(utm_position[1])
+
     else:
         # Non-position message OR invalid string
-        # print(f"Ignoring line {line}")
         pass
     return None
 
-
 def parse_nmea_checksum(nmea_line):
     """
-    Given the complete nmea line
+    Given the complete NMEA line
     (including starting '$' and ending checksum '*##')
     calculate the checksum from the body of the line.
-    NOTE: this does not check for structural correctness, so you
-          should check that '$' and '*##' checksum are present before
-          calling this function.
     """
     return int(nmea_line[-2:], 16)  # checksum hex digits as int
 
-
 def calculate_nmea_checksum(nmea_line):
     """
-    Given the complete nmea line
+    Given the complete NMEA line
     (including starting '$' and ending checksum '*##')
     calculate the checksum from the body of the line.
-    NOTE: this does not check for structural correctness, so you
-          should check that '$' and '*##' checksum are present
-          and that the checksum matches before calling this function.
     """
-    #
-    # xor all characters in the message to get a one byte checksum.
-    # don't include starting '$' or trailing checksum '*##'
-    #
+    # XOR all characters in the message to get a one-byte checksum.
+    # Don't include starting '$' or trailing checksum '*##'
     return reduce(operator.xor, map(ord, nmea_line[1:-3]), 0)
-
 
 def nmea_to_degrees(gps_str, direction):
     """
-    Convert a gps coordinate string formatted as:
+    Convert a GPS coordinate string formatted as:
     DDDMM.MMMMM, where DDD denotes the degrees
     (which may have zero to 3 digits)
     and MM.MMMMM denotes the minutes
@@ -351,30 +298,20 @@ def nmea_to_degrees(gps_str, direction):
     if not gps_str or gps_str == "0":
         return 0
 
-    # pull out the degrees and minutes
-    # and then combine the minutes
-
+    # Split into degrees and minutes
     parts = gps_str.split(".")
     degrees_str = parts[0][:-2]        # results in zero to 3 digits
     minutes_str = parts[0][-2:]        # always results in 2 digits
-    if 2 == len(parts):
+    if len(parts) == 2:
         minutes_str += "." + parts[1]  # combine whole and fractional minutes
 
-    # convert degrees to a float
+    # Convert to float
+    degrees = float(degrees_str) if degrees_str else 0.0
+    minutes = float(minutes_str) / 60 if minutes_str else 0.0
 
-    degrees = 0.0
-    if len(degrees_str) > 0:
-        degrees = float(degrees_str)
-
-    # convert minutes a float in degrees
-
-    minutes = 0.0
-    if len(minutes_str) > 0:
-        minutes = float(minutes_str) / 60
-
-    # sum up the degrees and apply the direction as a sign
-
+    # Apply direction
     return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
+
 
 
 ''' The __main__ self test can log position
