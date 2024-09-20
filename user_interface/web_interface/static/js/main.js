@@ -66,13 +66,15 @@ let areaPolygon = null;
 let homeMarker = null;
 
 // Initialize map
-function initMap() {
+async function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
+    const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 28,
         center: defaultCoordinates,
         tilt: 0,
-        mapTypeId: google.maps.MapTypeId.HYBRID,
+        mapTypeId: google.maps.MapTypeId.SATELLITE,
         disableDefaultUI: true,
     });
 
@@ -85,6 +87,27 @@ function initMap() {
         }
     });
     drawingManager.setMap(map);
+
+    // Allow user to place marker for robot's home location
+    const infoWindow = new InfoWindow();
+
+    const draggableMarker = new AdvancedMarkerElement({
+        map,
+        position: defaultCoordinates,
+        gmpDraggable: true,
+        title: "Drag to Robot's Home Location.",
+        gmpIcon: {
+            url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            scaledSize: new google.maps.Size(32, 32),
+        },
+    });
+
+    draggableMarker.addListener("dragend", (event) => {
+        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+        infoWindow.open(map, draggableMarker);
+        document.getElementById('confirm-home-button').disabled = false;
+    });
 
     google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
         const polygon = event.overlay;
