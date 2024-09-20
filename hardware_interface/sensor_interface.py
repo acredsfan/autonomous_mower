@@ -223,6 +223,12 @@ class SensorInterface:
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+# Singleton accessor function
+sensor_interface_instance = SensorInterface()
+
+def get_sensor_interface():
+    return sensor_interface_instance
+
 
 if __name__ == "__main__":
     sensor_interface = SensorInterface()

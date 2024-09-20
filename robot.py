@@ -18,10 +18,10 @@ logging = LoggerConfig.get_logger(__name__)
 # Function to initialize all resources
 def initialize_resources():
     global sensor_interface, blade_controller, robohat_controller
-    from hardware_interface.sensor_interface import SensorInterface
+    from hardware_interface.sensor_interface import get_sensor_interface
 
     # Initialize sensor interface
-    sensor_interface = SensorInterface()
+    sensor_interface = get_sensor_interface()
     logging.info("Sensor interface initialized.")
     time.sleep(0.2)  # Allow time for sensors to initialize
 

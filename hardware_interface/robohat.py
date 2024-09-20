@@ -225,9 +225,9 @@ class RoboHATController:
         Calculates steering and throttle commands based on current and
         target positions.
         """
-        from hardware_interface.sensor_interface import SensorInterface
+        from hardware_interface.sensor_interface import get_sensor_interface
 
-        sensor_interface = SensorInterface()
+        sensor_interface = get_sensor_interface()
 
         # Calculate bearing between current_position and target_location
         bearing = self.calculate_bearing(

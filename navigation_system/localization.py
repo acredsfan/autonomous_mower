@@ -18,9 +18,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 class Localization:
     """Handles localization by estimating position and orientation."""
     _instance = None
-    from hardware_interface.sensor_interface import SensorInterface
+    from hardware_interface.sensor_interface import get_sensor_interface
 
-    sensor_interface = SensorInterface()
+    sensor_interface = get_sensor_interface()
 
     def __new__(cls):
         if cls._instance is None:

@@ -17,9 +17,9 @@ sys.path.append(project_root)
 
 from utilities import LoggerConfigDebug as LoggerConfig
 from hardware_interface.camera import get_camera_instance
+from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface import (
     BladeController,
-    SensorInterface,
     RoboHATController)
 
 
@@ -53,7 +53,7 @@ position_reader = GpsLatestPosition()  # Initialize position reader
 blade_controller = BladeController()
 localization = Localization()
 path_planning = PathPlanning(localization)
-sensor_interface = SensorInterface()
+sensor_interface = get_sensor_interface()
 
 
 # Initialize RoboHATDriver

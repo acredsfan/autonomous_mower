@@ -1,11 +1,11 @@
 # Test to ensure that the sensor readings are being read and reported correctly
 # import SensorInterface from hardware_interface folder
 import time
-from hardware_interface import SensorInterface
+from hardware_interface.sensor_interface import get_sensor_interface
 
 
 def test_sensor_readings():
-    sensor_interface = SensorInterface()
+    sensor_interface = get_sensor_interface()
     time.sleep(5)
     sensor_data = sensor_interface.sensor_data
     assert 'bme280' in sensor_data
