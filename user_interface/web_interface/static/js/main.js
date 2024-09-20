@@ -225,16 +225,18 @@ function loadMapScript(apiKey, mapId) {
     document.head.appendChild(script);
 }
 
+// function to get and draw the path on the map, if no path is available, it will not show anything
 function getPathAndDraw() {
-    fetch('/get-path', {
-        method: 'GET',
-    })
-    .then(response => response.json())
-    .then(data => {
-        drawPath(data);
-    })
-    .catch((error) => console.error('Error:', error));
+    fetch('/get_path')
+        .then(response => response.json())
+        .then(data => {
+            if (data.path) {
+                drawPath(data.path);
+            }
+        })
+        .catch(error => console.error('Error fetching path:', error));
 }
+
 
 function drawPath(coordinates) {
     var path = new google.maps.Polyline({
