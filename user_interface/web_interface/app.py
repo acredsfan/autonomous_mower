@@ -237,14 +237,12 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    from navigation_system import GpsNmeaPositions
-    gps_nmea_positions = GpsNmeaPositions()
-    lines = gps_nmea_positions.get_lines()
-    positions = position_reader.run(lines)
+    from navigation_system import GpsLatestPosition
+    gps_latest_position = GpsLatestPosition()
+    positions = gps_latest_position.run()
 
     if positions:
-        ts, easting, northing, zone_number, zone_letter = positions[-1]
-        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+        lat, lon = positions[0]
         return jsonify({'latitude': lat, 'longitude': lon})
     else:
         return jsonify({'error': 'No GPS data available'})
