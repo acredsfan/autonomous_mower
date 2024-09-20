@@ -4,12 +4,14 @@
 import time
 import board
 import busio
-from digitalio import DigitalInOut
+import gpiod
 import adafruit_bno08x
 from adafruit_bno08x.i2c import BNO08X_I2C
 
 i2c = busio.I2C(board.SCL, board.SDA)
-reset_pin = DigitalInOut(board.D7)
+chip = gpiod.Chip("gpiochip0")
+# Reset pin is connected to GPIO 7 on the Raspberry Pi.
+reset_pin = chip.get_line(7)
 bno = BNO08X_I2C(i2c, reset_pin, address=0x4B, debug=False)
 
 bno.begin_calibration()
