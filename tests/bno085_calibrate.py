@@ -12,7 +12,8 @@ i2c = busio.I2C(board.SCL, board.SDA)
 chip = gpiod.Chip("gpiochip0")
 # Reset pin is connected to GPIO 7 on the Raspberry Pi.
 reset_pin = chip.get_line(7)
-bno = BNO08X_I2C(i2c, reset_pin, address=0x4B, debug=False)
+# BNO is at address 0x4B
+bno = BNO08X_I2C(i2c, address=0x4B, reset=reset_pin)
 
 bno.begin_calibration()
 # TODO: UPDATE UART/SPI
