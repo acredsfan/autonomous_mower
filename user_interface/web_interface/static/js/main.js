@@ -73,7 +73,8 @@ let areaCoordinates = [];
 let homeLocation = null;
 let map;
 let areaPolygon = null;
-let homeMarker = null;
+let draggableMarker = null;  // Changed from homeMarker
+let robotMarker = null;
 let mapId = null;
 
 // Initialize map
@@ -98,11 +99,11 @@ function initMap() {
     });
     drawingManager.setMap(map);
 
-    // Use google.maps.InfoWindow instead of InfoWindow
+    // Use google.maps.InfoWindow for displaying info
     const infoWindow = new google.maps.InfoWindow();
 
-    // Use google.maps.Marker instead of AdvancedMarkerElement
-    const draggableMarker = new google.maps.Marker({
+    // Initialize the draggable marker for home location
+    draggableMarker = new google.maps.Marker({
         map: map,
         position: defaultCoordinates,
         draggable: true,
@@ -111,8 +112,8 @@ function initMap() {
 
     draggableMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-        google.maps.infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
-        google.maps.infoWindow.open(map, draggableMarker);
+        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+        infoWindow.open(map, draggableMarker);
         document.getElementById('confirm-home-button').disabled = false;
     });
 
@@ -125,21 +126,80 @@ function initMap() {
         document.getElementById('confirm-area-button').disabled = false;
     });
 
-    google.maps.event.addListener(map, 'click', function (event) {
-        if (homeMarker) {
-            homeMarker.setMap(null);
-        }
-        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-        homeMarker = new google.maps.Marker({
-            position: homeLocation,
-            map: map,
-            title: 'Home Location'
-        });
-        document.getElementById('confirm-home-button').disabled = false;
-    });
 
     // Load saved data
     loadSavedData();
+
+    // Start updating the robot's position
+    updateRobotPosition();
+    setInterval(updateRobotPosition, 1000); // Update every 1 second
+}
+
+// Function to update the robot's position
+function updateRobotPosition() {
+    fetch('/api/gps')
+        .then(response => response.json())
+        .then(data => {
+            if (data.latitude && data.longitude) {
+                const position = { lat: data.latitude, lng: data.longitude };
+                if (robotMarker) {
+                    robotMarker.setPosition(position);
+                } else {
+                    robotMarker = new google.maps.Marker({
+                        position: position,
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 6,
+                            fillColor: "#FF0000",     // Red color for the robot
+                            fillOpacity: 1,
+                            strokeWeight: 2,
+                            strokeColor: "#FFFFFF"    // White border
+                        },
+                        title: 'Robot Position'
+                    });
+                }
+            } else {
+                console.error('No GPS data available');
+            }
+        })
+        .catch(error => console.error('Error fetching robot position:', error));
+}
+
+// Load saved data from the server
+function loadSavedData() {
+    fetch('/get-mowing-area')
+        .then(response => response.json())
+        .then(data => {
+            if (data.length > 0) {
+                areaPolygon = new google.maps.Polygon({
+                    paths: data,
+                    editable: true
+                });
+                areaPolygon.setMap(map);
+            }
+        })
+        .catch(error => console.error('Error loading mowing area:', error));
+
+    fetch('/get-home-location')
+        .then(response => response.json())
+        .then(data => {
+            if (data.lat && data.lng) {
+                homeLocation = { lat: data.lat, lng: data.lng };
+                if (draggableMarker) {
+                    draggableMarker.setPosition(homeLocation);
+                } else {
+                    // If for some reason draggableMarker doesn't exist
+                    draggableMarker = new google.maps.Marker({
+                        map: map,
+                        position: homeLocation,
+                        draggable: true,
+                        title: "Drag to Robot's Home Location.",
+                    });
+                }
+            }
+        })
+        .catch(error => console.error('Error loading home location:', error));
 }
 
 // Save the mowing area
@@ -149,7 +209,7 @@ function saveMowingArea() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ mowingAreaCoordinates: areaCoordinates })
+        body: JSON.stringify(areaCoordinates)
     })
     .then(response => response.json())
     .then(() => alert('Mowing area saved successfully.'))
@@ -174,45 +234,22 @@ function saveHomeLocation() {
     .catch(error => console.error('Error:', error));
 }
 
-// Load saved data from the server
-function loadSavedData() {
-    fetch('/get-mowing-area')
-        .then(response => response.json())
-        .then(data => {
-            if (data.length > 0) {
-                areaPolygon = new google.maps.Polygon({
-                    paths: data,
-                    editable: true
-                });
-                areaPolygon.setMap(map);
-            }
-        })
-        .catch(error => console.error('Error loading mowing area:', error));
-
-    fetch('/get-home-location')
-        .then(response => response.json())
-        .then(data => {
-            if (data.lat && data.lng) {
-                homeLocation = { lat: data.lat, lng: data.lng };
-                homeMarker = new google.maps.Marker({
-                    position: homeLocation,
-                    map: map,
-                    title: 'Home Location'
-                });
-            }
-        })
-        .catch(error => console.error('Error loading home location:', error));
-}
-
 window.addEventListener('load', function () {
     let apiKey;
     let mapId;
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
-        fetch('/get_map_id').then(response => response.json())
+        fetch('/get_map_id').then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                // If map_id is not found, return null
+                return null;
+            }
+        })
     ]).then(([apiKeyData, mapIdData]) => {
         apiKey = apiKeyData.GOOGLE_MAPS_API_KEY;
-        mapId = mapIdData.map_id;
+        mapId = mapIdData ? mapIdData.map_id : null;
         loadMapScript(apiKey, mapId);
     }).catch(error => console.error('Error fetching data:', error));
 
@@ -231,6 +268,7 @@ function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId ? `&map_ids=${mapId}` : ''}`;
     script.defer = true;
+    script.async = true;
     document.head.appendChild(script);
 }
 
