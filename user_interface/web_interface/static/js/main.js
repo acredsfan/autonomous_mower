@@ -71,6 +71,7 @@ function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 28,
         center: defaultCoordinates,
+        tilt: 0,
         mapTypeId: google.maps.MapTypeId.HYBRID,
         disableDefaultUI: true,
     });
