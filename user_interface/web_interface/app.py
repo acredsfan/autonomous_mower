@@ -297,7 +297,7 @@ def get_map_id():
     map_id = os.getenv("MAP_ID")
 
     if map_id:
-        return jsonify({"MAP_ID": map_id})
+        return jsonify({"map_id": map_id})
     else:
         return jsonify({"error": "Map ID not found"}), 404
 

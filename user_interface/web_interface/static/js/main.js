@@ -64,19 +64,19 @@ let homeLocation = null;
 let map;
 let areaPolygon = null;
 let homeMarker = null;
+let mapId = null;
 
 // Initialize map
-async function initMap() {
+function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
-    const { Map, InfoWindow } = await google.maps.importLibrary("maps");
-    const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-    map = new google.maps.Map(document.getElementById('map'), {
+    const mapOptions = {
         zoom: 28,
         center: defaultCoordinates,
         tilt: 0,
-        mapTypeId: google.maps.MapTypeId.SATELLITE,
+        mapTypeId: 'satellite',
         disableDefaultUI: true,
-    });
+    };
+    map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
     const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: google.maps.drawing.OverlayType.POLYGON,
@@ -193,32 +193,27 @@ function loadSavedData() {
         .catch(error => console.error('Error loading home location:', error));
 }
 
-// Load the Google Maps script dynamically
-function loadMapScript(apiKey) {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}`;
-    script.defer = true;
-    document.head.appendChild(script);
-}
-
-// Handle loading of maps and other features when the page is ready
 window.addEventListener('load', function () {
-    fetch('/get_google_maps_api_key')
-        .then(response => response.json())
-        .then(data => {
-            loadMapScript(data.GOOGLE_MAPS_API_KEY);
-        })
-        .catch(error => console.error('Error fetching Google Maps API key:', error));
-    this.fetch('/get_map_id')
-        .then(response => response.json())
-        .then(data => {
-            mapId = data.map_id;
-        })
-        .catch(error => console.error('Error fetching map ID:', error));
+    let apiKey;
+    let mapId;
+    Promise.all([
+        fetch('/get_google_maps_api_key').then(response => response.json()),
+        fetch('/get_map_id').then(response => response.json())
+    ]).then(([apiKeyData, mapIdData]) => {
+        apiKey = apiKeyData.GOOGLE_MAPS_API_KEY;
+        mapId = mapIdData.map_id;
+        loadMapScript(apiKey, mapId);
+    }).catch(error => console.error('Error fetching data:', error));
 
     document.getElementById('confirm-area-button').addEventListener('click', saveMowingArea);
     document.getElementById('confirm-home-button').addEventListener('click', saveHomeLocation);
 });
+
+function loadMapScript(apiKey, mapId) {
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId ? `&map_ids=${mapId}` : ''}`;
+    script.defer = true;
+    document.head.appendChild(script);
 
 function getPathAndDraw() {
     fetch('/get-path', {

@@ -3,13 +3,8 @@
 {% block content %}
 <h1>Mowing Area and Home Location</h1>
 <div id="map"></div>
-<button id="confirm-area-button">Confirm Area</button>
-<button id="confirm-home-button">Set Home Location</button>
-
-<!-- Load main.js for all the required functionality -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="/static/js/main.js"></script>
-<script src="/socket.io/socket.io.js"></script>
+<button id="confirm-area-button" disabled>Confirm Area</button>
+<button id="confirm-home-button" disabled>Set Home Location</button>
 
 <style>
     #map {
@@ -17,4 +12,8 @@
         height: 600px;
     }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Additional scripts specific to this page can go here -->
 {% endblock %}
