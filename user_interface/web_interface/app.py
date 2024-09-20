@@ -1,3 +1,5 @@
+# app.py - Location: autonomous_mower\user_interface\web_interface\app.py
+
 from PIL import Image
 from io import BytesIO
 from flask_cors import CORS
@@ -20,8 +22,10 @@ from hardware_interface.camera import get_camera_instance
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface import (
     BladeController,
-    RoboHATController)
-
+    RoboHATController,
+    SerialPort
+)
+from navigation_system.gps import GpsPosition, GpsLatestPosition
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -37,7 +41,8 @@ socketio = SocketIO(
     cors_allowed_origins="*",
     async_mode='threading',
     engineio_logger=True,
-    ping_timeout=30)
+    ping_timeout=30
+)
 CORS(app)
 
 # Load environment variables
@@ -47,14 +52,17 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Initialize other components
 from navigation_system.path_planning import PathPlanning
-from navigation_system.gps import GpsLatestPosition
 from navigation_system.localization import Localization
-position_reader = GpsLatestPosition()  # Initialize position reader
+
+# Initialize SerialPort and GpsPosition
+serial_port = SerialPort(port='/dev/ttyUSB0', baudrate=9600, timeout=1)  # Update port as needed
+gps_position = GpsPosition(serial_port=serial_port, debug=True)
+position_reader = GpsLatestPosition(gps_position_instance=gps_position, debug=True)
+
 blade_controller = BladeController()
 localization = Localization()
 path_planning = PathPlanning(localization)
 sensor_interface = get_sensor_interface()
-
 
 # Initialize RoboHATDriver
 robohat_driver = RoboHATController()
@@ -65,11 +73,9 @@ stop_thread = False
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
-
 def utm_to_latlon(easting, northing, zone_number, zone_letter):
     lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
     return lat, lon
-
 
 def gen():
     camera = get_camera_instance()
@@ -90,8 +96,6 @@ def gen():
                 logging.error(f"Error encoding frame for streaming: {e}")
         else:
             logging.error("Failed to get the frame from the camera.")
-
-
 
 @app.route('/')
 def index():
@@ -121,12 +125,10 @@ def status():
     }
     return render_template('status.html', status=status_info)
 
-
 @app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
-
 
 @app.route('/control', methods=['POST'])
 def control():
@@ -135,7 +137,6 @@ def control():
     throttle = data.get('throttle', 0)
     robohat_driver.run_threaded(steering, throttle)
     return jsonify({'status': 'success'})
-
 
 @socketio.on('request_status')
 def handle_status_request():
@@ -153,7 +154,6 @@ def handle_status_request():
     }
     emit('update_status', data)
 
-
 @app.route('/video_feed')
 def video_feed():
     return Response(
@@ -163,7 +163,6 @@ def video_feed():
 @app.route('/camera_route')
 def camera_route():
     return render_template('camera.html')
-
 
 @socketio.on('request_frame')
 def handle_frame_request():
@@ -181,7 +180,6 @@ def handle_frame_request():
     else:
         logging.error("Failed to get the frame from the camera.")
 
-
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
@@ -189,13 +187,11 @@ def start_mowing():
     robot_test.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
-
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
     import robot_test
     robot_test.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
-
 
 @app.route('/get-mowing-area', methods=['GET'])
 def get_mowing_area():
@@ -208,11 +204,9 @@ def get_mowing_area():
     else:
         return jsonify({'message': 'No area saved yet.'})
 
-
 @app.route('/area', methods=['GET'])
 def area():
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
-
 
 @app.route('/settings', methods=['GET'])
 def settings():
@@ -224,7 +218,6 @@ def get_path():
     path = path_planning.get_path(start, goal)
     return jsonify(path)
 
-
 @app.route('/save-mowing-area', methods=['POST'])
 # Save coordinates of Polygon drawn on Google Maps
 def save_mowing_area():
@@ -234,19 +227,16 @@ def save_mowing_area():
         json.dump(coordinates, f)
     return jsonify({'message': 'Mowing area saved.'})
 
-
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    from navigation_system import GpsPosition
-    gps_latest_position = GpsPosition()
-    positions = gps_latest_position.run()
+    positions = position_reader.run()
 
     if positions:
-        lat, lon = positions[0]
+        # positions is a tuple: (easting, northing)
+        lat, lon = utm.to_latlon(*positions, force_zone_number=True)
         return jsonify({'latitude': lat, 'longitude': lon})
     else:
-        return jsonify({'error': 'No GPS data available'})
-
+        return jsonify({'error': 'No GPS data available'}), 404
 
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
@@ -277,7 +267,6 @@ def save_settings():
 
     return jsonify({'message': 'Settings saved.'})
 
-
 @app.route('/get_google_maps_api_key', methods=['GET'])
 def get_google_maps_api_key():
     # Fetch the API key from environment or configuration
@@ -288,7 +277,6 @@ def get_google_maps_api_key():
     else:
         return jsonify({"error": "API key not found"}), 404
 
-
 @app.route('/get_map_id', methods=['GET'])
 def get_map_id():
     # Fetch the map ID from the environment
@@ -298,7 +286,6 @@ def get_map_id():
         return jsonify({"map_id": map_id})
     else:
         return jsonify({"error": "Map ID not found"}), 404
-
 
 def get_schedule():
     # Check if the schedule file exists
@@ -311,12 +298,10 @@ def get_schedule():
         # Return default values if the schedule is not set
         return None, None
 
-
 @app.route('/stop', methods=['POST'])
 def stop():
     robohat_driver.run(0, 0)
     return jsonify({'status': 'stopped'})
-
 
 @app.route('/save-home-location', methods=['POST'])
 def save_home_location():
@@ -325,7 +310,6 @@ def save_home_location():
     with open('home_location.json', 'w') as f:
         json.dump(home_location, f)
     return jsonify({'message': 'Home location saved.'})
-
 
 @app.route('/get-home-location', methods=['GET'])
 def get_home_location():
@@ -336,7 +320,6 @@ def get_home_location():
         return jsonify(home_location)
     else:
         return jsonify({'message': 'No home location set yet.'})
-
 
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
@@ -370,16 +353,13 @@ def calculate_next_scheduled_mow():
 
     return "Not scheduled"
 
-
 def start_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(75)
 
-
 def stop_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(0)
-
 
 @app.route('/toggle_blades', methods=['POST'])
 def toggle_blades():
@@ -393,11 +373,9 @@ def toggle_blades():
         return jsonify({'message': 'Invalid state provided.'}), 400
     return jsonify({'message': f'Blades turned {state}.'})
 
-
 def stop_motors():
     # Stop the motors
     robohat_driver.run(0, 0)
-
 
 def start_web_interface():
     global stop_sensor_thread
@@ -412,7 +390,6 @@ def start_web_interface():
     sensor_interface.stop_thread = True
 
     sensor_thread.join()  # Wait for the thread to finish
-
 
 if __name__ == '__main__':
     start_web_interface()
