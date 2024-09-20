@@ -106,26 +106,49 @@ INSTALLATION INSTRUCTIONS:
     pip install -r requirements.txt
     ```
 
-6. Download the TensorFlow model file for object detection (the code in `camera_processing.py` looks for `lite-model_qat_mobilenet_v2_retinanet_256_1.tflite` in the `obstacle_detection` folder, so make sure to update the code if you use something different or if you move the file): [TensorFlow Model](https://tfhub.dev/google/lite-model/qat/mobilenet_v2_retinanet_256/1)
+6. Download your preferred TensorFlow model file for object detection, I'm currently using 'mobilenet_v2_1.0_224.tflite'
+    '''bash
+    wget https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1.tflite -O /PATH/TO/autonomous_mower/mobilenet_v2_1.0_224.tflite
+    '''
+
     1. If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change '/home/pi' to the folder where you cloned the repository):
     ```bash
     sudo chown -R pi:pi /home/pi/autonomous_mower/
     ```
 
-7. Obtain a Google Maps JavaScript API key following the instructions here: [Get API Key](https://developers.google.com/maps/documentation/javascript/get-api-key#create-api-keys)
+7. Obtain a Google Maps JavaScript API key and Map ID following the instructions at the bottom of this README.
 
-8. Update and save `.env.example` as `.env` with your Google Maps API key:
-    ```bash
-    cp .env.example .env
-    nano .env
-    ```
-    Add your API key to the `.env` file and save it.
+8. Update and save `.env.example` as `.env` with all necessary information.
 
 9. If using roboHat, then take rp2040_code.py from the robohat_files directory and load it on the RP2040 and rename to code.py
 
-10. Run `main.py` to start the program:
+10. Run `robot.py` to start the program:
     ```bash
-    python main.py
+    python robot.py
     ```
 
-11. Go to the web UI at `{hostname}.local:90` to set up the robot boundaries and schedules as well as to see sensor data/controls.
+11. Go to the web UI at `{hostname}.local:8080` to set up the robot boundaries and schedules as well as to see sensor data/controls.
+
+### Steps to Obtain a Google Maps API Key and Map ID
+
+1. **Get a Google Maps API Key**:
+   - Visit the [Google Cloud Console](https://console.cloud.google.com/).
+   - Create or select a project.
+   - Enable the **Maps JavaScript API** in the "APIs & Services > Library" section.
+   - Navigate to **APIs & Services > Credentials**, and click **Create Credentials > API Key**.
+   - Copy the generated API key.
+
+2. **Get a Map ID**:
+   - In the Google Cloud Console, navigate to **Google Maps Platform > Maps**.
+   - Click **Create Map ID**, provide a name, and configure any settings.
+   - Copy the generated Map ID.
+
+3. **Update the `.env` File**:
+   - After obtaining your API key and Map ID, update the `.env` file with these values:
+     ```
+     GOOGLE_MAPS_API_KEY=your-api-key
+     GOOGLE_MAPS_MAP_ID=your-map-id
+     ```
+
+4. **Save and Restart**:
+   - After updating the `.env` file, save the changes and restart the application.
