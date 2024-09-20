@@ -53,8 +53,6 @@
 </table>
 <img id="camera_feed" alt="Camera Feed" />
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-<script src="/static/js/main.js"></script>
 <script>
 socket.on('update_frame', function(data) {
     var image = document.getElementById('video');

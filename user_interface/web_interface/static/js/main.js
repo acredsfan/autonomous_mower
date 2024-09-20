@@ -214,6 +214,7 @@ function loadMapScript(apiKey, mapId) {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId ? `&map_ids=${mapId}` : ''}`;
     script.defer = true;
     document.head.appendChild(script);
+}
 
 function getPathAndDraw() {
     fetch('/get-path', {
@@ -240,7 +241,7 @@ function drawPath(coordinates) {
 // Call this function when you want to update the path
 getPathAndDraw();
 
-var socket = io.connect('http://' + document.domain + ':' + location.port);
+var socket = io();
 
 socket.on('update_frame', function(data) {
     var image = document.getElementById('video_feed');
