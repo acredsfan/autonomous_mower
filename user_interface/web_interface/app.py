@@ -54,8 +54,13 @@ google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 from navigation_system.path_planning import PathPlanning
 from navigation_system.localization import Localization
 
-# Initialize SerialPort and GpsPosition
-serial_port = SerialPort(port='/dev/ttyUSB0', baudrate=9600, timeout=1)  # Update port as needed
+# Read serial port configurations from environment variables
+serial_port_path = os.getenv("GPS_SERIAL_PORT", "/dev/ttyACM0")  # Default to /dev/ttyACM0
+serial_baudrate = int(os.getenv("GPS_BAUD_RATE", "9600"))
+serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
+
+# Initialize SerialPort and GpsPosition with environment configurations
+serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
 gps_position = GpsPosition(serial_port=serial_port, debug=True)
 position_reader = GpsLatestPosition(gps_position_instance=gps_position, debug=True)
 
