@@ -87,27 +87,27 @@ class GpsPosition:
             cls._instance.__init__(serial, debug)
         return cls._instance
 
-    def __init__(self, serial: SerialPort, debug=False) -> None:
+    def __init__(self, serial_port, debug=False):
         from hardware_interface import SerialLineReader
-        self.line_reader = SerialLineReader(serial)
+        self.line_reader = SerialLineReader(serial_port)
         self.debug = debug
-        self.position_reader = GpsNmeaPositions()
+        self.position_reader = GpsNmeaPositions(debug=self.debug)
         self.position = None
         self._start()
 
     def _start(self):
         # wait until we get at least one gps position
         while self.position is None:
-            logger.info("Waiting for gps fix")
+            logger.info("Waiting for GPS fix...")
             self.position = self.run()
 
     def run_once(self, lines):
-        positions = self.GpsNmeaPositions.run(lines)
-        if positions is not None and len(positions) > 0:
+        positions = self.position_reader.run(lines)
+        if positions:
             self.position = positions[-1]
             if self.debug:
-                logger.info(f"UTM long = {self.position[0]},"
-                            f"UTM lat = {self.position[1]}")
+                logger.info(f"UTM easting = {self.position[0]}, "
+                            f"UTM northing = {self.position[1]}")
         return self.position
 
     def run(self):
