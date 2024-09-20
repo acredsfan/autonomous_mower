@@ -9,7 +9,7 @@ import adafruit_bno08x
 from adafruit_bno08x.i2c import BNO08X_I2C
 
 i2c = busio.I2C(board.SCL, board.SDA)
-reset_pin = DigitalInOut(board.D8)
+reset_pin = DigitalInOut(board.D7)
 bno = BNO08X_I2C(i2c, reset_pin, address=0x4B, debug=False)
 
 bno.begin_calibration()
