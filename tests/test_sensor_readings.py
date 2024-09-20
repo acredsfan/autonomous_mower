@@ -1,11 +1,12 @@
 # Test to ensure that the sensor readings are being read and reported correctly
 # import SensorInterface from hardware_interface folder
 import time
-from hardware_interface.sensor_interface import get_sensor_interface
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
 
 def test_sensor_readings():
+    from hardware_interface.sensor_interface import get_sensor_interface
     sensor_interface = get_sensor_interface()
     time.sleep(5)
     sensor_data = sensor_interface.sensor_data
