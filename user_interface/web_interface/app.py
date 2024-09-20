@@ -284,12 +284,23 @@ def save_settings():
 def get_google_maps_api_key():
     # Fetch the API key from environment or configuration
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-    
+
     if google_maps_api_key:
         return jsonify({"GOOGLE_MAPS_API_KEY": google_maps_api_key})
     else:
         return jsonify({"error": "API key not found"}), 404
-    
+
+
+@app.route('/get_map_id', methods=['GET'])
+def get_map_id():
+    # Fetch the map ID from the environment
+    map_id = os.getenv("MAP_ID")
+
+    if map_id:
+        return jsonify({"MAP_ID": map_id})
+    else:
+        return jsonify({"error": "Map ID not found"}), 404
+
 
 def get_schedule():
     # Check if the schedule file exists

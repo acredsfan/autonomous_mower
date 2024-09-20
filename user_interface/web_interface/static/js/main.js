@@ -196,7 +196,7 @@ function loadSavedData() {
 // Load the Google Maps script dynamically
 function loadMapScript(apiKey) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}`;
     script.defer = true;
     document.head.appendChild(script);
 }
@@ -209,6 +209,12 @@ window.addEventListener('load', function () {
             loadMapScript(data.GOOGLE_MAPS_API_KEY);
         })
         .catch(error => console.error('Error fetching Google Maps API key:', error));
+    this.fetch('/get_map_id')
+        .then(response => response.json())
+        .then(data => {
+            mapId = data.map_id;
+        })
+        .catch(error => console.error('Error fetching map ID:', error));
 
     document.getElementById('confirm-area-button').addEventListener('click', saveMowingArea);
     document.getElementById('confirm-home-button').addEventListener('click', saveHomeLocation);
