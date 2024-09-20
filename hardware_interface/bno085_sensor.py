@@ -58,14 +58,13 @@ class BNO085Sensor:
             return {}
 
     @staticmethod
-    def read_bno085_quaternion(sensor):
-        """Read BNO085 rotation vector quaternion data."""
+    def calculate_quaternion(sensor):
+        """Calculate Quaternion based on BNO085 rotation vector data."""
         try:
-            quat_i, quat_j, quat_k, quat_real = sensor.quaternion
-            return {'i': quat_i, 'j': quat_j, 'k': quat_k, 'real': quat_real}
+            q0, q1, q2, q3 = sensor.quaternion
+            return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
         except Exception as e:
-            logging.error(f"Error reading BNO085 quaternion: {e}")
-            return {}
+            logging.error(f"Error calculating Quaternion: {e}")
 
     @staticmethod
     def calculate_heading(sensor):

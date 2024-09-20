@@ -54,27 +54,9 @@
 <img id="camera_feed" alt="Camera Feed" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script src="/static/js/main.js"></script>
 <script>
 var socket = io.connect('http://' + document.domain + ':' + location.port);
-
-socket.on('update_status', function(data) {
-    document.getElementById('battery-voltage').textContent = `${data.battery.battery_voltage || 'N/A'} V`;
-    document.getElementById('battery-current').textContent = `${data.battery.battery_current || 'N/A'} A`;
-    document.getElementById('battery-charge-level').textContent = `${data.battery_charge || 'N/A'}%`;
-    document.getElementById('solar-voltage').textContent = `${data.solar.solar_voltage || 'N/A'} V`;
-    document.getElementById('solar-current').textContent = `${data.solar.solar_current || 'N/A'} A`;
-    document.getElementById('speed').textContent = `${data.speed || 'N/A'} m/s`;
-    document.getElementById('heading').textContent = `${data.heading || 'N/A'} °`;
-    document.getElementById('temperature').textContent = `${data.bme280.temperature || 'N/A'} °C`;
-    document.getElementById('humidity').textContent = `${data.bme280.humidity || 'N/A'} %`;
-    document.getElementById('pressure').textContent = `${data.bme280.pressure || 'N/A'} hPa`;
-    document.getElementById('left-distance').textContent = `${data.left_distance || 'N/A'} cm`;
-    document.getElementById('right-distance').textContent = `${data.right_distance || 'N/A'} cm`;
-});
-
-setInterval(function() {
-    socket.emit('request_status');
-}, 1000);
 
 socket.on('update_frame', function(data) {
     var image = document.getElementById('video');

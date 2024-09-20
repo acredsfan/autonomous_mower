@@ -16,6 +16,7 @@ from .gpio_manager import GPIOManager
 
 logging = LoggerConfigDebug.get_logger(__name__)
 
+
 class SensorInterface:
     _instance = None
     _lock = threading.Lock()
@@ -113,7 +114,7 @@ class SensorInterface:
             return {}
 
     def update_sensors(self):
-        """Read sensor data periodically 
+        """Read sensor data periodically
         and update shared sensor data."""
         while not self.stop_thread:
             try:
@@ -124,7 +125,7 @@ class SensorInterface:
                         BME280Sensor.read_bme280,
                         "BME280"
                     )
-                    
+
                     # Read and store BNO085 sensor data
                     self.sensor_data['accel'] = self.read_sensor_data(
                         self.sensors['bno085'],
@@ -160,21 +161,16 @@ class SensorInterface:
                         BNO085Sensor.calculate_speed,
                         "BNO085 Speed"
                     )
-                    self.sensor_data['quaternion'] = self.read_sensor_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.read_bno085_quaternion,
-                        "BNO085 Quaternion"
-                    )
-                
+
                     # Read and store INA3221 sensor data
                     self.sensor_data['solar'] = self.read_sensor_data(
                         self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 1), 
+                        lambda s: INA3221Sensor.read_ina3221(s, 1),
                         "INA3221 Solar"
                     )
                     self.sensor_data['battery'] = self.read_sensor_data(
                         self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 3), 
+                        lambda s: INA3221Sensor.read_ina3221(s, 3),
                         "INA3221 Battery"
                     )
                     self.sensor_data['battery_charge'] = self.read_sensor_data(
@@ -182,16 +178,16 @@ class SensorInterface:
                         INA3221Sensor.battery_charge,
                         "Battery Charge"
                     )
-                
+
                     # Read and store VL53L0X sensor data
                     self.sensor_data['left_distance'] = self.read_sensor_data(
                         self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(s[0]), 
+                        lambda s: VL53L0XSensors.read_vl53l0x(s[0]),
                         "VL53L0X Left Distance"
                     )
                     self.sensor_data['right_distance'] = self.read_sensor_data(
                         self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(s[1]), 
+                        lambda s: VL53L0XSensors.read_vl53l0x(s[1]),
                         "VL53L0X Right Distance"
                     )
                 time.sleep(1.0)  # Adjust the update interval as needed
