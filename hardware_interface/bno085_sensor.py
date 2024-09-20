@@ -79,7 +79,7 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating heading: {e}")
             return -1
-    
+
     @staticmethod
     def calculate_pitch(sensor):
         """Calculate pitch from BNO085 sensor data."""
@@ -90,18 +90,19 @@ class BNO085Sensor:
         except Exception as e:
             logging.error(f"Error calculating pitch: {e}")
             return -1
-        
+
     @staticmethod
     def calculate_roll(sensor):
         """Calculate roll from BNO085 sensor data."""
         try:
             x, y, z = sensor.acceleration
+            y = max(min(y, 1.0), -1.0)  # Clamp y to the range [-1, 1]
             roll = math.degrees(math.asin(y))
             return roll
         except Exception as e:
             logging.error(f"Error calculating roll: {e}")
             return -1
-        
+
     @staticmethod
     def calculate_speed(sensor):
         """Calculate speed from BNO085 sensor data."""
