@@ -237,9 +237,9 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    from navigation_system import GpsLatestPosition
-    gps_latest_position = GpsLatestPosition()
-    positions = gps_latest_position.run(positions)
+    from navigation_system import GpsPosition
+    gps_latest_position = GpsPosition()
+    positions = gps_latest_position.run()
 
     if positions:
         lat, lon = positions[0]
