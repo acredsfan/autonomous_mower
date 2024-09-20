@@ -294,7 +294,7 @@ def get_google_maps_api_key():
 @app.route('/get_map_id', methods=['GET'])
 def get_map_id():
     # Fetch the map ID from the environment
-    map_id = os.getenv("MAP_ID")
+    map_id = os.getenv("GOOGLE_MAPS_MAP_ID")
 
     if map_id:
         return jsonify({"map_id": map_id})
