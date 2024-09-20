@@ -239,7 +239,7 @@ def save_mowing_area():
 def get_gps():
     from navigation_system import GpsLatestPosition
     gps_latest_position = GpsLatestPosition()
-    positions = gps_latest_position.run()
+    positions = gps_latest_position.run(positions)
 
     if positions:
         lat, lon = positions[0]
