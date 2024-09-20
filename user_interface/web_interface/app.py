@@ -79,6 +79,8 @@ def gen():
             try:
                 # Convert frame (numpy array) to an image using Pillow
                 image = Image.fromarray(frame)
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')  # Ensure image is in RGB mode
                 buffer = BytesIO()
                 image.save(buffer, format="JPEG")
                 frame = buffer.getvalue()
@@ -88,6 +90,7 @@ def gen():
                 logging.error(f"Error encoding frame for streaming: {e}")
         else:
             logging.error("Failed to get the frame from the camera.")
+
 
 
 @app.route('/')

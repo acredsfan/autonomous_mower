@@ -85,6 +85,7 @@ class BNO085Sensor:
         """Calculate pitch from BNO085 sensor data."""
         try:
             x, y, z = sensor.acceleration
+            x = max(min(x, 1.0), -1.0)  # Clamp x to the range [-1, 1]
             pitch = math.degrees(math.asin(-x))
             return pitch
         except Exception as e:
