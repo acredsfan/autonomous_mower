@@ -15,7 +15,7 @@ import utm
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
 
-from utilities import LoggerConfigDebug as LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.camera import get_camera_instance
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface import (
