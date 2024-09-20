@@ -4,14 +4,13 @@
 import time
 import board
 import busio
-import gpiod
+import digitalio
 import adafruit_bno08x
 from adafruit_bno08x.i2c import BNO08X_I2C
 
 i2c = busio.I2C(board.SCL, board.SDA)
-chip = gpiod.Chip("gpiochip0")
-# Reset pin is connected to GPIO 7 on the Raspberry Pi.
-reset_pin = chip.get_line(7)
+# Reset pin is connected to GPIO 7 (Pin 26) on the Raspberry Pi.
+reset_pin = digitalio.DigitalInOut(board.D26)
 # BNO is at address 0x4B
 bno = BNO08X_I2C(i2c, address=0x4B, reset=reset_pin)
 
