@@ -8,10 +8,12 @@ import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
 
+
+# Test 5 times in 1 second intervals to ensure sensor readings are being read and reported correctly
 def test_sensor_readings():
     from hardware_interface.sensor_interface import get_sensor_interface
     sensor_interface = get_sensor_interface()
-    time.sleep(5)
+    time.sleep(1)
     sensor_data = sensor_interface.sensor_data
     assert 'bme280' in sensor_data
     assert 'accel' in sensor_data
@@ -53,5 +55,13 @@ def test_sensor_readings():
 
 
 if __name__ == '__main__':
+    test_sensor_readings()
+    time.sleep(1)
+    test_sensor_readings()
+    time.sleep(1)
+    test_sensor_readings()
+    time.sleep(1)
+    test_sensor_readings()
+    time.sleep(1)
     test_sensor_readings()
 # Compare this snippet from tests/test_sensor_readings.py:
