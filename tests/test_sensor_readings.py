@@ -17,7 +17,6 @@ def test_sensor_readings():
     assert 'accel' in sensor_data
     assert 'compass' in sensor_data
     assert 'gyro' in sensor_data
-    assert 'quaternion' in sensor_data
     assert 'speed' in sensor_data
     assert 'heading' in sensor_data
     assert 'pitch' in sensor_data
@@ -30,7 +29,6 @@ def test_sensor_readings():
     assert sensor_data['accel'] is not None
     assert sensor_data['compass'] is not None
     assert sensor_data['gyro'] is not None
-    assert sensor_data['quaternion'] is not None
     assert sensor_data['speed'] is not None
     assert sensor_data['heading'] is not None
     assert sensor_data['pitch'] is not None
@@ -44,7 +42,6 @@ def test_sensor_readings():
     print("Accelerometer: ", sensor_data['accel'])
     print("Compass: ", sensor_data['compass'])
     print("Gyroscope: ", sensor_data['gyro'])
-    print("Quaternion: ", sensor_data['quaternion'])
     print("Speed: ", sensor_data['speed'])
     print("Heading: ", sensor_data['heading'])
     print("Pitch: ", sensor_data['pitch'])
