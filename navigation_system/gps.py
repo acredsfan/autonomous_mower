@@ -4,15 +4,22 @@ import argparse
 from functools import reduce
 import operator
 import threading
-import time
-
 import pynmea2
 import utm
+import time
+import os
+import sys
+
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(project_root)
+
 from utilities import CsvLogger
 from utilities import LoggerConfigDebug as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
+
 
 class SingletonMeta(type):
     """
