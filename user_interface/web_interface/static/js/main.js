@@ -103,7 +103,7 @@ function initMap() {
     const infoWindow = new google.maps.InfoWindow();
 
     // Initialize the draggable marker for home location
-    draggableMarker = new google.maps.Marker({
+    draggableMarker = new google.maps.marker.AdvancedMarkerElement({
         map: map,
         position: defaultCoordinates,
         draggable: true,
@@ -145,7 +145,7 @@ function updateRobotPosition() {
                 if (robotMarker) {
                     robotMarker.setPosition(position);
                 } else {
-                    robotMarker = new google.maps.Marker({
+                    robotMarker = new google.maps.marker.AdvancedMarkerElement({
                         position: position,
                         map: map,
                         icon: {
@@ -190,7 +190,7 @@ function loadSavedData() {
                     draggableMarker.setPosition(homeLocation);
                 } else {
                     // If for some reason draggableMarker doesn't exist
-                    draggableMarker = new google.maps.Marker({
+                    draggableMarker = new google.maps.marker.AdvancedMarkerElement({
                         map: map,
                         position: homeLocation,
                         draggable: true,
@@ -270,7 +270,7 @@ window.addEventListener('load', function () {
 
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId ? `&map_ids=${mapId}` : ''}`;
     script.defer = true;
     script.async = true;
     document.head.appendChild(script);
