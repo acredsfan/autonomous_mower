@@ -270,7 +270,7 @@ window.addEventListener('load', function () {
 
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}` : ''}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}`;
     script.defer = true;
     script.async = true;
     document.head.appendChild(script);
