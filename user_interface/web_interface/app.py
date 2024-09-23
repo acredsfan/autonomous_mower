@@ -159,11 +159,11 @@ def handle_status_request():
     }
     emit('update_status', data)
 
+camera = get_camera_instance()
+
 @app.route('/video_feed')
 def video_feed():
-    return Response(
-        gen(),  # Calls the gen() function that yields camera frames
-        mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(camera.stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/camera_route')
 def camera_route():
