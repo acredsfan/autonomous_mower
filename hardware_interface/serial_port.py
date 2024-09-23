@@ -6,6 +6,7 @@ import threading
 import time
 import platform
 from dotenv import load_dotenv
+import os
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
