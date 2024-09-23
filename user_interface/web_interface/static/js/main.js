@@ -301,12 +301,7 @@ getPathAndDraw();
 
 var socket = io();
 
-socket.on('update_frame', function(data) {
-    var image = document.getElementById('video_feed');
-    image.src = 'data:image/jpeg;base64,' + data.frame;
+window.addEventListener('load', function () {
+    const videoFeedElement = document.getElementById('video_feed');
+    videoFeedElement.src = 'http://<OBJECT_DETECTION_IP>:5000/video_feed';  // Update <OBJECT_DETECTION_IP> with the actual IP
 });
-
-// Request a new frame every 500ms (or whatever interval you prefer)
-setInterval(function() {
-    socket.emit('request_frame');  // Request a frame every 500ms
-}, 500);
