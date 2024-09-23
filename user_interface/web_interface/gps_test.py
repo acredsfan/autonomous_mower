@@ -8,7 +8,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 sys.path.append(project_root)
 
 from navigation_system.gps import GpsPosition, GpsLatestPosition
-from hardware_interface import SerialPort
+from hardware_interface.serial_port import SerialPort
 
 # Initialize the serial port
 serial_port = SerialPort(port='/dev/ttyACM0', baudrate=9600, timeout=1)
