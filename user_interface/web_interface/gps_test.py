@@ -39,4 +39,4 @@ def get_gps():
         return jsonify({'error': 'No GPS data available'}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, reloader_type='stat')
