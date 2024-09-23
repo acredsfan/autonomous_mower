@@ -48,7 +48,6 @@ CORS(app)
 # Load environment variables
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
-google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Initialize other components
 from navigation_system.path_planning import PathPlanning
@@ -291,6 +290,16 @@ def get_map_id():
         return jsonify({"map_id": map_id})
     else:
         return jsonify({"error": "Map ID not found"}), 404
+    
+@app.route('/get_obj_det_ip', methods=['GET'])
+def get_obj_det_ip():
+    # Fetch the map ID from the environment
+    obj_det_id = os.getenv("OBJECT_DETECTION_IP")
+
+    if obj_det_id:
+        return jsonify({"object_detection_ip": obj_det_id})
+    else:
+        return jsonify({"error": "Object Detection IP not found"}), 404
 
 def get_schedule():
     # Check if the schedule file exists
