@@ -102,7 +102,7 @@ def gen():
 def index():
     next_scheduled_mow = calculate_next_scheduled_mow()
     return render_template('index.html',
-                           google_maps_api_key=google_maps_api_key,
+                           google_maps_api_key=,
                            next_scheduled_mow=next_scheduled_mow)
 
 @app.route('/status')
@@ -207,6 +207,7 @@ def get_mowing_area():
 
 @app.route('/area', methods=['GET'])
 def area():
+    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
 
