@@ -217,11 +217,13 @@ def area():
 def settings():
     return render_template('settings.html')
 
+
 @app.route('/get-path', methods=['GET'])
 def get_path():
     start, goal = path_planning.get_start_and_goal()
     path = path_planning.get_path(start, goal)
     return jsonify(path)
+
 
 @app.route('/save-mowing-area', methods=['POST'])
 # Save coordinates of Polygon drawn on Google Maps
@@ -232,12 +234,14 @@ def save_mowing_area():
         json.dump(coordinates, f)
     return jsonify({'message': 'Mowing area saved.'})
 
+
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
+    logging.info("Starting get_gps")
     positions = position_reader.run()
+    logging.info(f"positions: {positions}")
 
     if positions:
-        # positions is a tuple: (easting, northing)
         lat, lon = utm.to_latlon(*positions, force_zone_number=True)
         return jsonify({'latitude': lat, 'longitude': lon})
     else:

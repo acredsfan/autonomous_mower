@@ -1,7 +1,12 @@
 from flask import Flask, jsonify
 import logging
+from navigation_system.gps import GpsLatestPosition
+import utm
+
+position_reader = GpsLatestPosition()
 
 app = Flask(__name__)
+
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
@@ -14,6 +19,7 @@ def get_gps():
         return jsonify({'latitude': lat, 'longitude': lon})
     else:
         return jsonify({'error': 'No GPS data available'}), 404
+
 
 if __name__ == '__main__':
     app.run(debug=True)
