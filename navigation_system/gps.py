@@ -1,5 +1,3 @@
-# gps.py - Location: autonomous_mower/navigation_system/gps.py
-
 import argparse
 from functools import reduce
 import operator

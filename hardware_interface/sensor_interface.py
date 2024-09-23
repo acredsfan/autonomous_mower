@@ -1,5 +1,3 @@
-# sensor_interface.py
-
 import threading
 from utilities import LoggerConfigDebug
 import board
