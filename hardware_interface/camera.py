@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 import os
 import cv2
 from utilities import LoggerConfigInfo as LoggerConfig
+import socket
+import requests
+from flask import Flask, Response
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -17,6 +20,8 @@ load_dotenv()
 # Retrieve the path to the object detection model from the .env file
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 
+# Flask app for video stream
+app = Flask(__name__)
 
 class SingletonCamera:
     _instance = None
@@ -30,11 +35,10 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
-        """Initialize the camera using Picamera2
-        and start the update thread."""
+        """Initialize the camera using Picamera2 and start the update thread."""
         self.frame_queue = Queue(maxsize=1)
         self.picam2 = Picamera2()
-        self.picam2.configure(self.picam2.create_preview_configuration())
+        self.picam2.configure(self.picam2.create_video_configuration(main={"size": (640, 480)}))
         self.picam2.start()
         self.running = True
         self.read_thread = threading.Thread(target=self.update, daemon=True)
@@ -42,12 +46,11 @@ class SingletonCamera:
         self.queue_lock = threading.Lock()
 
     def update(self):
+        """Capture frames from the camera."""
         while self.running:
             frame = self.picam2.capture_array()
             if frame is None:
-                logging.warning(
-                    "Failed to read frame from camera. "
-                    "Attempting reinitialization.")
+                logging.warning("Failed to read frame from camera. Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
 
@@ -60,147 +63,73 @@ class SingletonCamera:
                 self.frame_queue.put(frame)
 
     def get_frame(self):
+        """Get the latest frame from the camera."""
         with self.queue_lock:
             try:
-                return self.frame_queue.get(timeout=0.1)
+                return self.frame_queue.get_nowait()
             except Empty:
-                logging.info("Frame queue is empty")
                 return None
 
-    def reinitialize_camera(self):
-        """Reinitialize the camera if it fails."""
-        if self.picam2 is not None:
-            self.picam2.stop()
-            logging.info("Releasing previous camera capture.")
-            self.picam2.start()
-            logging.info("Camera reinitialized successfully.")
-
-    def stop_camera(self):
-        """Stop the camera and release resources."""
-        self.running = False
-        if self.read_thread.is_alive():
-            self.read_thread.join()
-        if self.picam2 is not None:
-            self.picam2.stop()
-            logging.info("Camera stopped successfully.")
-
-    def __del__(self):
-        self.stop_camera()
-
-
-class CameraProcessor:
-    def __init__(self):
-        self.camera = SingletonCamera()
-        try:
-            # Load the MobileNetV2 model for object detection and surface
-            # classification
-            self.interpreter = tflite.Interpreter(
-                model_path=PATH_TO_OBJECT_DETECTION_MODEL)
-            self.interpreter.allocate_tensors()
-        except (FileNotFoundError, ValueError) as e:
-            logging.error(f"Failed to initialize TFLite interpreter: {e}")
-
-        # Input and output details
-        self.input_details = self.interpreter.get_input_details()
-        self.output_details = self.interpreter.get_output_details()
-
-    def preprocess_image(self, image, target_size=(224, 224)):
-        """Preprocess the image for the TFLite model."""
-        image = cv2.resize(image, target_size)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = image / 255.0
-        image = np.expand_dims(image, axis=0).astype(np.float32)
-        return image
-
-    def detect_objects(self, image):
-        """Run object detection and surface
-        classification using MobileNetV2."""
-        processed_image = self.preprocess_image(image)
-        self.interpreter.set_tensor(
-            self.input_details[0]['index'],
-            processed_image)
-        self.interpreter.invoke()
-        detection_boxes = self.interpreter.get_tensor(
-            self.output_details[0]['index'])
-        detection_classes = self.interpreter.get_tensor(
-            self.output_details[1]['index'])
-        detection_scores = self.interpreter.get_tensor(
-            self.output_details[2]['index'])
-        return self.process_results(
-            detection_boxes,
-            detection_classes,
-            detection_scores)
-
-    def process_results(
-            self,
-            detection_boxes,
-            detection_classes,
-            detection_scores):
-        """Process the results from the TFLite model
-        to extract detected objects and surfaces."""
-        threshold = 0.5
-        detected_objects = []
-        for i in range(len(detection_scores[0])):
-            if detection_scores[0][i] > threshold:
-                class_id = int(detection_classes[0][i])
-                box = detection_boxes[0][i]
-                # Replace with actual label mapping if available
-                label = f'Class {class_id}'
-                detected_objects.append({'label': label, 'box': box})
-        return detected_objects
+    def stream_video(self):
+        while True:
+            frame = self.picam2.capture_array()
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
     def detect_obstacle(self):
-        """Detect if any obstacles are present."""
-        image = self.camera.get_frame()
-        if image is None:
+        """Attempt to detect obstacles via Pi 5. Fallback to local detection if necessary."""
+        frame = self.get_frame()
+        if frame is None:
             logging.warning("No frame available for detection.")
             return False
 
-        results = self.detect_objects(image)
+        try:
+            # Try sending frame to Pi 5 for remote obstacle detection
+            response = requests.post('http://<PI5_IP>:5000/detect', files={'image': frame})
+            if response.status_code == 200:
+                logging.info(f"Obstacle detected remotely: {response.json()}")
+                return response.json().get('obstacle_detected', False)
+        except requests.ConnectionError:
+            logging.warning("Pi 5 not reachable. Falling back to local detection.")
+        
+        # Fallback to local obstacle detection using TFLite
+        return self.local_obstacle_detection(frame)
+
+    def local_obstacle_detection(self, frame):
+        """Run obstacle detection locally using TFLite model."""
+        # Add code here to run detection with TFLite interpreter on the Pi 4
+        results = self.detect_objects(frame)
         if results:
-            logging.info(f"Obstacle detected: {results}")
+            logging.info(f"Local obstacle detected: {results}")
             return True
         else:
-            logging.info("No obstacles detected.")
+            logging.info("No local obstacles detected.")
             return False
 
-    def detect_dropoff(self):
-        """Detect if a drop-off is present."""
-        image = self.camera.get_frame()
-        if image is None:
-            logging.warning("No frame available for detection.")
-            return False
-
-        results = self.detect_objects(image)
-        if results:
-            logging.info(f"Drop-off detected: {results}")
-            return True
-        else:
-            logging.info("No drop-offs detected.")
-            return False
-
-    def classify_obstacle(self):
-        """Classify the detected obstacle using the TFLite model."""
-        image = self.camera.get_frame()
-        if image is None:
-            logging.warning("No frame available for classification.")
-            return []
-
-        return self.detect_objects(image)
-
+    def detect_objects(self, image):
+        """Run inference with TFLite and detect objects."""
+        # You can use the existing TFLite detection code here
+        detected_objects = []
+        # Add logic for TFLite model inference and returning results
+        return detected_objects
+    
 
 # Singleton accessor function
-camera_instance = SingletonCamera()  # Ensures the camera is initialized once
+camera_instance = SingletonCamera()
 
 
 def get_camera_instance():
     """Accessor function to get the SingletonCamera instance."""
     return camera_instance
 
+# Flask route to serve the video stream
+@app.route('/video_feed')
+def video_feed():
+    return Response(camera_instance.stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# Example usage
+
 if __name__ == "__main__":
-    camera_processor = CameraProcessor()
-    while True:
-        obstacle_detected = camera_processor.detect_obstacle()
-        print(f"Obstacle detected: {obstacle_detected}")
+    # Start Flask server for video streaming
+    app.run(host='0.0.0.0', port=8000)
