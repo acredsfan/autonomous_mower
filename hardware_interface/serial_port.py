@@ -22,11 +22,6 @@ class SerialPort:
     """
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(SerialPort, cls).__new__(cls)
-        return cls._instance
-
     def __init__(
             self,
             port: str = '/dev/ttyACM0',
@@ -46,16 +41,21 @@ class SerialPort:
         self.ser = None
 
     def start(self):
-        for item in serial.tools.list_ports.comports():
-            logger.info(item)  # list all the serial ports
-        self.ser = serial.Serial(
-            self.port,
-            self.baudrate,
-            self.bits,
-            self.parity,
-            self.stop_bits,
-            timeout=self.timeout)
-        logger.debug("Opened serial port " + self.ser.name)
+        # for item in serial.tools.list_ports.comports():
+        #    logger.info(item)  # list all the serial ports
+        logger.debug(f"Attempting to open serial port {self.port}...")
+        try:
+            self.ser = serial.Serial(
+                self.port,
+                self.baudrate,
+                self.bits,
+                self.parity,
+                self.stop_bits,
+                timeout=self.timeout)
+            logger.debug("Opened serial port " + self.ser.name)
+        except Exception as e:
+            logger.error(f"Error opening serial port: {e}")
+            raise
         return self
 
     def stop(self):
@@ -197,18 +197,13 @@ class SerialLineReader:
     """
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(SerialLineReader, cls).__new__(cls)
-        return cls._instance
-
     def __init__(
             self,
             serial: SerialPort,
             max_lines: int = 0,
             debug: bool = False):
         self.serial = serial
-        self.max_lines = max_lines  # max number of lines per read cycle
+        self.max_lines = max_lines  # Max number of lines per read cycle
         self.debug = debug
         self.lines = []
         self.lock = threading.Lock()
