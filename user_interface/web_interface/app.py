@@ -1,5 +1,3 @@
-# app.py - Location: autonomous_mower\user_interface\web_interface\app.py
-
 from PIL import Image
 from io import BytesIO
 from flask_cors import CORS
@@ -213,6 +211,17 @@ def get_mowing_area():
 def area():
     return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
+@app.route('/api/gps', methods=['GET'])
+def get_gps():
+    logging.info("Starting get_gps")
+    positions = position_reader.run()
+    logging.info(f"positions: {positions}")
+
+    if positions:
+        lat, lon = utm.to_latlon(*positions, force_zone_number=True)
+        return jsonify({'latitude': lat, 'longitude': lon})
+    else:
+        return jsonify({'error': 'No GPS data available'}), 404
 @app.route('/settings', methods=['GET'])
 def settings():
     return render_template('settings.html')

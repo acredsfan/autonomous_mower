@@ -1,7 +1,14 @@
 from flask import Flask, jsonify
 import logging
-from navigation_system.gps import GpsLatestPosition
 import utm
+import os
+import sys
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
+
+
+from navigation_system.gps import GpsLatestPosition
 
 position_reader = GpsLatestPosition()
 
