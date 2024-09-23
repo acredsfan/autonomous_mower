@@ -107,9 +107,9 @@ INSTALLATION INSTRUCTIONS:
     ```
 
 6. Download your preferred TensorFlow model file for object detection, I'm currently using 'mobilenet_v2_1.0_224.tflite'
-    '''bash
+    ```bash
     wget https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1.tflite -O /PATH/TO/autonomous_mower/mobilenet_v2_1.0_224.tflite
-    '''
+    ```
 
     1. If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change '/home/pi' to the folder where you cloned the repository):
     ```bash

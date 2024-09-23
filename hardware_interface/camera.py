@@ -23,6 +23,7 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 # Flask app for video stream
 app = Flask(__name__)
 
+
 class SingletonCamera:
     _instance = None
     _lock = threading.Lock()
@@ -93,7 +94,7 @@ class SingletonCamera:
                 return response.json().get('obstacle_detected', False)
         except requests.ConnectionError:
             logging.warning("Pi 5 not reachable. Falling back to local detection.")
-        
+
         # Fallback to local obstacle detection using TFLite
         return self.local_obstacle_detection(frame)
 
@@ -114,7 +115,16 @@ class SingletonCamera:
         detected_objects = []
         # Add logic for TFLite model inference and returning results
         return detected_objects
-    
+
+
+    def object_detected_flag(self):
+        ''' Check if either remote or local obstacle detection has detected an obstacle and
+        return a flag that avoidance algorithm can use to avoid the obstacle'''
+        # Check if obstacle is detected by either remote or local detection
+        if self.detect_obstacle():
+            return True
+        return False
+
 
 # Singleton accessor function
 camera_instance = SingletonCamera()

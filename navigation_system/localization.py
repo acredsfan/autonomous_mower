@@ -18,9 +18,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 class Localization:
     """Handles localization by estimating position and orientation."""
     _instance = None
-    from hardware_interface.sensor_interface import get_sensor_interface
-
-    sensor_interface = get_sensor_interface()
 
     def __new__(cls):
         if cls._instance is None:
@@ -45,6 +42,13 @@ class Localization:
         self.max_lat = max_lat
         self.min_lng = min_lng
         self.max_lng = max_lng
+        self.sensor_interface = None
+
+    def get_sensor_interface(self):
+        if self.sensor_interface is None:
+            from hardware_interface.sensor_interface import get_sensor_interface
+            self.sensor_interface = get_sensor_interface()
+        return self.sensor_interface
 
     def load_json_file(self, file_name):
         """Load data from a JSON file."""
@@ -60,7 +64,8 @@ class Localization:
           fused with IMU data from the BNO085."""
         # Get latest GPS and IMU data
         gps_data = self.latest_position.run()
-        imu_data = self.get_sensor_interface().update_sensors()
+        sensor_interface = self.get_sensor_interface()
+        imu_data = sensor_interface().update_sensors()
 
         if gps_data and imu_data:
             # Extract relevant data
@@ -107,9 +112,10 @@ class Localization:
           heading, and time."""
         # Convert heading to radians
         heading_rad = math.radians(heading)
+        sensor_interface = self.get_sensor_interface()
 
         # Calculate distance traveled based on speed and time
-        speed = self.get_sensor_interface().update_sensors().get("speed")
+        speed = sensor_interface().update_sensors().get("speed")
         distance = speed * time_delta
 
         # Calculate the change in latitude and longitude
@@ -125,8 +131,9 @@ class Localization:
 
     def estimate_orientation(self):
         """Estimate the current orientation using compass data."""
+        sensor_interface = self.get_sensor_interface()
         try:
-            sensor_data = self.get_sensor_interface().update_sensors()
+            sensor_data = sensor_interface().update_sensors()
             compass_data = sensor_data.get("compass")
             if compass_data is not None:
                 x, y, z = compass_data

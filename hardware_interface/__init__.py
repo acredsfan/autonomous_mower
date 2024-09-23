@@ -6,7 +6,7 @@ from .bno085_sensor import BNO085Sensor
 from .ina3221_sensor import INA3221Sensor
 from .gpio_manager import GPIOManager
 from .sensor_interface import SensorInterface
-from .camera import SingletonCamera, CameraProcessor
+from .camera import SingletonCamera
 from .serial_port import SerialLineReader, SerialPort
 
 __all__ = [
@@ -20,7 +20,6 @@ __all__ = [
     'GPIOManager',
     'SensorInterface',
     'SingletonCamera',
-    'CameraProcessor',
     'SerialLineReader',
     'SerialPort'
 ]

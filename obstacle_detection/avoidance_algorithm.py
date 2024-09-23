@@ -46,9 +46,7 @@ class ObstacleAvoidance:
 
 class AvoidanceAlgorithm:
     def __init__(self, path_planner, motor_controller, sensor_interface):
-        from hardware_interface.camera import CameraProcessor
-
-        self.camera = CameraProcessor()
+        self.camera_obstacle_flag = None
         self.path_planner = path_planner
         self.motor_controller = motor_controller
         self.sensor_interface = sensor_interface
