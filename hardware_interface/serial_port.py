@@ -5,9 +5,17 @@ import serial.tools.list_ports
 import threading
 import time
 import platform
+from dotenv import load_dotenv
+
+dotenv_path = '/home/pi/autonomous_mower/.env'
+load_dotenv(dotenv_path)
 
 
 logger = LoggerConfigInfo.get_logger(__name__)
+
+
+GPS_PORT = os.getenv('GPS_PORT')
+GPS_BAUDRATE = os.getenv('GPS_BAUDRATE')
 
 
 class SerialPort:
@@ -24,8 +32,8 @@ class SerialPort:
 
     def __init__(
             self,
-            port: str = '/dev/ttyACM0',
-            baudrate: int = 115200,
+            port: str = GPS_PORT,
+            baudrate: int = GPS_BAUDRATE,
             bits: int = 8,
             parity: str = 'N',
             stop_bits: int = 1,
