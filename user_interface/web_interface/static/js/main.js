@@ -237,6 +237,7 @@ function saveHomeLocation() {
 window.addEventListener('load', function () {
     let apiKey;
     let mapId;
+    let object_detect_ip;
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => {
@@ -246,12 +247,15 @@ window.addEventListener('load', function () {
                 // If map_id is not found, return null
                 return null;
             }
-        })
-    ]).then(([apiKeyData, mapIdData]) => {
-        apiKey = apiKeyData.GOOGLE_MAPS_API_KEY;
-        mapId = mapIdData ? mapIdData.map_id : null;
+        }),
+        fetch('/get_object_detection_ip').then(response => response.json())
+    ]).then(([key, id, ip]) => {
+        apiKey = key;
+        mapId = id;
+        object_detect_ip = ip;
         loadMapScript(apiKey, mapId);
-    }).catch(error => console.error('Error fetching data:', error));
+    }
+    );
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
     if (confirmAreaButton) {
@@ -303,5 +307,5 @@ var socket = io();
 
 window.addEventListener('load', function () {
     const videoFeedElement = document.getElementById('video_feed');
-    videoFeedElement.src = 'http://<OBJECT_DETECTION_IP>:5000/video_feed';  // Update <OBJECT_DETECTION_IP> with the actual IP
+    videoFeedElement.src = `http://${object_detect_ip}:5000/video_feed`;
 });
