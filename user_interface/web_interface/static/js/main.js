@@ -252,7 +252,7 @@ window.addEventListener('load', function () {
     ]).then(([key, id, ip]) => {
         apiKey = key;
         mapId = id;
-        oobj_det_ip = ip;
+        obj_det_ip = ip;
         loadMapScript(apiKey, mapId);
     }
     );
@@ -307,5 +307,5 @@ var socket = io();
 
 window.addEventListener('load', function () {
     const videoFeedElement = document.getElementById('video_feed');
-    videoFeedElement.src = `http://${object_detect_ip}:5000/video_feed`;
+    videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
 });
