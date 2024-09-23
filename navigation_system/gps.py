@@ -21,17 +21,20 @@ logger = logger_config.get_logger(__name__)
 
 class SingletonMeta(type):
     """
-    A thread-safe implementation of Singleton.
+    A thread-safe implementation of Singleton with per-class locks.
     """
     _instances = {}
-    _lock: threading.Lock = threading.Lock()
+
+    def __init__(cls, name, bases, dict):
+        cls._lock = threading.Lock()  # Each class gets its own lock
+        super().__init__(name, bases, dict)
 
     def __call__(cls, *args, **kwargs):
         with cls._lock:
-            if cls not in cls._instances:
+            if cls not in SingletonMeta._instances:
                 instance = super().__call__(*args, **kwargs)
-                cls._instances[cls] = instance
-        return cls._instances[cls]
+                SingletonMeta._instances[cls] = instance
+        return SingletonMeta._instances[cls]
 
 class GpsNmeaPositions(metaclass=SingletonMeta):
     """

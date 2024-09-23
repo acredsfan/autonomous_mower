@@ -11,7 +11,7 @@ from navigation_system.gps import GpsPosition, GpsLatestPosition
 from hardware_interface.serial_port import SerialPort
 
 # Initialize the serial port
-serial_port = SerialPort(port='/dev/ttyACM0', baudrate=9600, timeout=1)
+serial_port = SerialPort(port='/dev/ttyACM0', baudrate=11520, timeout=1)
 
 # Create an instance of GpsPosition
 gps_position = GpsPosition(serial_port=serial_port, debug=True)
