@@ -64,8 +64,7 @@ class Localization:
           fused with IMU data from the BNO085."""
         # Get latest GPS and IMU data
         gps_data = self.latest_position.run()
-        sensor_interface = self.get_sensor_interface()
-        imu_data = sensor_interface().update_sensors()
+        imu_data = self.get_sensor_interface().update_sensors()
 
         if gps_data and imu_data:
             # Extract relevant data
