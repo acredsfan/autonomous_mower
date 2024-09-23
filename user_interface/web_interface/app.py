@@ -19,7 +19,7 @@ from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.camera import get_camera_instance
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat_controller import RoboHATController
+from hardware_interface.robohat import RoboHATController
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
 
