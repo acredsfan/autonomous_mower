@@ -61,6 +61,7 @@ serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
 # Initialize SerialPort and GpsPosition with environment configurations
 serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
 gps_position = GpsPosition(serial_port=serial_port, debug=True)
+gps_position.start()
 position_reader = GpsLatestPosition(gps_position_instance=gps_position, debug=True)
 
 blade_controller = BladeController()

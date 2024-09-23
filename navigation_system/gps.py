@@ -85,12 +85,15 @@ class GpsPosition(metaclass=SingletonMeta):
         self.position = None
         self.running = True
         self.lock = threading.Lock()
+
+    def start(self):
         self.thread = threading.Thread(target=self._read_gps, daemon=True)
         self.thread.start()
 
     def _read_gps(self):
         while self.running:
             try:
+                logger.debug("Reading GPS data...")
                 positions = self.run()
                 if positions:
                     with self.lock:
