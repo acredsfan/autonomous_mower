@@ -14,8 +14,8 @@ load_dotenv(dotenv_path)
 logger = LoggerConfigInfo.get_logger(__name__)
 
 
-GPS_PORT = os.getenv('GPS_PORT')
-GPS_BAUDRATE = os.getenv('GPS_BAUDRATE')
+GPS_PORT = os.getenv('GPS_SERIAL_PORT')
+GPS_BAUDRATE = os.getenv('GPS_BAUD_RATE')
 
 
 class SerialPort:

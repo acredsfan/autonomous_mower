@@ -7,11 +7,18 @@ import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
 
+dotenv_path = '/home/pi/autonomous_mower/.env'
+load_dotenv(dotenv_path)
+
+
+GPS_PORT = os.getenv('GPS_SERIAL_PORT')
+GPS_BAUDRATE = os.getenv('GPS_BAUD_RATE')
+
 from navigation_system.gps import GpsPosition, GpsLatestPosition
 from hardware_interface.serial_port import SerialPort
 
 # Initialize the serial port
-serial_port = SerialPort(port='/dev/ttyACM0', baudrate=38400, timeout=1)
+serial_port = SerialPort(port=GPS_PORT, baudrate=GPS_BAUDRATE, timeout=1)
 
 # Create an instance of GpsPosition
 gps_position = GpsPosition(serial_port=serial_port, debug=True)
