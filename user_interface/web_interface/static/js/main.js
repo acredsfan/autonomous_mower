@@ -237,7 +237,7 @@ function saveHomeLocation() {
 window.addEventListener('load', function () {
     let apiKey;
     let mapId;
-    let object_detect_ip;
+    let obj_det_ip;
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => {
@@ -248,11 +248,11 @@ window.addEventListener('load', function () {
                 return null;
             }
         }),
-        fetch('/get_object_detection_ip').then(response => response.json())
+        fetch('/get_obj_det_ip').then(response => response.json())
     ]).then(([key, id, ip]) => {
         apiKey = key;
         mapId = id;
-        object_detect_ip = ip;
+        oobj_det_ip = ip;
         loadMapScript(apiKey, mapId);
     }
     );
