@@ -113,6 +113,11 @@ async function initMap() {
         position: homeLocation || defaultCoordinates,
         gmpDraggable: true,
         title: "Robot Home Location - Drag to Change.",
+        content: pinBackground.element,
+    });
+
+    const pinBackground = new PinElement({
+        background: "#00a1e0" // Blue color for the home marker
     });
 
         // Attach the event listener to the correct marker (homeMarker)
