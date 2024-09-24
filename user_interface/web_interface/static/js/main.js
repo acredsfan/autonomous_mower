@@ -248,11 +248,9 @@ window.addEventListener('load', function () {
                 return null;
             }
         }),
-        fetch('/get_obj_det_ip').then(response => response.json())
-    ]).then(([key, id, ip]) => {
+    ]).then(([key, id]) => {
         apiKey = key;
         mapId = id;
-        obj_det_ip = ip;
         loadMapScript(apiKey, mapId);
     }
     );
@@ -306,6 +304,17 @@ getPathAndDraw();
 var socket = io();
 
 window.addEventListener('load', function () {
+    let obj_det_ip;
+    fetch('/get_obj_det_ip').then(response => response.json())
+        .then(data => {
+            obj_det_ip = data;
+            socket.emit('connect', { ip: obj_det_ip });
+        });
+
+    socket.on('connect', function (data) {
+        console.log('Connected to object detection server');
+    }
+    );
     const videoFeedElement = document.getElementById('video_feed');
     videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
 });
