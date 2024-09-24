@@ -107,12 +107,14 @@ function initMap() {
     const infoWindow = new google.maps.InfoWindow();
 
     // Initialize the draggable marker for home location
-    draggableMarker = AdvancedMarkerElementOptions.gmpDraggable({
-        map: map,
-        position: defaultCoordinates,
-        draggable: true,
-        title: "Drag to Robot's Home Location.",
-    });
+    markerPromise.then((Marker) => {
+        // Initialize the draggable marker for home location
+        homeMarker = new Marker({
+            map: map,
+            position: defaultCoordinates,
+            draggable: true,
+            title: "Drag to Robot's Home Location.",
+        });
 
     draggableMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
