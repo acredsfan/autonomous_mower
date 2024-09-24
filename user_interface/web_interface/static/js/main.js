@@ -107,7 +107,7 @@ function initMap() {
     const infoWindow = new google.maps.InfoWindow();
 
     // Initialize the draggable marker for home location
-    draggableMarker = new google.maps.marker.AdvancedMarkerElement({
+    draggableMarker = AdvancedMarkerElementOptions.gmpDraggable({
         map: map,
         position: defaultCoordinates,
         draggable: true,
