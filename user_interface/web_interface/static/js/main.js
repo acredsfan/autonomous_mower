@@ -237,7 +237,6 @@ function saveHomeLocation() {
 window.addEventListener('load', function () {
     let apiKey;
     let mapId;
-    let obj_det_ip;
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => {
@@ -248,12 +247,11 @@ window.addEventListener('load', function () {
                 return null;
             }
         }),
-    ]).then(([key, id]) => {
-        apiKey = key;
-        mapId = id;
+    ]).then(([keyData, idData]) => {
+        apiKey = keyData.GOOGLE_MAPS_API_KEY;
+        mapId = idData ? idData.map_id : null;
         loadMapScript(apiKey, mapId);
-    }
-    );
+    });
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
     if (confirmAreaButton) {
