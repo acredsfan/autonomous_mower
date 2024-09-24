@@ -106,7 +106,16 @@ function initMap() {
     // Use google.maps.InfoWindow for displaying info
     const infoWindow = new google.maps.InfoWindow();
 
-    // Initialize the draggable marker for home location
+    // Load the Marker library
+    const markerPromise = new Promise((resolve) => {
+        map.addListener("tilesloaded", () => {
+            const script = document.createElement("script");
+            script.src = "https://unpkg.com/@googlemaps/marker";
+            script.onload = () => resolve(google.maps.marker.Marker);
+            document.head.appendChild(script);
+        });
+    });
+
     markerPromise.then((Marker) => {
         // Initialize the draggable marker for home location
         homeMarker = new Marker({
@@ -116,11 +125,13 @@ function initMap() {
             title: "Drag to Robot's Home Location.",
         });
 
-    draggableMarker.addListener("dragend", (event) => {
-        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
-        infoWindow.open(map, draggableMarker);
-        document.getElementById('confirm-home-button').disabled = false;
+        // Attach the event listener to the correct marker (homeMarker)
+        homeMarker.addListener("dragend", (event) => {
+            homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+            infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+            infoWindow.open(map, homeMarker); // Open the info window on the homeMarker
+            document.getElementById('confirm-home-button').disabled = false;
+        });
     });
 
     google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
