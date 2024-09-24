@@ -41,8 +41,8 @@ socketio = SocketIO(
 )
 CORS(app)
 
-# Load environment variables
-dotenv_path = '/home/pi/autonomous_mower/.env'
+# Load environment variables from .env in project_root directory
+dotenv_path = os.path.join(project_root, '.env')
 load_dotenv(dotenv_path)
 
 # Initialize other components
