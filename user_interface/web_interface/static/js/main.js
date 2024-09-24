@@ -78,8 +78,10 @@ let robotMarker = null;
 let mapId = null; // Store the Map ID once fetched
 
 // Initialize map
-function initMap() {
+async function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
+    const { AdvancedMarkerElement } = await google.maps.imporLibrary('marker');
+    const { Map, InfoWindow } = await google.maps.imporLibrary("maps")
     const mapOptions = {
         zoom: 20, 
         center: defaultCoordinates,
@@ -91,7 +93,7 @@ function initMap() {
         mapOptions.mapId = mapId; 
     }
 
-    map = new google.maps.Map(document.getElementById('map'), mapOptions);
+    map = new Map(document.getElementById('map'), mapOptions);
 
     const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: google.maps.drawing.OverlayType.POLYGON,
@@ -106,27 +108,15 @@ function initMap() {
     // Use google.maps.InfoWindow for displaying info
     const infoWindow = new google.maps.InfoWindow();
 
-    // Load the Marker library
-    const markerPromise = new Promise((resolve) => {
-        map.addListener("tilesloaded", () => {
-            const script = document.createElement("script");
-            script.src = "https://unpkg.com/@googlemaps/marker";
-            script.onload = () => resolve(google.maps.marker.Marker);
-            document.head.appendChild(script);
-        });
+    const homeLocationMarker = new AdvancedMarkerElement({
+        map: map,
+        position: homeLocation || defaultCoordinates,
+        gmpDraggable: true,
+        title: "Robot Home Location - Drag to Change.",
     });
 
-    markerPromise.then((Marker) => {
-        // Initialize the draggable marker for home location
-        homeMarker = new Marker({
-            map: map,
-            position: defaultCoordinates,
-            draggable: true,
-            title: "Drag to Robot's Home Location.",
-        });
-
         // Attach the event listener to the correct marker (homeMarker)
-        homeMarker.addListener("dragend", (event) => {
+        homeLocationMarker.addListener("dragend", (event) => {
             homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
             infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
             infoWindow.open(map, homeMarker); // Open the info window on the homeMarker
@@ -173,7 +163,7 @@ function updateRobotPosition() {
                             strokeWeight: 2,
                             strokeColor: "#FFFFFF"    // White border
                         },
-                        title: 'Robot Position'
+                        title: 'Robot Current Position'
                     });
                 }
             } else {
