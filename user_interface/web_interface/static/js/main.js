@@ -69,13 +69,37 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 });
 
+window.addEventListener('load', function () {
+    let apiKey;
+    let mapId; // Fetch the Map ID
+
+    Promise.all([
+        fetch('/get_google_maps_api_key').then(response => response.json()),
+        fetch('/get_map_id').then(response => response.json()), // Fetch Map ID
+    ]).then(([keyData, idData]) => {
+        apiKey = keyData.GOOGLE_MAPS_API_KEY;
+        mapId = idData.map_id; // Store the Map ID
+        loadMapScript(apiKey, mapId); 
+    });
+
+    const confirmAreaButton = document.getElementById('confirm-area-button');
+    if (confirmAreaButton) {
+        confirmAreaButton.addEventListener('click', saveMowingArea);
+    }
+
+    const confirmHomeButton = document.getElementById('confirm-home-button');
+    if (confirmHomeButton) {
+        confirmHomeButton.addEventListener('click', saveHomeLocation);
+    }
+});
+
 let areaCoordinates = [];
 let homeLocation = null;
 let map;
 let areaPolygon = null;
 let homeMarker = null;
 let robotMarker = null;
-let mapId = null; // Store the Map ID once fetched
+
 
 // Initialize map
 async function initMap() {
@@ -202,6 +226,7 @@ function loadSavedData() {
                         draggable: true,
                         title: "Drag to Robot's Home Location.",
                     });
+                    draggableMarker.setMap(map);
                 }
             }
         })
@@ -240,29 +265,7 @@ function saveHomeLocation() {
     .catch(error => console.error('Error:', error));
 }
 
-window.addEventListener('load', function () {
-    let apiKey;
-    let mapId; // Fetch the Map ID
 
-    Promise.all([
-        fetch('/get_google_maps_api_key').then(response => response.json()),
-        fetch('/get_map_id').then(response => response.json()), // Fetch Map ID
-    ]).then(([keyData, idData]) => {
-        apiKey = keyData.GOOGLE_MAPS_API_KEY;
-        mapId = idData.map_id; // Store the Map ID
-        loadMapScript(apiKey, mapId); 
-    });
-
-    const confirmAreaButton = document.getElementById('confirm-area-button');
-    if (confirmAreaButton) {
-        confirmAreaButton.addEventListener('click', saveMowingArea);
-    }
-
-    const confirmHomeButton = document.getElementById('confirm-home-button');
-    if (confirmHomeButton) {
-        confirmHomeButton.addEventListener('click', saveHomeLocation);
-    }
-});
 
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
