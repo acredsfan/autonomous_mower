@@ -102,12 +102,12 @@ let robotMarker = null;
 
 
 // Initialize map
-async function initMap(apiKey, mapId) {
+async function initMap(mapId) {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
         "marker",
     );
-    const map = new Map(document.getElementById('map'), {
+    map = new Map(document.getElementById('map'), {
         zoom: 20, 
         center: defaultCoordinates,
         mapTypeId: 'satellite',
@@ -310,10 +310,10 @@ window.addEventListener('load', function () {
     fetch('/get_obj_det_ip').then(response => response.json())
         .then(data => {
             obj_det_ip = data;
-            socket.emit('connect', { ip: obj_det_ip });
+            socket.emit('video_connection', { ip: obj_det_ip });
         });
 
-    socket.on('connect', function (data) {
+    socket.on('video_connection', function (data) {
         console.log('Connected to object detection server');
     }
     );
