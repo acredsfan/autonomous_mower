@@ -80,8 +80,9 @@ let mapId = null; // Store the Map ID once fetched
 // Initialize map
 async function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
-    const { AdvancedMarkerElement } = await google.maps.imporLibrary('marker');
-    const { Map, InfoWindow } = await google.maps.imporLibrary("maps")
+    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
+        "marker",
+    );
     const mapOptions = {
         zoom: 20, 
         center: defaultCoordinates,
