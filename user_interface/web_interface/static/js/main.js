@@ -120,15 +120,14 @@ async function initMap() {
         background: "#00a1e0" // Blue color for the home marker
     });
 
-        // Attach the event listener to the correct marker (homeMarker)
-        homeLocationMarker.addListener("dragend", (event) => {
-            homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-            infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
-            infoWindow.open(map, homeMarker); // Open the info window on the homeMarker
-            document.getElementById('confirm-home-button').disabled = false;
-        });
+    // Attach the event listener to the correct marker (homeMarker)
+    homeLocationMarker.addListener("dragend", (event) => {
+        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+        infoWindow.open(map, homeMarker); // Open the info window on the homeMarker
+        document.getElementById('confirm-home-button').disabled = false;
     });
-
+  
     google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
         const polygon = event.overlay;
         areaCoordinates = polygon.getPath().getArray().map(coord => ({
