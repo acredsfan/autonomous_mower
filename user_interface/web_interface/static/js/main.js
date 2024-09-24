@@ -73,20 +73,24 @@ let areaCoordinates = [];
 let homeLocation = null;
 let map;
 let areaPolygon = null;
-let draggableMarker = null;  // Changed from homeMarker
+let homeMarker = null;
 let robotMarker = null;
-let mapId = null;
+let mapId = null; // Store the Map ID once fetched
 
 // Initialize map
 function initMap() {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     const mapOptions = {
-        zoom: 25,
+        zoom: 20, 
         center: defaultCoordinates,
-        mapTypeId: 'satellite',
-        tilt: 0,
-        disableDefaultUI: true,
+        mapTypeId: 'satellite'
     };
+
+    // If mapId is available, add it to the mapOptions
+    if (mapId) {
+        mapOptions.mapId = mapId; 
+    }
+
     map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
     const drawingManager = new google.maps.drawing.DrawingManager({
@@ -236,21 +240,15 @@ function saveHomeLocation() {
 
 window.addEventListener('load', function () {
     let apiKey;
-    let mapId;
+    let mapId; // Fetch the Map ID
+
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
-        fetch('/get_map_id').then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
-                // If map_id is not found, return null
-                return null;
-            }
-        }),
+        fetch('/get_map_id').then(response => response.json()), // Fetch Map ID
     ]).then(([keyData, idData]) => {
         apiKey = keyData.GOOGLE_MAPS_API_KEY;
-        mapId = idData ? idData.map_id : null;
-        loadMapScript(apiKey, mapId);
+        mapId = idData.map_id; // Store the Map ID
+        loadMapScript(apiKey, mapId); 
     });
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
@@ -266,7 +264,8 @@ window.addEventListener('load', function () {
 
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId ? `&map_ids=${mapId}` : ''}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId   
+ ? `&map_ids=${mapId}` : ''}`;
     script.defer = true;
     script.async = true;
     document.head.appendChild(script);
