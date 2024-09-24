@@ -102,7 +102,7 @@ let robotMarker = null;
 
 
 // Initialize map
-async function initMap() {
+async function initMap(apiKey, mapId) {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
         "marker",
