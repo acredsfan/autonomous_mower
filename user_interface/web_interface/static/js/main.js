@@ -83,18 +83,12 @@ async function initMap() {
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
         "marker",
     );
-    const mapOptions = {
+    const map = new Map(document.getElementById('map'), {
         zoom: 20, 
         center: defaultCoordinates,
-        mapTypeId: 'satellite'
-    };
-
-    // If mapId is available, add it to the mapOptions
-    if (mapId) {
-        mapOptions.mapId = mapId; 
-    }
-
-    map = new Map(document.getElementById('map'), mapOptions);
+        mapTypeId: 'satellite',
+        mapId: mapId
+    });
 
     const drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: google.maps.drawing.OverlayType.POLYGON,
