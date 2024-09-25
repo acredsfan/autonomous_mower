@@ -113,8 +113,9 @@ window.addEventListener('load', function () {
         }
 
         loadMapScript(apiKey, mapId);
+    }).catch(error => {
+        console.error('Error fetching API key or Map ID:', error);
     });
-});
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
     if (confirmAreaButton) {
@@ -125,6 +126,8 @@ window.addEventListener('load', function () {
     if (confirmHomeButton) {
         confirmHomeButton.addEventListener('click', saveHomeLocation);
     }
+});
+
 
 // Initialize map
 async function initMap() {
@@ -140,9 +143,14 @@ async function initMap() {
         return { lat: 39.095657, lng: -84.515959 }; // Fallback coordinates
     });
 
+    // Parse lat and lng to numbers
+    defaultCoordinates.lat = parseFloat(defaultCoordinates.lat);
+    defaultCoordinates.lng = parseFloat(defaultCoordinates.lng);
+
     // Validate the defaultCoordinates
-    if (typeof defaultCoordinates.lat !== 'number' || typeof defaultCoordinates.lng !== 'number') {
-        console.error('Invalid default coordinates:', defaultCoordinates);
+    if (typeof defaultCoordinates.lat !== 'number' || isNaN(defaultCoordinates.lat) ||
+        typeof defaultCoordinates.lng !== 'number' || isNaN(defaultCoordinates.lng)) {
+        console.error('Invalid default coordinates after parsing:', defaultCoordinates);
         defaultCoordinates = { lat: 39.095657, lng: -84.515959 }; // Fallback coordinates
     }
 
@@ -165,6 +173,8 @@ async function initMap() {
             ]
         }
     });
+
+    drawingManager.setMap(map);
 
     // Use google.maps.InfoWindow for displaying info
     const infoWindow = new google.maps.InfoWindow();
@@ -195,7 +205,7 @@ async function initMap() {
         title: 'Robot Current Position',
         content: robotPin.element,
     });
-    
+
     // Attach the event listener to the homeLocationMarker
     homeLocationMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
