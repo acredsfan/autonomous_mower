@@ -238,7 +238,7 @@ def get_gps():
     logging.info("Starting get_gps")
     try:
         position = position_reader.run()
-        logging.info(f"position: {position}")
+        # logging.info(f"position: {position}")
 
         if position and len(position) == 5:
             ts, easting, northing, zone_number, zone_letter = position
@@ -313,8 +313,6 @@ def get_obj_det_ip():
         return jsonify({"error": "Object Detection IP not found"}), 404
 
 
-import logging
-
 @app.route('/get_default_coordinates', methods=['GET'])
 def get_default_coordinates():
     # Fetch the default LAT and LNG from the environment
@@ -325,8 +323,8 @@ def get_default_coordinates():
         try:
             default_lat = float(default_lat)
             default_lng = float(default_lng)
-            logging.info(f"default_lat: {default_lat}, type: {float(default_lat)}")
-            logging.info(f"default_lng: {default_lng}, type: {float(default_lng)}")
+            logging.info(f"default_lat: {default_lat}, type: {type(default_lat)}")
+            logging.info(f"default_lng: {default_lng}, type: {type(default_lng)}")
             return jsonify({"lat": default_lat, "lng": default_lng})
         except ValueError:
             logging.error("Invalid default coordinates")
