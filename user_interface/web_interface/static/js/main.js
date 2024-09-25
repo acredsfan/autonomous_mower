@@ -7,13 +7,15 @@ let homeLocationMarker = null;
 let robotMarker = null;
 let mapId;
 let defaultCoordinates = null;
+let obj_det_ip = null;
+let apiKey;
 
 // Function to fetch sensor data
 function fetchSensorData() {
     fetch('/get_sensor_data')
         .then(response => response.json())
         .then(data => {
-            console.log(data);
+            //console.log(data);
             // Display data on the webpage if necessary
             updateSensorDisplay(data);
         })
@@ -87,6 +89,7 @@ function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}`;
     script.type = 'module'; // Use module type
+    script.setAttribute('loading', 'async');
     script.onload = () => {
         initMap();
     };
@@ -124,7 +127,19 @@ async function initMap() {
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
     const { DrawingManager } = await google.maps.importLibrary("drawing");
 
-    const defaultCoordinates = fetch('/get_default_coordinates').then(response => response.json());
+    const defaultCoordinates = await fetch('/get_default_coordinates')
+    .then(response => response.json())
+    .catch(error => {
+        console.error('Error fetching default coordinates:', error);
+        return { lat: 39.095657, lng: -84.515959 }; // Fallback coordinates
+    });
+
+    // Validate the defaultCoordinates
+    if (typeof defaultCoordinates.lat !== 'number' || typeof defaultCoordinates.lng !== 'number') {
+        console.error('Invalid default coordinates:', defaultCoordinates);
+        defaultCoordinates.lat = 39.095657;
+        defaultCoordinates.lng = -84.515959;
+    }
 
     // Initialize the map
     map = new GoogleMap(document.getElementById('map'), {
@@ -196,7 +211,9 @@ async function updateRobotPosition() {
     try {
         const response = await fetch('/api/gps');
         const data = await response.json();
-        if (data.latitude && data.longitude) {
+
+        // Validate the GPS data
+        if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
             const position = { lat: data.latitude, lng: data.longitude };
             if (robotMarker) {
                 robotMarker.position = position;
@@ -213,7 +230,7 @@ async function updateRobotPosition() {
                 });
             }
         } else {
-            console.error('No GPS data available');
+            console.error('Invalid GPS data:', data);
         }
     } catch (error) {
         console.error('Error fetching robot position:', error);
@@ -238,7 +255,7 @@ function loadSavedData() {
     fetch('/get-home-location')
         .then(response => response.json())
         .then(data => {
-            if (data.lat && data.lng) {
+            if (typeof data.lat === 'number' && typeof data.lng === 'number') {
                 homeLocation = { lat: data.lat, lng: data.lng };
                 if (homeLocationMarker) {
                     homeLocationMarker.position = homeLocation;
