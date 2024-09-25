@@ -143,9 +143,7 @@ async function initMap() {
     // Validate the defaultCoordinates
     if (typeof defaultCoordinates.lat !== 'number' || typeof defaultCoordinates.lng !== 'number') {
         console.error('Invalid default coordinates:', defaultCoordinates);
-        defaultCoordinates.lat = 39.095657;
-        defaultCoordinates.lng = -84.515959;
-    }
+        defaultCoordinates = { lat: 39.095657, lng: -84.515959 }; // Fallback coordinates
 
     // Initialize the map
     map = new GoogleMap(document.getElementById('map'), {

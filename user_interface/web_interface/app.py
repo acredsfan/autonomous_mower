@@ -313,16 +313,26 @@ def get_obj_det_ip():
         return jsonify({"error": "Object Detection IP not found"}), 404
 
 
+import logging
+
 @app.route('/get_default_coordinates', methods=['GET'])
 def get_default_coordinates():
     # Fetch the default LAT and LON from the environment
     default_lat = os.getenv("MAP_DEFAULT_LAT")
-    default_lng = os.getenv("MAP_DEFAULT_LNG")
-    logging.info(f"Default coordinates: {default_lat}, {default_lng}")
+    default_lon = os.getenv("MAP_DEFAULT_LON")
 
-    if default_lat and default_lng:
-        return jsonify({"lat": default_lat, "lng": default_lng})
+    if default_lat and default_lon:
+        try:
+            default_lat = float(default_lat)
+            default_lon = float(default_lon)
+            logging.info(f"default_lat: {default_lat}, type: {type(default_lat)}")
+            logging.info(f"default_lon: {default_lon}, type: {type(default_lon)}")
+            return jsonify({"lat": default_lat, "lng": default_lon})
+        except ValueError:
+            logging.error("Invalid default coordinates")
+            return jsonify({"error": "Invalid default coordinates"}), 400
     else:
+        logging.error("Default coordinates not found")
         return jsonify({"error": "Default coordinates not found"}), 404
 
 
