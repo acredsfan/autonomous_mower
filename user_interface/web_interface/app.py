@@ -224,12 +224,21 @@ def get_path():
 
 
 @app.route('/save-mowing-area', methods=['POST'])
-# Save coordinates of Polygon drawn on Google Maps
 def save_mowing_area():
     data = request.get_json()
-    coordinates = data if isinstance(data, list) else data.get('mowingAreaCoordinates', [])
+    if not isinstance(data, list):
+        return jsonify({'message': 'Invalid data format. Expected a list of coordinates.'}), 400
+
+    # Validate each coordinate object
+    for coord in data:
+        if not ('lat' in coord and 'lng' in coord):
+            return jsonify({'message': 'Each coordinate must have "lat" and "lng".'}), 400
+        if not (isinstance(coord['lat'], (int, float)) and isinstance(coord['lng'], (int, float))):
+            return jsonify({'message': '"lat" and "lng" must be numbers.'}), 400
+
     with open('user_polygon.json', 'w') as f:
-        json.dump(coordinates, f)
+        json.dump(data, f)
+    logging.info('Mowing area saved successfully.')
     return jsonify({'message': 'Mowing area saved.'})
 
 

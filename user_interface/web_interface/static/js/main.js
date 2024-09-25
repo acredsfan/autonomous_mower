@@ -65,6 +65,25 @@ function saveSettings(mowDays, mowHours) {
     .catch((error) => console.error('Error:', error));
 }
 
+// Function to update areaCoordinates when the polygon's path changes
+function updateAreaCoordinates() {
+    if (areaPolygon) {
+        areaCoordinates = areaPolygon.getPath().getArray().map(coord => ({
+            lat: coord.lat(),
+            lng: coord.lng()
+        }));
+        console.log('Updated areaCoordinates:', areaCoordinates);
+    }
+}
+
+// Function to attach listeners to a polygon's path
+function attachPolygonListeners(polygon) {
+    const path = polygon.getPath();
+    path.addListener('set_at', updateAreaCoordinates);
+    path.addListener('insert_at', updateAreaCoordinates);
+    path.addListener('remove_at', updateAreaCoordinates);
+}
+
 // Event listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', (event) => {
     const form = document.getElementById('settings-form');
@@ -87,7 +106,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 // Function to load the Google Maps script
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}&libraries=drawing,marker`;
     script.type = 'module'; // Use module type
     script.setAttribute('loading', 'async');
     script.onload = () => {
@@ -214,12 +233,28 @@ async function initMap() {
         document.getElementById('confirm-home-button').disabled = false;
     });
 
+    // Attach listener for when a new polygon is drawn
     google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
-        const polygon = event.overlay;
-        areaCoordinates = polygon.getPath().getArray().map(coord => ({
+        // Remove the previous polygon if it exists
+        if (areaPolygon) {
+            areaPolygon.setMap(null);
+        }
+
+        // Assign the new polygon to areaPolygon
+        areaPolygon = event.overlay;
+
+        // Update areaCoordinates with the new polygon's path
+        areaCoordinates = areaPolygon.getPath().getArray().map(coord => ({
             lat: coord.lat(),
             lng: coord.lng()
         }));
+
+        console.log('Initial areaCoordinates:', areaCoordinates);
+
+        // Attach listeners to detect future edits
+        attachPolygonListeners(areaPolygon);
+
+        // Enable the "Confirm Area" button
         document.getElementById('confirm-area-button').disabled = false;
     });
 
@@ -270,12 +305,37 @@ function loadSavedData() {
     fetch('/get-mowing-area')
         .then(response => response.json())
         .then(data => {
-            if (data.length > 0) {
+            if (Array.isArray(data) && data.length > 0) {
+                // Remove the existing polygon if it exists
+                if (areaPolygon) {
+                    areaPolygon.setMap(null);
+                }
+
+                // Create a new polygon with the saved coordinates
                 areaPolygon = new google.maps.Polygon({
                     paths: data,
-                    editable: true
+                    editable: true,
+                    draggable: false, // Make the polygon itself draggable if needed
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.35,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2
                 });
+
+                // Add the polygon to the map
                 areaPolygon.setMap(map);
+
+                // Update areaCoordinates with the loaded polygon's path
+                areaCoordinates = areaPolygon.getPath().getArray().map(coord => ({
+                    lat: coord.lat(),
+                    lng: coord.lng()
+                }));
+
+                console.log('Loaded areaCoordinates:', areaCoordinates);
+
+                // Attach listeners to detect future edits
+                attachPolygonListeners(areaPolygon);
             }
         })
         .catch(error => console.error('Error loading mowing area:', error));
@@ -308,6 +368,11 @@ function loadSavedData() {
 
 // Save the mowing area
 function saveMowingArea() {
+    if (areaCoordinates.length === 0) {
+        alert('No mowing area defined.');
+        return;
+    }
+
     fetch('/save-mowing-area', {
         method: 'POST',
         headers: {
