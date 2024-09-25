@@ -280,15 +280,17 @@ def save_settings():
 
     return jsonify({'message': 'Settings saved.'})
 
+
 @app.route('/get_google_maps_api_key', methods=['GET'])
 def get_google_maps_api_key():
     # Fetch the API key from environment or configuration
-    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
     if google_maps_api_key:
-        return jsonify({"GOOGLE_MAPS_API_KEY": api_key})
+        return jsonify({"api_key": google_maps_api_key})
     else:
         return jsonify({"error": "API key not found"}), 404
+
 
 @app.route('/get_map_id', methods=['GET'])
 def get_map_id():

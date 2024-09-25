@@ -104,10 +104,17 @@ window.addEventListener('load', function () {
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => response.json()),
     ]).then(([keyData, mapIdData]) => {
-        apiKey = keyData.api_key;
+        apiKey = keyData.api_key;  // Ensure this matches the key in your JSON response
         mapId = mapIdData.map_id;
+        
+        if (!apiKey) {
+            console.error('API key not found or invalid.');
+            return;
+        }
+
         loadMapScript(apiKey, mapId);
     });
+});
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
     if (confirmAreaButton) {
