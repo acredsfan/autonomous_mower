@@ -104,10 +104,11 @@ let robotMarker = null;
 // Initialize map
 async function initMap(mapId) {
     const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
+    const { Map: GoogleMap } = await google.maps.importLibrary("maps");
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
         "marker",
     );
-    map = new Map(document.getElementById('map'), {
+    map = new GoogleMap(document.getElementById('map'), {
         zoom: 20, 
         center: defaultCoordinates,
         mapTypeId: 'satellite',
@@ -269,12 +270,12 @@ function saveHomeLocation() {
 
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing${mapId   
- ? `&map_ids=${mapId}` : ''}`;
-    script.defer = true;
-    script.async = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}`;
+    script.type = 'module'; // Use module type
+    script.onload = () => {
+        initMap();
+    };
     document.head.appendChild(script);
-}
 
 // function to get and draw the path on the map, if no path is available, it will not show anything
 function getPathAndDraw() {
