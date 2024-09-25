@@ -6,7 +6,7 @@ let areaPolygon = null;
 let homeLocationMarker = null;
 let robotMarker = null;
 let mapId;
-let defaultCoordinates = null:
+let defaultCoordinates = null;
 
 // Function to fetch sensor data
 function fetchSensorData() {
