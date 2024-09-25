@@ -128,7 +128,6 @@ window.addEventListener('load', function () {
     }
 });
 
-
 // Initialize map
 async function initMap() {
     // Import required libraries
@@ -150,7 +149,7 @@ async function initMap() {
     // Validate the defaultCoordinates
     if (typeof defaultCoordinates.lat !== 'number' || isNaN(defaultCoordinates.lat) ||
         typeof defaultCoordinates.lng !== 'number' || isNaN(defaultCoordinates.lng)) {
-        console.error('Invalid default coordinates after parsing:', defaultCoordinates);
+        console.error('Invalid default coordinates:', defaultCoordinates);
         defaultCoordinates = { lat: 39.095657, lng: -84.515959 }; // Fallback coordinates
     }
 
@@ -174,6 +173,7 @@ async function initMap() {
         }
     });
 
+    // Attach the DrawingManager to the map
     drawingManager.setMap(map);
 
     // Use google.maps.InfoWindow for displaying info
@@ -205,7 +205,7 @@ async function initMap() {
         title: 'Robot Current Position',
         content: robotPin.element,
     });
-
+    
     // Attach the event listener to the homeLocationMarker
     homeLocationMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
@@ -378,6 +378,9 @@ window.addEventListener('load', function () {
             } else {
                 console.error('Element with id "video_feed" not found.');
             }
+        })
+        .catch(error => {
+            console.error('Error fetching object detection IP:', error);
         });
 
     socket.on('video_connection', function (data) {
