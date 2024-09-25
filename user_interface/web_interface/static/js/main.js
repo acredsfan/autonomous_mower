@@ -174,6 +174,11 @@ async function initMap() {
         background: "#00a1e0" // Blue color for the home marker
     });
 
+    // Create PinElement for the robot marker
+    const robotPin = new PinElement({
+        background: "#FF0000" // Red color for the robot
+    });
+
     // Initialize the draggable marker for home location
     homeLocationMarker = new AdvancedMarkerElement({
         map: map,
@@ -183,6 +188,14 @@ async function initMap() {
         content: pinBackground.element,
     });
 
+    // Initialize the robot marker
+    robotMarker = new AdvancedMarkerElement({
+        map: map,
+        position: defaultCoordinates,
+        title: 'Robot Current Position',
+        content: robotPin.element,
+    });
+    
     // Attach the event listener to the homeLocationMarker
     homeLocationMarker.addListener("dragend", (event) => {
         homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };

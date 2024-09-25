@@ -319,15 +319,15 @@ import logging
 def get_default_coordinates():
     # Fetch the default LAT and LON from the environment
     default_lat = os.getenv("MAP_DEFAULT_LAT")
-    default_lon = os.getenv("MAP_DEFAULT_LON")
+    default_lng = os.getenv("MAP_default_LNG")
 
-    if default_lat and default_lon:
+    if default_lat and default_lng:
         try:
             default_lat = float(default_lat)
-            default_lon = float(default_lon)
+            default_lng = float(default_lng)
             logging.info(f"default_lat: {default_lat}, type: {type(default_lat)}")
-            logging.info(f"default_lon: {default_lon}, type: {type(default_lon)}")
-            return jsonify({"lat": default_lat, "lng": default_lon})
+            logging.info(f"default_lng: {default_lng}, type: {type(default_lng)}")
+            return jsonify({"lat": default_lat, "lng": default_lng})
         except ValueError:
             logging.error("Invalid default coordinates")
             return jsonify({"error": "Invalid default coordinates"}), 400
