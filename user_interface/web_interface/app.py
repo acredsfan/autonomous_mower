@@ -304,6 +304,19 @@ def get_obj_det_ip():
     else:
         return jsonify({"error": "Object Detection IP not found"}), 404
 
+
+@app.route('/get_default_coordinates', methods=['GET'])
+def get_default_coordinates():
+    # Fetch the default LAT and LON from the environment
+    default_lat = os.getenv("MAP_DEFAULT_LAT")
+    default_lon = os.getenv("MAP_DEFAULT_LON")
+
+    if default_lat and default_lon:
+        return jsonify({"default_lat": default_lat, "default_lon": default_lon})
+    else:
+        return jsonify({"error": "Default coordinates not found"}), 404
+
+
 def get_schedule():
     # Check if the schedule file exists
     if os.path.exists('mowing_schedule.json'):

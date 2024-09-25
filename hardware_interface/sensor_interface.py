@@ -117,28 +117,50 @@ class SensorInterface:
         while not self.stop_thread:
             try:
                 with self.sensor_data_lock:
-                    # Read and store BME280 data
-                    self.sensor_data['bme280'] = self.read_sensor_data(
-                        self.sensors['bme280'],
-                        BME280Sensor.read_bme280,
-                        "BME280"
+                    ''' Read and Store Battery Data (INA3221 Channel 3) for:
+                    battery-voltage out (shunt-voltage),
+                    battery-current (current),
+                    and battery-charge-level (charge_level) as a percentage.'''
+                    self.sensor_data['battery_voltage'] = self.read_sensor_data(
+                        self.sensors['ina3221'],
+                        lambda s: INA3221Sensor.read_ina3221(s, 3)['shunt_voltage'],
+                        "INA3221 Battery"
+                    )
+                    self.sensor_data['battery_current'] = self.read_sensor_data(
+                        self.sensors['ina3221'],
+                        lambda s: INA3221Sensor.read_ina3221(s, 3)['current'],
+                        "INA3221 Battery"
+                    )
+                    self.sensor_data['battery_charge_level'] = self.read_sensor_data(
+                        self.sensors['ina3221'],
+                        INA3221Sensor.battery_charge,
+                        "Battery Charge"
                     )
 
-                    # Read and store BNO085 sensor data
-                    self.sensor_data['accel'] = self.read_sensor_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.read_bno085_accel,
-                        "BNO085 Accelerometer"
+                    ''' Read and Store Solar Data (INA3221 Channel 1) for:
+                    solar_voltage out (shunt_voltage) and
+                    solar_current (current).'''
+                    self.sensor_data['solar_voltage'] = self.read_sensor_data(
+                        self.sensors['ina3221'],
+                        lambda s: INA3221Sensor.read_ina3221(s, 1)['shunt_voltage'],
+                        "INA3221 Solar"
                     )
-                    self.sensor_data['gyro'] = self.read_sensor_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.read_bno085_gyro,
-                        "BNO085 Gyroscope"
+                    self.sensor_data['solar_current'] = self.read_sensor_data(
+                        self.sensors['ina3221'],
+                        lambda s: INA3221Sensor.read_ina3221(s, 1)['current'],
+                        "INA3221 Solar"
                     )
-                    self.sensor_data['compass'] = self.read_sensor_data(
+
+                    '''Read and store BNO085 sensor data for:
+                    speed (speed),
+                    heading (heading),
+                    pitch (pitch),
+                    and roll (roll).'''
+                    self.sensor_data['speed'] = self.read_sensor_data(
                         self.sensors['bno085'],
-                        BNO085Sensor.read_bno085_magnetometer,
-                        "BNO085 Magnetometer")
+                        BNO085Sensor.calculate_speed,
+                        "BNO085 Speed"
+                    )
                     self.sensor_data['heading'] = self.read_sensor_data(
                         self.sensors['bno085'],
                         BNO085Sensor.calculate_heading,
@@ -154,30 +176,31 @@ class SensorInterface:
                         BNO085Sensor.calculate_roll,
                         "BNO085 Roll"
                     )
-                    self.sensor_data['speed'] = self.read_sensor_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.calculate_speed,
-                        "BNO085 Speed"
+
+                    ''' Read and store BME280 sensor data for:
+                    temperature in F (temperature_f),
+                    humidity (humidity),
+                    and pressure (pressure).'''
+                    self.sensor_data['temperature'] = self.read_sensor_data(
+                        self.sensors['bme280'],
+                        lambda s: BME280Sensor.read_bme280(s)['temperature_f'],
+                        "BME280"
+                    )
+                    self.sensor_data['humidity'] = self.read_sensor_data(
+                        self.sensors['bme280'],
+                        lambda s: BME280Sensor.read_bme280(s)['humidity'],
+                        "BME280"
+                    )
+                    self.sensor_data['pressure'] = self.read_sensor_data(
+                        self.sensors['bme280'],
+                        lambda s: BME280Sensor.read_bme280(s)['pressure'],
+                        "BME280"
                     )
 
-                    # Read and store INA3221 sensor data
-                    self.sensor_data['solar'] = self.read_sensor_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 1),
-                        "INA3221 Solar"
-                    )
-                    self.sensor_data['battery'] = self.read_sensor_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 3),
-                        "INA3221 Battery"
-                    )
-                    self.sensor_data['battery_charge'] = self.read_sensor_data(
-                        self.sensors['ina3221'],
-                        INA3221Sensor.battery_charge,
-                        "Battery Charge"
-                    )
+                    ''' Read and store VL53L0X sensor data for:
+                    left distance (left_distance) as an float to 1 decimal place,
+                    and right distance (right_distance) as an float to 1 decimal place.'''
 
-                    # Read and store VL53L0X sensor data
                     self.sensor_data['left_distance'] = self.read_sensor_data(
                         self.sensors['vl53l0x'],
                         lambda s: VL53L0XSensors.read_vl53l0x(s[0]),

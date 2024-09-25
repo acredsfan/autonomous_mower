@@ -5,7 +5,8 @@ let map;
 let areaPolygon = null;
 let homeLocationMarker = null;
 let robotMarker = null;
-let mapId; // Global variable to store the Map ID
+let mapId;
+let defaultCoordinates = null:
 
 // Function to fetch sensor data
 function fetchSensorData() {
@@ -25,18 +26,18 @@ setInterval(fetchSensorData, 1000);
 // Function to update sensor display
 function updateSensorDisplay(data) {
     const elements = {
-        'bme280': `BME280: ${JSON.stringify(data.bme280)}`,
-        'accel': `Accelerometer: ${JSON.stringify(data.accel)}`,
-        'compass': `Compass: ${JSON.stringify(data.compass)}`,
-        'gyro': `Gyroscope: ${JSON.stringify(data.gyro)}`,
-        'quaternion': `Quaternion: ${JSON.stringify(data.quaternion)}`,
+        'battery_voltage': `Battery Voltage: ${data.battery_voltage}`,
+        'battery_current': `Battery Current: ${data.battery_current}`,
+        'battery_charge': `Battery Charge: ${data.battery_charge_level}`,
+        'solar_voltage': `Solar Voltage: ${data.solar_voltage}`,
+        'solar_current': `Solar Current: ${data.solar_current}`,
         'speed': `Speed: ${data.speed}`,
         'heading': `Heading: ${data.heading}`,
         'pitch': `Pitch: ${data.pitch}`,
         'roll': `Roll: ${data.roll}`,
-        'solar': `Solar: ${JSON.stringify(data.solar)}`,
-        'battery': `Battery: ${JSON.stringify(data.battery)}`,
-        'battery_charge': `Battery Charge: ${data.battery_charge}`,
+        'temperature': `Temperature: ${data.temperature}`,
+        'humidity': `Humidity: ${data.humidity}`,
+        'pressure': `Pressure: ${data.pressure}`,
         'left_distance': `Left Distance: ${data.left_distance}`,
         'right_distance': `Right Distance: ${data.right_distance}`,
     };
@@ -101,7 +102,7 @@ window.addEventListener('load', function () {
         fetch('/get_map_id').then(response => response.json()),
     ]).then(([keyData, idData]) => {
         apiKey = keyData.GOOGLE_MAPS_API_KEY;
-        mapId = idData.map_id; // Store the Map ID globally
+        mapId = idData.map_id;
         loadMapScript(apiKey, mapId); 
     });
 
@@ -123,7 +124,7 @@ async function initMap() {
     const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
     const { DrawingManager } = await google.maps.importLibrary("drawing");
 
-    const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
+    const defaultCoordinates = fetch('/get_default_coordinates').then(response => response.json());
 
     // Initialize the map
     map = new GoogleMap(document.getElementById('map'), {

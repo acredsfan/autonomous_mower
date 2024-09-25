@@ -25,8 +25,8 @@ class INA3221Sensor:
                 Shunt_Voltage = round(sensor.shunt_voltage(channel), 1)
                 Current = round(sensor.current(channel), 1)
                 sensor_data = {
-                    "bus_voltage": Voltage,
-                    "current": Current,
+                    'bus_voltage': Voltage,
+                    'current': Current,
                     'shunt_voltage': Shunt_Voltage}
                 if channel == 3:
                     Charge_Level = round(

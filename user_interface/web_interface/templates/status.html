@@ -5,14 +5,14 @@
 <table class="status-table">
     <tr>
         <td class="status-label">Battery Status</td>
-        <td id="battery-voltage" class="status-value">Loading...</td>
-        <td id="battery-current" class="status-value">Loading...</td>
-        <td id="battery-charge-level" class="status-value">Loading...</td>
+        <td id="battery_voltage" class="status-value">Loading...</td>
+        <td id="battery_current" class="status-value">Loading...</td>
+        <td id="battery_charge" class="status-value">Loading...</td>
     </tr>
     <tr>
         <td class="status-label">Solar Panel Status</td>
-        <td id="solar-voltage" class="status-value">Loading...</td>
-        <td id="solar-current" class="status-value">Loading...</td>
+        <td id="solar_voltage" class="status-value">Loading...</td>
+        <td id="solar_current" class="status-value">Loading...</td>
     </tr>
     <tr>
         <td class="status-label">Speed</td>
@@ -21,6 +21,14 @@
     <tr>
         <td class="status-label">Heading</td>
         <td id="heading" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Pitch</td>
+        <td id="pitch" class="status-value">Loading...</td>
+    </tr>
+    <tr>
+        <td class="status-label">Roll</td>
+        <td id="roll" class="status-value">Loading...</td>
     </tr>
     <tr>
         <td class="status-label">Temperature</td>
@@ -36,11 +44,11 @@
     </tr>
     <tr>
         <td class="status-label">Left Distance</td>
-        <td id="left-distance" class="status-value">Loading...</td>
+        <td id="left_distance" class="status-value">Loading...</td>
     </tr>
     <tr>
         <td class="status-label">Right Distance</td>
-        <td id="right-distance" class="status-value">Loading...</td>
+        <td id="right_distance" class="status-value">Loading...</td>
     </tr>
     <tr>
         <td class="status-label">Mowing status</td>
@@ -51,17 +59,8 @@
         <td class="status-value">{{ next_scheduled_mow }}</td>
     </tr>
 </table>
-<img id="camera_feed" alt="Camera Feed" />
+<video id="video_feed" width="640" height="480" autoplay></video>
 
 <script>
-socket.on('update_frame', function(data) {
-    var image = document.getElementById('video');
-    image.src = 'data:image/jpeg;base64,' + data.frame;
-});
-
-// Request a new frame every 500ms (or whatever interval you prefer)
-setInterval(function() {
-    socket.emit('request_frame');
-}, 500);
 </script>
 {% endblock %}

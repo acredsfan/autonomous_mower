@@ -1,6 +1,6 @@
 .env
 *.log
 *.tflite
-.vscode
-.__pycache__
-.tflite
+*.vscode
+*.__pycache__
+*.tflite
