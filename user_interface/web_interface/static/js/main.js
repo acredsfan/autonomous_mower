@@ -1,11 +1,4 @@
-// Global variables
-let areaCoordinates = [];
-let homeLocation = null;
-let map;
-let areaPolygon = null;
-let homeLocationMarker = null;
-let robotMarker = null;
-let mapId; // Global variable to store the Map ID
+// main.js
 
 // Function to fetch sensor data
 function fetchSensorData() {
@@ -84,107 +77,98 @@ document.addEventListener('DOMContentLoaded', (event) => {
 // Function to load the Google Maps script
 function loadMapScript(apiKey, mapId) {
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}`;
-    script.type = 'module'; // Use module type
-    script.onload = () => {
-        initMap();
-    };
+    // Include 'libraries=drawing' to load the Drawing library
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=drawing&map_ids=${mapId}`;
+    script.defer = true;
+    script.async = true;
     document.head.appendChild(script);
 }
 
-// Event listener for window load
-window.addEventListener('load', function () {
-    let apiKey;
-
-    Promise.all([
-        fetch('/get_google_maps_api_key').then(response => response.json()),
-        fetch('/get_map_id').then(response => response.json()),
-    ]).then(([keyData, idData]) => {
-        apiKey = keyData.GOOGLE_MAPS_API_KEY;
-        mapId = idData.map_id; // Store the Map ID globally
-        loadMapScript(apiKey, mapId); 
-    });
-
-    const confirmAreaButton = document.getElementById('confirm-area-button');
-    if (confirmAreaButton) {
-        confirmAreaButton.addEventListener('click', saveMowingArea);
-    }
-
-    const confirmHomeButton = document.getElementById('confirm-home-button');
-    if (confirmHomeButton) {
-        confirmHomeButton.addEventListener('click', saveHomeLocation);
-    }
-});
+// Initialize map variables
+let areaCoordinates = [];
+let homeLocation = null;
+let map;
+let areaPolygon = null;
+let homeLocationMarker = null;
+let robotMarker = null;
+let mapId; // Global variable to store the Map ID
 
 // Initialize map
 async function initMap() {
-    // Import required libraries
-    const { Map: GoogleMap } = await google.maps.importLibrary("maps");
-    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
+    try {
+        // Import required libraries
+        const { Map: GoogleMap } = await google.maps.importLibrary("maps");
+        const { DrawingManager } = await google.maps.importLibrary("drawing");
+        const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
 
-    const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
+        const defaultCoordinates = { lat: 39.03856, lng: -84.21473 };
 
-    // Initialize the map
-    map = new GoogleMap(document.getElementById('map'), {
-        zoom: 20, 
-        center: defaultCoordinates,
-        mapTypeId: 'satellite',
-        mapId: mapId, // Use the global mapId variable
-    });
+        // Initialize the map
+        map = new GoogleMap(document.getElementById('map'), {
+            zoom: 20, 
+            center: defaultCoordinates,
+            mapTypeId: 'satellite',
+            mapId: mapId, // Use the global mapId variable
+        });
 
-    const drawingManager = new google.maps.drawing.DrawingManager({
-        drawingMode: google.maps.drawing.OverlayType.POLYGON,
-        drawingControl: true,
-        drawingControlOptions: {
-            position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [google.maps.drawing.OverlayType.POLYGON]
-        }
-    });
-    drawingManager.setMap(map);
+        // Initialize DrawingManager
+        const drawingManager = new DrawingManager({
+            drawingMode: google.maps.drawing.OverlayType.POLYGON,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+            }
+        });
+        drawingManager.setMap(map);
 
-    // Use google.maps.InfoWindow for displaying info
-    const infoWindow = new google.maps.InfoWindow();
+        // Use google.maps.InfoWindow for displaying info
+        const infoWindow = new google.maps.InfoWindow();
 
-    // Create PinElement for the home marker
-    const pinBackground = new PinElement({
-        background: "#00a1e0" // Blue color for the home marker
-    });
+        // Create PinElement for the home marker
+        const pinBackground = new PinElement({
+            background: "#00a1e0" // Blue color for the home marker
+        });
 
-    // Initialize the draggable marker for home location
-    homeLocationMarker = new AdvancedMarkerElement({
-        map: map,
-        position: homeLocation || defaultCoordinates,
-        gmpDraggable: true,
-        title: "Robot Home Location - Drag to Change.",
-        content: pinBackground.element,
-    });
+        // Initialize the draggable marker for home location
+        homeLocationMarker = new AdvancedMarkerElement({
+            map: map,
+            position: homeLocation || defaultCoordinates,
+            gmpDraggable: true,
+            title: "Robot Home Location - Drag to Change.",
+            content: pinBackground.element,
+        });
 
-    // Attach the event listener to the homeLocationMarker
-    homeLocationMarker.addListener("dragend", (event) => {
-        homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
-        infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
-        infoWindow.open(map, homeLocationMarker); // Open the info window on the homeLocationMarker
-        document.getElementById('confirm-home-button').disabled = false;
-    });
+        // Attach the event listener to the homeLocationMarker
+        homeLocationMarker.addListener("dragend", (event) => {
+            homeLocation = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+            infoWindow.setContent(`Home Location: ${homeLocation.lat}, ${homeLocation.lng}`);
+            infoWindow.open(map, homeLocationMarker);
+            document.getElementById('confirm-home-button').disabled = false;
+        });
 
-    google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
-        const polygon = event.overlay;
-        areaCoordinates = polygon.getPath().getArray().map(coord => ({
-            lat: coord.lat(),
-            lng: coord.lng()
-        }));
-        document.getElementById('confirm-area-button').disabled = false;
-    });
+        // Listener for drawing completion
+        google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
+            const polygon = event.overlay;
+            areaCoordinates = polygon.getPath().getArray().map(coord => ({
+                lat: coord.lat(),
+                lng: coord.lng()
+            }));
+            document.getElementById('confirm-area-button').disabled = false;
+        });
 
-    // Load saved data
-    loadSavedData();
+        // Load saved data
+        loadSavedData();
 
-    // Start updating the robot's position
-    updateRobotPosition();
-    setInterval(updateRobotPosition, 1000); // Update every 1 second
+        // Start updating the robot's position
+        updateRobotPosition();
+        setInterval(updateRobotPosition, 1000); // Update every 1 second
 
-    // Get and draw the path
-    getPathAndDraw();
+        // Get and draw the path
+        getPathAndDraw();
+    } catch (error) {
+        console.error('Error initializing map:', error);
+    }
 }
 
 // Function to update the robot's position
@@ -195,7 +179,7 @@ async function updateRobotPosition() {
         if (data.latitude && data.longitude) {
             const position = { lat: data.latitude, lng: data.longitude };
             if (robotMarker) {
-                robotMarker.position = position;
+                robotMarker.setPosition(position);
             } else {
                 // Create a PinElement for the robot marker
                 const robotPin = new PinElement({
@@ -221,7 +205,7 @@ function loadSavedData() {
     fetch('/get-mowing-area')
         .then(response => response.json())
         .then(data => {
-            if (data.length > 0) {
+            if (Array.isArray(data) && data.length > 0) {
                 areaPolygon = new google.maps.Polygon({
                     paths: data,
                     editable: true
@@ -237,7 +221,7 @@ function loadSavedData() {
             if (data.lat && data.lng) {
                 homeLocation = { lat: data.lat, lng: data.lng };
                 if (homeLocationMarker) {
-                    homeLocationMarker.position = homeLocation;
+                    homeLocationMarker.setPosition(homeLocation);
                 } else {
                     // If for some reason homeLocationMarker doesn't exist
                     const pinBackground = new PinElement({
@@ -294,7 +278,7 @@ function getPathAndDraw() {
     fetch('/get-path')
         .then(response => response.json())
         .then(data => {
-            if (data.path) {
+            if (data.path && Array.isArray(data.path)) {
                 drawPath(data.path);
             }
         })
