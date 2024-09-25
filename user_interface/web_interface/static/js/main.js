@@ -101,8 +101,8 @@ window.addEventListener('load', function () {
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => response.json()),
     ]).then(([apiKey, mapId]) => {
-        apiKey = google_maps_api_key;
-        mapId = map_id;
+        apiKey = GOOGLE_MAPS_API_KEY;
+        mapId = GOOGLE_MAPS_MAP_ID;
         loadMapScript(apiKey, mapId); 
     });
 
