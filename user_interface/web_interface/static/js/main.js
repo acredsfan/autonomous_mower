@@ -125,7 +125,6 @@ window.addEventListener('load', function () {
     if (confirmHomeButton) {
         confirmHomeButton.addEventListener('click', saveHomeLocation);
     }
-});
 
 // Initialize map
 async function initMap() {
