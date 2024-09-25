@@ -240,7 +240,7 @@ def parseGpsPosition(line, debug=False):
         if debug:
             logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
 
-        return float(utm_position[0]), float(utm_position[1])
+        return float(utm_position[0]), float(utm_position[1]), utm_position[2], utm_position[3]
 
     else:
         pass

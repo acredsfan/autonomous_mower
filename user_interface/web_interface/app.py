@@ -236,14 +236,20 @@ def save_mowing_area():
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
     logging.info("Starting get_gps")
-    positions = position_reader.run()
-    logging.info(f"positions: {positions}")
+    try:
+        position = position_reader.run()
+        logging.info(f"position: {position}")
 
-    if positions:
-        lat, lon = utm.to_latlon(*positions, force_zone_number=True)
-        return jsonify({'latitude': lat, 'longitude': lon})
-    else:
-        return jsonify({'error': 'No GPS data available'}), 404
+        if position and len(position) == 5:
+            ts, easting, northing, zone_number, zone_letter = position
+            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+            return jsonify({'latitude': lat, 'longitude': lon})
+        else:
+            return jsonify({'error': 'No GPS data available'}), 404
+    except Exception as e:
+        logging.error(f"Error in get_gps: {e}")
+        return jsonify({'error': 'Server error'}), 500
+
 
 @app.route('/save_settings', methods=['POST'])
 def save_settings():
@@ -277,10 +283,10 @@ def save_settings():
 @app.route('/get_google_maps_api_key', methods=['GET'])
 def get_google_maps_api_key():
     # Fetch the API key from environment or configuration
-    google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
     if google_maps_api_key:
-        return jsonify({"GOOGLE_MAPS_API_KEY": google_maps_api_key})
+        return jsonify({"GOOGLE_MAPS_API_KEY": api_key})
     else:
         return jsonify({"error": "API key not found"}), 404
 
@@ -309,10 +315,10 @@ def get_obj_det_ip():
 def get_default_coordinates():
     # Fetch the default LAT and LON from the environment
     default_lat = os.getenv("MAP_DEFAULT_LAT")
-    default_lon = os.getenv("MAP_DEFAULT_LON")
+    default_lng = os.getenv("MAP_DEFAULT_LNG")
 
     if default_lat and default_lon:
-        return jsonify({"lat": default_lat, "lon": default_lon})
+        return jsonify({"lat": default_lat, "lng": default_lng})
     else:
         return jsonify({"error": "Default coordinates not found"}), 404
 
