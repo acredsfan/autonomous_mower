@@ -75,8 +75,8 @@ mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
 def utm_to_latlon(easting, northing, zone_number, zone_letter):
-    lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-    return lat, lon
+    lat, lng = utm.to_latlon(easting, northing, zone_number, zone_letter)
+    return lat, lng
 
 def gen():
     camera = get_camera_instance()
@@ -242,8 +242,8 @@ def get_gps():
 
         if position and len(position) == 5:
             ts, easting, northing, zone_number, zone_letter = position
-            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-            return jsonify({'latitude': lat, 'longitude': lon})
+            lat, lng = utm.to_latlon(easting, northing, zone_number, zone_letter)
+            return jsonify({'latitude': lat, 'longitude': lng})
         else:
             return jsonify({'error': 'No GPS data available'}), 404
     except Exception as e:
@@ -317,16 +317,16 @@ import logging
 
 @app.route('/get_default_coordinates', methods=['GET'])
 def get_default_coordinates():
-    # Fetch the default LAT and LON from the environment
+    # Fetch the default LAT and LNG from the environment
     default_lat = os.getenv("MAP_DEFAULT_LAT")
-    default_lng = os.getenv("MAP_default_LNG")
+    default_lng = os.getenv("MAP_DEFAULT_LNG")
 
     if default_lat and default_lng:
         try:
             default_lat = float(default_lat)
             default_lng = float(default_lng)
-            logging.info(f"default_lat: {default_lat}, type: {type(default_lat)}")
-            logging.info(f"default_lng: {default_lng}, type: {type(default_lng)}")
+            logging.info(f"default_lat: {default_lat}, type: {float(default_lat)}")
+            logging.info(f"default_lng: {default_lng}, type: {float(default_lng)}")
             return jsonify({"lat": default_lat, "lng": default_lng})
         except ValueError:
             logging.error("Invalid default coordinates")
