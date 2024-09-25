@@ -100,9 +100,9 @@ window.addEventListener('load', function () {
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => response.json()),
-    ]).then(([keyData, idData]) => {
-        apiKey = keyData.google_maps_api_key;
-        mapId = idData.map_id;
+    ]).then(([apiKey, mapId]) => {
+        apiKey = google_maps_api_key;
+        mapId = map_id;
         loadMapScript(apiKey, mapId); 
     });
 
