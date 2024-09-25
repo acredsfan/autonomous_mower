@@ -319,7 +319,7 @@ def get_default_coordinates():
     default_lat = os.getenv("MAP_DEFAULT_LAT")
     default_lng = os.getenv("MAP_DEFAULT_LNG")
 
-    if default_lat and default_lon:
+    if default_lat and default_lng:
         return jsonify({"lat": default_lat, "lng": default_lng})
     else:
         return jsonify({"error": "Default coordinates not found"}), 404
