@@ -100,10 +100,10 @@ window.addEventListener('load', function () {
     Promise.all([
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => response.json()),
-    ]).then(([apiKey, mapId]) => {
-        apiKey = GOOGLE_MAPS_API_KEY;
-        mapId = GOOGLE_MAPS_MAP_ID;
-        loadMapScript(apiKey, mapId); 
+    ]).then(([keyData, mapIdData]) => {
+        apiKey = keyData.api_key;
+        mapId = mapIdData.map_id;
+        loadMapScript(apiKey, mapId);
     });
 
     const confirmAreaButton = document.getElementById('confirm-area-button');
