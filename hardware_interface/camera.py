@@ -4,7 +4,7 @@ import time
 import threading
 from threading import Condition
 from http import server
-from picamera2 import PiCamera
+from picamera2 import PiCamera2 as PiCamera
 import numpy as np
 import tflite_runtime.interpreter as tflite
 from dotenv import load_dotenv
