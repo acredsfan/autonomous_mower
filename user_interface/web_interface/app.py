@@ -146,6 +146,7 @@ def control():
         robohat_driver.set_steering_throttle(steering, throttle)
         return jsonify({'status': 'success'})
 
+
 @socketio.on('request_status')
 def handle_status_request():
     sensor_data = sensor_interface.sensor_data
