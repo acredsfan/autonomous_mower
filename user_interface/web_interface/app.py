@@ -65,8 +65,8 @@ localization = Localization()
 path_planning = PathPlanning(localization)
 sensor_interface = get_sensor_interface()
 
-# Initialize RoboHATDriver
-robohat_driver = RoboHATController()
+# Initialize RoboHATController with gps_latest_position
+robohat_driver = RoboHATController(gps_latest_position=position_reader)
 
 # Define a flag for stopping the sensor update thread
 stop_thread = False
@@ -126,17 +126,19 @@ def status():
     }
     return render_template('status.html', status=status_info)
 
+
 @app.route('/get_sensor_data', methods=['GET'])
 def get_sensor_data():
     sensor_data = sensor_interface.sensor_data
     return jsonify(sensor_data)
+
 
 @app.route('/control', methods=['POST'])
 def control():
     data = request.get_json()
     steering = data.get('steering', 0)
     throttle = data.get('throttle', 0)
-    robohat_driver.run_threaded(steering, throttle)
+    robohat_driver.set_steering_throttle(steering, throttle)
     return jsonify({'status': 'success'})
 
 @socketio.on('request_status')
@@ -155,31 +157,19 @@ def handle_status_request():
     }
     emit('update_status', data)
 
+
 camera = get_camera_instance()
+
 
 @app.route('/video_feed')
 def video_feed():
     return Response(camera.stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
+
 @app.route('/camera_route')
 def camera_route():
     return render_template('camera.html')
 
-@socketio.on('request_frame')
-def handle_frame_request():
-    camera = get_camera_instance()
-    frame = camera.get_frame()
-    if frame is not None:
-        try:
-            image = Image.fromarray(frame)
-            buffer = BytesIO()
-            image.save(buffer, format="JPEG")
-            frame_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            emit('update_frame', {'frame': frame_data})
-        except Exception as e:
-            logging.error(f"Error encoding frame for WebSocket transmission: {e}")
-    else:
-        logging.error("Failed to get the frame from the camera.")
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
@@ -428,6 +418,33 @@ def toggle_blades():
     else:
         return jsonify({'message': 'Invalid state provided.'}), 400
     return jsonify({'message': f'Blades turned {state}.'})
+
+
+@app.route('/check-polygon-points', methods=['POST'])
+def check_polygon_points():
+    # Load the saved polygon points
+    if os.path.exists('user_polygon.json'):
+        with open('user_polygon.json', 'r') as f:
+            coordinates = json.load(f)
+    else:
+        return jsonify({'message': 'No polygon points saved.'}), 400
+
+    # Iterate over each point and navigate to it
+    success = True
+    for point in coordinates:
+        lat = point['lat']
+        lng = point['lng']
+        target_location = (lat, lng)
+        result = robohat_driver.navigate_to_location(target_location)
+        if not result:
+            success = False
+            break  # Stop if navigation failed
+
+    if success:
+        return jsonify({'message': 'Robot has visited all polygon points.'})
+    else:
+        return jsonify({'message': 'Failed to navigate to all polygon points.'}), 500
+
 
 def stop_motors():
     # Stop the motors

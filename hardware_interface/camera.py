@@ -36,10 +36,12 @@ class SingletonCamera:
         return cls._instance
 
     def init_camera(self):
-        """Initialize the camera using Picamera2 and start the update thread."""
+        """Initialize the camera using Picamera2
+        and start the update thread."""
         self.frame_queue = Queue(maxsize=1)
         self.picam2 = Picamera2()
-        self.picam2.configure(self.picam2.create_video_configuration(main={"size": (640, 480)}))
+        self.picam2.configure(
+            self.picam2.create_video_configuration(main={"size": (640, 480)}))
         self.picam2.start()
         self.running = True
         self.read_thread = threading.Thread(target=self.update, daemon=True)
@@ -51,7 +53,8 @@ class SingletonCamera:
         while self.running:
             frame = self.picam2.capture_array()
             if frame is None:
-                logging.warning("Failed to read frame from camera. Attempting reinitialization.")
+                logging.warning("Failed to read frame from camera."
+                                "Attempting reinitialization.")
                 self.reinitialize_camera()
                 continue
 
@@ -80,7 +83,8 @@ class SingletonCamera:
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
 
     def detect_obstacle(self):
-        """Attempt to detect obstacles via Pi 5. Fallback to local detection if necessary."""
+        """Attempt to detect obstacles via Pi 5.
+        Fallback to local detection if necessary."""
         frame = self.get_frame()
         if frame is None:
             logging.warning("No frame available for detection.")
@@ -88,19 +92,21 @@ class SingletonCamera:
 
         try:
             # Try sending frame to Pi 5 for remote obstacle detection
-            response = requests.post('http://<PI5_IP>:5000/detect', files={'image': frame})
+            response = requests.post('http://<PI5_IP>:5000/detect',
+                                     files={'image': frame})
             if response.status_code == 200:
                 logging.info(f"Obstacle detected remotely: {response.json()}")
                 return response.json().get('obstacle_detected', False)
         except requests.ConnectionError:
-            logging.warning("Pi 5 not reachable. Falling back to local detection.")
+            logging.warning("Pi 5 not reachable."
+                            "Falling back to local detection.")
 
         # Fallback to local obstacle detection using TFLite
         return self.local_obstacle_detection(frame)
 
     def local_obstacle_detection(self, frame):
         """Run obstacle detection locally using TFLite model."""
-        # Add code here to run detection with TFLite interpreter on the Pi 4
+        # Code to run detection with TFLite interpreter on the Pi 4
         results = self.detect_objects(frame)
         if results:
             logging.info(f"Local obstacle detected: {results}")
@@ -116,10 +122,10 @@ class SingletonCamera:
         # Add logic for TFLite model inference and returning results
         return detected_objects
 
-
     def object_detected_flag(self):
-        ''' Check if either remote or local obstacle detection has detected an obstacle and
-        return a flag that avoidance algorithm can use to avoid the obstacle'''
+        ''' Check if either remote or local obstacle detection
+        has detected an obstacle and return a flag that avoidance
+        algorithm can use to avoid the obstacle'''
         # Check if obstacle is detected by either remote or local detection
         if self.detect_obstacle():
             return True
@@ -134,10 +140,12 @@ def get_camera_instance():
     """Accessor function to get the SingletonCamera instance."""
     return camera_instance
 
+
 # Flask route to serve the video stream
 @app.route('/video_feed')
 def video_feed():
-    return Response(camera_instance.stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(camera_instance.stream_video(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 if __name__ == "__main__":

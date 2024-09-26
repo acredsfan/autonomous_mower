@@ -19,23 +19,88 @@
             </div>
         </div>
         <div class="video-stream">
-            <img id="camera_feed" alt="Camera Feed">
+            <video id="video_feed" width="640" height="480" autoplay></video>
         </div>
     </div>
 
     <script>
+        // Existing Socket.IO code
         socket.on('message', function(data) {
             console.log(data.data);
         });
 
-        socket.on('update_frame', function(data) {
-            var image = document.getElementById('camera_feed');
-            image.src = 'data:image/jpeg;base64,' + data.frame;
-        });
 
-        // Request a new frame every 500ms (or whatever interval you prefer)
-        setInterval(function() {
-            socket.emit('request_frame');
-        }, 500);
+        // JavaScript functions for controlling the robot
+        function move(direction) {
+            let steering = 0;
+            let throttle = 0;
+
+            switch (direction) {
+                case 'forward':
+                    throttle = 1; // Full forward
+                    break;
+                case 'backward':
+                    throttle = -1; // Full backward
+                    break;
+                case 'left':
+                    steering = -1; // Full left
+                    break;
+                case 'right':
+                    steering = 1; // Full right
+                    break;
+                case 'stop':
+                    throttle = 0;
+                    steering = 0;
+                    break;
+                default:
+                    throttle = 0;
+                    steering = 0;
+            }
+
+            fetch('/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    steering: steering,
+                    throttle: throttle
+                }),
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch((error) => console.error('Error:', error));
+        }
+
+        function toggleBlades(state) {
+            fetch('/toggle_blades', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ state: state }),
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch((error) => console.error('Error:', error));
+        }
+
+        function startMowing() {
+            fetch('/start-mowing', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch((error) => console.error('Error:', error));
+        }
+
+        function stopMowing() {
+            fetch('/stop-mowing', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => alert(data.message))
+            .catch((error) => console.error('Error:', error));
+        }
     </script>
 {% endblock %}

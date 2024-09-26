@@ -6,7 +6,9 @@ from utilities import LoggerConfigInfo as LoggerConfig
 import os
 import time
 import math
+from math import radians, sin, cos, atan2, sqrt
 import threading
+import utm
 
 from dotenv import load_dotenv
 from utilities import Utils
@@ -199,20 +201,33 @@ class RoboHATController:
     def navigate_to_location(self, target_location):
         """Navigates the robot to the specified target location."""
         try:
-            ts, lat, lon = self.gps_latest_position.run()
-            current_position = (lat, lon)
-            while not self.has_reached_location(
-                    current_position, target_location):
-                steering, throttle = self.calculate_navigation_commands(
-                    current_position, target_location
-                )
-                self.set_pulse(steering, throttle)
-                ts, lat, lon = (
-                    self.gps_latest_position
-                    .get_latest_position()
-                )
+            position = self.gps_latest_position.run()
+            if position and len(position) == 5:
+                ts, easting, northing, zone_number, zone_letter = position
+                lat, lon = utm.to_latlon(easting, northing,
+                                         zone_number, zone_letter)
                 current_position = (lat, lon)
+            else:
+                logging.error('No GPS data available')
+                return False
+
+            while not self.has_reached_location(current_position,
+                                                target_location):
+                steering, throttle = self.calculate_navigation_commands(
+                    current_position,
+                    target_location
+                    )
+                self.set_pulse(steering, throttle)
                 time.sleep(0.1)
+                position = self.gps_latest_position.run()
+                if position and len(position) == 5:
+                    ts, easting, northing, zone_number, zone_letter = position
+                    lat, lon = utm.to_latlon(easting, northing,
+                                             zone_number, zone_letter)
+                    current_position = (lat, lon)
+                else:
+                    logging.error('No GPS data available during navigation')
+                    return False
             self.stop()
             return True
         except Exception:
@@ -229,23 +244,22 @@ class RoboHATController:
 
         sensor_interface = get_sensor_interface()
 
-        # Calculate bearing between current_position and target_location
-        bearing = self.calculate_bearing(
-            current_position, target_location
-        )
-        heading_error = (
-            sensor_interface.update_sensors('heading') - bearing
-        )
+        # Calculate bearing and heading error
+        bearing = self.calculate_bearing(current_position, target_location)
+        current_heading = sensor_interface.update_sensors('heading')
+        heading_error = (bearing - current_heading + 360) % 360
+        if heading_error > 180:
+            heading_error -= 360  # Normalize to [-180, 180]
 
         # Simple proportional controller for steering
-        Kp = 0.01  # Proportional gain; adjust as needed
-        steering = -Kp * heading_error  # Negative sign to correct the error
+        Kp_steering = 0.01  # Proportional gain; adjust as needed
+        steering = -Kp_steering * heading_error
 
-        # Set throttle based on distance to target
-        distance = self.calculate_distance(
-            current_position, target_location
-        )
-        throttle = min(distance * 0.1, 1.0)  # Scale throttle; adjust as needed
+        # Calculate distance to target
+        distance = self.calculate_distance(current_position, target_location)
+        # Simple proportional controller for throttle
+        Kp_throttle = 0.5  # Proportional gain; adjust as needed
+        throttle = min(Kp_throttle * distance, 1.0)  # Scale throttle; adjust as needed
 
         # Clamp steering and throttle values
         steering = max(min(steering, 1.0), -1.0)
@@ -256,20 +270,27 @@ class RoboHATController:
     @staticmethod
     def calculate_bearing(current_position, target_location):
         """Calculates the bearing from current_position to target_location."""
-        lat1, lon1 = current_position
-        lat2, lon2 = target_location
-        angle_rad = math.atan2(lon2 - lon1, lat2 - lat1)
-        # Normalize to 0-360 degrees
-        bearing = (math.degrees(angle_rad) + 360) % 360
+        lat1, lon1 = map(radians, current_position)
+        lat2, lon2 = map(radians, target_location)
+        delta_lon = lon2 - lon1
+        x = sin(delta_lon) * cos(lat2)
+        y = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)
+        initial_bearing = atan2(x, y)
+        # Convert from radians to degrees and normalize
+        bearing = (math.degrees(initial_bearing) + 360) % 360
         return bearing
 
     @staticmethod
     def calculate_distance(current_position, target_location):
-        """Calculates the Euclidean distance
-        between current and target positions."""
-        lat1, lon1 = current_position
-        lat2, lon2 = target_location
-        distance = math.hypot(lat2 - lat1, lon2 - lon1)
+        """Calculates the Haversine distance between two points."""
+        R = 6371e3  # Earth's radius in meters
+        lat1, lon1 = map(radians, current_position)
+        lat2, lon2 = map(radians, target_location)
+        delta_lat = lat2 - lat1
+        delta_lon = lon2 - lon1
+        a = sin(delta_lat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        distance = R * c  # Distance in meters
         return distance
 
     @staticmethod
@@ -343,6 +364,14 @@ class RoboHATController:
                 f"Unexpected issue setting PWM (check wires to motor "
                 f"board): {err}"
             )
+
+    def set_steering_throttle(self, steering, throttle):
+        """Sets the steering and throttle values and sends PWM commands."""
+        steering = self.trim_out_of_bound_value(steering)
+        throttle = self.trim_out_of_bound_value(throttle)
+        self.angle = steering
+        self.throttle = throttle
+        self.set_pulse(self.angle, self.throttle)
 
     @staticmethod
     def is_valid_pwm_value(value):

@@ -452,3 +452,18 @@ window.addEventListener('load', function () {
         console.log('Connected to object detection server');
     });
 });
+
+// Add event listener for the "Check Polygon Points" button
+const checkPolygonButton = document.getElementById('check-polygon-button');
+if (checkPolygonButton) {
+    checkPolygonButton.addEventListener('click', checkPolygonPoints);
+}
+
+function checkPolygonPoints() {
+    fetch('/check-polygon-points', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch(error => console.error('Error:', error));
+}
