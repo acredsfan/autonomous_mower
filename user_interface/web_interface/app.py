@@ -133,13 +133,18 @@ def get_sensor_data():
     return jsonify(sensor_data)
 
 
-@app.route('/control', methods=['POST'])
+@app.route('/control', methods=['GET', 'POST'])
 def control():
-    data = request.get_json()
-    steering = data.get('steering', 0)
-    throttle = data.get('throttle', 0)
-    robohat_driver.set_steering_throttle(steering, throttle)
-    return jsonify({'status': 'success'})
+    if request.method == 'GET':
+        # Render the control.html template
+        return render_template('control.html')
+    elif request.method == 'POST':
+        # Handle control commands
+        data = request.get_json()
+        steering = data.get('steering', 0)
+        throttle = data.get('throttle', 0)
+        robohat_driver.set_steering_throttle(steering, throttle)
+        return jsonify({'status': 'success'})
 
 @socketio.on('request_status')
 def handle_status_request():

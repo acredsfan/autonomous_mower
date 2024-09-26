@@ -91,15 +91,18 @@ class SingletonCamera:
             return False
 
         try:
+            # Encode frame as JPEG
+            _, img_encoded = cv2.imencode('.jpg', frame)
+            img_bytes = img_encoded.tobytes()
+
             # Try sending frame to Pi 5 for remote obstacle detection
-            response = requests.post('http://<PI5_IP>:5000/detect',
-                                     files={'image': frame})
+            response = requests.post(f'http://{OBSTACLE_DETECT}:5000/detect',
+                                    files={'image': ('image.jpg', img_bytes, 'image/jpeg')})
             if response.status_code == 200:
                 logging.info(f"Obstacle detected remotely: {response.json()}")
                 return response.json().get('obstacle_detected', False)
         except requests.ConnectionError:
-            logging.warning("Pi 5 not reachable."
-                            "Falling back to local detection.")
+            logging.warning("Pi 5 not reachable. Falling back to local detection.")
 
         # Fallback to local obstacle detection using TFLite
         return self.local_obstacle_detection(frame)
