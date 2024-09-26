@@ -13,7 +13,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 from utilities import LoggerConfigInfo as LoggerConfig
-from camera_instance import get_camera_instance
+from hardware_interface.camera_instance import get_camera_instance
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
