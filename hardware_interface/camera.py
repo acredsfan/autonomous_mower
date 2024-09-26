@@ -7,6 +7,9 @@ import gi
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GLib
 from dotenv import load_dotenv
+import sys
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(project_root)
 from utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
