@@ -1,156 +1,175 @@
-import numpy as np
-import threading
-from queue import Queue, Empty
-import tflite_runtime.interpreter as tflite
-from picamera2 import Picamera2
-from dotenv import load_dotenv
+import io
 import os
-import cv2
-from utilities import LoggerConfigInfo as LoggerConfig
-import socket
+import time
+import threading
+from threading import Condition
+from http import server
+from picamera2 import PiCamera
+import numpy as np
+import tflite_runtime.interpreter as tflite
+from dotenv import load_dotenv
 import requests
-from flask import Flask, Response
+import logging
+from utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
-
-# Retrieve the path to the object detection model from the .env file
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
+PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address of the Pi 5
 
-# Flask app for video stream
-app = Flask(__name__)
+# Initialize TFLite interpreter for local detection
+interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+height = input_details[0]['shape'][1]
+width = input_details[0]['shape'][2]
+floating_model = (input_details[0]['dtype'] == np.float32)
+input_mean = 127.5
+input_std = 127.5
 
+# Load labels
+LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Add this to your .env
+with open(LABEL_MAP_PATH, 'r') as f:
+    labels = [line.strip() for line in f.readlines()]
+if labels[0] == '???':
+    del(labels[0])
 
-class SingletonCamera:
-    _instance = None
-    _lock = threading.Lock()
+# Camera settings
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 24
+output = None
 
-    def __new__(cls):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super(SingletonCamera, cls).__new__(cls)
-                cls._instance.init_camera()
-        return cls._instance
+# A flag to indicate whether to use remote detection
+use_remote_detection = True
 
-    def init_camera(self):
-        """Initialize the camera using Picamera2
-        and start the update thread."""
-        self.frame_queue = Queue(maxsize=1)
-        self.picam2 = Picamera2()
-        self.picam2.configure(
-            self.picam2.create_video_configuration(main={"size": (640, 480)}))
-        self.picam2.start()
+# Condition variable for thread synchronization
+frame_condition = Condition()
+frame = None
+
+class StreamingOutput(object):
+    def __init__(self):
+        self.frame = None
+        self.buffer = io.BytesIO()
+        self.condition = Condition()
         self.running = True
-        self.read_thread = threading.Thread(target=self.update, daemon=True)
-        self.read_thread.start()
-        self.queue_lock = threading.Lock()
 
-    def update(self):
-        """Capture frames from the camera."""
-        while self.running:
-            frame = self.picam2.capture_array()
-            if frame is None:
-                logging.warning("Failed to read frame from camera."
-                                "Attempting reinitialization.")
-                self.reinitialize_camera()
-                continue
+    def write(self, buf):
+        if buf.startswith(b'\xff\xd8'):
+            # New frame, copy the existing buffer's content and notify all clients it's available
+            self.buffer.truncate()
+            with self.condition:
+                self.frame = self.buffer.getvalue()
+                self.condition.notify_all()
+            self.buffer.seek(0)
+        return self.buffer.write(buf)
 
-            with self.queue_lock:
-                if not self.frame_queue.empty():
-                    try:
-                        self.frame_queue.get_nowait()
-                    except Empty:
-                        pass
-                self.frame_queue.put(frame)
+output = StreamingOutput()
+camera.start_recording(output, format='mjpeg')
 
-    def get_frame(self):
-        """Get the latest frame from the camera."""
-        with self.queue_lock:
-            try:
-                return self.frame_queue.get_nowait()
-            except Empty:
-                return None
+def detect_obstacles_local(image):
+    """Perform local TFLite detection on the image."""
+    frame_rgb = np.array(image)
+    frame_resized = cv2.resize(frame_rgb, (width, height))
+    input_data = np.expand_dims(frame_resized, axis=0)
+    if floating_model:
+        input_data = (np.float32(input_data) - input_mean) / input_std
+    interpreter.set_tensor(input_details[0]['index'], input_data)
+    interpreter.invoke()
+    boxes = interpreter.get_tensor(output_details[0]['index'])[0]  # Bounding box coordinates
+    classes = interpreter.get_tensor(output_details[1]['index'])[0]  # Class index
+    scores = interpreter.get_tensor(output_details[2]['index'])[0]  # Confidence scores
+    min_conf_threshold = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
+    detected_objects = []
+    for i in range(len(scores)):
+        if ((scores[i] > min_conf_threshold) and (scores[i] <= 1.0)):
+            object_name = labels[int(classes[i])]
+            detected_objects.append({'name': object_name, 'score': scores[i]})
+    return detected_objects
 
-    def stream_video(self):
-        while True:
-            frame = self.picam2.capture_array()
-            _, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+def detect_obstacles_remote(image):
+    """Send the image to Pi 5 for remote detection."""
+    try:
+        # Convert image to bytes
+        img_byte_arr = io.BytesIO()
+        image.save(img_byte_arr, format='JPEG')
+        img_bytes = img_byte_arr.getvalue()
 
-    def detect_obstacle(self):
-        """Attempt to detect obstacles via Pi 5.
-        Fallback to local detection if necessary."""
-        frame = self.get_frame()
-        if frame is None:
-            logging.warning("No frame available for detection.")
-            return False
-
-        try:
-            # Encode frame as JPEG
-            _, img_encoded = cv2.imencode('.jpg', frame)
-            img_bytes = img_encoded.tobytes()
-
-            # Try sending frame to Pi 5 for remote obstacle detection
-            response = requests.post(f'http://{OBSTACLE_DETECT}:5000/detect',
-                                    files={'image': ('image.jpg', img_bytes, 'image/jpeg')})
-            if response.status_code == 200:
-                logging.info(f"Obstacle detected remotely: {response.json()}")
-                return response.json().get('obstacle_detected', False)
-        except requests.ConnectionError:
-            logging.warning("Pi 5 not reachable. Falling back to local detection.")
-
-        # Fallback to local obstacle detection using TFLite
-        return self.local_obstacle_detection(frame)
-
-    def local_obstacle_detection(self, frame):
-        """Run obstacle detection locally using TFLite model."""
-        # Code to run detection with TFLite interpreter on the Pi 4
-        results = self.detect_objects(frame)
-        if results:
-            logging.info(f"Local obstacle detected: {results}")
-            return True
+        response = requests.post(f'http://{PI5_IP}:5000/detect',
+                                 files={'image': ('image.jpg', img_bytes, 'image/jpeg')},
+                                 timeout=1)
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('obstacle_detected', False)
         else:
-            logging.info("No local obstacles detected.")
+            logging.warning("Failed to get a valid response from Pi 5.")
             return False
-
-    def detect_objects(self, image):
-        """Run inference with TFLite and detect objects."""
-        # You can use the existing TFLite detection code here
-        detected_objects = []
-        # Add logic for TFLite model inference and returning results
-        return detected_objects
-
-    def object_detected_flag(self):
-        ''' Check if either remote or local obstacle detection
-        has detected an obstacle and return a flag that avoidance
-        algorithm can use to avoid the obstacle'''
-        # Check if obstacle is detected by either remote or local detection
-        if self.detect_obstacle():
-            return True
+    except (requests.ConnectionError, requests.Timeout):
+        logging.warning("Pi 5 not reachable. Falling back to local detection.")
+        global use_remote_detection
+        use_remote_detection = False
         return False
 
+def process_frame():
+    """Process frames for obstacle detection."""
+    while True:
+        with output.condition:
+            output.condition.wait()
+            frame = output.frame
+        image = Image.open(io.BytesIO(frame))
+        if use_remote_detection:
+            obstacle_detected = detect_obstacles_remote(image)
+        else:
+            obstacle_detected = detect_obstacles_local(image)
+        # Use obstacle_detected flag in your robot control logic
 
-# Singleton accessor function
-camera_instance = SingletonCamera()
+def start_processing():
+    thread = threading.Thread(target=process_frame)
+    thread.daemon = True
+    thread.start()
 
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/video_feed':
+            self.send_response(200)
+            self.send_header('Age', 0)
+            self.send_header('Cache-Control', 'no-cache, private')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.end_headers()
+            try:
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+                    self.wfile.write(b'--FRAME\r\n')
+                    self.send_header('Content-Type', 'image/jpeg')
+                    self.send_header('Content-Length', len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b'\r\n')
+            except Exception as e:
+                logging.warning('Removed streaming client %s: %s', self.client_address, str(e))
+        else:
+            self.send_error(404)
+            self.end_headers()
 
-def get_camera_instance():
-    """Accessor function to get the SingletonCamera instance."""
-    return camera_instance
-
-
-# Flask route to serve the video stream
-@app.route('/video_feed')
-def video_feed():
-    return Response(camera_instance.stream_video(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
+def start_streaming_server():
+    address = ('', 8000)
+    server_instance = server.ThreadingHTTPServer(address, StreamingHandler)
+    server_thread = threading.Thread(target=server_instance.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
 
 if __name__ == "__main__":
-    # Start Flask server for video streaming
-    app.run(host='0.0.0.0', port=8000)
+    start_processing()
+    start_streaming_server()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        camera.stop_recording()

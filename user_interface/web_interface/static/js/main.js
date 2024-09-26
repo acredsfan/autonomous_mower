@@ -435,8 +435,6 @@ window.addEventListener('load', function () {
     fetch('/get_obj_det_ip').then(response => response.json())
         .then(data => {
             obj_det_ip = data.object_detection_ip; // Extract the IP address
-            socket.emit('video_connection', { ip: obj_det_ip });
-
             const videoFeedElement = document.getElementById('video_feed');
             if (videoFeedElement) {
                 videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
@@ -446,11 +444,12 @@ window.addEventListener('load', function () {
         })
         .catch(error => {
             console.error('Error fetching object detection IP:', error);
+            // Fallback to Pi 4 video feed
+            const videoFeedElement = document.getElementById('video_feed');
+            if (videoFeedElement) {
+                videoFeedElement.src = '/video_feed'; // This will fetch from Pi 4
+            }
         });
-
-    socket.on('video_connection', function (data) {
-        console.log('Connected to object detection server');
-    });
 });
 
 // Add event listener for the "Check Polygon Points" button
