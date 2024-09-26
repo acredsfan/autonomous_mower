@@ -1,7 +1,5 @@
-from PIL import Image
-from io import BytesIO
 from flask_cors import CORS
-import base64
+import requests
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 import datetime
@@ -16,7 +14,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 sys.path.append(project_root)
 
 from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.camera import get_camera_instance
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATController
@@ -74,29 +71,11 @@ stop_thread = False
 mowing_status = "Not mowing"
 next_scheduled_mow = "2023-05-06 12:00:00"
 
+
 def utm_to_latlon(easting, northing, zone_number, zone_letter):
     lat, lng = utm.to_latlon(easting, northing, zone_number, zone_letter)
     return lat, lng
 
-def gen():
-    camera = get_camera_instance()
-    while True:
-        frame = camera.get_frame()
-        if frame is not None:
-            try:
-                # Convert frame (numpy array) to an image using Pillow
-                image = Image.fromarray(frame)
-                if image.mode != 'RGB':
-                    image = image.convert('RGB')  # Ensure image is in RGB mode
-                buffer = BytesIO()
-                image.save(buffer, format="JPEG")
-                frame = buffer.getvalue()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            except Exception as e:
-                logging.error(f"Error encoding frame for streaming: {e}")
-        else:
-            logging.error("Failed to get the frame from the camera.")
 
 @app.route('/')
 def index():
@@ -104,6 +83,7 @@ def index():
     return render_template('index.html',
                            google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
                            next_scheduled_mow=next_scheduled_mow)
+
 
 @app.route('/status')
 def status():
@@ -164,12 +144,23 @@ def handle_status_request():
     emit('update_status', data)
 
 
-camera = get_camera_instance()
-
-
 @app.route('/video_feed')
 def video_feed():
-    return Response(camera.stream_video(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    def generate():
+        try:
+            # Proxy the video feed from camera.py
+            # Assuming camera.py is serving at http://localhost:8000/video_feed
+            with requests.get('http://localhost:8000/video_feed', stream=True) as r:
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:
+                        yield chunk
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error accessing local video feed: {e}")
+            # Optionally, yield an error image or message
+            yield b''
+
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=FRAME')
 
 
 @app.route('/camera_route')

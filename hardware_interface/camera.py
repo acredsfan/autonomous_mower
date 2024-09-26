@@ -6,7 +6,6 @@ import time
 import threading
 from threading import Condition
 from http import server
-from picamera2 import Picamera2
 import numpy as np
 import tflite_runtime.interpreter as tflite
 from dotenv import load_dotenv
@@ -14,6 +13,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 from utilities import LoggerConfigInfo as LoggerConfig
+from camera_instance import get_camera_instance
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -42,11 +42,8 @@ with open(LABEL_MAP_PATH, 'r') as f:
 if labels[0] == '???':
     del(labels[0])
 
-# Initialize Picamera2
-camera = Picamera2()
-camera_config = camera.create_video_configuration(main={"size": (640, 480)})
-camera.configure(camera_config)
-camera.start()
+# Get the camera instance
+camera = get_camera_instance()
 
 # A flag to indicate whether to use remote detection
 use_remote_detection = True
