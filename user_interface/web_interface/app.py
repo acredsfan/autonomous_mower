@@ -19,6 +19,7 @@ from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATController
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
+from hardware_interface.camera_instance import start_processing, start_streaming_server
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -447,6 +448,12 @@ def stop_motors():
     # Stop the motors
     robohat_driver.run(0, 0)
 
+
+def start_camera():
+    start_processing()
+    start_streaming_server()
+
+
 def start_web_interface():
     global stop_sensor_thread
     # Start the sensor update thread
@@ -454,12 +461,18 @@ def start_web_interface():
         target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
 
+    # Start the camera processing and streaming server
+    camera_thread = threading.Thread(target=start_camera, daemon=True)
+    camera_thread.start()
+    logging.info("Camera started.")
+
     socketio.run(app, host='0.0.0.0', port=8080)
 
     # Set the flag to stop the sensor update thread
     sensor_interface.stop_thread = True
 
     sensor_thread.join()  # Wait for the thread to finish
+
 
 if __name__ == '__main__':
     start_web_interface()

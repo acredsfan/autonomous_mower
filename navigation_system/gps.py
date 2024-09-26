@@ -13,7 +13,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(project_root)
 
 from utilities import CsvLogger
-from utilities import LoggerConfigDebug as LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)

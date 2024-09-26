@@ -431,7 +431,6 @@ function drawPath(coordinates) {
 var socket = io();
 
 window.addEventListener('load', function () {
-    let obj_det_ip;
     fetch('/get_obj_det_ip').then(response => response.json())
         .then(data => {
             obj_det_ip = data.object_detection_ip; // Extract the IP address
