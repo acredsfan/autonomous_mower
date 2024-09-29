@@ -31,7 +31,7 @@ robohat_controller = None
 
 # Function to initialize all resources
 def initialize_resources():
-    from hardware_interface.camera import SingletonCamera
+    from obstacle_detection.local_obstacle_detection import SingletonCamera
     global sensor_interface, camera, path_planner
     global avoidance_algorithm, localization, robohat_controller
     from hardware_interface.sensor_interface import SensorInterface

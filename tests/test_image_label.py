@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import numpy as np
-from hardware_interface.camera import CameraProcessor, SingletonCamera
+from obstacle_detection.local_obstacle_detection import CameraProcessor, SingletonCamera
 
 
 class TestCameraDetectionLabels(unittest.TestCase):

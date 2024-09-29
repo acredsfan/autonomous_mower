@@ -19,7 +19,7 @@ from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATController
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
-from hardware_interface.camera import start_processing, start_streaming_server
+from obstacle_detection.local_obstacle_detection import start_processing, start_streaming_server
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
