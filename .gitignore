@@ -3,5 +3,6 @@
 *.tflite
 *.vscode
 *.__pycache__
+**__paycache__/
 *.tflite
 *.zip
