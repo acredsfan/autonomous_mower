@@ -62,6 +62,7 @@ def capture_frames():
         processed_frame = process_frame(frame)
         img = Image.fromarray(processed_frame)
         buf = io.BytesIO()
+        img.convert('RGB')
         img.save(buf, format='JPEG')
 
 
