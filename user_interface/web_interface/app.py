@@ -471,7 +471,7 @@ def start_web_interface():
     # Start Ngrok tunnel for remote access if use_ngrok is set to True
     if use_ngrok:
         logging.info("Starting Ngrok tunnel...")
-        ngrok_tunnel = ngrok.connect(8080, bind_tls=True, domain='ngrok.io')
+        ngrok_tunnel = ngrok.connect(8080)
         logging.info(f"Ngrok tunnel URL: {ngrok_tunnel.public_url}")
 
     socketio.run(app, host='0.0.0.0', port=8080)
