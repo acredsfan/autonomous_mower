@@ -96,12 +96,12 @@ class GpsPosition(metaclass=SingletonMeta):
     def _read_gps(self):
         while self.running:
             try:
-                logger.debug("Reading GPS data...")
+                #logger.debug("Reading GPS data...")
                 positions = self.run()
                 if positions:
                     with self.lock:
                         self.position = positions
-                    logger.debug(f"New GPS position: {positions}")
+                    #logger.debug(f"New GPS position: {positions}")
                 else:
                     logger.debug("No valid GPS position received.")
                 time.sleep(1)  # Adjust as needed
@@ -230,15 +230,15 @@ def parseGpsPosition(line, debug=False):
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
         latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
 
-        if debug:
-            if hasattr(msg, 'longitude') and msg.longitude != longitude:
-                logger.info(f"Longitude mismatch {msg.longitude} != {longitude}")
-            if hasattr(msg, 'latitude') and msg.latitude != latitude:
-                logger.info(f"Latitude mismatch {msg.latitude} != {latitude}")
+        # if debug:
+        #     if hasattr(msg, 'longitude') and msg.longitude != longitude:
+        #         logger.info(f"Longitude mismatch {msg.longitude} != {longitude}")
+        #     if hasattr(msg, 'latitude') and msg.latitude != latitude:
+        #         logger.info(f"Latitude mismatch {msg.latitude} != {latitude}")
 
         utm_position = utm.from_latlon(latitude, longitude)
-        if debug:
-            logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
+        # if debug:
+        #     logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
 
         return float(utm_position[0]), float(utm_position[1]), utm_position[2], utm_position[3]
 
