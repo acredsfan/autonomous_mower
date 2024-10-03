@@ -9,6 +9,7 @@ import json
 import sys
 import os
 import utm
+from pyngrok import ngrok
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
@@ -19,7 +20,7 @@ from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATController
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
-from obstacle_detection.local_obstacle_detection import start_processing, start_streaming_server
+from obstacle_detection.local_obstacle_detection import start_processing
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -51,6 +52,8 @@ from navigation_system.localization import Localization
 serial_port_path = os.getenv("GPS_SERIAL_PORT", "/dev/ttyACM0")  # Default to /dev/ttyACM0
 serial_baudrate = int(os.getenv("GPS_BAUD_RATE", "9600"))
 serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
+ngrok_url = os.getenv("NGROK_URL")
+use_ngrok = os.getenv("USE_NGROK", "False").lower() == "true"
 
 # Initialize SerialPort and GpsPosition with environment configurations
 serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
@@ -451,7 +454,6 @@ def stop_motors():
 
 def start_camera():
     start_processing()
-    start_streaming_server()
 
 
 def start_web_interface():
@@ -465,6 +467,12 @@ def start_web_interface():
     camera_thread = threading.Thread(target=start_camera, daemon=True)
     camera_thread.start()
     logging.info("Camera started.")
+
+    # Start Ngrok tunnel for remote access if use_ngrok is set to True
+    if use_ngrok:
+        logging.info("Starting Ngrok tunnel...")
+        ngrok_tunnel = ngrok.connect(8080, bind_tls=True, domain='ngrok.io')
+        logging.info(f"Ngrok tunnel URL: {ngrok_tunnel.public_url}")
 
     socketio.run(app, host='0.0.0.0', port=8080)
 
