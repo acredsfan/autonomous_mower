@@ -72,6 +72,7 @@ def save_latest_frame(frame):
     """
     global latest_frame
     latest_frame = output1.frame
+    return latest_frame
 
 
 def get_camera_instance():
