@@ -161,6 +161,7 @@ def gen_frames():
     while True:
         frame = camera.capture_array()
         img = Image.fromarray(frame)
+        img = img.convert('RGB')
         buf = io.BytesIO()
         img.save(buf, format='JPEG')
         frame_bytes = buf.getvalue()
