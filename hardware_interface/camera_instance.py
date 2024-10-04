@@ -2,16 +2,12 @@ from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 from picamera2.outputs import FileOutput, FfmpegOutput
 import socket
-from dotenv import load_dotenv
-import os
 from utilities import LoggerConfigInfo as LoggerConfig
 import threading
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-# Load environment variables from .env file (for configurable UDP port)
-load_dotenv()
 
 def get_device_ip():
     """
@@ -52,9 +48,6 @@ encoder.output = [output1, output2]
 camera.start_encoder(encoder)
 
 
-
-
-
 def start_server_thread():
     """
     Start the server thread for streaming.
@@ -63,6 +56,7 @@ def start_server_thread():
     """
     camera.start()
     output2.start()
+
 
 def save_latest_frame(frame):
     """
