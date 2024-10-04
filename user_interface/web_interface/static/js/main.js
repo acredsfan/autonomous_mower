@@ -457,3 +457,91 @@ function checkPolygonPoints() {
     .then(data => alert(data.message))
     .catch(error => console.error('Error:', error));
 }
+
+// Handle incoming messages (if any)
+socket.on('message', function(data) {
+    console.log(data.data);
+});
+
+// JavaScript functions for controlling the robot
+function move(direction) {
+    let steering = 0;
+    let throttle = 0;
+
+    switch (direction) {
+        case 'forward':
+            throttle = 1; // Full forward
+            break;
+        case 'backward':
+            throttle = -1; // Full backward
+            break;
+        case 'left':
+            steering = -1; // Full left
+            break;
+        case 'right':
+            steering = 1; // Full right
+            break;
+        case 'stop':
+            throttle = 0;
+            steering = 0;
+            break;
+        default:
+            throttle = 0;
+            steering = 0;
+    }
+
+    fetch('/control', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            steering: steering,
+            throttle: throttle
+        }),
+    })
+    .then(response => {
+        if (!response.ok) {
+            console.error('Server error:', response.status);
+            return response.text().then(text => {
+                console.error('Error text:', text);
+                throw new Error('Server error');
+            });
+        }
+        return response.json();
+    })
+    .then(data => console.log(data))
+    .catch((error) => console.error('Error:', error));
+}
+
+function toggleBlades(state) {
+    fetch('/toggle_blades', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ state: state }),
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch((error) => console.error('Error:', error));
+}
+
+function startMowing() {
+    fetch('/start-mowing', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch((error) => console.error('Error:', error));
+}
+
+function stopMowing() {
+    fetch('/stop-mowing', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch((error) => console.error('Error:', error));
+}
+
