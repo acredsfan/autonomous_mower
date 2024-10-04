@@ -15,7 +15,6 @@ load_dotenv()
 # Retrieve the UDP port from the .env file or set a default value
 UDP_PORT = os.getenv('UDP_PORT', '8000')  # Default port for streaming
 
-
 def get_device_ip():
     """
     Get the IP address of the device on the local network.
@@ -29,12 +28,11 @@ def get_device_ip():
         device_ip = s.getsockname()[0]
     except Exception as e:
         # Fallback if IP detection fails
-        print(f"Could not determine device IP: {e}")
+        logging.error(f"Could not determine device IP: {e}")
         device_ip = '127.0.0.1'  # Default to localhost if detection fails
     finally:
         s.close()
     return device_ip
-
 
 # Get the device's IP dynamically
 DEVICE_IP = get_device_ip()
@@ -51,15 +49,17 @@ encoder = H264Encoder(1000000)
 # Set up the output stream over UDP
 output = FfmpegOutput(f"-f rtp udp://{DEVICE_IP}:{UDP_PORT}")
 
-
 def start_server_thread():
     """
     Start the server thread for streaming.
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
-    camera.start_recording(encoder, output)
-
+    try:
+        camera.start_recording(encoder, output)
+        logging.info("Camera recording started successfully.")
+    except Exception as e:
+        logging.error(f"Error starting camera recording: {e}")
 
 def get_camera_instance():
     """
@@ -67,5 +67,8 @@ def get_camera_instance():
     This function returns the initialized Picamera2 instance
     and also starts the UDP streaming process.
     """
-    start_server_thread()
+    if not camera.recording:
+        start_server_thread()
+    else:
+        logging.warning("Camera recording is already in progress.")
     return camera
