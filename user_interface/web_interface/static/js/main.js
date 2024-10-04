@@ -436,7 +436,7 @@ window.addEventListener('load', function () {
             obj_det_ip = data.object_detection_ip; // Extract the IP address
             const videoFeedElement = document.getElementById('video_feed');
             if (videoFeedElement) {
-                videoFeedElement.src = `http://${obj_det_ip}:8000/video_feed`;
+                videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
             } else {
                 console.error('Element with id "video_feed" not found.');
             }
@@ -447,6 +447,7 @@ window.addEventListener('load', function () {
             const videoFeedElement = document.getElementById('video_feed');
             if (videoFeedElement) {
                 videoFeedElement.src = '/video_feed'; // This will fetch from Pi 4
+                console.log('Falling back to local video feed.');
             }
         });
 });
