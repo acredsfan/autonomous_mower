@@ -65,7 +65,7 @@ def save_latest_frame(frame):
     for processing by the obstacle detection module.
     """
     global latest_frame
-    latest_frame = output1.frame
+    latest_frame = output1.frame.save()
     return latest_frame
 
 
