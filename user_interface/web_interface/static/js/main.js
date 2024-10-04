@@ -455,12 +455,11 @@ async function setVideoFeed() {
         if (videoFeedElement) {
             videoFeedElement.src = '/video_feed'; // This will fetch from Pi 4
             console.log('Falling back to local video feed.');
-            else {
-                console.error('Element with id "video_feed" not found.');
+        }else {
+            console.error('Element with id "video_feed" not found.');
             }
         }
     }
-}
 
 window.addEventListener('load', setVideoFeed);
 
