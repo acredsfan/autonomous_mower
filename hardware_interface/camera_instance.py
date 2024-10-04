@@ -12,10 +12,6 @@ logging = LoggerConfig.get_logger(__name__)
 # Load environment variables from .env file (for configurable UDP port)
 load_dotenv()
 
-# Retrieve the UDP port from the .env file or set a default value and make sure it's an integer
-UDP_PORT = int(os.getenv("UDP_PORT", 8000))
-
-
 def get_device_ip():
     """
     Get the IP address of the device on the local network.
@@ -56,7 +52,7 @@ def start_server_thread():
     stream to the designated IP and port.
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.connect((DEVICE_IP, UDP_PORT))
+        sock.connect((DEVICE_IP, 8080))
         stream = sock.makefile('wb')
         camera.start_recording(encoder, FileOutput(stream))
 
