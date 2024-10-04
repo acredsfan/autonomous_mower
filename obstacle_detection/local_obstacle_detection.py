@@ -50,6 +50,7 @@ frame_condition = Condition()
 frame = None
 frame_lock = threading.Lock()
 
+
 def capture_frames():
     """
     Capture frames from Picamera2 and process them.
@@ -65,6 +66,7 @@ def capture_frames():
         buf = io.BytesIO()
         img = img.convert('RGB')  # Ensure all images are properly converted before saving to prevent errors
         img.save(buf, format='JPEG')
+
 
 def detect_obstacles_local(image):
     """
@@ -96,6 +98,7 @@ def detect_obstacles_local(image):
             detected_objects.append({'name': class_name, 'score': score})
     return detected_objects
 
+
 def detect_obstacles_remote(image):
     """
     Send the image to Pi 5 for remote detection.
@@ -125,6 +128,7 @@ def detect_obstacles_remote(image):
         use_remote_detection = False
         return False
 
+
 def process_frame(frame):
     """
     Process frames for obstacle detection and annotate them.
@@ -150,12 +154,14 @@ def process_frame(frame):
         obstacle_detected = len(detected_objects) > 0
     return np.array(image)
 
+
 def start_processing():
     """
     Start the frame processing thread.
     """
-    thread = threading.Thread(target=capture_frames)  
+    thread = threading.Thread(target=capture_frames)
     thread.start()
+
 
 if __name__ == "__main__":
     start_processing()
