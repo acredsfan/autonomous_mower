@@ -151,31 +151,9 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
-    from hardware_interface.camera_instance import save_latest_frame, frame_lock
-    from PIL import Image
-    import io
-    with frame_lock:
-        latest_frame = save_latest_frame()
-
-    def gen_frames():
-        while True:
-            with frame_lock:
-                if latest_frame is not None:
-                    frame = latest_frame.copy()
-                else:
-                    logging.info("No frame available yet")
-                    continue
-            try:
-                img = Image.fromarray(frame)
-                buf = io.BytesIO()
-                img = img.convert('RGB')
-                img.save(buf, format='JPEG')
-                frame_bytes = buf.getvalue()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-            except Exception as e:
-                logging.error(f"Error in gen_frames: {e}")
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    ''' Get UDP stream from camera_isntance.py'''
+    from hardware_interface.camera_instance import get_camera_instance
+    return Response(get_camera_instance, mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 @app.route('/camera_route')
