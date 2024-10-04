@@ -43,7 +43,7 @@ if labels[0] == '???':
 camera = get_camera_instance()
 
 # A flag to indicate whether to use remote detection (default to True)
-use_remote_detection = USE_REMOTE_DETECTION  s
+use_remote_detection = USE_REMOTE_DETECTION
 
 # Condition variable for thread synchronization
 frame_condition = Condition()
