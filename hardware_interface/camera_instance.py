@@ -12,8 +12,8 @@ logging = LoggerConfig.get_logger(__name__)
 # Load environment variables from .env file (for configurable UDP port)
 load_dotenv()
 
-# Retrieve the UDP port from the .env file or set a default value
-UDP_PORT = os.getenv('UDP_PORT', '8000')  # Default port for streaming
+# Retrieve the UDP port from the .env file or set a default value and make sure it's an integer
+UDP_PORT = int(os.getenv("UDP_PORT", 8000))
 
 
 def get_device_ip():
