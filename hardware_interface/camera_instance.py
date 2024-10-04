@@ -42,7 +42,7 @@ camera.configure(camera_config)
 # Set up the encoder with a bitrate of 1 Mbps
 encoder = H264Encoder(1000000)
 output1 = FileOutput()
-output2 = FfmpegOutput('-f mpegts udp://{Device_IP}:8080')
+output2 = FfmpegOutput(f'-f mpegts udp://{DEVICE_IP}:8080')
 frame_lock = threading.Lock()
 encoder.output = [output1, output2]
 camera.start_encoder(encoder)
