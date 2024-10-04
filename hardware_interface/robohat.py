@@ -310,40 +310,39 @@ class RoboHATController:
         self.set_pulse(0, 0)
         logging.info("Robot stopped.")
 
-def set_pulse(self, steering, throttle):
-    steering = self.trim_out_of_bound_value(steering)
-    throttle = self.trim_out_of_bound_value(throttle)
-    if throttle > 0:
-        output_throttle = Utils.map_range(
-            throttle, 0, 1.0,
-            self.STOPPED_PWM, self.MAX_FORWARD
-        )
-    else:
-        output_throttle = Utils.map_range(
-            throttle, -1, 0,
-            self.MAX_REVERSE, self.STOPPED_PWM
-        )
-    if steering > 0:
-        output_steering = Utils.map_range(
-            steering, 0, 1.0,
-            self.STEERING_MID, 1000
-        )
-    else:
-        output_steering = Utils.map_range(
-            steering, -1, 0,
-            2000, self.STEERING_MID
-        )
-    if (self.is_valid_pwm_value(output_steering) and
-            self.is_valid_pwm_value(output_throttle)):
-        if self.debug:
-            print(
-                f"output_steering={output_steering}, "
-                f"output_throttle={output_throttle}"
+    def set_pulse(self, steering, throttle):
+        steering = self.trim_out_of_bound_value(steering)
+        throttle = self.trim_out_of_bound_value(throttle)
+        if throttle > 0:
+            output_throttle = Utils.map_range(
+                throttle, 0, 1.0,
+                self.STOPPED_PWM, self.MAX_FORWARD
             )
-        self.write_pwm(output_steering, output_throttle)  # Corrected line
-    else:
-        logging.warning("Invalid PWM values, not sending to MM1")
-
+        else:
+            output_throttle = Utils.map_range(
+                throttle, -1, 0,
+                self.MAX_REVERSE, self.STOPPED_PWM
+            )
+        if steering > 0:
+            output_steering = Utils.map_range(
+                steering, 0, 1.0,
+                self.STEERING_MID, 1000
+            )
+        else:
+            output_steering = Utils.map_range(
+                steering, -1, 0,
+                2000, self.STEERING_MID
+            )
+        if (self.is_valid_pwm_value(output_steering) and
+                self.is_valid_pwm_value(output_throttle)):
+            if self.debug:
+                print(
+                    f"output_steering={output_steering}, "
+                    f"output_throttle={output_throttle}"
+                )
+            self.write_pwm(output_steering, output_throttle)  # Corrected line
+        else:
+            logging.warning("Invalid PWM values, not sending to MM1")
 
     def set_steering_throttle(self, steering, throttle):
         """Sets the steering and throttle values and sends PWM commands."""
