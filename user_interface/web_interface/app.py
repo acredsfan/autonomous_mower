@@ -151,7 +151,12 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
-    from hardware_interface.camera_instance import latest_frame, frame_lock
+    from hardware_interface.camera_instance import save_latest_frame, frame_lock
+    from PIL import Image
+    import io
+    with frame_lock:
+        latest_frame = save_latest_frame()
+
     def gen_frames():
         while True:
             with frame_lock:
