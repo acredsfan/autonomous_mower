@@ -1,6 +1,6 @@
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput, SocketOutput, FfmpegOutput
+from picamera2.outputs import FileOutput, FfmpegOutput
 import socket
 from dotenv import load_dotenv
 import os
@@ -46,8 +46,7 @@ camera.configure(camera_config)
 # Set up the encoder with a bitrate of 1 Mbps
 encoder = H264Encoder(1000000)
 output1 = FileOutput()
-output2 = SocketOutput(encoder, ('{Device_IP}', 8080))
-output3 = FfmpegOutput(encoder, 'udp://{Device_IP}:8080')
+output2 = FfmpegOutput(encoder, 'udp://{Device_IP}:8080')
 frame_lock = threading.Lock()
 
 
@@ -57,7 +56,7 @@ def start_server_thread():
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
-    output3.start()
+    output2.start()
 
 def save_latest_frame(frame):
     """
