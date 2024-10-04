@@ -60,7 +60,7 @@ class GpsLatestPosition(metaclass=SingletonMeta):
         self.debug = debug
         self.gps_position = gps_position_instance
         self.position = None
-        self.status = "Initializing GPS..."
+        # self.status = "Initializing GPS..."
         self.lock = threading.Lock()
 
     def run(self):
