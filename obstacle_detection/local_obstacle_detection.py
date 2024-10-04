@@ -73,6 +73,8 @@ def detect_obstacles_local(image):
     """
     image_resized = image.resize((width, height))
     input_data = np.expand_dims(image_resized, axis=0)
+    if len(input_data.shape) == 4 and input_data.shape[-1] != 3:
+        input_data = input_data[:, :, :, :3]
     if floating_model:
         input_data = (np.float32(input_data) - input_mean) / input_std
     else:
