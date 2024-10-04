@@ -54,7 +54,6 @@ serial_baudrate = int(os.getenv("GPS_BAUD_RATE", "9600"))
 serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
 ngrok_url = os.getenv("NGROK_URL")
 use_ngrok = os.getenv("USE_NGROK", "False").lower() == "true"
-udp_port = os.getenv("UDP_PORT", "8000")
 
 # Initialize SerialPort and GpsPosition with environment configurations
 serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
@@ -151,10 +150,11 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
+    from hardware_interface.camera_instance import DEVICE_IP, UDP_PORT
     def generate():
         try:
             # Proxy the video feed from camera.py
-            with requests.get(f'http://localhost:{udp_port}/video_feed', stream=True) as r:
+            with requests.get(f'http://{DEVICE_IP}:{UDP_PORT}/video_feed', stream=True) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
