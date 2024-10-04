@@ -235,7 +235,7 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    logging.info("Starting get_gps")
+    #logging.info("Starting get_gps")
     try:
         position = position_reader.run()
         # logging.info(f"position: {position}")
