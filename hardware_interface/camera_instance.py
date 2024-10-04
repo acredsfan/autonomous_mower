@@ -1,10 +1,11 @@
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput
+from picamera2.outputs import FileOutput, SocketOutput, FfmpegOutput
 import socket
 from dotenv import load_dotenv
 import os
 from utilities import LoggerConfigInfo as LoggerConfig
+import threading
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -37,12 +38,17 @@ DEVICE_IP = get_device_ip()
 
 # Initialize Picamera2 instance and configure camera settings
 camera = Picamera2()
+camera.start()
 # Set the camera resolution to 1280x720
 camera_config = camera.create_video_configuration({"size": (1280, 720)})
 camera.configure(camera_config)
 
 # Set up the encoder with a bitrate of 1 Mbps
 encoder = H264Encoder(1000000)
+output1 = FileOutput()
+output2 = SocketOutput(encoder, ('{Device_IP}', 8080))
+output3 = FfmpegOutput(encoder, 'udp://{Device_IP}:8080')
+frame_lock = threading.Lock()
 
 
 def start_server_thread():
@@ -51,10 +57,16 @@ def start_server_thread():
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-        sock.connect((DEVICE_IP, 8080))
-        stream = sock.makefile('wb')
-        camera.start_recording(encoder, FileOutput(stream))
+    output3.start()
+
+def save_latest_frame(frame):
+    """
+    Save the latest frame captured by the camera.
+    This function saves the latest frame to a global variable
+    for processing by the obstacle detection module.
+    """
+    global latest_frame
+    latest_frame = output1.frame
 
 
 def get_camera_instance():

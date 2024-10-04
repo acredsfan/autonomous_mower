@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.camera_instance import get_camera_instance
+from hardware_interface.camera_instance import get_camera_instance, latest_frame
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -48,7 +48,6 @@ use_remote_detection = USE_REMOTE_DETECTION
 # Condition variable for thread synchronization
 frame_condition = Condition()
 frame = None
-latest_frame = None
 frame_lock = threading.Lock()
 
 def capture_frames():
@@ -58,10 +57,10 @@ def capture_frames():
     function on each captured frame.
     """
     while True:
-        frame = camera.capture_array()
+        frame = latest_frame
         processed_frame = process_frame(frame)
         with frame_lock:
-            latest_frame = processed_frame.copy()
+            saved_frame = processed_frame.copy()
         img = Image.fromarray(processed_frame)
         buf = io.BytesIO()
         img = img.convert('RGB')  # Ensure all images are properly converted before saving to prevent errors
