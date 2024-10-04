@@ -20,8 +20,7 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
 MIN_CONF_THRESHOLD = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
-USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION',
-                                 'True').lower() == 'true'
+USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'True').lower() == 'true'
 
 # Initialize TFLite interpreter for local detection
 interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
@@ -44,12 +43,11 @@ if labels[0] == '???':
 camera = get_camera_instance()
 
 # A flag to indicate whether to use remote detection (default to True)
-use_remote_detection = USE_REMOTE_DETECTION
+use_remote_detection = USE_REMOTE_DETECTION  s
 
 # Condition variable for thread synchronization
 frame_condition = Condition()
 frame = None
-
 
 def capture_frames():
     """
@@ -62,9 +60,8 @@ def capture_frames():
         processed_frame = process_frame(frame)
         img = Image.fromarray(processed_frame)
         buf = io.BytesIO()
-        img.convert('RGB')
+        img = img.convert('RGB')  # Ensure all images are properly converted before saving to prevent errors
         img.save(buf, format='JPEG')
-
 
 def detect_obstacles_local(image):
     """
@@ -94,7 +91,6 @@ def detect_obstacles_local(image):
             detected_objects.append({'name': class_name, 'score': score})
     return detected_objects
 
-
 def detect_obstacles_remote(image):
     """
     Send the image to Pi 5 for remote detection.
@@ -110,8 +106,7 @@ def detect_obstacles_remote(image):
         img_bytes = img_byte_arr.getvalue()
 
         response = requests.post(f'http://{PI5_IP}:5000/detect',
-                                 files={'image': ('image.jpg', img_bytes,
-                                                  'image/jpeg')},
+                                 files={'image': ('image.jpg', img_bytes, 'image/jpeg')},
                                  timeout=1)
         if response.status_code == 200:
             result = response.json()
@@ -120,11 +115,10 @@ def detect_obstacles_remote(image):
             logging.warning("Failed to get a valid response from Pi 5.")
             return False
     except (requests.ConnectionError, requests.Timeout):
-        logging.warning("Pi 5 not reachable. Falling back to local detection.")
+        logging.warning("Pi 5 not reachable. Retrying before falling back to local detection.")
         global use_remote_detection
         use_remote_detection = False
         return False
-
 
 def process_frame(frame):
     """
@@ -151,15 +145,12 @@ def process_frame(frame):
         obstacle_detected = len(detected_objects) > 0
     return np.array(image)
 
-
 def start_processing():
     """
     Start the frame processing thread.
     """
-    thread = threading.Thread(target=capture_frames)
-    thread.daemon = True
+    thread = threading.Thread(target=capture_frames)  
     thread.start()
-
 
 if __name__ == "__main__":
     start_processing()
