@@ -1,6 +1,6 @@
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
-from picamera2.outputs import FfmpegOutput
+from picamera2.outputs import FileOutput
 import socket
 from dotenv import load_dotenv
 import os
@@ -42,14 +42,11 @@ DEVICE_IP = get_device_ip()
 # Initialize Picamera2 instance and configure camera settings
 camera = Picamera2()
 # Set the camera resolution to 1280x720
-camera_config = camera.create_video_configuration(main={"size": (1280, 720)})
+camera_config = camera.create_video_configuration({"size": (1280, 720)})
 camera.configure(camera_config)
 
 # Set up the encoder with a bitrate of 1 Mbps
 encoder = H264Encoder(1000000)
-
-# Set up the output stream over UDP
-output = FfmpegOutput(f"-f rtp udp://{DEVICE_IP}:{UDP_PORT}")
 
 
 def start_server_thread():
@@ -58,11 +55,10 @@ def start_server_thread():
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
-    try:
-        camera.start_recording(encoder, output)
-        logging.info("Camera recording started successfully.")
-    except Exception as e:
-        logging.error(f"Error starting camera recording: {e}")
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.connect((DEVICE_IP, UDP_PORT))
+        stream = sock.makefile('wb')
+        camera.start_recording(encoder, FileOutput(stream))
 
 
 def get_camera_instance():
