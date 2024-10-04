@@ -105,7 +105,7 @@ def detect_obstacles_remote(image):
     """
     try:
         img_byte_arr = io.BytesIO()
-        image.convert('RGB')
+        image = image.convert('RGB')
         image.save(img_byte_arr, format='JPEG')
         img_bytes = img_byte_arr.getvalue()
 
