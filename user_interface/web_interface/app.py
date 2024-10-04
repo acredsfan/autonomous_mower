@@ -154,16 +154,15 @@ def video_feed():
     def generate():
         try:
             # Proxy the video feed from camera.py
-            # Assuming camera.py is serving at http://localhost:8000/video_feed
-            with requests.get('http://localhost:{udp_port}/video_feed', stream=True) as r:
+            with requests.get(f'http://localhost:{udp_port}/video_feed', stream=True) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         yield chunk
         except requests.exceptions.RequestException as e:
             logging.error(f"Error accessing local video feed: {e}")
-            # Optionally, yield an error image or message
-            yield b''
+            # Yield a placeholder message indicating an error with the feed
+            yield b'--FRAME\r\nContent-Type: text/plain\r\n\r\nError accessing video feed\r\n'
 
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=FRAME')
 
