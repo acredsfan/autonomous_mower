@@ -430,27 +430,37 @@ function drawPath(coordinates) {
 // Socket.IO setup
 var socket = io();
 
-window.addEventListener('load', function () {
-    fetch('/get_obj_det_ip').then(response => response.json())
-        .then(data => {
-            obj_det_ip = data.object_detection_ip; // Extract the IP address
-            const videoFeedElement = document.getElementById('video_feed');
-            if (videoFeedElement) {
-                videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
-            } else {
-                console.error('Element with id "video_feed" not found.');
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching object detection IP:', error);
-            // Fallback to Pi 4 video feed
-            const videoFeedElement = document.getElementById('video_feed');
-            if (videoFeedElement) {
-                videoFeedElement.src = '/video_feed'; // This will fetch from Pi 4
-                console.log('Falling back to local video feed.');
-            }
-        });
-});
+async function setVideoFeed() {
+    const videoFeedElement = document.getElementById('video_feed');
+    try {
+        const response = await fetch('/get_obj_det_ip');
+        const data = await response.json();
+        obj_det_ip = data.object_detection_ip;
+
+        if (videoFeedElement) {
+            // Attempt to set the video feed to the remote IP
+            videoFeedElement.src = `http://${obj_det_ip}:5000/video_feed`;
+
+            // Set up an event listener for any error with the video stream
+            videoFeedElement.onerror = () => {
+                console.error('Error with remote video feed, falling back to local.');
+                videoFeedElement.src = '/video_feed'; // Fallback to local video feed
+            };
+        } else {
+            console.error('Element with id "video_feed" not found.');
+        }
+    } catch (error) {
+        console.error('Error fetching object detection IP:', error);
+        // Fallback to Pi 4 video feed if fetching the IP fails
+        if (videoFeedElement) {
+            videoFeedElement.src = '/video_feed'; // This will fetch from Pi 4
+            console.log('Falling back to local video feed.');
+        }
+    }
+}
+
+window.addEventListener('load', setVideoFeed);
+
 
 // Add event listener for the "Check Polygon Points" button
 const checkPolygonButton = document.getElementById('check-polygon-button');
