@@ -150,21 +150,22 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
-    from hardware_interface.camera_instance import DEVICE_IP, UDP_PORT
-    def generate():
-        try:
-            # Proxy the video feed from camera.py
-            with requests.get(f'http://{DEVICE_IP}:{UDP_PORT}/video_feed', stream=True) as r:
-                r.raise_for_status()
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:
-                        yield chunk
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Error accessing local video feed: {e}")
-            # Yield a placeholder message indicating an error with the feed
-            yield b'--FRAME\r\nContent-Type: text/plain\r\n\r\nError accessing video feed\r\n'
+    return Response(gen_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=FRAME')
+
+def gen_frames():
+    from hardware_interface.camera_instance import camera
+    import io
+    from PIL import Image
+    while True:
+        frame = camera.capture_array()
+        img = Image.fromarray(frame)
+        buf = io.BytesIO()
+        img.save(buf, format='JPEG')
+        frame_bytes = buf.getvalue()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
 
 @app.route('/camera_route')
