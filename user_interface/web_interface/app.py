@@ -151,11 +151,11 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
-    from hardware_interface.camera_instance import DEVICE_IP, UDP_PORT
+    from hardware_interface.camera_instance import DEVICE_IP
     def generate():
         try:
             # Proxy the video feed from camera.py
-            with requests.get(f'http://{DEVICE_IP}:{UDP_PORT}/video_feed', stream=True) as r:
+            with requests.get(f'http://{DEVICE_IP}:8080/video_feed', stream=True) as r:
                 r.raise_for_status()
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
