@@ -48,6 +48,8 @@ use_remote_detection = USE_REMOTE_DETECTION
 # Condition variable for thread synchronization
 frame_condition = Condition()
 frame = None
+latest_frame = None
+frame_lock = threading.Lock()
 
 def capture_frames():
     """
@@ -58,6 +60,8 @@ def capture_frames():
     while True:
         frame = camera.capture_array()
         processed_frame = process_frame(frame)
+        with frame_lock:
+            latest_frame = processed_frame.copy()
         img = Image.fromarray(processed_frame)
         buf = io.BytesIO()
         img = img.convert('RGB')  # Ensure all images are properly converted before saving to prevent errors

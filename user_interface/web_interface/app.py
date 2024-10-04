@@ -155,13 +155,17 @@ def video_feed():
 
 
 def gen_frames():
-    from hardware_interface.camera_instance import camera
+    from obstacle_detection.local_obstacle_detection import latest_frame, frame_lock
     import io
     from PIL import Image
     while True:
-        frame = camera.capture_array()
+        with frame_lock:
+            if latest_frame is not None:
+                frame = latest_frame.copy()
+            else:
+                continue  # No frame available yet
         img = Image.fromarray(frame)
-        img = img.convert('RGB')
+        img = img.convert('RGB')  # Convert image to 'RGB' mode
         buf = io.BytesIO()
         img.save(buf, format='JPEG')
         frame_bytes = buf.getvalue()
