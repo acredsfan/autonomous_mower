@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.camera_instance import get_camera_instance, latest_frame
+from hardware_interface.camera_instance import get_camera_instance, save_latest_frame
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -57,7 +57,7 @@ def capture_frames():
     function on each captured frame.
     """
     while True:
-        frame = latest_frame
+        frame = save_latest_frame()
         processed_frame = process_frame(frame)
         with frame_lock:
             saved_frame = processed_frame.copy()
