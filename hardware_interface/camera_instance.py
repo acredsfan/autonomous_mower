@@ -38,7 +38,7 @@ DEVICE_IP = get_device_ip()
 
 # Initialize Picamera2 instance and configure camera settings
 camera = Picamera2()
-camera.start()
+
 # Set the camera resolution to 1280x720
 camera_config = camera.create_video_configuration({"size": (1280, 720)})
 camera.configure(camera_config)
@@ -48,6 +48,11 @@ encoder = H264Encoder(1000000)
 output1 = FileOutput()
 output2 = FfmpegOutput(encoder, 'udp://{Device_IP}:8080')
 frame_lock = threading.Lock()
+encoder.output = [output1, output2]
+camera.start_encoder(encoder)
+
+
+
 
 
 def start_server_thread():
@@ -56,6 +61,7 @@ def start_server_thread():
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
+    camera.start()
     output2.start()
 
 def save_latest_frame(frame):
@@ -75,4 +81,5 @@ def get_camera_instance():
     and also starts the UDP streaming process.
     """
     start_server_thread()
+    save_latest_frame
     return camera
