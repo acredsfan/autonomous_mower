@@ -54,6 +54,7 @@ serial_baudrate = int(os.getenv("GPS_BAUD_RATE", "9600"))
 serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
 ngrok_url = os.getenv("NGROK_URL")
 use_ngrok = os.getenv("USE_NGROK", "False").lower() == "true"
+udp_port = os.getenv("UDP_PORT", "8000")
 
 # Initialize SerialPort and GpsPosition with environment configurations
 serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
@@ -150,27 +151,21 @@ def handle_status_request():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    from hardware_interface.camera_instance import DEVICE_IP, UDP_PORT
+    def generate():
+        try:
+            # Proxy the video feed from camera.py
+            with requests.get(f'http://{DEVICE_IP}:{UDP_PORT}/video_feed', stream=True) as r:
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:
+                        yield chunk
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error accessing local video feed: {e}")
+            # Yield a placeholder message indicating an error with the feed
+            yield b'--FRAME\r\nContent-Type: text/plain\r\n\r\nError accessing video feed\r\n'
 
-
-def gen_frames():
-    from obstacle_detection.local_obstacle_detection import latest_frame, frame_lock
-    import io
-    from PIL import Image
-    while True:
-        with frame_lock:
-            if latest_frame is not None:
-                frame = latest_frame.copy()
-            else:
-                continue  # No frame available yet
-        img = Image.fromarray(frame)
-        img = img.convert('RGB')  # Convert image to 'RGB' mode
-        buf = io.BytesIO()
-        img.save(buf, format='JPEG')
-        frame_bytes = buf.getvalue()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=FRAME')
 
 
 @app.route('/camera_route')
