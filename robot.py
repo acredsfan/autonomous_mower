@@ -9,6 +9,10 @@ from hardware_interface.gpio_manager import GPIOManager
 import threading
 import time
 import sys
+import os
+
+# Add the path to the sys path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 
 # Initialize logger
