@@ -14,8 +14,15 @@ import time
 import logging
 import serial
 import donkeycar as dk
+from constants import (
+    MM1_MAX_FORWARD,
+    MM1_MAX_REVERSE,
+    MM1_STOPPED_PWM,
+    MM1_STEERING_MID
+)
 
 logger = logging.getLogger(__name__)
+
 
 class RoboHATController:
     '''
@@ -170,26 +177,27 @@ class RoboHATController:
 
         return self.angle, self.throttle, self.mode, self.recording
 
+
 class RoboHATDriver:
     """
     PWM motor controller using Robo HAT MM1 boards.
-    This is developed by Robotics Masters.
-
-    Updated version based on recommendations.
     """
 
-    def __init__(self, cfg, debug=False):
+    def __init__(self, debug=False):
         # Initialize the Robo HAT using the serial port
         self.debug = debug
-        self.MAX_FORWARD = cfg.MM1_MAX_FORWARD
-        self.MAX_REVERSE = cfg.MM1_MAX_REVERSE
-        self.STOPPED_PWM = cfg.MM1_STOPPED_PWM
-        self.STEERING_MID = cfg.MM1_STEERING_MID
+        self.MAX_FORWARD = MM1_MAX_FORWARD
+        self.MAX_REVERSE = MM1_MAX_REVERSE
+        self.STOPPED_PWM = MM1_STOPPED_PWM
+        self.STEERING_MID = MM1_STEERING_MID
+
+        # Read the serial port from environment variables or use default
+        MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyS0")
 
         # Initialize serial port for sending PWM signals
         try:
-            self.pwm = serial.Serial(cfg.MM1_SERIAL_PORT, 115200, timeout=1)
-            logger.info(f"Serial port {cfg.MM1_SERIAL_PORT} opened for PWM output.")
+            self.pwm = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
+            logger.info(f"Serial port {MM1_SERIAL_PORT} opened for PWM output.")
         except serial.SerialException:
             logger.error("Serial port for PWM output not found! Please enable: sudo raspi-config")
             self.pwm = None
@@ -214,22 +222,22 @@ class RoboHATDriver:
             throttle = self.trim_out_of_bound_value(throttle)
 
             if throttle > 0:
-                output_throttle = dk.utils.map_range(throttle,
-                                                     0, 1.0,
-                                                     self.STOPPED_PWM, self.MAX_FORWARD)
+                output_throttle = Utils.map_range(throttle,
+                                                  0, 1.0,
+                                                  self.STOPPED_PWM, self.MAX_FORWARD)
             else:
-                output_throttle = dk.utils.map_range(throttle,
-                                                     -1, 0,
-                                                     self.MAX_REVERSE, self.STOPPED_PWM)
+                output_throttle = Utils.map_range(throttle,
+                                                  -1, 0,
+                                                  self.MAX_REVERSE, self.STOPPED_PWM)
 
             if steering > 0:
-                output_steering = dk.utils.map_range(steering,
-                                                     0, 1.0,
-                                                     self.STEERING_MID, 1000)
+                output_steering = Utils.map_range(steering,
+                                                  0, 1.0,
+                                                  self.STEERING_MID, 1000)
             else:
-                output_steering = dk.utils.map_range(steering,
-                                                     -1, 0,
-                                                     2000, self.STEERING_MID)
+                output_steering = Utils.map_range(steering,
+                                                  -1, 0,
+                                                  2000, self.STEERING_MID)
 
             # Ensure PWM values are integers
             output_steering = int(output_steering)
