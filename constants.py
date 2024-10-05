@@ -2,6 +2,11 @@
 import json
 from dotenv import load_dotenv
 from utilities import LoggerConfigInfo as LoggerConfig
+import sys
+import os
+
+# Add the path to the sys path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
