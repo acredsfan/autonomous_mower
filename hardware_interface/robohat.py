@@ -21,6 +21,10 @@ from constants import (
     MM1_STEERING_MID
 )
 import os
+import sys
+
+# Add the path to the sys path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 logger = logging.getLogger(__name__)
 
