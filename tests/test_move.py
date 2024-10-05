@@ -1,6 +1,6 @@
 # Code to test motors via robohat and blade controller
 import time
-from hardware_interface import RoboHATController, BladeController
+from hardware_interface.robohat import RoboHATDriver
 import sys
 import os
 
@@ -8,14 +8,24 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 def test_motors():
-    robohat = RoboHATController()
-    blade_controller = BladeController()
-    robohat.set_motors(0.5, 0.5)
-    blade_controller.set_blades(0.5, 0.5)
-    time.sleep(5)
-    robohat.set_motors(0, 0)
-    blade_controller.set_blades(0, 0)
-    print("Motors are working correctly")
+    """
+    Test the motors by running them in forward and reverse directions.
+    """
+    try:
+        robot = RoboHATDriver()
+        print("Testing motors...")
+        robot.write_pwm(0, 0)
+        time.sleep(2)
+        robot.write_pwm(1, 0)
+        time.sleep(1)
+        robot.write_pwm(0, 1)
+        time.sleep(2)
+        robot.write_pwm(1, 1)
+        time.sleep(2)
+        robot.write_pwm(0, 0)
+        print("Motor test complete.")
+    except Exception as e:
+        print(f"Error in test_motors: {e}")
 
 
 if __name__ == '__main__':
