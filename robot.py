@@ -4,19 +4,21 @@ from utilities import LoggerConfigInfo as LoggerConfig
 from user_interface.web_interface.app import start_web_interface, position_reader
 from hardware_interface.serial_port import SerialPort
 from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat import RoboHATController
+from hardware_interface.robohat import RoboHATDriver  # Updated import
 from hardware_interface.gpio_manager import GPIOManager
 import threading
 import time
 import sys
 
+# Import your configuration object
+from myconfig import myconfig  # Replace with the actual path to your cfg
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
 # Function to initialize all resources
 def initialize_resources():
-    global sensor_interface, blade_controller, robohat_controller
+    global sensor_interface, blade_controller, robohat_driver  # Updated variable
     from hardware_interface.sensor_interface import get_sensor_interface
 
     # Initialize sensor interface
@@ -29,20 +31,21 @@ def initialize_resources():
     logging.info("Blade controller initialized.")
     time.sleep(0.2)
 
-    # Initialize RoboHATController (movement controller)
+    # Initialize RoboHATDriver (movement controller)
     try:
-        robohat_controller = RoboHATController()
-        logging.info("RoboHAT controller initialized.")
+        robohat_driver = RoboHATDriver(cfg=myconfig)  # Pass cfg
+        logging.info("RoboHAT driver initialized.")
     except RuntimeError as e:
-        logging.error(f"Failed to initialize RoboHATController: {e}")
+        logging.error(f"Failed to initialize RoboHATDriver: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
         time.sleep(0.5)  # Adding delay before retrying
         try:
-            robohat_controller = RoboHATController()
-            logging.info("RoboHAT controller initialized after retry.")
+            robohat_driver = RoboHATDriver(cfg=myconfig)  # Retry initialization
+            logging.info("RoboHAT driver initialized after retry.")
         except RuntimeError as e:
-            logging.error(f"Retry failed for RoboHATController: {e}")
-            robohat_controller = None
+            logging.error(f"Retry failed for RoboHATDriver: {e}")
+            robohat_driver = None
+
 
 def monitor_gps_status(position_reader):
     """
@@ -71,7 +74,8 @@ if __name__ == "__main__":
         web_thread.start()
         logging.info("Web interface started.")
 
-        gps_thread = threading.Thread(target=monitor_gps_status, args=(position_reader,), daemon=True)
+        gps_thread = threading.Thread(target=monitor_gps_status,
+                                      args=(position_reader,), daemon=True)
         gps_thread.start()
         logging.info("GPS status monitoring started.")
 
@@ -85,7 +89,7 @@ if __name__ == "__main__":
     finally:
         # Cleanup
         BladeController.stop()
-        if robohat_controller:
-            robohat_controller.stop()
+        if robohat_driver:
+            robohat_driver.shutdown()  # Use shutdown method
         GPIOManager.clean()
         logging.info("Exiting the application.")
