@@ -14,9 +14,14 @@ logging = LoggerConfig.get_logger(__name__)
 # Load .env variables
 load_dotenv()
 
-with open("config.json") as f:
-    config = json.load(f)
-
+# Open config file in root folder
+try:
+    with open("config.json") as f:
+        config = json.load(f)
+except FileNotFoundError:
+    logging.error("Config file not found.")
+    config = {}
+    
 try:
     with open("user_polygon.json") as f:
         polygon_coordinates = json.load(f)
