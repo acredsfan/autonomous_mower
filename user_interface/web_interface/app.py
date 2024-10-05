@@ -17,10 +17,11 @@ sys.path.append(project_root)
 from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat import RoboHATController
+from hardware_interface.robohat import RoboHATDriver
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
 from obstacle_detection.local_obstacle_detection import start_processing
+from navigation_system.navigation import NavigationController
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -67,8 +68,11 @@ localization = Localization()
 path_planning = PathPlanning(localization)
 sensor_interface = get_sensor_interface()
 
-# Initialize RoboHATController with gps_latest_position
-robohat_driver = RoboHATController(gps_latest_position=position_reader)
+# Initialize RoboHATDriver
+robohat_driver = RoboHATDriver()
+
+# Initialize NavigationController
+navigation_controller = NavigationController(position_reader, robohat_driver, sensor_interface)
 
 # Define a flag for stopping the sensor update thread
 stop_thread = False
@@ -124,12 +128,16 @@ def control():
         # Render the control.html template
         return render_template('control.html')
     elif request.method == 'POST':
-        # Handle control commands
-        data = request.get_json()
-        steering = data.get('steering', 0)
-        throttle = data.get('throttle', 0)
-        robohat_driver.set_steering_throttle(steering, throttle)
-        return jsonify({'status': 'success'})
+        try:
+            # Handle control commands
+            data = request.get_json()
+            steering = data.get('steering', 0)
+            throttle = data.get('throttle', 0)
+            robohat_driver.run(steering, throttle)  # Updated method call
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logging.error(f"Error in /control: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @socketio.on('request_status')
@@ -443,7 +451,7 @@ def check_polygon_points():
         lat = point['lat']
         lng = point['lng']
         target_location = (lat, lng)
-        result = robohat_driver.navigate_to_location(target_location)
+        result = navigation_controller.navigate_to_location(target_location)  # Updated call
         if not result:
             success = False
             break  # Stop if navigation failed
