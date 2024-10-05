@@ -10,8 +10,6 @@ import threading
 import time
 import sys
 
-# Import your configuration object
-from myconfig import myconfig  # Replace with the actual path to your cfg
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -33,14 +31,14 @@ def initialize_resources():
 
     # Initialize RoboHATDriver (movement controller)
     try:
-        robohat_driver = RoboHATDriver(cfg=myconfig)  # Pass cfg
+        robohat_driver = RoboHATDriver()  # Pass cfg
         logging.info("RoboHAT driver initialized.")
     except RuntimeError as e:
         logging.error(f"Failed to initialize RoboHATDriver: {e}")
         GPIOManager.clean()  # Cleanup all GPIO
         time.sleep(0.5)  # Adding delay before retrying
         try:
-            robohat_driver = RoboHATDriver(cfg=myconfig)  # Retry initialization
+            robohat_driver = RoboHATDriver()  # Retry initialization
             logging.info("RoboHAT driver initialized after retry.")
         except RuntimeError as e:
             logging.error(f"Retry failed for RoboHATDriver: {e}")

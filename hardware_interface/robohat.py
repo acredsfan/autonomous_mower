@@ -13,15 +13,18 @@ Updated version based on recommendations.
 import time
 import logging
 import serial
-import donkeycar as dk
+from utilities import Utils
 from constants import (
     MM1_MAX_FORWARD,
     MM1_MAX_REVERSE,
     MM1_STOPPED_PWM,
     MM1_STEERING_MID
 )
+import os
 
 logger = logging.getLogger(__name__)
+
+
 
 
 class RoboHATController:
@@ -93,34 +96,34 @@ class RoboHATController:
 
                 if throttle_pwm >= self.STOPPED_PWM:
                     # Scale down the input PWM (1500 - 2000) to our max forward
-                    throttle_pwm_mapped = dk.utils.map_range_float(throttle_pwm,
+                    throttle_pwm_mapped = Utils.map_range_float(throttle_pwm,
                                                                    1500, 2000,
                                                                    self.STOPPED_PWM,
                                                                    self.MAX_FORWARD)
                     # Go forward
-                    self.throttle = dk.utils.map_range_float(throttle_pwm_mapped,
+                    self.throttle = Utils.map_range_float(throttle_pwm_mapped,
                                                              self.STOPPED_PWM,
                                                              self.MAX_FORWARD,
                                                              0, 1.0)
                 else:
-                    throttle_pwm_mapped = dk.utils.map_range_float(throttle_pwm,
+                    throttle_pwm_mapped = Utils.map_range_float(throttle_pwm,
                                                                    1000, 1500,
                                                                    self.MAX_REVERSE,
                                                                    self.STOPPED_PWM)
                     # Go backward
-                    self.throttle = dk.utils.map_range_float(throttle_pwm_mapped,
+                    self.throttle = Utils.map_range_float(throttle_pwm_mapped,
                                                              self.MAX_REVERSE,
                                                              self.STOPPED_PWM,
                                                              -1.0, 0)
 
                 if angle_pwm >= self.STEERING_MID:
                     # Turn left
-                    self.angle = dk.utils.map_range_float(angle_pwm,
+                    self.angle = Utils.map_range_float(angle_pwm,
                                                           2000, self.STEERING_MID,
                                                           -1, 0)
                 else:
                     # Turn right
-                    self.angle = dk.utils.map_range_float(angle_pwm,
+                    self.angle = Utils.map_range_float(angle_pwm,
                                                           self.STEERING_MID, 1000,
                                                           0, 1)
 
