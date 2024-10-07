@@ -16,7 +16,7 @@ import rotaryio
 
 # Customisation variables
 DEBUG = False
-USB_SERIAL = True
+USB_SERIAL = False
 SMOOTHING_INTERVAL_IN_S = 0.10
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
