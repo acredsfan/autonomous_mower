@@ -1,7 +1,7 @@
 import serial
 import time
 
-ser = serial.Serial('/dev/ACM1', 115200, timeout=1)
+ser = serial.Serial('/dev/ttyACM1', 115200, timeout=1)
 time.sleep(2)  # Wait for the serial connection to initialize
 
 test_command = b'1500, 1500\r'
