@@ -29,8 +29,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 logger = logging.getLogger(__name__)
 
 
-
-
 class RoboHATController:
     '''
     Controller to read signals from the RC controller via serial and convert into steering and throttle outputs.
