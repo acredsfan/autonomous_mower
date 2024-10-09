@@ -57,7 +57,7 @@ while True:
             bus_voltage = ina3221.bus_voltage(chan)
             shunt_voltage = ina3221.shunt_voltage(chan)
             current = ina3221.current(chan)
-            battery_charge = round((bus_voltage - 11.5) / (13.5 - 11.5) * 100, 1)
+            battery_charge = round((bus_voltage - 11.2) / (14.6 - 11.2) * 100, 1)
             #
             line_title += "| Chan#{:d}      ".format(chan)
             line_psu_voltage += "| {:6.3f}    V ".format(
