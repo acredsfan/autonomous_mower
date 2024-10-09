@@ -49,6 +49,7 @@ while True:
     line_load_voltage = "Load voltage  "
     line_shunt_voltage = "Shunt voltage "
     line_current = "Current       "
+    battery_charge = "Battery charge"
 
     for chan in range(1, 4):
         if ina3221.is_channel_enabled(chan):
@@ -56,6 +57,7 @@ while True:
             bus_voltage = ina3221.bus_voltage(chan)
             shunt_voltage = ina3221.shunt_voltage(chan)
             current = ina3221.current(chan)
+            battery_charge = round((bus_voltage - 11.5) / (13.5 - 11.5) * 100, 1)
             #
             line_title += "| Chan#{:d}      ".format(chan)
             line_psu_voltage += "| {:6.3f}    V ".format(
@@ -63,6 +65,7 @@ while True:
             line_load_voltage += "| {:6.3f}    V ".format(bus_voltage)
             line_shunt_voltage += "| {:9.6f} V ".format(shunt_voltage)
             line_current += "| {:9.6f} A ".format(current)
+            battery_charge += "| {:9.6f} A ".format(current)
 
     print(line_title)
     print(line_psu_voltage)
