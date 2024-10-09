@@ -51,6 +51,7 @@ class RoboHATController:
         self.SHOW_STEERING_VALUE = cfg.MM1_SHOW_STEERING_VALUE
         self.DEAD_ZONE = cfg.JOYSTICK_DEADZONE
         self.debug = debug
+        self.control_mode = 'serial' # Set default control mode to 'serial'
 
         # Initialize serial port for reading RC inputs
         try:
@@ -148,7 +149,8 @@ class RoboHATController:
 
         while True:
             try:
-                self.read_serial()
+                if self.control_mode == 'rc':  # Only process RC input if enabled
+                    self.read_serial()
             except Exception as e:
                 logger.error(f"MM1: Error reading serial input: {e}")
                 break

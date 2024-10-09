@@ -30,7 +30,7 @@ class INA3221Sensor:
                     'shunt_voltage': Shunt_Voltage}
                 if channel == 3:
                     Charge_Level = round(
-                        (Voltage - 11.5) / (13.5 - 11.5) * 100, 1)
+                        (Voltage - 11.2) / (14.6 - 11.2) * 100, 1)
                     sensor_data["charge_level"] = f"{Charge_Level}%"
                 return sensor_data
             else:

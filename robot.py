@@ -2,7 +2,6 @@
 
 from utilities import LoggerConfigInfo as LoggerConfig
 from user_interface.web_interface.app import start_web_interface, position_reader
-from hardware_interface.serial_port import SerialPort
 from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATDriver  # Updated import
 from hardware_interface.gpio_manager import GPIOManager
