@@ -201,12 +201,12 @@ input[type="text"], select {
 
 .checkbox-group.days {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 columns for days */
+    grid-template-columns: repeat(7, 1fr); /* 3 columns for days */
 }
 
 .checkbox-group.hours {
     display: grid;
-    grid-template-columns: repeat(6, 1fr); /* 6 columns for hours */
+    grid-template-columns: repeat(8, 1fr); /* 6 columns for hours */
 }
 
 @media (max-width: 600px) {
