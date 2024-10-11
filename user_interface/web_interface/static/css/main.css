@@ -181,13 +181,13 @@ input[type="text"], select {
 
 .checkbox-group.days {
     /* Optional: Specific styles for days */
-    max-height: 100px;
+    max-height: 400px;
     overflow-y: auto; /* Add scroll if too many days */
 }
 
 .checkbox-group.hours {
     /* Optional: Specific styles for hours */
-    max-height: 200px;
+    max-height: 400px;
     overflow-y: auto; /* Add scroll if too many hours */
 }
 
