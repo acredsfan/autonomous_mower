@@ -171,3 +171,47 @@ input[type="text"], select {
 .fas {
     font-size: 24px;
 }
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.checkbox-group.days {
+    /* Optional: Specific styles for days */
+    max-height: 100px;
+    overflow-y: auto; /* Add scroll if too many days */
+}
+
+.checkbox-group.hours {
+    /* Optional: Specific styles for hours */
+    max-height: 200px;
+    overflow-y: auto; /* Add scroll if too many hours */
+}
+
+.checkbox-group input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+.checkbox-group label {
+    margin-right: 15px;
+}
+
+.checkbox-group.days {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns for days */
+}
+
+.checkbox-group.hours {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr); /* 6 columns for hours */
+}
+
+@media (max-width: 600px) {
+    .checkbox-group.days,
+    .checkbox-group.hours {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on small screens */
+    }
+}

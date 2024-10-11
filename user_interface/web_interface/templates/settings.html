@@ -3,16 +3,22 @@
 {% block content %}
     <h1>Settings</h1>
     <form id="settings-form">
-        <label for="mow-days">Mowing days:</label><br>
-        {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
-            <input type="checkbox" id="{{ day }}" name="mowDays" value="{{ day }}">
-            <label for="{{ day }}">{{ day }}</label><br>
-        {% endfor %}
-        <label for="mow-hours">Mowing hours:</label><br>
-        {% for hour in range(1, 25) %}
-            <input type="checkbox" id="hour-{{ hour }}" name="mowHours" value="{{ hour }}">
-            <label for="hour-{{ hour }}">{{ hour }}</label><br>
-        {% endfor %}
+        <label for="mow-days">Mowing days:</label>
+        <div class="checkbox-group days">
+            {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                <input type="checkbox" id="{{ day }}" name="mowDays" value="{{ day }}">
+                <label for="{{ day }}">{{ day }}</label>
+            {% endfor %}
+        </div>
+
+        <label for="mow-hours">Mowing hours:</label>
+        <div class="checkbox-group hours">
+            {% for hour in range(0, 24) %}
+                <input type="checkbox" id="hour-{{ hour }}" name="mowHours" value="{{ hour }}">
+                <label for="hour-{{ hour }}">{{ hour }}:00</label>
+            {% endfor %}
+        </div>
+
         <label for="patternType">Select Mowing Pattern:</label>
         <select id="patternType" name="patternType">
             <option value="stripes">Stripes</option>

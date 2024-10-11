@@ -53,7 +53,8 @@ function updateSensorDisplay(data) {
 }
 
 // Save settings for mowing days and hours
-function saveSettings(mowDays, mowHours) {
+// Save settings for mowing days and hours
+function saveSettings(mowDays, mowHours, patternType) {
     fetch('/save_settings', {
         method: 'POST',
         headers: {
@@ -62,15 +63,17 @@ function saveSettings(mowDays, mowHours) {
         body: JSON.stringify({
             mowDays: mowDays,
             mowHours: mowHours,
-            patternType: patternType
+            patternType: patternType  // Include patternType
          }),
     })
     .then(response => response.json())
-    .then(data => console.log(data))
+    .then(data => {
+        console.log(data);
+        alert('Settings saved successfully.');
+    })
     .catch((error) => console.error('Error:', error));
-    // Verify the saved settings with user feedback
-    alert('Settings saved successfully.');
 }
+
 
 // Function to update areaCoordinates when the polygon's path changes
 function updateAreaCoordinates() {
@@ -92,6 +95,7 @@ function attachPolygonListeners(polygon) {
 }
 
 // Event listener for DOMContentLoaded
+// Event listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', (event) => {
     const form = document.getElementById('settings-form');
     if (form) {
@@ -100,13 +104,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
             event.preventDefault();
             const mowDays = document.querySelectorAll('input[name="mowDays"]:checked');
             const mowHours = document.querySelectorAll('input[name="mowHours"]:checked');
-            const patternType = document.querySelector('input[name="patternType"]:checked').value;
+            // Correctly select the patternType from the select element
+            const patternType = document.getElementById('patternType').value;
             
             // Convert selected values to arrays
             const selectedDays = Array.from(mowDays).map(input => input.value);
             const selectedHours = Array.from(mowHours).map(input => input.value);
 
-            saveSettings(selectedDays, selectedHours, patternType);  // Trigger save settings
+            saveSettings(selectedDays, selectedHours, patternType);  // Pass patternType as an argument
         });
     }
 });
