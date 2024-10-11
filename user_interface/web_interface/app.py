@@ -560,7 +560,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
             logging.info("Mowing area thread started.")
 
 
-def on_publish(client, userdata, mid):
+def on_publish(client, userdata, flags, mid, properties=None):
     logging.info(f"Published message ID: {mid}")
 
 
