@@ -588,7 +588,8 @@ def publish_sensor_data():
     while True:
         sensor_data = sensor_interface.sensor_data
         client.publish(SENSOR_TOPIC, json.dumps(sensor_data))
-        time.sleep(1)  # Adjust based on desired update frequency
+        logging.info(f"Published sensor data: {sensor_data}")
+        time.sleep(0.5)  # Adjust based on desired update frequency
 
 
 def publish_gps_data():
@@ -599,7 +600,8 @@ def publish_gps_data():
             ts, easting, northing, zone_number, zone_letter = position
             lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
             client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}))
-        time.sleep(1)  # Adjust based on desired update frequency
+            logging.info(f"Published GPS data: {lat}, {lon}")
+        time.sleep(0.5)  # Adjust based on desired update frequency
 
 
 def publish_mowing_area():
@@ -609,6 +611,7 @@ def publish_mowing_area():
             with open('user_polygon.json', 'r') as f:
                 coordinates = json.load(f)
             client.publish('mower/mowing_area', json.dumps(coordinates))
+            logging.info(f"Published mowing area: {coordinates}")
         time.sleep(1)  # Adjust based on desired update frequency
 
 
@@ -618,13 +621,15 @@ gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
 mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
 
 # Initialize the MQTT client
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.on_connect = on_connect
-client.on_message = on_message
-client.connect(MQTT_BROKER, MQTT_PORT, 60)
-client.on_publish = on_publish
-client.loop_start()
+def start_mqtt_client():
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.on_publish = on_publish
+    client.loop_start()
 
 
 if __name__ == '__main__':
+    start_mqtt_client()
     start_web_interface()

@@ -1,5 +1,5 @@
 from utilities import LoggerConfigInfo as LoggerConfig
-from user_interface.web_interface.app import start_web_interface, position_reader
+from user_interface.web_interface.app import start_web_interface, position_reader, start_mqtt_client
 from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATDriver  # Updated import
 from hardware_interface.gpio_manager import GPIOManager
@@ -67,6 +67,11 @@ if __name__ == "__main__":
         if not position_reader:
             logging.error("Failed to initialize GPS position reader.")
             sys.exit(1)
+
+        # Start the MQTT client in a separate thread
+        mqtt_thread = threading.Thread(target=start_mqtt_client, daemon=True)
+        mqtt_thread.start()
+        logging.info("MQTT client started.")
 
         # Start the web interface in a separate thread
         web_thread = threading.Thread(target=start_web_interface, daemon=True)
