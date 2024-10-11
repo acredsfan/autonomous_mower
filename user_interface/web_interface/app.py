@@ -607,7 +607,7 @@ def publish_sensor_data():
     global client
     while True:
         sensor_data = sensor_interface.sensor_data
-        client.publish(SENSOR_TOPIC, json.dumps(sensor_data))
+        client.publish(SENSOR_TOPIC, json.dumps(sensor_data), qos=1)
         logging.info(f"Published sensor data: {sensor_data}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
@@ -620,7 +620,7 @@ def publish_gps_data():
         if position and len(position) == 5:
             ts, easting, northing, zone_number, zone_letter = position
             lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-            client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}))
+            client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}), qos=1)
             logging.info(f"Published GPS data: {lat}, {lon}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
@@ -632,7 +632,7 @@ def publish_mowing_area():
         if os.path.exists('user_polygon.json'):
             with open('user_polygon.json', 'r') as f:
                 coordinates = json.load(f)
-            client.publish('mower/mowing_area', json.dumps(coordinates))
+            client.publish('mower/mowing_area', json.dumps(coordinates), qos=1)
             logging.info(f"Published mowing area: {coordinates}")
         time.sleep(1)  # Adjust based on desired update frequency
 
