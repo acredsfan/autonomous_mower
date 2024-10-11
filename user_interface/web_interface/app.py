@@ -528,7 +528,7 @@ def start_web_interface():
 
 
 # MQTT callbacks
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     logging.info(f"Connected with result code {rc}")
     client.subscribe(COMMAND_TOPIC)
     client.subscribe(PATH_TOPIC)
