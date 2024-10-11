@@ -570,6 +570,15 @@ def publish_gps_data():
             client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}))
         time.sleep(1)  # Adjust based on desired update frequency
 
+def publish_mowing_area():
+    # Publish the mowing area to the MQTT broker
+    while True:
+        if os.path.exists('user_polygon.json'):
+            with open('user_polygon.json', 'r') as f:
+                coordinates = json.load(f)
+            client.publish('mower/mowing_area', json.dumps(coordinates))
+        time.sleep(1)  # Adjust based on desired update frequency
+
 
 # Initialize the MQTT client
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
