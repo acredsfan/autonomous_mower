@@ -53,6 +53,7 @@ def get_ip_address():
 
 # Check if "USE_REMOTE_PATH_PLANNING" is set to True in the .env file
 USE_REMOTE_PATH_PLANNING = os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
+print(f"USE_REMOTE_PATH_PLANNING: {os.getenv('USE_REMOTE_PATH_PLANNING')}")
 
 # Initialize the MQTT client
 MQTT_BROKER = get_ip_address()
