@@ -536,6 +536,7 @@ def start_web_interface():
 
     sensor_thread.join()  # Wait for the thread to finish
 
+
 # Initialize the MQTT client
 def start_mqtt_client():
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
@@ -544,6 +545,7 @@ def start_mqtt_client():
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.on_publish = on_publish
     client.loop_start()
+
 
 # MQTT callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
