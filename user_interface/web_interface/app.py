@@ -518,6 +518,9 @@ def start_camera():
     start_processing()
 
 
+sensor_update_thread = None
+
+
 def start_web_interface():
     global stop_sensor_thread, sensor_update_thread
     # Start the sensor update thread
