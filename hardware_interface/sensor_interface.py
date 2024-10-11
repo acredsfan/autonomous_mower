@@ -246,10 +246,12 @@ class SensorInterface:
 
 
 # Singleton accessor function
-sensor_interface_instance = SensorInterface()
+sensor_interface_instance = None
 
 
 def get_sensor_interface():
+    if sensor_interface_instance is None:
+        sensor_interface_instance = SensorInterface()
     return sensor_interface_instance
 
 

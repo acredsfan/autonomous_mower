@@ -57,6 +57,7 @@ def get_ip_address():
     """Get the IP address of the Raspberry Pi to use as teh Broker IP."""
     return os.popen("hostname -I").read().split()[0]
 
+
 # Check if "USE_REMOTE_PATH_PLANNING" is set to True in the .env file
 USE_REMOTE_PATH_PLANNING = os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
 
@@ -518,10 +519,10 @@ def start_camera():
 
 
 def start_web_interface():
-    global stop_sensor_thread, sensor_thread
+    global stop_sensor_thread, sensor_update_thread
     # Start the sensor update thread
-    if not sensor_thread or not sensor_thread.is_alive():
-        sensor_thread = threading.Thread(
+    if not sensor_update_thread or not sensor_update_thread.is_alive():
+        sensor_update_thread = threading.Thread(
             target=sensor_interface.update_sensors, daemon=True)
         sensor_thread.start()
         logging.info("Sensor update thread started.")
@@ -542,7 +543,7 @@ def start_web_interface():
     # Set the flag to stop the sensor update thread
     sensor_interface.stop_thread = True
 
-    sensor_thread.join()  # Wait for the thread to finish
+    sensor_update_thread.join()  # Wait for the thread to finish
 
 
 # Initialize the MQTT client
