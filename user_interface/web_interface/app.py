@@ -442,13 +442,16 @@ def calculate_next_scheduled_mow():
 
     return "Not scheduled"
 
+
 def start_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(75)
 
+
 def stop_mower_blades():
     # Toggle the mower blades
     BladeController.set_speed(0)
+
 
 @app.route('/toggle_blades', methods=['POST'])
 def toggle_blades():
@@ -569,7 +572,7 @@ def publish_gps_data():
 
 
 # Initialize the MQTT client
-client = mqtt.Client(CLIENT_ID)
+client = mqtt.Client(CLIENT_ID,mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
