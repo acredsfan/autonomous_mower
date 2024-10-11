@@ -560,6 +560,7 @@ def publish_sensor_data():
         client.publish(SENSOR_TOPIC, json.dumps(sensor_data))
         time.sleep(1)  # Adjust based on desired update frequency
 
+
 def publish_gps_data():
     # Publish GPS data to the MQTT broker
     while True:
@@ -569,6 +570,7 @@ def publish_gps_data():
             lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
             client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}))
         time.sleep(1)  # Adjust based on desired update frequency
+
 
 def publish_mowing_area():
     # Publish the mowing area to the MQTT broker
