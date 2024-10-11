@@ -46,6 +46,12 @@ CORS(app)
 dotenv_path = os.path.join(project_root, '.env')
 load_dotenv(dotenv_path)
 
+client = None
+sensor_thread = None
+gps_thread = None
+mowing_area_thread = None
+
+
 # Get current IP address to assign for MQTT Broker
 def get_ip_address():
     """Get the IP address of the Raspberry Pi to use as teh Broker IP."""
@@ -512,11 +518,13 @@ def start_camera():
 
 
 def start_web_interface():
-    global stop_sensor_thread
+    global stop_sensor_thread, sensor_thread
     # Start the sensor update thread
-    sensor_thread = threading.Thread(
-        target=sensor_interface.update_sensors, daemon=True)
-    sensor_thread.start()
+    if not sensor_thread or not sensor_thread.is_alive():
+        sensor_thread = threading.Thread(
+            target=sensor_interface.update_sensors, daemon=True)
+        sensor_thread.start()
+        logging.info("Sensor update thread started.")
 
     # Start the camera processing and streaming server
     camera_thread = threading.Thread(target=start_camera, daemon=True)
@@ -539,29 +547,34 @@ def start_web_interface():
 
 # Initialize the MQTT client
 def start_mqtt_client():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    global client  # Declare client as global
+    client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.on_publish = on_publish
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
     client.loop_start()
 
 
 # MQTT callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
+    global sensor_thread, gps_thread, mowing_area_thread  # Declare as global
     logging.info(f"Connected with result code {rc}")
     client.subscribe(COMMAND_TOPIC)
     client.subscribe(PATH_TOPIC)
 
     # Start the publishing threads if USE_REMOTE_PATH_PLANNING is True
     if USE_REMOTE_PATH_PLANNING:
-        if not sensor_thread.is_alive():
+        if not sensor_thread or not sensor_thread.is_alive():
+            sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
             sensor_thread.start()
             logging.info("Sensor thread started.")
-        if not gps_thread.is_alive():
+        if not gps_thread or not gps_thread.is_alive():
+            gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
             gps_thread.start()
             logging.info("GPS thread started.")
-        if not mowing_area_thread.is_alive():
+        if not mowing_area_thread or not mowing_area_thread.is_alive():
+            mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
             mowing_area_thread.start()
             logging.info("Mowing area thread started.")
 
@@ -591,6 +604,7 @@ def execute_command(command):
 
 def publish_sensor_data():
     # Publish sensor data to the MQTT broker
+    global client
     while True:
         sensor_data = sensor_interface.sensor_data
         client.publish(SENSOR_TOPIC, json.dumps(sensor_data))
@@ -600,6 +614,7 @@ def publish_sensor_data():
 
 def publish_gps_data():
     # Publish GPS data to the MQTT broker
+    global client
     while True:
         position = position_reader.run()
         if position and len(position) == 5:
@@ -612,6 +627,7 @@ def publish_gps_data():
 
 def publish_mowing_area():
     # Publish the mowing area to the MQTT broker
+    global client
     while True:
         if os.path.exists('user_polygon.json'):
             with open('user_polygon.json', 'r') as f:
