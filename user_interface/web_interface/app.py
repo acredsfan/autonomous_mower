@@ -517,11 +517,6 @@ def start_web_interface():
     sensor_thread = threading.Thread(
         target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_start()
 
     # Start the camera processing and streaming server
     camera_thread = threading.Thread(target=start_camera, daemon=True)
@@ -541,6 +536,14 @@ def start_web_interface():
 
     sensor_thread.join()  # Wait for the thread to finish
 
+# Initialize the MQTT client
+def start_mqtt_client():
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.on_publish = on_publish
+    client.loop_start()
 
 # MQTT callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -621,14 +624,7 @@ sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
 gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
 mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
 
-# Initialize the MQTT client
-def start_mqtt_client():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.on_publish = on_publish
-    client.loop_start()
+
 
 
 if __name__ == '__main__':
