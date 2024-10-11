@@ -250,8 +250,6 @@ sensor_interface_instance = SensorInterface()
 
 
 def get_sensor_interface():
-    if sensor_interface_instance is None:
-        sensor_interface_instance = SensorInterface()
     return sensor_interface_instance
 
 
