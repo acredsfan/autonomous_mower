@@ -1,5 +1,3 @@
-# robot.py
-
 from utilities import LoggerConfigInfo as LoggerConfig
 from user_interface.web_interface.app import start_web_interface, position_reader
 from hardware_interface.blade_controller import BladeController

@@ -7,7 +7,7 @@ if 'SAMD21' in sys.platform:
     from barbudor_ina3221.lite import INA3221
 else:
     from barbudor_ina3221.full import *
-    
+  
 i2c_bus = board.I2C()
 ina3221 = INA3221(i2c_bus)
 
@@ -61,7 +61,7 @@ while True:
             line_title += f"| Chan#{chan}      "
             line_psu_voltage += f"| {bus_voltage + shunt_voltage:6.3f} V "
             line_load_voltage += f"| {bus_voltage:6.3f} V "
-            line_shunt_voltage += f"| {shunt_voltage:9.6f} V "
+            line_shunt_voltage += f"| {shunt_voltage:9.3f} V "
             line_current += f"| {current:9.6f} A "
             battery_charge += f"| {battery_charge_percent:6.1f}% "
 
