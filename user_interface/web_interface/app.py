@@ -580,11 +580,32 @@ def publish_mowing_area():
         time.sleep(1)  # Adjust based on desired update frequency
 
 
+# Create publishing threads
+sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
+gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
+mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
+
+# Start the publishing threads
+if USE_REMOTE_PATH_PLANNING:
+    sensor_thread.start()
+    gps_thread.start()
+    mowing_area_thread.start()
+
+
+def on_publish(client, userdata, mid, reasonCode, properties=None):
+    logging.info(f"Published message ID: {mid}")
+    try:
+        logging.info(f"Reason code: {reasonCode}")
+    except Exception as e:
+        logging.error(f"Error in on_publish: {e}")
+
+
 # Initialize the MQTT client
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
+client.on_publish = on_publish
 client.loop_start()
 
 
