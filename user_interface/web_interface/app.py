@@ -605,16 +605,17 @@ def execute_command(command):
 def publish_sensor_data():
     # Publish sensor data to the MQTT broker
     global client
+    sensor_data = {}
     while True:
-        sensor_data = sensor_interface.sensor_data
-        data = {
-                'speed': sensor_data.get('speed', 'N/A'),
-                'heading': sensor_data.get('heading', 'N/A'),
-                'left_distance': sensor_data.get('left_distance', 'N/A'),
-                'right_distance': sensor_data.get('right_distance', 'N/A'),
+        sensor_update = sensor_interface.sensor_data
+        sensor_data = {
+                'speed': sensor_update.get('speed', 'N/A'),
+                'heading': sensor_update.get('heading', 'N/A'),
+                'left_distance': sensor_update.get('left_distance', 'N/A'),
+                'right_distance': sensor_update.get('right_distance', 'N/A'),
             }
-        client.publish(SENSOR_TOPIC, json.dumps(data), qos=1)
-        logging.info(f"Published sensor data: {data}")
+        client.publish(SENSOR_TOPIC, json.dumps(sensor_data), qos=1)
+        logging.info(f"Published sensor data: {sensor_data}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
 
