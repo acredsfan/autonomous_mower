@@ -9,6 +9,7 @@ let mapId;
 let defaultCoordinates = null;
 let obj_det_ip = null;
 let apiKey;
+let pathPolyline = null;
 
 // Function to fetch sensor data
 function fetchSensorData() {
@@ -123,7 +124,7 @@ window.addEventListener('load', function () {
         fetch('/get_google_maps_api_key').then(response => response.json()),
         fetch('/get_map_id').then(response => response.json()),
     ]).then(([keyData, mapIdData]) => {
-        apiKey = keyData.api_key;  // Ensure this matches the key in your JSON response
+        apiKey = keyData.api_key;
         mapId = mapIdData.map_id;
         
         if (!apiKey) {
@@ -415,16 +416,24 @@ function getPathAndDraw() {
         .catch(error => console.error('Error fetching path:', error));
 }
 
-// Function to draw the path
+// Function to draw the path on the map
 function drawPath(coordinates) {
-    const path = new google.maps.Polyline({
-        path: coordinates,
+    // Remove existing path if any
+    if (pathPolyline) {
+        pathPolyline.setMap(null);
+    }
+
+    // Create a new polyline for the path
+    pathPolyline = new google.maps.Polyline({
+        path: coordinates.map(coord => ({ lat: coord[1], lng: coord[0] })), // Convert to lat/lng
         geodesic: true,
         strokeColor: '#0000FF',
         strokeOpacity: 1.0,
         strokeWeight: 2
     });
-    path.setMap(map);
+
+    // Set the polyline on the map
+    pathPolyline.setMap(map);
 }
 
 // Socket.IO setup

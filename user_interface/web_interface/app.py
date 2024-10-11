@@ -1,5 +1,4 @@
 from flask_cors import CORS
-import requests
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 import datetime
@@ -10,6 +9,8 @@ import sys
 import os
 import utm
 from pyngrok import ngrok
+import paho.mqtt.client as mqtt
+import time
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(project_root)
@@ -44,6 +45,22 @@ CORS(app)
 # Load environment variables from .env in project_root directory
 dotenv_path = os.path.join(project_root, '.env')
 load_dotenv(dotenv_path)
+
+# Get current IP address to assign for MQTT Broker
+def get_ip_address():
+    """Get the IP address of the Raspberry Pi to use as teh Broker IP."""
+    return os.popen("hostname -I").read().split()[0]
+
+# Check if "USE_REMOTE_PATH_PLANNING" is set to True in the .env file
+USE_REMOTE_PATH_PLANNING = os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
+
+# Initialize the MQTT client
+MQTT_BROKER = get_ip_address()
+MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+CLIENT_ID = os.getenv("CLIENT_ID", "mower")
+PATH_TOPIC = 'mower/path'
+SENSOR_TOPIC = 'mower/sensor_data'
+COMMAND_TOPIC = 'mower/commands'
 
 # Initialize other components
 from navigation_system.path_planning import PathPlanning
@@ -222,11 +239,21 @@ def settings():
     return render_template('settings.html')
 
 
+path_data = {"path": []}  # Global variable to store the path data
+
+
 @app.route('/get-path', methods=['GET'])
 def get_path():
-    start, goal = path_planning.get_start_and_goal()
-    path = path_planning.get_path(start, goal)
-    return jsonify(path)
+    # If USE_REMOTE_PATH_PLANNING is set to True, use the remote path planning server
+    if USE_REMOTE_PATH_PLANNING:
+            global path_data
+            if not path_data["path"]:
+                return jsonify({"message": "Path not available"}), 404
+            return jsonify(path_data)
+    else:
+        # Use the local path planning module
+        path = path_planning.get_path()
+        return jsonify({"path": path})
 
 
 @app.route('/save-mowing-area', methods=['POST'])
@@ -495,6 +522,58 @@ def start_web_interface():
     sensor_interface.stop_thread = True
 
     sensor_thread.join()  # Wait for the thread to finish
+
+
+# MQTT callbacks
+def on_connect(client, userdata, flags, rc):
+    logging.info(f"Connected with result code {rc}")
+    client.subscribe(COMMAND_TOPIC)
+    client.subscribe(PATH_TOPIC)
+
+
+def on_message(client, userdata, msg):
+    global path_data, target_location
+    try:
+        if msg.topic == PATH_TOPIC:
+            path_data = json.loads(msg.payload.decode())
+            logging.info(f"Received path data: {path_data}")
+        elif msg.topic == COMMAND_TOPIC:
+            command = json.loads(msg.payload.decode())
+            logging.info(f"Received command: {command}")
+            execute_command(command)
+    except Exception as e:
+        logging.error(f"Error in on_message: {e}")
+
+
+def execute_command(command):
+    # Send the command to the navigation controller
+    navigation_controller.navigate_to_location(command['target_location'])
+
+
+def publish_sensor_data():
+    # Publish sensor data to the MQTT broker
+    while True:
+        sensor_data = sensor_interface.sensor_data
+        client.publish(SENSOR_TOPIC, json.dumps(sensor_data))
+        time.sleep(1)  # Adjust based on desired update frequency
+
+def publish_gps_data():
+    # Publish GPS data to the MQTT broker
+    while True:
+        position = position_reader.run()
+        if position and len(position) == 5:
+            ts, easting, northing, zone_number, zone_letter = position
+            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+            client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}))
+        time.sleep(1)  # Adjust based on desired update frequency
+
+
+# Initialize the MQTT client
+client = mqtt.Client(CLIENT_ID)
+client.on_connect = on_connect
+client.on_message = on_message
+client.connect(MQTT_BROKER, MQTT_PORT, 60)
+client.loop_start()
 
 
 if __name__ == '__main__':
