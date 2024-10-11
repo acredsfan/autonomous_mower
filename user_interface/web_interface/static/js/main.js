@@ -59,7 +59,11 @@ function saveSettings(mowDays, mowHours) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mowDays: mowDays, mowHours: mowHours }),
+        body: JSON.stringify({
+            mowDays: mowDays,
+            mowHours: mowHours,
+            patternType: patternType
+         }),
     })
     .then(response => response.json())
     .then(data => console.log(data))
@@ -94,12 +98,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
             event.preventDefault();
             const mowDays = document.querySelectorAll('input[name="mowDays"]:checked');
             const mowHours = document.querySelectorAll('input[name="mowHours"]:checked');
+            const patternType = document.querySelector('input[name="patternType"]:checked').value;
             
             // Convert selected values to arrays
             const selectedDays = Array.from(mowDays).map(input => input.value);
             const selectedHours = Array.from(mowHours).map(input => input.value);
 
-            saveSettings(selectedDays, selectedHours);  // Trigger save settings
+            saveSettings(selectedDays, selectedHours, patternType);  // Trigger save settings
         });
     }
 });

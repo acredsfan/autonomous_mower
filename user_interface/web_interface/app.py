@@ -298,6 +298,7 @@ def save_settings():
     data = request.get_json()
     mow_days = data.get('mowDays', [])
     mow_hours = data.get('mowHours', [])
+    pattern_type = data.get('patternType', 'stripes')  # Default to 'stripes' if not provided
 
     # Validate mow_days
     valid_days = [
@@ -307,20 +308,28 @@ def save_settings():
         'Thursday',
         'Friday',
         'Saturday',
-        'Sunday']
+        'Sunday'
+    ]
     if not all(day in valid_days for day in mow_days):
         return jsonify({'message': 'Invalid days provided.'}), 400
 
     # Validate mow_hours
-    if not all(isinstance(hour, int) and 0 <=
-               hour <= 23 for hour in mow_hours):
+    if not all(isinstance(hour, int) and 0 <= hour <= 23 for hour in mow_hours):
         return jsonify({'message': 'Invalid hours provided.'}), 400
 
-    # Save the mowing days and hours to a JSON file
+    # Save the mowing days, hours, and pattern type to a JSON file
     with open('mowing_schedule.json', 'w') as f:
-        json.dump({'mowDays': mow_days, 'mowHours': mow_hours}, f)
+        json.dump({
+            'mowDays': mow_days,
+            'mowHours': mow_hours,
+            'patternType': pattern_type
+        }, f)
+
+    # Publish the pattern type to the AI brain via MQTT
+    client.publish('mower/pattern_type', pattern_type)
 
     return jsonify({'message': 'Settings saved.'})
+
 
 
 @app.route('/get_google_maps_api_key', methods=['GET'])
@@ -507,6 +516,11 @@ def start_web_interface():
     sensor_thread = threading.Thread(
         target=sensor_interface.update_sensors, daemon=True)
     sensor_thread.start()
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.loop_start()
 
     # Start the camera processing and streaming server
     camera_thread = threading.Thread(target=start_camera, daemon=True)
@@ -533,9 +547,25 @@ def on_connect(client, userdata, flags, rc, properties=None):
     client.subscribe(COMMAND_TOPIC)
     client.subscribe(PATH_TOPIC)
 
+    # Start the publishing threads if USE_REMOTE_PATH_PLANNING is True
+    if USE_REMOTE_PATH_PLANNING:
+        if not sensor_thread.is_alive():
+            sensor_thread.start()
+            logging.info("Sensor thread started.")
+        if not gps_thread.is_alive():
+            gps_thread.start()
+            logging.info("GPS thread started.")
+        if not mowing_area_thread.is_alive():
+            mowing_area_thread.start()
+            logging.info("Mowing area thread started.")
+
+
+def on_publish(client, userdata, mid):
+    logging.info(f"Published message ID: {mid}")
+
 
 def on_message(client, userdata, msg):
-    global path_data, target_location
+    global path_data
     try:
         if msg.topic == PATH_TOPIC:
             path_data = json.loads(msg.payload.decode())
@@ -586,19 +616,6 @@ def publish_mowing_area():
 sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
 gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
 mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
-
-
-def on_publish(client, userdata, mid, reasonCode, properties=None):
-    logging.info(f"Published message ID: {mid}")
-    try:
-        logging.info(f"Reason code: {reasonCode}")
-        if USE_REMOTE_PATH_PLANNING:
-            sensor_thread.start()
-            gps_thread.start()
-            mowing_area_thread.start()
-    except Exception as e:
-        logging.error(f"Error in on_publish: {e}")
-
 
 # Initialize the MQTT client
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
