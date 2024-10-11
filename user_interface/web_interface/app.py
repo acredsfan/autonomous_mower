@@ -642,6 +642,16 @@ def publish_mowing_area():
                 coordinates = json.load(f)
             client.publish('mower/mowing_area', json.dumps(coordinates), qos=1)
             logging.info(f"Published mowing area: {coordinates}")
+        time.sleep(10)  # Adjust based on desired update frequency
+
+
+# Publish Obstacle Map from Path Planner to MQTT
+def publish_obstacle_map():
+    global client
+    while True:
+        if path_planning.obstacle_map:
+            client.publish('mower/obstacle_map', json.dumps(path_planning.obstacle_map), qos=1)
+            logging.info(f"Published obstacle map: {path_planning.obstacle_map}")
         time.sleep(1)  # Adjust based on desired update frequency
 
 
@@ -649,8 +659,6 @@ def publish_mowing_area():
 sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
 gps_thread = threading.Thread(target=publish_gps_data, daemon=True)
 mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
-
-
 
 
 if __name__ == '__main__':
