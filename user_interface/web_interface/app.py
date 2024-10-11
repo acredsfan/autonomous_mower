@@ -524,7 +524,7 @@ def start_web_interface():
     if not sensor_update_thread or not sensor_update_thread.is_alive():
         sensor_update_thread = threading.Thread(
             target=sensor_interface.update_sensors, daemon=True)
-        sensor_thread.start()
+        sensor_update_thread.start()
         logging.info("Sensor update thread started.")
 
     # Start the camera processing and streaming server
