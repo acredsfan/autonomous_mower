@@ -68,6 +68,8 @@ function saveSettings(mowDays, mowHours) {
     .then(response => response.json())
     .then(data => console.log(data))
     .catch((error) => console.error('Error:', error));
+    // Verify the saved settings with user feedback
+    alert('Settings saved successfully.');
 }
 
 // Function to update areaCoordinates when the polygon's path changes
