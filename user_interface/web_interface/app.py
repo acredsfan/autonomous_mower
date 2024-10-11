@@ -572,7 +572,7 @@ def publish_gps_data():
 
 
 # Initialize the MQTT client
-client = mqtt.Client(CLIENT_ID,mqtt.CallbackAPIVersion.VERSION2)
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 client.connect(MQTT_BROKER, MQTT_PORT, 60)
