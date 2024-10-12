@@ -279,6 +279,7 @@ class RoboHATDriver:
     def run(self, steering, throttle):
         self.set_pulse(steering, throttle)
 
+
     def shutdown(self):
         if self.pwm and self.pwm.is_open:
             try:

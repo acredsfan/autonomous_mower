@@ -204,8 +204,6 @@ def main():
             if byte is None:
                 break
 
-
-
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
                 command = datastr.strip()
