@@ -147,22 +147,20 @@ def get_sensor_data():
     return jsonify(sensor_data)
 
 
-@app.route('/control', methods=['GET', 'POST'])
+@app.route('/control', methods=['POST'])
 def control():
-    if request.method == 'GET':
-        # Render the control.html template
-        return render_template('control.html')
-    elif request.method == 'POST':
-        try:
-            # Handle control commands
-            data = request.get_json()
-            steering = data.get('steering', 0)
-            throttle = data.get('throttle', 0)
-            robohat_driver.run(steering, throttle)  # Updated method call
-            return jsonify({'status': 'success'})
-        except Exception as e:
-            logging.error(f"Error in /control: {e}")
-            return jsonify({'status': 'error', 'message': str(e)}), 500
+    try:
+        # Handle control commands
+        data = request.get_json()
+        steering = float(data.get('steering', 0))
+        throttle = float(data.get('throttle', 0))
+        logging.info(f"Received control command - Steering: {steering}, Throttle: {throttle}")
+        robohat_driver.run(steering, throttle)
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logging.error(f"Error in /control: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 
 @socketio.on('request_status')

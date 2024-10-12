@@ -484,56 +484,137 @@ socket.on('message', function(data) {
     console.log(data.data);
 });
 
-// JavaScript functions for controlling the robot
-function move(direction) {
-    let steering = 0;
-    let throttle = 0;
+// Joystick implementation
+document.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('joystick');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const joystick = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 40,
+            maxRadius: 100,
+            dragging: false,
+            startX: canvas.width / 2,
+            startY: canvas.height / 2
+        };
 
-    switch (direction) {
-        case 'forward':
-            throttle = 1; // Full forward
-            break;
-        case 'backward':
-            throttle = -1; // Full backward
-            break;
-        case 'left':
-            steering = -1; // Full left
-            break;
-        case 'right':
-            steering = 1; // Full right
-            break;
-        case 'stop':
-            throttle = 0;
-            steering = 0;
-            break;
-        default:
-            throttle = 0;
-            steering = 0;
+        function drawJoystick() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Outer circle
+            ctx.beginPath();
+            ctx.arc(joystick.startX, joystick.startY, joystick.maxRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Inner circle (joystick knob)
+            ctx.beginPath();
+            ctx.arc(joystick.x, joystick.y, joystick.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#007BFF';
+            ctx.fill();
+            ctx.strokeStyle = '#003F7F';
+            ctx.stroke();
+        }
+
+        function handleJoystickMove(event) {
+            const rect = canvas.getBoundingClientRect();
+            const offsetX = event.clientX - rect.left;
+            const offsetY = event.clientY - rect.top;
+            const dx = offsetX - joystick.startX;
+            const dy = offsetY - joystick.startY;
+            const distance = Math.hypot(dx, dy);
+
+            if (distance < joystick.maxRadius) {
+                joystick.x = offsetX;
+                joystick.y = offsetY;
+            } else {
+                const angle = Math.atan2(dy, dx);
+                joystick.x = joystick.startX + joystick.maxRadius * Math.cos(angle);
+                joystick.y = joystick.startY + joystick.maxRadius * Math.sin(angle);
+            }
+
+            drawJoystick();
+
+            // Calculate normalized values
+            const normX = (joystick.x - joystick.startX) / joystick.maxRadius;
+            const normY = (joystick.y - joystick.startY) / joystick.maxRadius;
+
+            sendControlCommand(normX, -normY); // Invert Y to match typical joystick behavior
+        }
+
+        function resetJoystick() {
+            joystick.x = joystick.startX;
+            joystick.y = joystick.startY;
+            drawJoystick();
+            sendControlCommand(0, 0); // Stop the robot when joystick is released
+        }
+
+        canvas.addEventListener('mousedown', (event) => {
+            joystick.dragging = true;
+            handleJoystickMove(event);
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (joystick.dragging) {
+                handleJoystickMove(event);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            joystick.dragging = false;
+            resetJoystick();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            joystick.dragging = false;
+            resetJoystick();
+        });
+
+        // For touch devices
+        canvas.addEventListener('touchstart', (event) => {
+            joystick.dragging = true;
+            handleJoystickMove(event.touches[0]);
+            event.preventDefault();
+        });
+
+        canvas.addEventListener('touchmove', (event) => {
+            if (joystick.dragging) {
+                handleJoystickMove(event.touches[0]);
+                event.preventDefault();
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            joystick.dragging = false;
+            resetJoystick();
+        });
+
+        drawJoystick();
     }
 
-    fetch('/control', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            steering: steering,
-            throttle: throttle
-        }),
-    })
-    .then(response => {
-        if (!response.ok) {
-            console.error('Server error:', response.status);
-            return response.text().then(text => {
-                console.error('Error text:', text);
-                throw new Error('Server error');
-            });
-        }
-        return response.json();
-    })
-    .then(data => console.log(data))
-    .catch((error) => console.error('Error:', error));
-}
+    function sendControlCommand(steering, throttle) {
+        fetch('/control', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                steering: steering,
+                throttle: throttle
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Control command sent:', data);
+        })
+        .catch((error) => {
+            console.error('Error sending control command:', error);
+        });
+    }
+});
+
 
 function toggleBlades(state) {
     fetch('/toggle_blades', {
@@ -565,4 +646,3 @@ function stopMowing() {
     .then(data => alert(data.message))
     .catch((error) => console.error('Error:', error));
 }
-
