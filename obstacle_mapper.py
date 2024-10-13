@@ -19,7 +19,12 @@ class ObstacleMapper:
         self.obstacle_map = []  # Store obstacle locations as a list of coordinates
 
         # Create a Shapely polygon from the yard boundary
-        self.yard_boundary = Polygon(polygon_coordinates)
+        self.yard_boundary = self.load_yard_boundary()
+
+    def load_yard_boundary(self):
+        """Convert polygon_coordinates to a Shapely Polygon."""
+        points = [(coord['lng'], coord['lat']) for coord in polygon_coordinates]
+        return Polygon(points)
 
     def detect_obstacle(self):
         """Check if an obstacle is detected using the sensors."""
@@ -32,7 +37,7 @@ class ObstacleMapper:
                 right_distance < MIN_DISTANCE_THRESHOLD)
 
     def record_obstacle(self):
-        """Record the current GPS position as an obstacle."""
+        """Record the current GPS position as an obstacle if it's inside the boundary."""
         position = self.localization.estimate_position()
         if position:
             lat, lon = position
@@ -42,7 +47,7 @@ class ObstacleMapper:
                 logger.info(f"Obstacle detected inside boundary at {lat}, {lon}")
                 self.obstacle_map.append({"latitude": lat, "longitude": lon})
             else:
-                logger.warning(f"Obstacle detected outside boundary at {lat}, {lon}. Ignoring.")
+                logger.warning(f"Obstacle at {lat}, {lon} is outside boundary. Ignored.")
 
     def save_obstacle_map(self, filename="obstacle_map.json"):
         """Save the obstacle map to a JSON file."""
@@ -76,11 +81,12 @@ class ObstacleMapper:
             if self.detect_obstacle():
                 self.record_obstacle()
 
-            time.sleep(0.1)  # Adjust the loop frequency as needed
+            time.sleep(0.1)  # Adjust the loop frequency
 
         # Stop the mower after exploration
         self.driver.run(0.0, 0.0)
         self.save_obstacle_map()
+
 
 # Usage example
 if __name__ == "__main__":
@@ -90,4 +96,4 @@ if __name__ == "__main__":
 
     mapper = ObstacleMapper(localization, sensors, driver)
     logger.info("Starting yard exploration to build the obstacle map...")
-    mapper.explore_yard(duration=1200)  # Explore for 10 minutes
+    mapper.explore_yard(duration=600)  # Explore for 10 minutes
