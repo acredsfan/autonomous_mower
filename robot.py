@@ -13,6 +13,7 @@ import os
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
+localization = Localization()
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -49,7 +50,7 @@ def initialize_resources():
 
     # Initialize obstacle mapper
     global obstacle_mapper
-    obstacle_mapper = ObstacleMapper(Localization, sensor_interface, robohat_driver)
+    obstacle_mapper = ObstacleMapper(localization, sensor_interface, robohat_driver)
     logging.info("Obstacle mapper initialized.")
 
 

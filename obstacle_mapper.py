@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 
 class ObstacleMapper:
     def __init__(self, localization: Localization, sensors: SensorInterface, driver: RoboHATDriver):
-        self.localization = localization
+        self.localization = localization  # Store the instance properly
         self.sensors = sensors
         self.driver = driver
-        self.obstacle_map = []  # Store obstacle locations as a list of coordinates
+        self.obstacle_map = []  # Store obstacle locations
 
-        # Create a Shapely polygon from the yard boundary
+        # Convert polygon_coordinates to a Shapely Polygon
         self.yard_boundary = self.load_yard_boundary()
 
     def load_yard_boundary(self):
@@ -37,8 +37,8 @@ class ObstacleMapper:
                 right_distance < MIN_DISTANCE_THRESHOLD)
 
     def record_obstacle(self):
-        """Record the current GPS position as an obstacle if it's inside the boundary."""
-        position = self.localization.estimate_position()
+        """Record the current GPS position as an obstacle if inside the boundary."""
+        position = self.localization.estimate_position()  # Call properly
         if position:
             lat, lon = position
             obstacle_point = Point(lon, lat)
@@ -68,7 +68,7 @@ class ObstacleMapper:
 
         while time.time() - start_time < duration:
             # Get the current position and ensure it's inside the yard
-            position = self.localization.estimate_position()
+            position = self.localization.estimate_position()  # Fixed the call
             if not self.is_within_yard(position):
                 logger.warning("Mower is outside the yard boundary! Stopping.")
                 self.driver.run(0.0, 0.0)  # Stop the mower
@@ -87,10 +87,9 @@ class ObstacleMapper:
         self.driver.run(0.0, 0.0)
         self.save_obstacle_map()
 
-
 # Usage example
 if __name__ == "__main__":
-    localization = Localization()
+    localization = Localization()  # Ensure proper instantiation
     sensors = SensorInterface()
     driver = RoboHATDriver()
 
