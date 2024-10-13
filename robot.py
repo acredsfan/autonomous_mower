@@ -3,6 +3,7 @@ from user_interface.web_interface.app import start_web_interface, position_reade
 from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATDriver  # Updated import
 from hardware_interface.gpio_manager import GPIOManager
+from obstacle_mapper import ObstacleMapper
 import threading
 import time
 import sys
@@ -45,6 +46,11 @@ def initialize_resources():
             logging.error(f"Retry failed for RoboHATDriver: {e}")
             robohat_driver = None
 
+    # Initialize obstacle mapper
+    global obstacle_mapper
+    obstacle_mapper = ObstacleMapper(sensor_interface, robohat_driver)
+    logging.info("Obstacle mapper initialized.")
+
 
 def monitor_gps_status(position_reader):
     """
@@ -82,6 +88,14 @@ if __name__ == "__main__":
                                       args=(position_reader,), daemon=True)
         gps_thread.start()
         logging.info("GPS status monitoring started.")
+
+        # Before starting the main loop, ask the user if they want to run Obstacle Mapper
+        user_input = input("Do you want to run the obstacle mapper? (y/n): ")
+        if user_input.lower() == 'y':
+            logging.info("Starting the obstacle mapper...")
+            obstacle_mapper.explore_yard()
+        else:
+            logging.info("Obstacle mapper skipped.")
 
         # Keep the main thread alive
         while True:
