@@ -94,14 +94,17 @@ class BladeController:
             pwm1.ChangeDutyCycle(speed)
             pwm2.ChangeDutyCycle(0)
             BladeController.blades_on = True
+            print("Blades on at speed: ", speed)
         elif speed < 0:
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(-speed)
             BladeController.blades_on = True
+            print("Blades on at speed: ", speed)
         else:
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(0)
             BladeController.blades_on = False
+            print("Blades off")
 
     @staticmethod
     def stop():

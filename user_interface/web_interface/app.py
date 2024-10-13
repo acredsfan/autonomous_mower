@@ -87,7 +87,7 @@ gps_position.start()
 position_reader = GpsLatestPosition(gps_position_instance=gps_position,
                                     debug=True)
 
-blade_controller = BladeController()
+blade_control = BladeController()
 localization = Localization()
 path_planning = PathPlanning(localization)
 sensor_interface = get_sensor_interface()
@@ -509,12 +509,12 @@ def calculate_next_scheduled_mow():
 
 def start_mower_blades():
     # Toggle the mower blades
-    blade_controller.set_speed(75)
+    blade_control.set_speed(100)
 
 
 def stop_mower_blades():
     # Toggle the mower blades
-    blade_controller.set_speed(0)
+    blade_control.set_speed(0)
 
 
 @app.route('/toggle_blades', methods=['POST'])
