@@ -16,7 +16,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 sys.path.append(project_root)
 from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.sensor_interface import get_sensor_interface
-from hardware_interface.blade_controller import BladeController
+from hardware_interface.blade_controller import 
 from hardware_interface.robohat import RoboHATDriver
 from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
@@ -725,3 +725,4 @@ if __name__ == '__main__':
     print(f"USE_REMOTE_PATH_PLANNING: {os.getenv('USE_REMOTE_PATH_PLANNING')}")
     start_mqtt_client()
     start_web_interface()
+    start_mower_blades()
