@@ -582,7 +582,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
 
 
 def on_publish(client, userdata, mid):
-    logging.info(f"Published message ID: {mid}")
+    # logging.info(f"Published message ID: {mid}")
 
 
 def on_message(client, userdata, msg):
@@ -602,6 +602,7 @@ def on_message(client, userdata, msg):
 def execute_command(command):
     # Send the command to the navigation controller
     navigation_controller.navigate_to_location(command['target_location'])
+    logging.info(f"Executing command: {command}")
 
 
 def publish_sensor_data():
@@ -617,7 +618,7 @@ def publish_sensor_data():
                 'right_distance': sensor_update.get('right_distance', 'N/A'),
             }
         client.publish(SENSOR_TOPIC, json.dumps(sensor_data), qos=1)
-        logging.info(f"Published sensor data: {sensor_data}")
+        # logging.info(f"Published sensor data: {sensor_data}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
 
@@ -630,7 +631,7 @@ def publish_gps_data():
             ts, easting, northing, zone_number, zone_letter = position
             lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
             client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}), qos=1)
-            logging.info(f"Published GPS data: {lat}, {lon}")
+            # logging.info(f"Published GPS data: {lat}, {lon}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
 
@@ -642,7 +643,7 @@ def publish_mowing_area():
             with open('user_polygon.json', 'r') as f:
                 coordinates = json.load(f)
             client.publish('mower/mowing_area', json.dumps(coordinates), qos=1)
-            logging.info(f"Published mowing area: {coordinates}")
+            # logging.info(f"Published mowing area: {coordinates}")
         time.sleep(10)  # Adjust based on desired update frequency
 
 
@@ -652,7 +653,7 @@ def publish_obstacle_map():
     while True:
         if path_planning.obstacle_map:
             client.publish('mower/obstacle_map', json.dumps(path_planning.obstacle_map), qos=1)
-            logging.info(f"Published obstacle map: {path_planning.obstacle_map}")
+            # logging.info(f"Published obstacle map: {path_planning.obstacle_map}")
         time.sleep(1)  # Adjust based on desired update frequency
 
 
