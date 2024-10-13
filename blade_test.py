@@ -1,5 +1,3 @@
-from hardware_interface.blade_controller import BladeController
-import time
 from hardware_interface.gpio_manager import GPIOManager
 import time
 
@@ -25,6 +23,8 @@ print("Turning off pin 25")
 shutdown_lines[1].set_value(0)  # Set pin 25 to LOW
 
 print("GPIO test complete")
+
+from hardware_interface.blade_controller import BladeController
 
 # Initialize blade controller instance
 blade_controller = BladeController()
