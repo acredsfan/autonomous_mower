@@ -28,7 +28,6 @@ def initialize_resources():
     # Initialize blade controller
     blade_controller = BladeController()
     logging.info("Blade controller initialized.")
-    blade_controller.start_blades()  # Start
     time.sleep(0.2)
 
     # Initialize RoboHATDriver (movement controller)
