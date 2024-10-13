@@ -12,7 +12,7 @@ shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, [])
 
 
 class PWM:
-    def __init__(self, line, frequency=50):
+    def __init__(self, line, frequency=2000):
         """Initialize PWM on a GPIO line with a given frequency."""
         self.line = line
         self.frequency = frequency
