@@ -11,10 +11,9 @@ import utm
 from pyngrok import ngrok
 import paho.mqtt.client as mqtt
 import time
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                            '..'))
 sys.path.append(project_root)
-
 from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface.blade_controller import BladeController
@@ -23,6 +22,8 @@ from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import GpsPosition, GpsLatestPosition
 from obstacle_detection.local_obstacle_detection import start_processing
 from navigation_system.navigation import NavigationController
+from navigation_system.path_planning import PathPlanning
+from navigation_system.localization import Localization
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -70,12 +71,8 @@ PATH_TOPIC = 'mower/path'
 SENSOR_TOPIC = 'mower/sensor_data'
 COMMAND_TOPIC = 'mower/commands'
 
-# Initialize other components
-from navigation_system.path_planning import PathPlanning
-from navigation_system.localization import Localization
-
 # Read serial port configurations from environment variables
-serial_port_path = os.getenv("GPS_SERIAL_PORT", "/dev/ttyACM0")  # Default to /dev/ttyACM0
+serial_port_path = os.getenv("GPS_SERIAL_PORT", "/dev/ttyACM0")
 serial_baudrate = int(os.getenv("GPS_BAUD_RATE", "9600"))
 serial_timeout = float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
 ngrok_url = os.getenv("NGROK_URL")
@@ -83,10 +80,12 @@ use_ngrok = os.getenv("USE_NGROK", "False").lower() == "true"
 udp_port = os.getenv("UDP_PORT", "8000")
 
 # Initialize SerialPort and GpsPosition with environment configurations
-serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate, timeout=serial_timeout)
+serial_port = SerialPort(port=serial_port_path, baudrate=serial_baudrate,
+                         timeout=serial_timeout)
 gps_position = GpsPosition(serial_port=serial_port, debug=True)
 gps_position.start()
-position_reader = GpsLatestPosition(gps_position_instance=gps_position, debug=True)
+position_reader = GpsLatestPosition(gps_position_instance=gps_position,
+                                    debug=True)
 
 blade_controller = BladeController()
 localization = Localization()
@@ -97,7 +96,9 @@ sensor_interface = get_sensor_interface()
 robohat_driver = RoboHATDriver()
 
 # Initialize NavigationController
-navigation_controller = NavigationController(position_reader, robohat_driver, sensor_interface)
+navigation_controller = NavigationController(position_reader,
+                                             robohat_driver,
+                                             sensor_interface)
 
 # Define a flag for stopping the sensor update thread
 stop_thread = False
@@ -113,10 +114,13 @@ def utm_to_latlon(easting, northing, zone_number, zone_letter):
 
 @app.route('/')
 def index():
+    global next_scheduled_mow
     next_scheduled_mow = calculate_next_scheduled_mow()
-    return render_template('index.html',
-                           google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
-                           next_scheduled_mow=next_scheduled_mow)
+    return render_template(
+        'index.html',
+        google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
+        next_scheduled_mow=next_scheduled_mow
+    )
 
 
 @app.route('/status')
@@ -125,18 +129,28 @@ def status():
     status_info = {
         'mowing_status': mowing_status,
         'next_scheduled_mow': next_scheduled_mow,
-        'battery-voltage': sensor_interface.sensor_data.get('battery', {}).get('voltage', 'N/A'),
-        'battery-current': sensor_interface.sensor_data.get('battery', {}).get('current', 'N/A'),
-        'battery-charge-level': sensor_interface.sensor_data.get('battery_charge', 'N/A'),
-        'solar-voltage': sensor_interface.sensor_data.get('solar', {}).get('voltage', 'N/A'),
-        'solar-current': sensor_interface.sensor_data.get('solar', {}).get('current', 'N/A'),
+        'battery-voltage': sensor_interface.sensor_data.get('battery', {})
+                                                       .get('voltage', 'N/A'),
+        'battery-current': sensor_interface.sensor_data.get('battery', {})
+                                                       .get('current', 'N/A'),
+        'battery-charge-level': sensor_interface.sensor_data.get(
+            'battery_charge', 'N/A'),
+        'solar-voltage': sensor_interface.sensor_data.get('solar', {})
+                                                     .get('voltage', 'N/A'),
+        'solar-current': sensor_interface.sensor_data.get('solar', {})
+                                                     .get('current', 'N/A'),
         'speed': sensor_interface.sensor_data.get('speed', 'N/A'),
         'heading': sensor_interface.sensor_data.get('heading', 'N/A'),
-        'temperature': sensor_interface.sensor_data.get('bme280', {}).get('temperature', 'N/A'),
-        'humidity': sensor_interface.sensor_data.get('bme280', {}).get('humidity', 'N/A'),
-        'pressure': sensor_interface.sensor_data.get('bme280', {}).get('pressure', 'N/A'),
-        'left-distance': sensor_interface.sensor_data.get('left_distance', 'N/A'),
-        'right-distance': sensor_interface.sensor_data.get('right_distance', 'N/A')
+        'temperature': sensor_interface.sensor_data.get('bme280', {})
+        .get('temperature', 'N/A'),
+        'humidity': sensor_interface.sensor_data.get('bme280', {})
+                                                .get('humidity', 'N/A'),
+        'pressure': sensor_interface.sensor_data.get('bme280', {})
+                                                .get('pressure', 'N/A'),
+        'left-distance': sensor_interface.sensor_data.get('left_distance',
+                                                          'N/A'),
+        'right-distance': sensor_interface.sensor_data.get('right_distance',
+                                                           'N/A')
     }
     return render_template('status.html', status=status_info)
 
@@ -147,20 +161,24 @@ def get_sensor_data():
     return jsonify(sensor_data)
 
 
-@app.route('/control', methods=['POST'])
+@app.route('/control', methods=['GET', 'POST'])
 def control():
-    try:
-        # Handle control commands
-        data = request.get_json()
-        steering = float(data.get('steering', 0))
-        throttle = float(data.get('throttle', 0))
-        logging.info(f"Received control command - Steering: {steering}, Throttle: {throttle}")
-        robohat_driver.run(steering, throttle)
-        return jsonify({'status': 'success'})
-    except Exception as e:
-        logging.error(f"Error in /control: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
-
+    if request.method == 'GET':
+        # Render the control.html template
+        return render_template('control.html')
+    elif request.method == 'POST':
+        try:
+            # Handle control commands
+            data = request.get_json()
+            steering = float(data.get('steering', 0))
+            throttle = float(data.get('throttle', 0))
+            logging.info(f"Received control command - Steering: {steering},"
+                         f"Throttle: {throttle}")
+            robohat_driver.run(steering, throttle)
+            return jsonify({'status': 'success'})
+        except Exception as e:
+            logging.error(f"Error in /control: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @socketio.on('request_status')
@@ -202,7 +220,10 @@ def gen_frames():
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(
+        gen_frames(), 
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
 
 
 @app.route('/camera_route')
@@ -217,11 +238,13 @@ def start_mowing():
     robot_test.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
+
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
     import robot_test
     robot_test.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
+
 
 @app.route('/get-mowing-area', methods=['GET'])
 def get_mowing_area():
@@ -234,10 +257,12 @@ def get_mowing_area():
     else:
         return jsonify({'message': 'No area saved yet.'})
 
+
 @app.route('/area', methods=['GET'])
 def area():
     google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
-    return render_template('area.html', google_maps_api_key=google_maps_api_key)
+    return render_template('area.html',
+                           google_maps_api_key=google_maps_api_key)
 
 
 @app.route('/settings', methods=['GET'])
@@ -250,12 +275,13 @@ path_data = {"path": []}  # Global variable to store the path data
 
 @app.route('/get-path', methods=['GET'])
 def get_path():
-    # If USE_REMOTE_PATH_PLANNING is set to True, use the remote path planning server
+    """ If USE_REMOTE_PATH_PLANNING is set to True,
+        use the remote path planning server"""
     if USE_REMOTE_PATH_PLANNING:
-            global path_data
-            if not path_data["path"]:
-                return jsonify({"message": "Path not available"}), 404
-            return jsonify(path_data)
+        global path_data
+        if not path_data["path"]:
+            return jsonify({"message": "Path not available"}), 404
+        return jsonify(path_data)
     else:
         # Use the local path planning module
         path = path_planning.get_path()
@@ -266,14 +292,23 @@ def get_path():
 def save_mowing_area():
     data = request.get_json()
     if not isinstance(data, list):
-        return jsonify({'message': 'Invalid data format. Expected a list of coordinates.'}), 400
+        return jsonify(
+            {'message': 'Invalid data format. Expected a list of coordinates.'}
+        ), 400
 
     # Validate each coordinate object
     for coord in data:
-        if not ('lat' in coord and 'lng' in coord):
-            return jsonify({'message': 'Each coordinate must have "lat" and "lng".'}), 400
-        if not (isinstance(coord['lat'], (int, float)) and isinstance(coord['lng'], (int, float))):
-            return jsonify({'message': '"lat" and "lng" must be numbers.'}), 400
+        if not ('lat' in coord and
+                'lng' in coord):
+            return jsonify(
+                {'message': 'Each coordinate must have "lat" and "lng".'}
+            ), 400
+        if not (
+            isinstance(coord['lat'], (int, float)) and
+            isinstance(coord['lng'], (int, float))
+        ):
+            return jsonify({'message': '"lat" and "lng"'
+                            'must be numbers.'}), 400
 
     with open('user_polygon.json', 'w') as f:
         json.dump(data, f)
@@ -283,15 +318,19 @@ def save_mowing_area():
 
 @app.route('/api/gps', methods=['GET'])
 def get_gps():
-    #logging.info("Starting get_gps")
+    # logging.info("Starting get_gps")
     try:
         position = position_reader.run()
         # logging.info(f"position: {position}")
 
         if position and len(position) == 5:
             ts, easting, northing, zone_number, zone_letter = position
-            lat, lng = utm.to_latlon(easting, northing, zone_number, zone_letter)
-            return jsonify({'latitude': lat, 'longitude': lng})
+            lat, lng = utm.to_latlon(easting, northing,
+                                     zone_number, zone_letter)
+            return jsonify({
+                'latitude': lat,
+                'longitude': lng
+            })
         else:
             return jsonify({'error': 'No GPS data available'}), 404
     except Exception as e:
@@ -304,7 +343,7 @@ def save_settings():
     data = request.get_json()
     mow_days = data.get('mowDays', [])
     mow_hours = data.get('mowHours', [])
-    pattern_type = data.get('patternType', 'stripes')  # Default to 'stripes' if not provided
+    pattern_type = data.get('patternType', 'stripes')
 
     # Validate mow_days
     valid_days = [
@@ -320,7 +359,10 @@ def save_settings():
         return jsonify({'message': 'Invalid days provided.'}), 400
 
     # Validate mow_hours
-    if not all(isinstance(hour, int) and 0 <= hour <= 23 for hour in mow_hours):
+    if not all(
+        isinstance(hour, int) and 0 <= hour <= 23
+        for hour in mow_hours
+    ):
         return jsonify({'message': 'Invalid hours provided.'}), 400
 
     # Save the mowing days, hours, and pattern type to a JSON file
@@ -335,7 +377,6 @@ def save_settings():
     client.publish('mower/pattern_type', pattern_type)
 
     return jsonify({'message': 'Settings saved.'})
-
 
 
 @app.route('/get_google_maps_api_key', methods=['GET'])
@@ -358,7 +399,8 @@ def get_map_id():
         return jsonify({"map_id": map_id})
     else:
         return jsonify({"error": "Map ID not found"}), 404
-    
+
+
 @app.route('/get_obj_det_ip', methods=['GET'])
 def get_obj_det_ip():
     # Fetch the map ID from the environment
@@ -380,8 +422,10 @@ def get_default_coordinates():
         try:
             default_lat = float(default_lat)
             default_lng = float(default_lng)
-            logging.info(f"default_lat: {default_lat}, type: {type(default_lat)}")
-            logging.info(f"default_lng: {default_lng}, type: {type(default_lng)}")
+            logging.info(f"default_lat: {default_lat},"
+                         f"type: {type(default_lat)}")
+            logging.info(f"default_lng: {default_lng},"
+                         f"type: {type(default_lng)}")
             return jsonify({"lat": default_lat, "lng": default_lng})
         except ValueError:
             logging.error("Invalid default coordinates")
@@ -402,10 +446,12 @@ def get_schedule():
         # Return default values if the schedule is not set
         return None, None
 
+
 @app.route('/stop', methods=['POST'])
 def stop():
     robohat_driver.run(0, 0)
     return jsonify({'status': 'stopped'})
+
 
 @app.route('/save-home-location', methods=['POST'])
 def save_home_location():
@@ -414,6 +460,7 @@ def save_home_location():
     with open('home_location.json', 'w') as f:
         json.dump(home_location, f)
     return jsonify({'message': 'Home location saved.'})
+
 
 @app.route('/get-home-location', methods=['GET'])
 def get_home_location():
@@ -424,6 +471,7 @@ def get_home_location():
         return jsonify(home_location)
     else:
         return jsonify({'message': 'No home location set yet.'})
+
 
 def calculate_next_scheduled_mow():
     # Get the mowing days and hours from the schedule file
@@ -460,12 +508,12 @@ def calculate_next_scheduled_mow():
 
 def start_mower_blades():
     # Toggle the mower blades
-    BladeController.set_speed(75)
+    blade_controller.set_speed(75)
 
 
 def stop_mower_blades():
     # Toggle the mower blades
-    BladeController.set_speed(0)
+    blade_controller.set_speed(0)
 
 
 @app.route('/toggle_blades', methods=['POST'])
@@ -496,7 +544,7 @@ def check_polygon_points():
         lat = point['lat']
         lng = point['lng']
         target_location = (lat, lng)
-        result = navigation_controller.navigate_to_location(target_location)  # Updated call
+        result = navigation_controller.navigate_to_location(target_location)
         if not result:
             success = False
             break  # Stop if navigation failed
@@ -504,7 +552,8 @@ def check_polygon_points():
     if success:
         return jsonify({'message': 'Robot has visited all polygon points.'})
     else:
-        return jsonify({'message': 'Failed to navigate to all polygon points.'}), 500
+        return jsonify({'message':
+                        'Failed to navigate to all polygon points.'}), 500
 
 
 def stop_motors():
@@ -568,7 +617,8 @@ def on_connect(client, userdata, flags, rc, properties=None):
     # Start the publishing threads if USE_REMOTE_PATH_PLANNING is True
     if USE_REMOTE_PATH_PLANNING:
         if not sensor_thread or not sensor_thread.is_alive():
-            sensor_thread = threading.Thread(target=publish_sensor_data, daemon=True)
+            sensor_thread = threading.Thread(target=publish_sensor_data,
+                                             daemon=True)
             sensor_thread.start()
             logging.info("Sensor thread started.")
         if not gps_thread or not gps_thread.is_alive():
@@ -576,13 +626,15 @@ def on_connect(client, userdata, flags, rc, properties=None):
             gps_thread.start()
             logging.info("GPS thread started.")
         if not mowing_area_thread or not mowing_area_thread.is_alive():
-            mowing_area_thread = threading.Thread(target=publish_mowing_area, daemon=True)
+            mowing_area_thread = threading.Thread(target=publish_mowing_area,
+                                                  daemon=True)
             mowing_area_thread.start()
             logging.info("Mowing area thread started.")
 
 
 def on_publish(client, userdata, mid):
     # logging.info(f"Published message ID: {mid}")
+    pass
 
 
 def on_message(client, userdata, msg):
@@ -629,8 +681,11 @@ def publish_gps_data():
         position = position_reader.run()
         if position and len(position) == 5:
             ts, easting, northing, zone_number, zone_letter = position
-            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-            client.publish('mower/gps', json.dumps({'latitude': lat, 'longitude': lon}), qos=1)
+            lat, lon = utm.to_latlon(easting, northing,
+                                     zone_number,
+                                     zone_letter)
+            client.publish('mower/gps', json.dumps({'latitude': lat,
+                                                    'longitude': lon}), qos=1)
             # logging.info(f"Published GPS data: {lat}, {lon}")
         time.sleep(0.5)  # Adjust based on desired update frequency
 
@@ -652,8 +707,10 @@ def publish_obstacle_map():
     global client
     while True:
         if path_planning.obstacle_map:
-            client.publish('mower/obstacle_map', json.dumps(path_planning.obstacle_map), qos=1)
-            # logging.info(f"Published obstacle map: {path_planning.obstacle_map}")
+            client.publish('mower/obstacle_map',
+                           json.dumps(path_planning.obstacle_map), qos=1)
+            logging.info(f"Published obstacle map:"
+                         f"{path_planning.obstacle_map}")
         time.sleep(1)  # Adjust based on desired update frequency
 
 
