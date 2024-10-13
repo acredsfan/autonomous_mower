@@ -174,6 +174,7 @@ def control():
             throttle = float(data.get('throttle', 0))
             logging.info(f"Received control command - Steering: {steering},"
                          f"Throttle: {throttle}")
+            steering = -steering  # Invert the steering value
             robohat_driver.run(steering, throttle)
             return jsonify({'status': 'success'})
         except Exception as e:
