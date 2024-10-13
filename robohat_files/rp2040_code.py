@@ -130,6 +130,7 @@ def main():
     throttle_val = throttle.value
     led_state = False
     color = (0, 0, 255)
+    control_mode = 'serial'
     if not USE_QUADRATURE:
         last_state1 = encoder1.value
         last_state2 = encoder2.value
