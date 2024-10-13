@@ -4,6 +4,7 @@ from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATDriver  # Updated import
 from hardware_interface.gpio_manager import GPIOManager
 from obstacle_mapper import ObstacleMapper
+from navigation_system.localization import Localization
 import threading
 import time
 import sys
@@ -48,7 +49,7 @@ def initialize_resources():
 
     # Initialize obstacle mapper
     global obstacle_mapper
-    obstacle_mapper = ObstacleMapper(sensor_interface, robohat_driver)
+    obstacle_mapper = ObstacleMapper(Localization, sensor_interface, robohat_driver)
     logging.info("Obstacle mapper initialized.")
 
 
