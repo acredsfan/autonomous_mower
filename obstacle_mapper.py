@@ -4,20 +4,22 @@ from navigation_system.localization import Localization
 from hardware_interface.sensor_interface import SensorInterface
 from hardware_interface.robohat import RoboHATDriver
 import logging
-from constants import MIN_DISTANCE_THRESHOLD
+from constants import MIN_DISTANCE_THRESHOLD, polygon_coordinates
+from shapely.geometry import Polygon, Point
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class ObstacleMapper:
-    def __init__(self, localization: Localization,
-                 sensors: SensorInterface, driver: RoboHATDriver):
+    def __init__(self, localization: Localization, sensors: SensorInterface, driver: RoboHATDriver):
         self.localization = localization
         self.sensors = sensors
         self.driver = driver
-        # Store obstacle locations as a list of coordinates
-        self.obstacle_map = []
+        self.obstacle_map = []  # Store obstacle locations as a list of coordinates
+
+        # Create a Shapely polygon from the yard boundary
+        self.yard_boundary = Polygon(polygon_coordinates)
 
     def detect_obstacle(self):
         """Check if an obstacle is detected using the sensors."""
@@ -34,8 +36,13 @@ class ObstacleMapper:
         position = self.localization.estimate_position()
         if position:
             lat, lon = position
-            logger.info(f"Obstacle detected at {lat}, {lon}")
-            self.obstacle_map.append({"latitude": lat, "longitude": lon})
+            obstacle_point = Point(lon, lat)
+
+            if self.yard_boundary.contains(obstacle_point):
+                logger.info(f"Obstacle detected inside boundary at {lat}, {lon}")
+                self.obstacle_map.append({"latitude": lat, "longitude": lon})
+            else:
+                logger.warning(f"Obstacle detected outside boundary at {lat}, {lon}. Ignoring.")
 
     def save_obstacle_map(self, filename="obstacle_map.json"):
         """Save the obstacle map to a JSON file."""
@@ -43,11 +50,25 @@ class ObstacleMapper:
             json.dump(self.obstacle_map, f, indent=4)
         logger.info(f"Obstacle map saved to {filename}")
 
+    def is_within_yard(self, position):
+        """Check if the current position is within the yard boundary."""
+        if position:
+            lat, lon = position
+            return self.yard_boundary.contains(Point(lon, lat))
+        return False
+
     def explore_yard(self, duration=300):
-        """Explore the yard to map obstacles
-           for a given duration (in seconds)."""
+        """Explore the yard to map obstacles for a given duration (in seconds)."""
         start_time = time.time()
+
         while time.time() - start_time < duration:
+            # Get the current position and ensure it's inside the yard
+            position = self.localization.estimate_position()
+            if not self.is_within_yard(position):
+                logger.warning("Mower is outside the yard boundary! Stopping.")
+                self.driver.run(0.0, 0.0)  # Stop the mower
+                break
+
             # Drive the mower forward at low speed
             self.driver.run(steering=0.0, throttle=0.2)
 
@@ -61,7 +82,6 @@ class ObstacleMapper:
         self.driver.run(0.0, 0.0)
         self.save_obstacle_map()
 
-
 # Usage example
 if __name__ == "__main__":
     localization = Localization()
@@ -70,5 +90,4 @@ if __name__ == "__main__":
 
     mapper = ObstacleMapper(localization, sensors, driver)
     logger.info("Starting yard exploration to build the obstacle map...")
-    # Explore for 20 minutes
-    mapper.explore_yard(duration=600)
+    mapper.explore_yard(duration=1200)  # Explore for 10 minutes
