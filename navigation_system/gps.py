@@ -70,7 +70,7 @@ class GpsLatestPosition(metaclass=SingletonMeta):
             self.position = self.gps_position.get_latest_position()
             if self.position:
                 # self.status = "GPS fix acquired."
-            # else:
+                # else:
                 # self.status = "Waiting for GPS fix..."
                 return self.position
 
