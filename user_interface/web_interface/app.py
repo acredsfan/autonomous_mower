@@ -199,51 +199,47 @@ def handle_status_request():
     emit('update_status', data)
 
 
-def gen_frames():
-    from hardware_interface.camera_instance import get_camera_instance
-    import cv2
-    camera = get_camera_instance()
-    while True:
-        frame = camera.capture_array()
-        if frame is not None:
-            # Convert the frame from RGB to BGR (if needed)
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            # Encode the frame as JPEG
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame_bytes = buffer.tobytes()
-
-            # Yield the frame in the byte format expected by the browser
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-        else:
-            continue
-
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(
-        gen_frames(), 
-        mimetype='multipart/x-mixed-replace; boundary=frame'
-    )
-
-
 @app.route('/camera_route')
 def camera_route():
+    """Render the camera.html page."""
     return render_template('camera.html')
+
+
+def stream_video():
+    """Background thread to stream video frames over WebSocket."""
+    from hardware_interface.camera_instance import capture_frame
+    while True:
+        frame = capture_frame()
+        if frame:
+            # Emit the frame to connected clients
+            socketio.emit('video_frame', frame, namespace='/video')
+        time.sleep(1 / int(os.getenv('STREAMING_FPS', 15)))  # Control FPS
+
+
+@socketio.on('connect', namespace='/video')
+def video_connect():
+    """Handle WebSocket connection."""
+    print("Client connected for video stream")
+
+
+@socketio.on('disconnect', namespace='/video')
+def video_disconnect():
+    """Handle WebSocket disconnection."""
+    print("Client disconnected")
 
 
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
-    import robot_test
-    robot_test.start_mowing()
+    import robot
+    robot.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    import robot_test
-    robot_test.stop_mowing()
+    import robot
+    robot.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
 
 

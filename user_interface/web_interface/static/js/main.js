@@ -53,7 +53,6 @@ function updateSensorDisplay(data) {
 }
 
 // Save settings for mowing days and hours
-// Save settings for mowing days and hours
 function saveSettings(mowDays, mowHours, patternType) {
     fetch('/save_settings', {
         method: 'POST',
@@ -94,7 +93,6 @@ function attachPolygonListeners(polygon) {
     path.addListener('remove_at', updateAreaCoordinates);
 }
 
-// Event listener for DOMContentLoaded
 // Event listener for DOMContentLoaded
 document.addEventListener('DOMContentLoaded', (event) => {
     const form = document.getElementById('settings-form');
@@ -451,17 +449,24 @@ function drawPath(coordinates) {
 // Socket.IO setup
 var socket = io();
 
-//Setup /video_feed endpoint
-async function setVideoFeed() {
-    const videoFeedElement = document.getElementById('video_feed');
-    if (videoFeedElement) {
-        videoFeedElement.src = '/video_feed'; // This will fetch from the updated route in app.py
-    } else {
-        console.error('Element with id "video_feed" not found.');
-    }
-}
+//Setup /video endpoint
+document.addEventListener('DOMContentLoaded', function () {
+    const videoElement = document.getElementById('video_feed');
 
-window.addEventListener('load', setVideoFeed);
+    // Initialize WebSocket connection for video stream
+    const socket = io('/video');
+
+    socket.on('video_frame', function (frame) {
+        // Update the video feed with the new frame
+        videoElement.src = 'data:image/jpeg;base64,' + btoa(
+            new Uint8Array(frame).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+    });
+
+    socket.on('connect', () => console.log('Connected to video stream'));
+    socket.on('disconnect', () => console.log('Disconnected from video stream'));
+});
+
 
 
 // Add event listener for the "Check Polygon Points" button

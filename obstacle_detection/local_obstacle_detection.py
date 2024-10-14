@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import requests
 from PIL import Image, ImageDraw, ImageFont
 from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.camera_instance import get_camera_instance, save_latest_frame
+from hardware_interface.camera_instance import get_camera_instance, capture_frame
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -58,13 +58,15 @@ def capture_frames():
     function on each captured frame.
     """
     while True:
-        frame = save_latest_frame(frame)
+        frame = capture_frame(camera)
         processed_frame = process_frame(frame)
         with frame_lock:
             saved_frame = processed_frame.copy()
         img = Image.fromarray(processed_frame)
         buf = io.BytesIO()
-        img = img.convert('RGB')  # Ensure all images are properly converted before saving to prevent errors
+        """ Ensure all images are properly converted
+            before saving to prevent errors """
+        img = img.convert('RGB')
         img.save(buf, format='JPEG')
 
 
@@ -114,7 +116,8 @@ def detect_obstacles_remote(image):
         img_bytes = img_byte_arr.getvalue()
 
         response = requests.post(f'http://{PI5_IP}:5000/detect',
-                                 files={'image': ('image.jpg', img_bytes, 'image/jpeg')},
+                                 files={'image': ('image.jpg', img_bytes,
+                                                  'image/jpeg')},
                                  timeout=1)
         if response.status_code == 200:
             result = response.json()
@@ -123,7 +126,8 @@ def detect_obstacles_remote(image):
             logging.warning("Failed to get a valid response from Pi 5.")
             return False
     except (requests.ConnectionError, requests.Timeout):
-        logging.warning("Pi 5 not reachable. Retrying before falling back to local detection.")
+        logging.warning("Pi 5 not reachable. Retrying before"
+                        "falling back to local detection.")
         global use_remote_detection
         use_remote_detection = False
         return False

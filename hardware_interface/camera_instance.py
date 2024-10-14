@@ -1,12 +1,25 @@
-from picamera2 import Picamera2
-from picamera2.encoders import H264Encoder
-from picamera2.outputs import FileOutput, FfmpegOutput
+from picamera2 import Picamera2  # type: ignore
 import socket
 from utilities import LoggerConfigInfo as LoggerConfig
 import threading
+import os
+import cv2
+from dotenv import load_dotenv
+
+# Add the path to the sys path
+script_dir = os.path.dirname(__file__)
+abs_path = os.path.abspath(os.path.join(script_dir, '.'))
+os.sys.path.append(abs_path)
+
+# Load environment variables
+load_dotenv()
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
+
+FPS = int(os.getenv('STREAMING_FPS', 15))
+STREAMING_RESOLUTION = os.getenv('STREAMING_RESOLUTION', '640x480')
+WIDTH, HEIGHT = map(int, STREAMING_RESOLUTION.split('x'))
 
 
 def get_device_ip():
@@ -36,16 +49,13 @@ DEVICE_IP = get_device_ip()
 camera = Picamera2()
 
 # Set the camera resolution to 1280x720
-camera_config = camera.create_video_configuration({"size": (1280, 720)})
+camera_config = camera.create_video_configuration({"size": (WIDTH, HEIGHT),
+                                                   "fps": FPS})
 camera.configure(camera_config)
 
 # Set up the encoder with a bitrate of 1 Mbps
-encoder = H264Encoder(1000000)
-output1 = FileOutput()
-output2 = FfmpegOutput(f'-f mpegts udp://{DEVICE_IP}:8080')
 frame_lock = threading.Lock()
-encoder.output = [output1, output2]
-camera.start_encoder(encoder)
+latest_frame = None
 
 
 def start_server_thread():
@@ -55,17 +65,23 @@ def start_server_thread():
     stream to the designated IP and port.
     """
     camera.start()
-    output2.start()
+    logging.info(
+        f"Camera started with resolution {WIDTH}x{HEIGHT} at {FPS} FPS"
+    )
 
 
-def save_latest_frame(frame):
+def capture_frame():
     """
-    Save the latest frame captured by the camera.
-    This function saves the latest frame to a global variable
-    for processing by the obstacle detection module.
+    Capture a frame from the camera.
+    This function captures a frame from the camera and returns it.
     """
     global latest_frame
-    latest_frame = output1.frame.save()
+    with frame_lock:
+        frame = camera.capture_array()
+        if frame is not None:
+            # Convert to JPEG for streaming
+            _, buffer = cv2.imencode('.jpg', frame)
+            latest_frame = buffer.tobytes()
     return latest_frame
 
 
@@ -76,5 +92,5 @@ def get_camera_instance():
     and also starts the UDP streaming process.
     """
     start_server_thread()
-    save_latest_frame
+    capture_frame()
     return camera
