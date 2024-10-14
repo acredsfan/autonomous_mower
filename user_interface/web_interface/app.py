@@ -221,12 +221,11 @@ def stream_video():
 
 
 @socketio.on('connect', namespace='/video')
-def video_connect():
+def video_connect(auth=None):
     """Handle WebSocket connection."""
-    logging.info("Client connected")
-    # Start the video streaming thread
-    if not socketio.server._thread:
-        socketio.start_background_task(stream_video)
+    logging.info(f"Client connected for video stream: {auth}")
+    threading.Thread(target=stream_video, daemon=True).start()
+
 
 
 @socketio.on('disconnect', namespace='/video')
