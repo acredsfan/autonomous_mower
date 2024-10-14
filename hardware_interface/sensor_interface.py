@@ -211,7 +211,6 @@ class SensorInterface:
                         lambda s: VL53L0XSensors.read_vl53l0x(s[1]),
                         "VL53L0X Right Distance"
                     )
-                time.sleep(1.0)  # Adjust the update interval as needed
             except Exception as e:
                 logging.error(f"Error updating sensors: {e}")
                 time.sleep(1.0)  # Wait before retrying
