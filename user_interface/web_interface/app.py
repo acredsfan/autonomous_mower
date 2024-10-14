@@ -24,6 +24,7 @@ from obstacle_detection.local_obstacle_detection import start_processing
 from navigation_system.navigation import NavigationController
 from navigation_system.path_planning import PathPlanning
 from navigation_system.localization import Localization
+from hardware_interface.camera_instance import capture_frame, start_server_thread
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -199,15 +200,15 @@ def handle_status_request():
     emit('update_status', data)
 
 
+start_server_thread()
+
 @app.route('/camera_route')
 def camera_route():
-    """Render the camera.html page."""
+    """Render the camera page."""
     return render_template('camera.html')
-
 
 def stream_video():
     """Background thread to stream video frames over WebSocket."""
-    from hardware_interface.camera_instance import capture_frame
     while True:
         frame = capture_frame()
         if frame:
@@ -215,12 +216,10 @@ def stream_video():
             socketio.emit('video_frame', frame, namespace='/video')
         time.sleep(1 / int(os.getenv('STREAMING_FPS', 15)))  # Control FPS
 
-
 @socketio.on('connect', namespace='/video')
 def video_connect():
     """Handle WebSocket connection."""
     print("Client connected for video stream")
-
 
 @socketio.on('disconnect', namespace='/video')
 def video_disconnect():
