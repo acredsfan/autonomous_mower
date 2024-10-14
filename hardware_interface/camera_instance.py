@@ -49,8 +49,7 @@ DEVICE_IP = get_device_ip()
 camera = Picamera2()
 
 # Set the camera resolution to 1280x720
-camera_config = camera.create_video_configuration({"size": (WIDTH, HEIGHT),
-                                                   "fps": FPS})
+camera_config = camera.create_video_configuration({"size": (WIDTH, HEIGHT)})
 camera.configure(camera_config)
 
 # Set up the encoder with a bitrate of 1 Mbps
