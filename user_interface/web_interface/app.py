@@ -214,7 +214,7 @@ def stream_video():
         frame = capture_frame()
         if frame:
             socketio.emit('video_frame', frame, namespace='/video')
-            logging.info("Sent frame via WebSocket")
+            # logging.info("Sent frame via WebSocket")
         else:
             logging.warning("No frame to send")
         time.sleep(1 / int(os.getenv('STREAMING_FPS', 15)))  # Control FPS

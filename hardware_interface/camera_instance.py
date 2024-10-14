@@ -81,7 +81,7 @@ def capture_frame():
             if frame is not None:
                 _, buffer = cv2.imencode('.jpg', frame)
                 latest_frame = buffer.tobytes()
-                logging.info("Captured frame successfully")
+                # logging.info("Captured frame successfully")
             else:
                 logging.warning("No frame captured")
         except Exception as e:
