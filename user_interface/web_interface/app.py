@@ -3,12 +3,12 @@ from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
 import datetime
 import threading
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify
 import json
 import sys
 import os
 import utm
-from pyngrok import ngrok
+from pyngrok import ngrok # type: ignore
 import paho.mqtt.client as mqtt
 import time
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
@@ -24,7 +24,8 @@ from obstacle_detection.local_obstacle_detection import start_processing
 from navigation_system.navigation import NavigationController
 from navigation_system.path_planning import PathPlanning
 from navigation_system.localization import Localization
-from hardware_interface.camera_instance import capture_frame, start_server_thread
+from hardware_interface.camera_instance import capture_frame
+from hardware_interface.camera_instance import start_server_thread
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -202,24 +203,31 @@ def handle_status_request():
 
 start_server_thread()
 
+
 @app.route('/camera_route')
 def camera_route():
     """Render the camera page."""
     return render_template('camera.html')
 
+
+@app.route('/video_feed')
 def stream_video():
-    """Background thread to stream video frames over WebSocket."""
+    """Background thread to emit video frames over WebSocket."""
     while True:
         frame = capture_frame()
         if frame:
-            # Emit the frame to connected clients
             socketio.emit('video_frame', frame, namespace='/video')
+            logging.info("Sent frame via WebSocket")
+        else:
+            logging.warning("No frame to send")
         time.sleep(1 / int(os.getenv('STREAMING_FPS', 15)))  # Control FPS
+
 
 @socketio.on('connect', namespace='/video')
 def video_connect():
     """Handle WebSocket connection."""
     print("Client connected for video stream")
+
 
 @socketio.on('disconnect', namespace='/video')
 def video_disconnect():
