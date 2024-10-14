@@ -63,10 +63,13 @@ def start_server_thread():
     This function starts the camera recording and sends the
     stream to the designated IP and port.
     """
-    camera.start()
-    logging.info(
-        f"Camera started with resolution {WIDTH}x{HEIGHT} at {FPS} FPS"
-    )
+    try:
+        camera.start()
+        logging.info(
+            f"Camera started with resolution {WIDTH}x{HEIGHT} at {FPS} FPS"
+        )
+    except Exception as e:
+        logging.error(f"Error starting camera: {e}")
 
 
 def capture_frame():

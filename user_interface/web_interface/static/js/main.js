@@ -456,9 +456,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     socket.on('video_frame', function (frame) {
         console.log('Received frame from WebSocket');
-        videoElement.src = 'data:image/jpeg;base64,' + btoa(
-            new Uint8Array(frame).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
+        const blob = new Blob([new Uint8Array(frame)], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        document.getElementById('video_feed').src = url;
     });
 
     socket.on('connect', () => console.log('Connected to video stream'));

@@ -39,9 +39,7 @@ app = Flask(
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
-    async_mode='threading',
-    engineio_logger=True,
-    ping_timeout=30
+    async_mode='threading'
 )
 CORS(app)
 
@@ -210,7 +208,6 @@ def camera_route():
     return render_template('camera.html')
 
 
-@app.route('/video_feed')
 def stream_video():
     """Background thread to emit video frames over WebSocket."""
     while True:
@@ -226,7 +223,10 @@ def stream_video():
 @socketio.on('connect', namespace='/video')
 def video_connect():
     """Handle WebSocket connection."""
-    print("Client connected for video stream")
+    logging.info("Client connected")
+    # Start the video streaming thread
+    if not socketio.server._thread:
+        socketio.start_background_task(stream_video)
 
 
 @socketio.on('disconnect', namespace='/video')
