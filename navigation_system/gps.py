@@ -36,6 +36,7 @@ class SingletonMeta(type):
                 SingletonMeta._instances[cls] = instance
         return SingletonMeta._instances[cls]
 
+
 class GpsNmeaPositions(metaclass=SingletonMeta):
     """
     Converts array of NMEA sentences into array of (easting, northing) positions.
@@ -52,6 +53,7 @@ class GpsNmeaPositions(metaclass=SingletonMeta):
                     positions.append((ts, *position))
         return positions
 
+
 class GpsLatestPosition(metaclass=SingletonMeta):
     """
     Provides the most recent valid GPS position and status.
@@ -67,14 +69,15 @@ class GpsLatestPosition(metaclass=SingletonMeta):
         with self.lock:
             self.position = self.gps_position.get_latest_position()
             if self.position:
-                self.status = "GPS fix acquired."
-            else:
-                self.status = "Waiting for GPS fix..."
-            return self.position
+                # self.status = "GPS fix acquired."
+            # else:
+                # self.status = "Waiting for GPS fix..."
+                return self.position
 
     def get_status(self):
         with self.lock:
             return self.status
+
 
 class GpsPosition(metaclass=SingletonMeta):
     """
@@ -126,6 +129,7 @@ class GpsPosition(metaclass=SingletonMeta):
         self.line_reader.shutdown()
         self.thread.join()
         logger.info("GPS Position shut down successfully.")
+
 
 class GpsPlayer(metaclass=SingletonMeta):
     """
@@ -184,8 +188,8 @@ class GpsPlayer(metaclass=SingletonMeta):
                             self.index += 1
         return nmea_sentences
 
-# Parsing and Utility Functions (unchanged)
 
+# Parsing and Utility Functions (unchanged)
 def parseGpsPosition(line, debug=False):
     if not line:
         return None
@@ -246,6 +250,7 @@ def parseGpsPosition(line, debug=False):
         pass
     return None
 
+
 def parse_nmea_checksum(nmea_line):
     try:
         return int(nmea_line[-2:], 16)
@@ -253,8 +258,10 @@ def parse_nmea_checksum(nmea_line):
         logger.error("Failed to parse NMEA checksum.")
         return None
 
+
 def calculate_nmea_checksum(nmea_line):
     return reduce(operator.xor, map(ord, nmea_line[1:-3]), 0)
+
 
 def nmea_to_degrees(gps_str, direction):
     if not gps_str or gps_str == "0":
