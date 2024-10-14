@@ -452,12 +452,10 @@ var socket = io();
 //Setup /video endpoint
 document.addEventListener('DOMContentLoaded', function () {
     const videoElement = document.getElementById('video_feed');
-
-    // Initialize WebSocket connection for video stream
     const socket = io('/video');
 
     socket.on('video_frame', function (frame) {
-        // Update the video feed with the new frame
+        console.log('Received frame from WebSocket');
         videoElement.src = 'data:image/jpeg;base64,' + btoa(
             new Uint8Array(frame).reduce((data, byte) => data + String.fromCharCode(byte), '')
         );
@@ -466,7 +464,6 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.on('connect', () => console.log('Connected to video stream'));
     socket.on('disconnect', () => console.log('Disconnected from video stream'));
 });
-
 
 
 // Add event listener for the "Check Polygon Points" button

@@ -70,17 +70,19 @@ def start_server_thread():
 
 
 def capture_frame():
-    """
-    Capture a frame from the camera.
-    This function captures a frame from the camera and returns it.
-    """
+    """Capture the latest frame from the camera and convert to JPEG."""
     global latest_frame
     with frame_lock:
-        frame = camera.capture_array()
-        if frame is not None:
-            # Convert to JPEG for streaming
-            _, buffer = cv2.imencode('.jpg', frame)
-            latest_frame = buffer.tobytes()
+        try:
+            frame = camera.capture_array()
+            if frame is not None:
+                _, buffer = cv2.imencode('.jpg', frame)
+                latest_frame = buffer.tobytes()
+                logging.info("Captured frame successfully")
+            else:
+                logging.warning("No frame captured")
+        except Exception as e:
+            logging.error(f"Error capturing frame: {e}")
     return latest_frame
 
 
