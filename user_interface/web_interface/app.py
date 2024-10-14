@@ -227,7 +227,6 @@ def video_connect(auth=None):
     threading.Thread(target=stream_video, daemon=True).start()
 
 
-
 @socketio.on('disconnect', namespace='/video')
 def video_disconnect():
     """Handle WebSocket disconnection."""
