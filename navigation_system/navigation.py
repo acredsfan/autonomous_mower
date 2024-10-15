@@ -4,11 +4,12 @@ import math
 from math import radians, sin, cos, atan2, sqrt
 import utm
 from hardware_interface.robohat import RoboHATDriver
-from navigation_system.gps import GpsLatestPosition
+from navigation_system.gps import GpsLatestPosition, GpsPosition
 logger = logging.getLogger(__name__)
 
 robohat_driver = RoboHATDriver()
-gps_latest_position = GpsLatestPosition()
+gps_position_instance = GpsPosition()
+gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
 
 class NavigationController:
     """
