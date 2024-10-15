@@ -19,6 +19,7 @@ except Exception as e:
 gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
 robohat_driver = RoboHATDriver()
 
+
 class NavigationController:
     """
     Handles navigation logic separately from the motor controller.
