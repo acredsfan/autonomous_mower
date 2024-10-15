@@ -141,6 +141,10 @@ def process_frame(frame):
     Returns:
         The annotated frame with detected objects.
     """
+    if isinstance(frame, bytes):
+        frame = np.frombuffer(frame, dtype=np.uint8)
+        frame = frame.reshape((camera.height, camera.width, 3))
+
     image = Image.fromarray(frame)
     if use_remote_detection:
         obstacle_detected = detect_obstacles_remote(image)
