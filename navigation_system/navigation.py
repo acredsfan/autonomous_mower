@@ -5,11 +5,19 @@ from math import radians, sin, cos, atan2, sqrt
 import utm
 from hardware_interface.robohat import RoboHATDriver
 from navigation_system.gps import GpsLatestPosition, GpsPosition
+
 logger = logging.getLogger(__name__)
 
-robohat_driver = RoboHATDriver()
-gps_position_instance = GpsPosition()
+# Initialize GPS and RoboHAT components safely
+try:
+    gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0', debug=True)
+    gps_position_instance.start()  # Start GPS reading in the background
+except Exception as e:
+    logger.error(f"Failed to initialize GPS: {e}")
+    gps_position_instance = None
+
 gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
+robohat_driver = RoboHATDriver()
 
 class NavigationController:
     """
@@ -25,43 +33,55 @@ class NavigationController:
     def navigate_to_location(self, target_location):
         """Navigates the robot to the specified target location."""
         try:
-            position = self.gps_latest_position.run()
-            if position and len(position) == 5:
-                ts, easting, northing, zone_number, zone_letter = position
-                lat, lon = utm.to_latlon(easting, northing,
-                                         zone_number, zone_letter)
-                current_position = (lat, lon)
-            else:
-                logger.error('No GPS data available')
+            current_position = self.get_current_gps_position()
+
+            if not current_position:
+                logger.error('No valid GPS data available.')
                 return False
 
             while not self.has_reached_location(current_position, target_location):
-                steering, throttle = self.calculate_navigation_commands(current_position, target_location)
+                steering, throttle = self.calculate_navigation_commands(
+                    current_position, target_location
+                )
                 self.robohat_driver.run(steering, throttle)
                 time.sleep(0.1)
-                position = self.gps_latest_position.run()
-                if position and len(position) == 5:
-                    ts, easting, northing, zone_number, zone_letter = position
-                    lat, lon = utm.to_latlon(easting, northing,
-                                             zone_number, zone_letter)
-                    current_position = (lat, lon)
-                else:
-                    logger.error('No GPS data available during navigation')
+
+                current_position = self.get_current_gps_position()
+                if not current_position:
+                    logger.error('No valid GPS data during navigation.')
+                    self.robohat_driver.run(0, 0)  # Stop the mower
                     return False
-            self.robohat_driver.run(0, 0)  # Stop the robot
+
+            self.robohat_driver.run(0, 0)  # Stop the mower at destination
             return True
+
         except Exception as e:
             logger.exception(f"Error in navigate_to_location: {e}")
-            self.robohat_driver.run(0, 0)
+            self.robohat_driver.run(0, 0)  # Stop the mower on exception
             return False
 
-    def calculate_navigation_commands(self, current_position, target_location):
+    def get_current_gps_position(self):
         """
-        Calculates steering and throttle commands based on current and
-        target positions.
+        Attempts to fetch the latest GPS position and converts it to lat/lon.
+        Returns None if data is invalid.
         """
+        try:
+            position = self.gps_latest_position.run()
 
-        # Calculate bearing and heading error
+            if not position or len(position) < 4:
+                logger.warning('Incomplete GPS data received.')
+                return None
+
+            ts, easting, northing, zone_number, zone_letter = position
+            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+            return (lat, lon)
+
+        except Exception as e:
+            logger.error(f"Failed to parse GPS position: {e}")
+            return None
+
+    def calculate_navigation_commands(self, current_position, target_location):
+        """Calculates steering and throttle commands based on the positions."""
         bearing = self.calculate_bearing(current_position, target_location)
         current_heading = self.sensor_interface.get_heading()  # Assumed method
         heading_error = (bearing - current_heading + 360) % 360
@@ -74,9 +94,10 @@ class NavigationController:
 
         # Calculate distance to target
         distance = self.calculate_distance(current_position, target_location)
+
         # Simple proportional controller for throttle
         Kp_throttle = 0.5  # Proportional gain; adjust as needed
-        throttle = min(Kp_throttle * distance, 1.0)  # Scale throttle; adjust as needed
+        throttle = min(Kp_throttle * distance, 1.0)  # Clamp throttle
 
         # Clamp steering and throttle values
         steering = max(min(steering, 1.0), -1.0)
@@ -93,8 +114,7 @@ class NavigationController:
         x = sin(delta_lon) * cos(lat2)
         y = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)
         initial_bearing = atan2(x, y)
-        # Convert from radians to degrees and normalize
-        bearing = (math.degrees(initial_bearing) + 360) % 360
+        bearing = (math.degrees(initial_bearing) + 360) % 360  # Normalize
         return bearing
 
     @staticmethod
@@ -112,10 +132,23 @@ class NavigationController:
 
     @staticmethod
     def has_reached_location(current_position, target_location, tolerance=0.0001):
-        """
-        Determines if the current_position is within the tolerance of the
-        target_location.
-        """
+        """Determines if the robot has reached the target location."""
         lat1, lon1 = current_position
         lat2, lon2 = target_location
-        return (abs(lat1 - lat2) < tolerance and abs(lon1 - lon2) < tolerance)
+        return abs(lat1 - lat2) < tolerance and abs(lon1 - lon2) < tolerance
+
+
+# Example Usage
+if __name__ == "__main__":
+    sensor_interface = None  # Replace with actual sensor interface
+    controller = NavigationController(
+        gps_latest_position, robohat_driver, sensor_interface, debug=True
+    )
+
+    # Example target location (latitude, longitude)
+    target = (39.123, -84.512)
+
+    if controller.navigate_to_location(target):
+        logger.info("Navigation successful.")
+    else:
+        logger.error("Navigation failed.")
