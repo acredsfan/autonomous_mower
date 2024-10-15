@@ -58,7 +58,7 @@ def capture_frames():
     function on each captured frame.
     """
     while True:
-        frame = capture_frame(camera)
+        frame = capture_frame()
         processed_frame = process_frame(frame)
         with frame_lock:
             saved_frame = processed_frame.copy()
