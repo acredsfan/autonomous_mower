@@ -54,31 +54,6 @@ class GpsNmeaPositions(metaclass=SingletonMeta):
         return positions
 
 
-class GpsLatestPosition(metaclass=SingletonMeta):
-    """
-    Provides the most recent valid GPS position and status.
-    """
-    def __init__(self, gps_position_instance, debug=False):
-        self.debug = debug
-        self.gps_position = gps_position_instance
-        self.position = None
-        # self.status = "Initializing GPS..."
-        self.lock = threading.Lock()
-
-    def run(self):
-        with self.lock:
-            self.position = self.gps_position.get_latest_position()
-            if self.position:
-                # self.status = "GPS fix acquired."
-                # else:
-                # self.status = "Waiting for GPS fix..."
-                return self.position
-
-    def get_status(self):
-        with self.lock:
-            return self.status
-
-
 class GpsPosition(metaclass=SingletonMeta):
     """
     Reads NMEA lines from serial port and converts them into positions.
@@ -129,6 +104,31 @@ class GpsPosition(metaclass=SingletonMeta):
         self.line_reader.shutdown()
         self.thread.join()
         logger.info("GPS Position shut down successfully.")
+
+
+class GpsLatestPosition(metaclass=SingletonMeta):
+    """
+    Provides the most recent valid GPS position and status.
+    """
+    def __init__(self, gps_position_instance, debug=False):
+        self.debug = debug
+        self.gps_position = gps_position_instance
+        self.position = None
+        # self.status = "Initializing GPS..."
+        self.lock = threading.Lock()
+
+    def run(self):
+        with self.lock:
+            self.position = self.gps_position.get_latest_position()
+            if self.position:
+                # self.status = "GPS fix acquired."
+                # else:
+                # self.status = "Waiting for GPS fix..."
+                return self.position
+
+    def get_status(self):
+        with self.lock:
+            return self.status
 
 
 class GpsPlayer(metaclass=SingletonMeta):
