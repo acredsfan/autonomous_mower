@@ -3,16 +3,16 @@ import sys
 import threading
 import time
 
-from autonomous_mower.hardware_interface.blade_controller import (
+from hardware_interface.blade_controller import (
     BladeController
 )
-from autonomous_mower.hardware_interface.gpio_manager import GPIOManager
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from hardware_interface.gpio_manager import GPIOManager
+from hardware_interface.robohat import RoboHATDriver
 from navigation_system.localization import Localization
 from user_interface.web_interface.app import (position_reader,
                                               start_mqtt_client,
                                               start_web_interface)
-from autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 from obstacle_mapper import ObstacleMapper
 from navigation_system.path_planning import PathPlanner
 
@@ -28,7 +28,7 @@ logging = LoggerConfig.get_logger(__name__)
 # Function to initialize all resources
 def initialize_resources():
     global sensor_interface, blade_controller, robohat_driver
-    from autonomous_mower.hardware_interface.sensor_interface import get_sensor_interface
+    from hardware_interface.sensor_interface import get_sensor_interface
 
     # Initialize sensor interface
     sensor_interface = get_sensor_interface()
