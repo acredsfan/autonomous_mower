@@ -3,6 +3,7 @@ import json
 from navigation_system.localization import Localization
 from hardware_interface.sensor_interface import SensorInterface
 from hardware_interface.robohat import RoboHATDriver
+from navigation_system.navigation import NavigationController
 import logging
 from constants import MIN_DISTANCE_THRESHOLD, polygon_coordinates
 from shapely.geometry import Polygon, Point
@@ -17,6 +18,7 @@ class ObstacleMapper:
         self.sensors = sensors
         self.driver = driver
         self.obstacle_map = []  # Store obstacle locations
+        self.navigation_controller = NavigationController(localization, driver, sensors)
 
         # Convert polygon_coordinates to a Shapely Polygon
         self.yard_boundary = self.load_yard_boundary()
@@ -69,10 +71,50 @@ class ObstacleMapper:
         while time.time() - start_time < duration:
             # Get the current position and ensure it's inside the yard
             position = self.localization.estimate_position()  # Fixed the call
-            if not self.is_within_yard(position):
-                logger.warning("Mower is outside the yard boundary! Stopping.")
-                self.driver.run(0.0, 0.0)  # Stop the mower
-                break
+            # Find the top right corner of the yard
+            corner = self.yard_boundary.bounds
+            top_right_lat = corner[3]
+            top_right_lon = corner[2]
+            logger.info(f"Center of the yard is at {top_right_lat}, {top_right_lon}")
+
+            # Move Robot to the center of the yard and grid pattern
+            self.navigation_controller.navigate_to_location((top_right_lat, top_right_lon))
+            # Create a grid pattern to cover the yard
+            # Define the grid parameters
+            grid_spacing = 1.0  # Distance between grid points in meters
+
+            # Get the bounds of the yard
+            minx, miny, maxx, maxy = self.yard_boundary.bounds
+
+            # Generate grid points within the yard boundary
+            grid_points = []
+            x = minx
+            while x <= maxx:
+                y = miny
+                while y <= maxy:
+                    point = Point(x, y)
+                    if self.yard_boundary.contains(point):
+                        grid_points.append((y, x))
+                    y += grid_spacing
+                x += grid_spacing
+
+            # Navigate to each grid point
+            for lat, lon in grid_points:
+                self.navigation_controller.navigate_to_location((lat, lon))
+                """ 
+                    Check for obstacles and record them if found,
+                    then move around them to get to the target location.
+                """
+                if self.detect_obstacle():
+                    self.record_obstacle()
+                    # Move around the obstacle
+                    self.navigation_controller.navigate_around_obstacle()
+                # Check if Robot reached the point them move to the next point
+                while not self.localization.has_reached_location((lat, lon)):
+                    time.sleep(0.1)
+                # If the Robot is not in the yard, allow it to return to the yard
+                if not self.is_within_yard(self.localization.estimate_position()):
+                    self.navigation_controller.navigate_to_location((top_right_lat, top_right_lon))
 
             # Drive the mower forward at low speed
             self.driver.run(steering=0.0, throttle=0.2)

@@ -10,6 +10,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.camera_instance import get_camera_instance, capture_frame
+import cv2
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -20,7 +21,7 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
 MIN_CONF_THRESHOLD = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
-USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'True').lower() == 'true'
+USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'False').lower() == 'true'
 
 # Initialize TFLite interpreter for local detection
 interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
@@ -101,6 +102,24 @@ def detect_obstacles_local(image):
     return detected_objects
 
 
+def detect_drops_local(image):
+    """
+    Use OpenCV to detect drops in the yard.
+    Args:
+        image: The image to perform drop detection on.
+    Returns:
+        A boolean indicating if a drop was detected.
+    """
+    image_resized = cv2.resize(image, (width, height))
+    edges = cv2.Canny(image_resized, 100, 200)
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 1000:
+            return True
+    return False
+
+
 def detect_obstacles_remote(image):
     """
     Send the image to Pi 5 for remote detection.
@@ -169,6 +188,123 @@ def start_processing():
     """
     thread = threading.Thread(target=capture_frames)
     thread.start()
+
+
+# Create Global Object Detected Flag
+object_detected = False
+
+
+def detect_obstacle():
+    """
+    Check if remote detection or local detection is enabled
+    then check if an obstacle is detected on either detect_obstacles_remote
+    or detect_obstacles_local.
+    """
+    global object_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    if use_remote_detection:
+        object_detected = detect_obstacles_remote(image)
+    else:
+        detected_objects = detect_obstacles_local(image)
+        object_detected = len(detected_objects) > 0
+    return object_detected
+
+
+drop_detected = False
+
+
+def detect_drop():
+    """
+    Check if detect_drops_local has detected a drop in the yard.
+    Then update the global drop_detected flag.
+    """
+    global drop_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    drop_detected = detect_drops_local(image)
+    return drop_detected
+
+
+def draw_object_boxes_local()
+    """
+    Draw bounding boxes around detected objects.
+    """
+    global object_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    detected_objects = detect_obstacles_local(image)
+    draw = ImageDraw.Draw(image)
+    for obj in detected_objects:
+        # Placeholder for bounding box drawing; adjust for your model
+        label = f"{obj['name']}: {int(obj['score'] * 100)}%"
+        try:
+            font = ImageFont.truetype("arial.ttf", 15)
+        except IOError:
+            font = ImageFont.load_default()
+        draw.text((10, 10), label, fill='red', font=font)
+    return np.array(image)
+
+
+def draw_object_boxes_remote():
+    """
+    Draw bounding boxes around detected objects.
+    """
+    global object_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    object_detected = detect_obstacles_remote(image)
+    return np.array(image)
+
+
+def draw_drop_lines():
+    """
+    Draw lines around detected drops.
+    """
+    global drop_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    drop_detected = detect_drops_local(image)
+    return np.array(image)
+
+
+def overlay_text(image, text):
+    """
+    Overlay text on the image.
+    Args:
+        image: The image to overlay text on.
+        text: The text to overlay on the image.
+    Returns:
+        The image with the text overlay.
+    """
+    draw = ImageDraw.Draw(image)
+    try:
+        font = ImageFont.truetype("arial.ttf", 15)
+    except IOError:
+        font = ImageFont.load_default()
+    draw.text((10, 10), text, fill='red', font=font)
+    return image
+
+def stream_frame_with_overlays():
+    """
+    Stream frames with overlays for objects and drops.
+    """
+    global object_detected, drop_detected
+    with frame_lock:
+        frame = capture_frame()
+    image = Image.fromarray(frame)
+    if use_remote_detection:
+        image = draw_object_boxes_remote()
+    else:
+        image = draw_object_boxes_local()
+    if drop_detected:
+        image = overlay_text(image, "Drop detected!")
+    return image
 
 
 if __name__ == "__main__":

@@ -1,15 +1,14 @@
-from adafruit_bno08x import (
-    BNO_REPORT_ACCELEROMETER,
-    BNO_REPORT_GYROSCOPE,
-    BNO_REPORT_MAGNETOMETER,
-    BNO_REPORT_ROTATION_VECTOR,
-)
+import adafruit_bno08x
+from adafruit_bno08x.uart import BNO08X_UART
 from utilities import LoggerConfigInfo as LoggerConfig
-from .gpio_manager import GPIOManager
 import math
+import serial
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
+
+uart = serial.Serial("/dev/ttyAMA4", baudrate=3000000, timeout=0.1)
+sensor = BNO08X_UART(uart)
 
 
 class BNO085Sensor:
@@ -19,10 +18,10 @@ class BNO085Sensor:
     def enable_features(sensor):
         """Enable BNO085 sensor features."""
         try:
-            sensor.enable_feature(BNO_REPORT_ACCELEROMETER)
-            sensor.enable_feature(BNO_REPORT_GYROSCOPE)
-            sensor.enable_feature(BNO_REPORT_MAGNETOMETER)
-            sensor.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+            sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
+            sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
+            sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
+            sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
             logging.info("BNO085 features enabled.")
         except Exception as e:
             logging.error(f"Error enabling features on BNO085: {e}")
@@ -116,5 +115,9 @@ class BNO085Sensor:
 
     @staticmethod
     def cleanup():
-        """Cleanup GPIO pins when done."""
-        GPIOManager.clean()
+        """Cleanup BNO085 sensor resources."""
+        try:
+            bno.deinit()
+            logging.info("BNO085 sensor deinitialized.")
+        except Exception as e:
+            logging.error(f"Error deinitializing BNO085 sensor: {e}")
