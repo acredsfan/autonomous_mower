@@ -36,7 +36,9 @@ from src.autonomous_mower.navigation_system.navigation import (
     NavigationController
 )
 from src.autonomous_mower.navigation_system.path_planning import PathPlanning
-from src.autonomous_mower.obstacle_detection.local_obstacle_detection import start_processing
+from src.autonomous_mower.obstacle_detection.local_obstacle_detection import (
+    start_processing
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -53,6 +55,8 @@ socketio = SocketIO(
     async_mode='threading'
 )
 CORS(app)
+
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Load environment variables from .env in project_root directory
 dotenv_path = os.path.join(project_root, '.env')
