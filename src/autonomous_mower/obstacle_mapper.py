@@ -8,7 +8,7 @@ from navigation_system.localization import Localization
 from navigation_system.navigation import NavigationController
 from shapely.geometry import Point, Polygon
 
-from src.autonomous_mower.constants import (MIN_DISTANCE_THRESHOLD,
+from constants import (MIN_DISTANCE_THRESHOLD,
                                             polygon_coordinates)
 
 logging.basicConfig(level=logging.INFO)

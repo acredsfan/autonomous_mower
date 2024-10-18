@@ -1,7 +1,7 @@
 import threading
 import time
 
-from .gpio_manager import GPIOManager
+from hardware_interface.gpio_manager import GPIOManager
 from utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logging

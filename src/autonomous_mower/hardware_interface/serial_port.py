@@ -8,7 +8,7 @@ import serial
 import serial.tools.list_ports
 from dotenv import load_dotenv
 
-from src.autonomous_mower.utilities import LoggerConfigInfo
+from utilities import LoggerConfigInfo
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
