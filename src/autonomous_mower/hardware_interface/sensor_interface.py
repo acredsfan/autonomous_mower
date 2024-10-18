@@ -7,13 +7,13 @@ import board
 import busio
 
 from src.autonomous_mower.utilities import LoggerConfigDebug
-from src.autonomous_mower.hardware_interface.bme280_sensor import BME280Sensor
-from src.autonomous_mower.hardware_interface.bno085_sensor import BNO085Sensor
-from src.autonomous_mower.hardware_interface.gpio_manager import GPIOManager
-from src.autonomous_mower.hardware_interface.ina3221_sensor import (
+from .bme280_sensor import BME280Sensor
+from .bno085_sensor import BNO085Sensor
+from .gpio_manager import GPIOManager
+from .ina3221_sensor import (
     INA3221Sensor
 )
-from src.autonomous_mower.hardware_interface.vl53l0x_sensor import (
+from .vl53l0x_sensor import (
     VL53L0XSensors
 )
 

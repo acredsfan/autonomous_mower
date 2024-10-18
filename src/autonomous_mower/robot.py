@@ -3,16 +3,18 @@ import sys
 import threading
 import time
 
-from hardware_interface.blade_controller import BladeController
-from hardware_interface.gpio_manager import GPIOManager
-from hardware_interface.robohat import RoboHATDriver
-from navigation_system.localization import Localization
-from user_interface.web_interface.app import (position_reader,
+from src.autonomous_mower.hardware_interface.blade_controller import (
+    BladeController
+)
+from src.autonomous_mower.hardware_interface.gpio_manager import GPIOManager
+from src.autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from src.autonomous_mower.navigation_system.localization import Localization
+from src.autonomous_mower.user_interface.web_interface.app import (position_reader,
                                               start_mqtt_client,
                                               start_web_interface)
-from utilities import LoggerConfigInfo as LoggerConfig
-
-from src.autonomous_mower.obstacle_mapper import ObstacleMapper
+from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
+from obstacle_mapper import ObstacleMapper
+from src.autonomous_mower.navigation_system.path_planning import PathPlanner
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -73,6 +75,11 @@ def monitor_gps_status(position_reader):
         except Exception as e:
             print(f"[GPS Status] Error: {e}")
             time.sleep(2)
+
+def mow_yard():
+    """
+    Mow the yard autonomously.
+    """
 
 
 if __name__ == "__main__":
