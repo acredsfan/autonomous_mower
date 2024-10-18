@@ -7,8 +7,8 @@ from functools import reduce
 import pynmea2
 import utm
 
-from utilities import CsvLogger
-from utilities import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities import CsvLogger
+from autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
