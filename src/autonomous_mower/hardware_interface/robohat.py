@@ -15,10 +15,10 @@ import os
 import time
 
 import serial
-from autonomous_mower.utilities import Utils
+from utilities import Utils
 
 from constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
-                                            MM1_STEERING_MID, MM1_STOPPED_PWM)
+                       MM1_STEERING_MID, MM1_STOPPED_PWM)
 
 
 logger = logging.getLogger(__name__)
