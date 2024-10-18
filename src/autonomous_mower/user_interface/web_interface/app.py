@@ -14,7 +14,7 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 # Local application imports
-from autonomous_mower.utilities.logger_config import LoggerConfigConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from hardware_interface.blade_controller import (
     BladeController
 )

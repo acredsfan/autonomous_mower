@@ -12,7 +12,7 @@ from navigation_system.localization import Localization
 from user_interface.web_interface.app import (position_reader,
                                               start_mqtt_client,
                                               start_web_interface)
-from autonomous_mower.utilities.logger_config import LoggerConfigConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from obstacle_mapper import ObstacleMapper
 from navigation_system.path_planning import PathPlanner
 

@@ -2,7 +2,7 @@ import os
 import sys
 
 from user_interface.web_interface.app import start_web_interface
-from autonomous_mower.utilities.logger_config import LoggerConfigConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 

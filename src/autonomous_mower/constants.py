@@ -4,7 +4,7 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from autonomous_mower.utilities.logger_config import LoggerConfigConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
