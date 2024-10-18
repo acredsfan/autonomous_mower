@@ -130,3 +130,16 @@ class BNO085Sensor:
             logging.info("BNO085 sensor deinitialized.")
         except Exception as e:
             logging.error(f"Error deinitializing BNO085 sensor: {e}")
+
+
+if __name__ == '__main__':
+    BNO085Sensor.enable_features(sensor)
+    print(BNO085Sensor.read_bno085_accel(sensor))
+    print(BNO085Sensor.read_bno085_gyro(sensor))
+    print(BNO085Sensor.read_bno085_magnetometer(sensor))
+    print(BNO085Sensor.calculate_quaternion(sensor))
+    print(BNO085Sensor.calculate_heading(sensor))
+    print(BNO085Sensor.calculate_pitch(sensor))
+    print(BNO085Sensor.calculate_roll(sensor))
+    print(BNO085Sensor.calculate_speed(sensor))
+    BNO085Sensor.cleanup()
