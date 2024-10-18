@@ -49,7 +49,7 @@ class Localization:
 
     def get_sensor_interface(self):
         if self.sensor_interface is None:
-            from autonomous_mower.hardware_interface.sensor_interface import \
+            from hardware_interfacesensor_interface import \
                 get_sensor_interface
             self.sensor_interface = get_sensor_interface()
         return self.sensor_interface

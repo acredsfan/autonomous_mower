@@ -2,8 +2,8 @@ import json
 import logging
 import time
 
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.hardware_interface.sensor_interface import SensorInterface
+from hardware_interfacerobohat import RoboHATDriver
+from hardware_interfacesensor_interface import SensorInterface
 from navigation_system.localization import Localization
 from navigation_system.navigation import NavigationController
 from shapely.geometry import Point, Polygon

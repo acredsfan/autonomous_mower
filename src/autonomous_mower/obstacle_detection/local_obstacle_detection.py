@@ -11,7 +11,7 @@ import tflite_runtime.interpreter as tflite  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
-from autonomous_mower.hardware_interface.camera_instance import (
+from hardware_interfacecamera_instance import (
     capture_frame,
     get_camera_instance
     )

@@ -4,7 +4,7 @@ import time
 from math import atan2, cos, radians, sin, sqrt
 
 import utm
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from hardware_interfacerobohat import RoboHATDriver
 from navigation_system.gps import GpsLatestPosition, GpsPosition
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ sys.path.append(project_root)
 
 # Test 5 times in 1 second intervals to ensure sensor readings are being read and reported correctly
 def test_sensor_readings():
-    from autonomous_mower.hardware_interface.sensor_interface import get_sensor_interface
+    from hardware_interfacesensor_interface import get_sensor_interface
     sensor_interface = get_sensor_interface()
     time.sleep(1)
     sensor_data = sensor_interface.sensor_data
