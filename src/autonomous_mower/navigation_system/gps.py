@@ -55,7 +55,7 @@ class GpsPosition(metaclass=SingletonMeta):
     Reads NMEA lines from serial port and converts them into positions.
     """
     def __init__(self, serial_port, debug=False):
-        from hardware_interfaceserial_port import SerialLineReader
+        from hardware_interface.serial_port import SerialLineReader
         self.line_reader = SerialLineReader(serial_port)
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
     import numpy as np
     import readchar
-    from hardware_interfaceserial_port import SerialPort
+    from hardware_interface.serial_port import SerialPort
 
     def stats(data):
         """
@@ -569,7 +569,7 @@ if __name__ == "__main__":
     waypoints = []
     waypoint_samples = []
 
-    from hardware_interfaceserial_port import SerialLineReader
+    from hardware_interface.serial_port import SerialLineReader
 
     try:
         serial_port = SerialPort(args.serial, baudrate=args.baudrate,

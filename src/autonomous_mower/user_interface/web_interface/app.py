@@ -15,18 +15,18 @@ from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 # Local application imports
 from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interfaceblade_controller import (
+from hardware_interface.blade_controller import (
     BladeController
 )
-from hardware_interfacecamera_instance import (
+from hardware_interface.camera_instance import (
     capture_frame,
     start_server_thread
 )
-from hardware_interfacerobohat import RoboHATDriver
-from hardware_interfacesensor_interface import (
+from hardware_interface.robohat import RoboHATDriver
+from hardware_interface.sensor_interface import (
     get_sensor_interface
 )
-from hardware_interfaceserial_port import SerialPort
+from hardware_interface.serial_port import SerialPort
 from navigation_system.gps import (
     GpsLatestPosition,
     GpsPosition

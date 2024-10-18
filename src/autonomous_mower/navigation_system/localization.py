@@ -8,7 +8,7 @@ from navigation_system.gps import GpsLatestPosition, GpsNmeaPositions
 from utilities import LoggerConfigDebug as LoggerConfig
 
 from constants import (max_lat, max_lng, min_lat, min_lng,
-                                            polygon_coordinates)
+                       polygon_coordinates)
 
 # Initialize logger
 LoggerConfig.configure_logging()
@@ -49,7 +49,7 @@ class Localization:
 
     def get_sensor_interface(self):
         if self.sensor_interface is None:
-            from hardware_interfacesensor_interface import \
+            from hardware_interface.sensor_interface import \
                 get_sensor_interface
             self.sensor_interface = get_sensor_interface()
         return self.sensor_interface
