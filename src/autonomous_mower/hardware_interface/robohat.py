@@ -14,7 +14,7 @@ import time
 import logging
 import serial
 from utilities import Utils
-from constants import (
+from src.autonomous_mower.constants import (
     MM1_MAX_FORWARD,
     MM1_MAX_REVERSE,
     MM1_STOPPED_PWM,

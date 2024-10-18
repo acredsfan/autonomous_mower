@@ -1,7 +1,7 @@
 # avoidance_algorithm.py
 
 import threading
-from constants import (
+from src.autonomous_mower.constants import (
     CAMERA_OBSTACLE_THRESHOLD,
     MIN_DISTANCE_THRESHOLD,
     AVOIDANCE_DELAY

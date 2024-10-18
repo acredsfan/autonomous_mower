@@ -3,11 +3,18 @@ from adafruit_bno08x.uart import BNO08X_UART
 from utilities import LoggerConfigInfo as LoggerConfig
 import math
 import serial
+from dotenv import load_dotenv
+import os
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-uart = serial.Serial("/dev/ttyAMA4", baudrate=3000000, timeout=0.1)
+# Load environment variables
+load_dotenv()
+# Get the UART port from the environment variables
+IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA4')
+
+uart = serial.Serial(IMU_SERIAL_PORT, baudrate=3000000, timeout=0.1)
 sensor = BNO08X_UART(uart)
 
 

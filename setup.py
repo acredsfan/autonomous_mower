@@ -1,0 +1,56 @@
+# setup.py
+from setuptools import setup, find_packages
+
+setup(
+    name='autonomous_mower',
+    version='0.1.0',
+    packages=find_packages(where='src'),
+    package_dir={'': 'src'},
+    install_requires=[
+        'smbus2',
+        'pyserial',
+        'numpy',
+        'adafruit-circuitpython-bme280',
+        'adafruit-circuitpython-vl53l0x',
+        'easydict',
+        'barbudor-circuitpython-ina3221',
+        'mpu9250-jmdev',
+        'python-dotenv',
+        'imutils',
+        'pathfinding',
+        'shapely',
+        'networkx',
+        'rtree',
+        'tflite-runtime',
+        'flask-socketio',
+        'opencv-contrib-python',
+        'gpsd-py3',
+        'adafruit-circuitpython-tca9548a',
+        'gunicorn',
+        'eventlet',
+        'flask-cors',
+        'donkeycar',
+        'pynmea2',
+        'requests',
+        'pyubx2',
+        'adafruit-circuitpython-bno08x',
+        'utm',
+        'neopixel',
+        'readchar',
+        'paho-mqtt'
+    ],
+    entry_points={
+        'console_scripts': [
+            'autonomous_mower=autonomous_mower.robot:main',
+        ],
+    },
+    author='Your Name',
+    author_email='your.email@example.com',
+    description='Autonomous Mower Project',
+    url='https://github.com/acredsfan/autonomous_mower',
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'Operating System :: OS Independent',
+    ],
+    python_requires='>=3.6',
+)

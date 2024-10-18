@@ -1,4 +1,4 @@
-from constants import polygon_coordinates, min_lat, max_lat, min_lng, max_lng
+from src.autonomous_mower.constants import polygon_coordinates, min_lat, max_lat, min_lng, max_lng
 from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
 import math
 import time

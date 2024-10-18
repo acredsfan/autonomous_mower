@@ -7,7 +7,7 @@ from user_interface.web_interface.app import (
 from hardware_interface.blade_controller import BladeController
 from hardware_interface.robohat import RoboHATDriver
 from hardware_interface.gpio_manager import GPIOManager
-from obstacle_mapper import ObstacleMapper
+from src.autonomous_mower.obstacle_mapper import ObstacleMapper
 from navigation_system.localization import Localization
 import threading
 import time

@@ -69,7 +69,9 @@ def get_ip_address():
 
 
 # Check if "USE_REMOTE_PATH_PLANNING" is set to True in the .env file
-USE_REMOTE_PATH_PLANNING = os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
+USE_REMOTE_PATH_PLANNING = (
+    os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
+)
 
 
 # Initialize the MQTT client
@@ -245,14 +247,14 @@ def video_disconnect():
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
-    import robot
+    import src.autonomous_mower.robot as robot
     robot.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    import robot
+    import src.autonomous_mower.robot as robot
     robot.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
 
