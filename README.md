@@ -74,60 +74,51 @@ Considering to incorporate:
 
 I'll be happy to share any details you'd be interested in just let me know.
 
-INSTALLATION INSTRUCTIONS:
-1. Install necessary packages:
-    ```bash
-    sudo apt-get install libatlas-base-dev libhdf5-dev libhdf5-serial-dev python3-dev python3-pip i2c-tools gpsd gpsd-clients python3-gps python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev
-    ```
-    Note: to get gpiod to work within the venv, you must run the following command after your venv is created, replacing "/path/to/venv" with the correct path to your venv:
-    ```bash
-    python3 -m venv --system-site-packages /path/to/venv
-    ```
-
-
-2. Clone the repository:
+**INSTALLATION INSTRUCTIONS:**
+1. **Clone the repository:**
     ```bash
     sudo git clone https://github.com/acredsfan/autonomous_mower.git
     ```
 
-3. Go to the new folder:
+2. **Go to the new folder:**
     ```bash
     cd autonomous_mower
     ```
 
-4. Set up a virtual environment and activate it:
+3. **Make install_requirements.sh executable**
     ```bash
-    python3 -m venv venv
-    source venv/bin/activate
+    chmod +x install_requirements.sh
     ```
 
-5. Install packages from requirements.txt:
+4. **Install necessary packages and set up VENV via install_requirements.sh**
     ```bash
-    pip install -r requirements.txt
+    ./install_requirements.sh
     ```
+    **NOTE:* *This will output a list of the packages that did not install, make sure you review this as you may need to find an alternative if you encounter errors
+    when running robot.py*
 
-6. Download your preferred TensorFlow model file for object detection, I'm currently using 'mobilenet_v2_1.0_224.tflite'
+5. **Download your preferred TensorFlow model file for object detection, I'm currently using 'mobilenet_v2_1.0_224.tflite'**
     ```bash
     wget https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1.tflite -O /PATH/TO/autonomous_mower/mobilenet_v2_1.0_224.tflite
     ```
 
-    1. If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change '/home/pi' to the folder where you cloned the repository):
+    **Note:** If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change '/home/pi' to the folder where you cloned the repository):
     ```bash
     sudo chown -R pi:pi /home/pi/autonomous_mower/
     ```
 
-7. Obtain a Google Maps JavaScript API key and Map ID following the instructions at the bottom of this README.
+6. **Obtain a Google Maps JavaScript API key and Map ID following the instructions at the bottom of this README.**
 
-8. Update and save `.env.example` as `.env` with all necessary information.
+7. **Update and save `.env.example` as `.env` with all necessary information.**
 
-9. If using roboHat, then take rp2040_code.py from the robohat_files directory and load it on the RP2040 and rename to code.py
+8. **If using roboHat, take rp2040_code.py from the robohat_files directory and load it on the RP2040 and rename to code.py**
 
-10. Run `robot.py` to start the program:
+9. **Run `robot.py` to start the program:**
     ```bash
     python robot.py
     ```
 
-11. Go to the web UI at `{hostname}.local:8080` to set up the robot boundaries and schedules as well as to see sensor data/controls.
+10. **Go to the web UI at `{hostname}.local:8080` to set up the robot boundaries and schedules as well as to see sensor data/controls.**
 
 ### Steps to Obtain a Google Maps API Key and Map ID
 

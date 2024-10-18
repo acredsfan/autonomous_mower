@@ -2,7 +2,7 @@ smbus2
 pyserial
 numpy
 adafruit-circuitpython-bme280
-adafruit-circuitpython-vl53l0x
+
 easydict
 barbudor-circuitpython-ina3221
 mpu9250-jmdev
