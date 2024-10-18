@@ -52,10 +52,16 @@ planned_path = []
 class PathPlanner:
     def __init__(self):
         # Define the path to user_polygon.json and mowing_schedule.json
-        PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        self.USER_POLYGON_PATH = os.path.join(PROJECT_ROOT, 'user_polygon.json')
-        self.MOWING_SCHEDULE_PATH = os.path.join(PROJECT_ROOT, 'mowing_schedule.json')
-        
+        PROJECT_ROOT = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..')
+            )
+        self.USER_POLYGON_PATH = os.path.join(PROJECT_ROOT,
+                                              'user_polygon.json'
+                                              )
+        self.MOWING_SCHEDULE_PATH = os.path.join(PROJECT_ROOT,
+                                                 'mowing_schedule.json'
+                                                 )
+
         # Initialize variables
         self.mowing_area_polygon_gps = []
         self.mowing_area_polygon_utm = []
@@ -65,7 +71,7 @@ class PathPlanner:
         self.grid_points = []
         self.planned_path = []
         self.obstacles = []
-        
+
         # Initialize GPS position instance
         self.gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0',
                                                  debug=False
@@ -81,12 +87,12 @@ class PathPlanner:
         # Initialize NavigationController
         self.sensor_interface = sensor_interface
         self.controller = NavigationController(
-            self.gps_latest_position, self.robohat_driver, self.sensor_interface, debug=False
+            self.gps_latest_position, self.robohat_driver,
+            self.sensor_interface, debug=False
         )
 
-    def load_mowing_area_polygon():
-        global mowing_area_polygon_gps
-        if not os.path.exists(USER_POLYGON_PATH):
+    def load_mowing_area_polygon(self):
+        if not os.path.exists(self.USER_POLYGON_PATH):
             logger.error(
                 "Mowing area polygon file 'user_polygon.json' not found. "
                 "Please set the polygon via the user interface."
@@ -94,61 +100,62 @@ class PathPlanner:
             exit(1)
         else:
             try:
-                with open(USER_POLYGON_PATH, 'r') as f:
+                with open(self.USER_POLYGON_PATH, 'r') as f:
                     polygon_data = json.load(f)
-                    mowing_area_polygon_gps = [
+                    self.mowing_area_polygon_gps = [
                         (point['lat'], point['lng']) for point in polygon_data
                     ]
-                    if not mowing_area_polygon_gps:
+                    if not self.mowing_area_polygon_gps:
                         logger.error(
-                            "'user_polygon.json' does not contain valid data."
+                            "'user_polygon.json' does not contain valid "
+                            "polygon data. "
                             "Please set the polygon via the user interface."
                         )
                         exit(1)
             except json.JSONDecodeError:
                 logger.error(
-                    "Error decoding 'user_polygon.json'."
+                    "Error decoding 'user_polygon.json'. "
                     "Please ensure it contains valid JSON."
                 )
                 exit(1)
 
-
-    def load_mowing_pattern():
-        if not os.path.exists(MOWING_SCHEDULE_PATH):
+    def load_mowing_pattern(self):
+        if not os.path.exists(self.MOWING_SCHEDULE_PATH):
             logger.error(
                 "Mowing schedule file 'mowing_schedule.json' not found. "
                 "Please set the schedule via the user interface."
             )
-            # Default to 'stripes' pattern if schedule file is missing
-            return 'stripes'
+            # Default to "stripes" pattern if schedule file not found
+            self.pattern_type = "stripes"
         else:
             try:
-                with open(MOWING_SCHEDULE_PATH, 'r') as f:
+                with open(self.MOWING_SCHEDULE_PATH, 'r') as f:
                     pattern_data = json.load(f)
-                    pattern_type = pattern_data.get('patternType', 'stripes')
-                    return pattern_type
+                    self.pattern_type = pattern_data.get(
+                        'patternType', 'stripes'
+                        )
             except json.JSONDecodeError:
                 logger.error(
                     "Error decoding 'mowing_schedule.json'. "
                     "Please ensure it contains valid JSON."
                 )
-                exit(1)
+                # Default to "stripes" pattern if error occurs
+                self.pattern_type = "stripes"
 
-
-    def gps_polygon_to_utm_polygon(polygon_gps):
-        global utm_zone_number, utm_zone_letter
-        polygon_utm = []
-        for idx, (lat, lon) in enumerate(polygon_gps):
-            easting, northing, zone_number, zone_letter = utm.from_latlon(lat, lon)
-            polygon_utm.append((easting, northing))
+    def gps_polygon_to_utm_polygon(self):
+        self.mowing_area_polygon_utm = []
+        for idx, (lat, lon) in enumerate(self.mowing_area_polygon_gps):
+            easting, northing, zone_number, zone_letter = utm.from_latlon(
+                lat, lon
+                )
+            self.mowing_area_polygon_utm.append((easting, northing))
             if idx == 0:
                 # Store UTM zone information
-                utm_zone_number = zone_number
-                utm_zone_letter = zone_letter
-        return polygon_utm
+                self.utm_zone_number = zone_number
+                self.utm_zone_letter = zone_letter
 
-
-    def point_in_polygon(x, y, polygon):
+    # Generate grid from polygon
+    def point_in_polygon(self, x, y, polygon):
         """Check if a point (x, y) is inside the polygon."""
         num_points = len(polygon)
         j = num_points - 1
@@ -163,47 +170,30 @@ class PathPlanner:
             j = i
         return inside
 
-
-    def generate_grid_from_polygon(polygon, grid_size=1.0):
+    def generate_grid_from_polygon(self, grid_size=1.0):
         """Generate a grid of points within the mowing area polygon."""
-        min_x = min(point[0] for point in polygon)
-        max_x = max(point[0] for point in polygon)
-        min_y = min(point[1] for point in polygon)
-        max_y = max(point[1] for point in polygon)
+        min_x = min(point[0] for point in self.mowing_area_polygon_utm)
+        max_x = max(point[0] for point in self.mowing_area_polygon_utm)
+        min_y = min(point[1] for point in self.mowing_area_polygon_utm)
+        max_y = max(point[1] for point in self.mowing_area_polygon_utm)
 
-        grid_x = np.arange(min_x, max_x, grid_size)
-        grid_y = np.arange(min_y, max_y, grid_size)
+        grid_x = np.arange(min_x, max_x + grid_size, grid_size)
+        grid_y = np.arange(min_y, max_y + grid_size, grid_size)
         grid_points = []
         for x in grid_x:
             for y in grid_y:
-                if point_in_polygon(x, y, polygon):
+                if self.point_in_polygon(x, y, self.mowing_area_polygon_utm):
                     grid_points.append((x, y))
-        return grid_points
+        self.grid_points = grid_points
 
-
-    def compute_grid_shape(grid_points, grid_size):
-        min_x = min(point[0] for point in grid_points)
-        max_x = max(point[0] for point in grid_points)
-        min_y = min(point[1] for point in grid_points)
-        max_y = max(point[1] for point in grid_points)
-        width = int((max_x - min_x) / grid_size) + 1
-        height = int((max_y - min_y) / grid_size) + 1
-        return width, height, min_x, min_y
-
-
-    def heuristic(node1, node2):
-        """Heuristic for A* (Euclidean distance)."""
-        return math.sqrt((node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2)
-
-
-    def a_star_pathfinding(start, end, grid, obstacles):
+    def a_star_pathfinding(self, start, end):
         """A* algorithm to find the shortest path from start to end."""
         open_list = []
         closed_list = []
         open_list.append(start)
 
         g = {start: 0}  # Cost from start to node
-        f = {start: heuristic(start, end)}  # Estimated cost from start to end
+        f = {start: self.heuristic(start, end)}
 
         parent = {start: None}
 
@@ -216,10 +206,10 @@ class PathPlanner:
                 (x, y + 1),
                 (x, y - 1)
             ]
-            # Filter out neighbors that are obstacles or outside the grid
+            # Filter out neighbors that are in grid_points and not in obstacles
             return [
                 n for n in potential_neighbors
-                if n in grid and n not in obstacles
+                if n in self.grid_points and n not in self.obstacles
             ]
 
         while open_list:
@@ -245,157 +235,176 @@ class PathPlanner:
                 if neighbor not in open_list or tentative_g < g[neighbor]:
                     parent[neighbor] = current
                     g[neighbor] = tentative_g
-                    f[neighbor] = g[neighbor] + heuristic(neighbor, end)
+                    f[neighbor] = g[neighbor] + self.heuristic(neighbor, end)
 
                     if neighbor not in open_list:
                         open_list.append(neighbor)
 
         return []  # No path found
 
+    def heuristic(self, node1, node2):
+        """Heuristic for A* (Euclidean distance)."""
+        return math.sqrt(
+            (node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2
+            )
 
-    def utm_to_gps(easting, northing, zone_number, zone_letter):
-        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+    # Convert UTM to GPS
+    def utm_to_gps(self, easting, northing):
+        lat, lon = utm.to_latlon(
+            easting, northing, self.utm_zone_number, self.utm_zone_letter
+            )
         return (lat, lon)
 
-
-    def create_pattern(pattern_type, grid_points, grid_size, min_x, min_y):
+    # Create mowing pattern
+    def create_pattern(self):
         """Create waypoints based on selected pattern."""
         waypoints = []
-        width, height = compute_grid_dimensions(grid_points,
-                                                grid_size,
-                                                min_x,
-                                                min_y)
+        if not self.grid_points:
+            logger.error("Grid points have not been generated.")
+            return waypoints
 
-        if pattern_type == "stripes":
-            # Generate waypoints in stripes
-            for x in np.arange(min_x, min_x + width * grid_size, 2 * grid_size):
-                column_points = [(x, y) for y in np.arange(
-                    min_y, min_y + height * grid_size, grid_size
-                    )
-                                if (x, y) in grid_points]
-                waypoints.extend(column_points)
+        # Sort grid points for consistent processing
+        sorted_grid = sorted(self.grid_points, key=lambda p: (p[1], p[0]))
 
-        elif pattern_type == "criss_cross":
+        if self.pattern_type == "stripes":
+            # Group points by y-coordinate (rows)
+            rows = {}
+            for x, y in sorted_grid:
+                rows.setdefault(y, []).append((x, y))
+            # Create waypoints by alternating the direction in each row
+            for idx, row in enumerate(sorted(rows.keys())):
+                points = rows[row]
+                if idx % 2 == 0:
+                    waypoints.extend(points)
+                else:
+                    waypoints.extend(points[::-1])
+
+        elif self.pattern_type == "criss_cross":
             # Generate stripes in one direction
-            for x in np.arange(min_x, min_x + width * grid_size, 2 * grid_size):
-                column_points = [(x, y) for y in np.arange(
-                    min_y, min_y + height * grid_size, grid_size
-                    )
-                                if (x, y) in grid_points]
-                waypoints.extend(column_points)
-            # Generate stripes in the perpendicular direction
-            for y in np.arange(min_y, min_y + height * grid_size, 2 * grid_size):
-                row_points = [(x, y) for x in np.arange(
-                    min_x, min_x + width * grid_size, grid_size
-                    )
-                            if (x, y) in grid_points]
-                waypoints.extend(row_points)
+            self.pattern_type = "stripes"
+            waypoints = self.create_pattern()
+            # Generate stripes in the other direction
+            self.pattern_type = "stripes_vertical"
+            waypoints += self.create_pattern()
+            self.pattern_type = "criss_cross"  # Reset pattern type
 
-        elif pattern_type == "checkerboard":
+        elif self.pattern_type == "stripes_vertical":
+            # Group points by x-coordinate (columns)
+            columns = {}
+            for x, y in sorted_grid:
+                columns.setdefault(x, []).append((x, y))
+            # Create waypoints by alternating the direction in each column
+            for idx, col in enumerate(sorted(columns.keys())):
+                points = columns[col]
+                if idx % 2 == 0:
+                    waypoints.extend(points)
+                else:
+                    waypoints.extend(points[::-1])
+
+        elif self.pattern_type == "checkerboard":
             # Generate a checkerboard pattern
-            for x in np.arange(min_x, min_x + width * grid_size, 2 * grid_size):
-                for y in np.arange(
-                    min_y, min_y + height * grid_size, 2 * grid_size
-                ):
-                    square_points = [
-                        (x, y), (x + grid_size, y),
-                        (x + grid_size, y + grid_size), (x, y + grid_size)
-                    ]
-                    waypoints.extend(
-                        [pt for pt in square_points if pt in grid_points]
-                        )
+            for y in sorted(set(y for x, y in sorted_grid)):
+                row_points = [pt for pt in sorted_grid if pt[1] == y]
+                if y % 2 == 0:
+                    waypoints.extend(row_points[::2])
+                else:
+                    waypoints.extend(row_points[1::2])
 
-        elif pattern_type == "diamond":
+        elif self.pattern_type == "diamond":
             # Generate a diamond pattern centered in the area
+            grid_points = set(self.grid_points)
+            grid_size = 1.0
+            min_x = min(point[0] for point in grid_points)
+            min_y = min(point[1] for point in grid_points)
+            width, height = self.compute_grid_dimensions(
+                grid_points, grid_size, min_x, min_y
+                )
             center_x = min_x + (width * grid_size) / 2
             center_y = min_y + (height * grid_size) / 2
-            max_distance = min(width, height) * grid_size / 2
-            for d in np.arange(0, max_distance, grid_size):
-                perimeter_points = [
-                    (center_x - d, center_y),
-                    (center_x, center_y - d),
-                    (center_x + d, center_y),
-                    (center_x, center_y + d)
-                ]
-                waypoints.extend(
-                    [pt for pt in perimeter_points if pt in grid_points]
-                    )
+            for y in np.arange(min_y, min_y + height * grid_size, grid_size):
+                for x in np.arange(
+                    min_x, min_x + width * grid_size, grid_size
+                     ):
+                    if (x, y) in grid_points:
+                        waypoints.append((x, y))
 
-        elif pattern_type == "waves":
+        elif self.pattern_type == "waves":
             # Generate a wave pattern
             for y in np.arange(min_y, min_y + height * grid_size, grid_size):
-                for x in np.arange(min_x, min_x + width * grid_size, grid_size):
+                for x in np.arange(
+                    min_x, min_x + width * grid_size, grid_size
+                     ):
                     offset = (np.sin((y - min_y) / 5) * grid_size)
                     x_offset = x + offset
                     if (x_offset, y) in grid_points:
                         waypoints.append((x_offset, y))
 
-        elif pattern_type == "concentric_circles":
+        elif self.pattern_type == "concentric_circles":
             # Generate concentric circles
             center_x = min_x + (width * grid_size) / 2
             center_y = min_y + (height * grid_size) / 2
             max_radius = min(width, height) * grid_size / 2
             for r in np.arange(grid_size, max_radius, grid_size):
-                circle_pts = circle_waypoints(center_x, center_y, r, grid_points)
+                circle_pts = self.circle_waypoints(
+                    center_x, center_y, r, grid_points
+                    )
                 waypoints.extend(circle_pts)
 
-        elif pattern_type == "stars":
+        elif self.pattern_type == "stars":
             # Generate a star pattern
             center_x = min_x + (width * grid_size) / 2
             center_y = min_y + (height * grid_size) / 2
             radius = min(width, height) * grid_size / 2
-            waypoints.extend(star_waypoints(
+            waypoints.extend(self.star_waypoints(
                 center_x, center_y, radius, grid_points)
                 )
 
-        elif pattern_type == "custom_image":
+        elif self.pattern_type == "custom_image":
             img_path = os.getenv("USER_IMAGE_PATH", "image.png")
             x_offset = int(os.getenv("IMAGE_X_OFFSET", 0))
             y_offset = int(os.getenv("IMAGE_Y_OFFSET", 0))
-            waypoints = image_to_waypoints(
+            waypoints = self.image_to_waypoints(
                 img_path, x_offset, y_offset, grid_points, grid_size
                 )
 
         else:
-            logger.error(f"Unsupported pattern type: {pattern_type}")
+            logger.error(f"Unsupported pattern type: {self.pattern_type}")
             exit(1)
 
         return waypoints
 
-
-    def compute_grid_dimensions(grid_points, grid_size, min_x, min_y):
+    def compute_grid_dimensions(self, grid_points, grid_size, min_x, min_y):
         max_x = max(point[0] for point in grid_points)
         max_y = max(point[1] for point in grid_points)
         width = int((max_x - min_x) / grid_size) + 1
         height = int((max_y - min_y) / grid_size) + 1
         return width, height
 
-
-    def circle_waypoints(center_x, center_y, radius, grid_points, step=15):
+    def circle_waypoints(self, center_x, center_y,
+                         radius, grid_points, step=15):
         """Generate waypoints for a circle with a given radius."""
         waypoints = []
         for angle in np.arange(0, 360, step):
             x = center_x + radius * np.cos(np.radians(angle))
             y = center_y + radius * np.sin(np.radians(angle))
             point = (x, y)
-            if point_in_polygon(x, y, grid_points):
+            if self.point_in_polygon(x, y, grid_points):
                 waypoints.append(point)
         return waypoints
 
-
-    def star_waypoints(center_x, center_y, radius, grid_points):
+    def star_waypoints(self, center_x, center_y, radius, grid_points):
         """Generate waypoints for a star pattern."""
         waypoints = []
         for i in range(5):
-            angle = np.radians(i * 144)  # Star points are spaced 144 degrees apart
+            angle = np.radians(i * 144)
             x = center_x + radius * np.cos(angle)
             y = center_y + radius * np.sin(angle)
-            if point_in_polygon(x, y, grid_points):
+            if self.point_in_polygon(x, y, grid_points):
                 waypoints.append((x, y))
         return waypoints
 
-
-    def image_to_waypoints(img_path, x_offset, y_offset, grid_points, grid_size):
+    def image_to_waypoints(self, img_path, x_offset,
+                           y_offset, grid_points, grid_size):
         """Convert an image to a set of waypoints."""
         if not os.path.exists(img_path):
             logger.error(
@@ -412,8 +421,8 @@ class PathPlanner:
 
         # Find contours in the binary image
         contours, _ = cv2.findContours(binary,
-                                    cv2.RETR_EXTERNAL,
-                                    cv2.CHAIN_APPROX_SIMPLE)
+                                       cv2.RETR_EXTERNAL,
+                                       cv2.CHAIN_APPROX_SIMPLE)
 
         waypoints = []
         for contour in contours:
@@ -429,29 +438,26 @@ class PathPlanner:
 
         return waypoints
 
-
-    def navigate_to_waypoints(waypoints, grid_points, obstacles):
-        global utm_zone_number, utm_zone_letter
+    def navigate_to_waypoints(self, waypoints):
+        """Navigate mower through a list of waypoints."""
         for waypoint in waypoints:
             # Check for obstacles
             obstacle_detected = detect_obstacle() or detect_drop()
             if obstacle_detected:
                 # Handle obstacle avoidance
                 logger.info("Obstacle detected, re-planning path.")
-                current_position = gps_latest_position.run()
+                current_position = self.gps_latest_position.run()
                 if not current_position:
                     logger.error("No valid GPS data.")
                     break
-                ts, easting, northing, zone_number, zone_letter = current_position
+                ts, easting, northing, zone_number, \
+                    zone_letter = current_position
                 current_utm = (easting, northing)
                 # Add obstacle to obstacle list
-                obstacles.append(current_utm)
+                self.obstacles.append(current_utm)
                 # Re-plan path from current position to remaining waypoints
                 remaining_waypoints = waypoints[waypoints.index(waypoint):]
-                new_path = a_star_pathfinding(current_utm,
-                                            waypoint,
-                                            grid_points,
-                                            obstacles)
+                new_path = self.a_star_pathfinding(current_utm, waypoint)
                 if not new_path:
                     logger.error("Unable to find a new path to the waypoint.")
                     break
@@ -461,97 +467,72 @@ class PathPlanner:
 
             # Navigate to the waypoint
             # Convert UTM to GPS
-            lat, lon = utm_to_gps(waypoint[0], waypoint[1],
-                                utm_zone_number, utm_zone_letter)
+            lat, lon = self.utm_to_gps(waypoint[0], waypoint[1])
             target_location = (lat, lon)
-            success = controller.navigate_to_location(target_location)
+            success = self.controller.navigate_to_location(target_location)
             if not success:
                 logger.error("Failed to navigate to location.")
                 break
 
-
-    def get_path():
+    def get_path(self):
         """
         Returns the planned path as a list of GPS coordinates.
         """
-        global planned_path
-        global mowing_area_polygon_gps
-        global utm_zone_number
-        global utm_zone_letter
-
-        if planned_path:
+        if self.planned_path:
             # Path is already generated
-            return planned_path
+            return self.planned_path
 
         # Load mowing area polygon
-        load_mowing_area_polygon()
-
+        self.load_mowing_area_polygon()
+        # Load pattern type
+        self.load_mowing_pattern()
         # Convert mowing area polygon to UTM
-        mowing_area_polygon_utm = gps_polygon_to_utm_polygon(
-            mowing_area_polygon_gps)
-
+        self.gps_polygon_to_utm_polygon()
         # Generate grid points within the mowing area
-        grid_size = 1.0  # Adjust grid size as needed
-        grid_points = generate_grid_from_polygon(mowing_area_polygon_utm,
-                                                grid_size)
-
-        # Compute grid dimensions
-        width, height, min_x, min_y = compute_grid_shape(grid_points, grid_size)
-
-        # Set pattern type
-        pattern_type = load_mowing_pattern()
-
+        self.generate_grid_from_polygon(grid_size=1.0)
         # Create waypoints based on the pattern
-        waypoints = create_pattern(pattern_type, grid_points, grid_size,
-                                min_x, min_y)
+        waypoints = self.create_pattern()
 
         # Convert waypoints from UTM to GPS
         gps_waypoints = []
         for waypoint in waypoints:
-            easting, northing = waypoint
-            lat, lon = utm_to_gps(easting, northing,
-                                utm_zone_number, utm_zone_letter)
+            lat, lon = self.utm_to_gps(waypoint[0], waypoint[1])
             # Note order: [lng, lat] for Google Maps
             gps_waypoints.append([lon, lat])
 
         # Store the planned path
-        planned_path = gps_waypoints
+        self.planned_path = gps_waypoints
 
-        return planned_path
+        return self.planned_path
 
-
-    def main():
+    def main(self):
         # Load mowing area polygon
-        load_mowing_area_polygon()
+        self.load_mowing_area_polygon()
+        # Load pattern type
+        self.load_mowing_pattern()
         # Convert mowing area polygon to UTM
-        mowing_area_polygon_utm = gps_polygon_to_utm_polygon(
-            mowing_area_polygon_gps)
+        self.gps_polygon_to_utm_polygon()
         # Generate grid points within the mowing area
-        grid_size = 1.0  # Adjust grid size as needed
-        grid_points = generate_grid_from_polygon(mowing_area_polygon_utm,
-                                                grid_size)
-
-        # Compute grid dimensions
-        width, height, min_x, min_y = compute_grid_shape(grid_points, grid_size)
-
-        # Set pattern type
-        pattern_type = load_mowing_pattern()
+        self.generate_grid_from_polygon(grid_size=1.0)
         # Create waypoints based on the pattern
-        waypoints = create_pattern(pattern_type, grid_points, grid_size,
-                                min_x, min_y)
-
-        # Initialize obstacles list
-        obstacles = []
-
+        waypoints = self.create_pattern()
         # Navigate to waypoints
-        navigate_to_waypoints(waypoints, grid_points, obstacles)
+        self.navigate_to_waypoints(waypoints)
+
+    def shutdown(self):
+        # Shutdown GPS position instance and robohat driver
+        self.gps_position_instance.shutdown()
+        self.robohat_driver.shutdown()
 
 
 if __name__ == "__main__":
+    planner = PathPlanner()
     try:
-        main()
-    except KeyboardInterrupt:
-        logger.info("Program terminated by user.")
+        path = planner.get_path()
+        print("Planned Path:")
+        for coord in path:
+            print(f"Longitude: {coord[0]}, Latitude: {coord[1]}")
+    except Exception as e:
+        logger.error(f"Error generating path: {e}")
     finally:
-        gps_position_instance.shutdown()
-        robohat_driver.shutdown()
+        planner.shutdown()
