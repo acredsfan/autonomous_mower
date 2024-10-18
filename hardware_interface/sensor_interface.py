@@ -123,7 +123,8 @@ class SensorInterface:
                     and battery-charge-level (charge_level) as a percentage.'''
                     self.sensor_data['battery_voltage'] = self.read_sensor_data(
                         self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 3)['shunt_voltage'],
+                        lambda s: INA3221Sensor.read_ina3221(s, 3)[
+                            'shunt_voltage'],
                         "INA3221 Battery"
                     )
                     self.sensor_data['battery_current'] = self.read_sensor_data(

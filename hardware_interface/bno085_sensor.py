@@ -117,7 +117,7 @@ class BNO085Sensor:
     def cleanup():
         """Cleanup BNO085 sensor resources."""
         try:
-            bno.deinit()
+            sensor.deinit()
             logging.info("BNO085 sensor deinitialized.")
         except Exception as e:
             logging.error(f"Error deinitializing BNO085 sensor: {e}")

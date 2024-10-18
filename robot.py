@@ -1,7 +1,11 @@
 from utilities import LoggerConfigInfo as LoggerConfig
-from user_interface.web_interface.app import start_web_interface, position_reader, start_mqtt_client
+from user_interface.web_interface.app import (
+    start_web_interface,
+    position_reader,
+    start_mqtt_client
+)
 from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat import RoboHATDriver  # Updated import
+from hardware_interface.robohat import RoboHATDriver
 from hardware_interface.gpio_manager import GPIOManager
 from obstacle_mapper import ObstacleMapper
 from navigation_system.localization import Localization
@@ -18,9 +22,10 @@ localization = Localization()
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+
 # Function to initialize all resources
 def initialize_resources():
-    global sensor_interface, blade_controller, robohat_driver  # Updated variable
+    global sensor_interface, blade_controller, robohat_driver
     from hardware_interface.sensor_interface import get_sensor_interface
 
     # Initialize sensor interface
@@ -50,7 +55,9 @@ def initialize_resources():
 
     # Initialize obstacle mapper
     global obstacle_mapper
-    obstacle_mapper = ObstacleMapper(localization, sensor_interface, robohat_driver)
+    obstacle_mapper = ObstacleMapper(
+        localization, sensor_interface, robohat_driver
+    )
     logging.info("Obstacle mapper initialized.")
 
 
@@ -91,7 +98,8 @@ if __name__ == "__main__":
         gps_thread.start()
         logging.info("GPS status monitoring started.")
 
-        # Before starting the main loop, ask the user if they want to run Obstacle Mapper
+        """ Before starting the main loop,
+            ask the user if they want to run Obstacle Mapper """
         user_input = input("Do you want to run the obstacle mapper? (y/n): ")
         if user_input.lower() == 'y':
             logging.info("Starting the obstacle mapper...")
