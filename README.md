@@ -1,145 +1,305 @@
 # autonomous_mower
-Raspberry Pi Powered Autonomous Lawn Mower - WIP
-I'm working on building a Raspberry Pi powered autonomous lawn mower. I've experiemented with using ChatGPT to help me along with the process but the size of the project limits how much I can utilize that. Feel free to jump in and make any suggestions for improving/adding to/completing the code I have started.
 
-As for details of the project, I've printed the body from here: https://cults3d.com/en/3d-model/home/pimowrobot-case (The newer model wasn't available at the time, so mine is model C I believe.)
+**Raspberry Pi Powered Autonomous Lawn Mower - WIP**
 
-I started with working from this and even bought the software from this designer: http://pimowbot.tgd-consulting.de/
+I'm working on building a Raspberry Pi powered autonomous lawn mower. I've experimented with using ChatGPT to help me along with the process, but the size of the project limits how much I can utilize that. Feel free to jump in and make any suggestions for improving/adding to/completing the code I have started.
+
+## **Project Overview**
+
+As for details of the project, I've printed the body from [Cults3D - PimoWRobot Case](https://cults3d.com/en/3d-model/home/pimowrobot-case) (The newer model wasn't available at the time, so mine is model C I believe.)
+
+I started with working from this and even bought the software from this designer: [pimowbot.tgd-consulting.de](http://pimowbot.tgd-consulting.de/)
 
 However, I found that the software did not meet my needs, specifically it does not geofence the robot into my yard so it was essentially a free range robot that I couldn't keep from mowing the neighbors' yards. So I decided to start my own journey of writing a program to meet my needs as described below:
 
-Here are the requirements:
+### **Project Requirements**
 
-It needs to be able to detect the weather, specifically if conditions are ideal for mowing (i.e. not raining or too cold)
-It needs to detect and avoid obstacles and ledges in the yard by using sensors and the camera
-The robot should stay in an assigned area that can be plotted out on google maps using the Google Maps JavaScript API to allow the user to trace their yard with a polygon too.
-The robot needs to mow in a pattern and track where it has and has not been
-If the battery is low, it needs to stop mowing and move to an area where it can recharge the battery in the sunlight
-It needs to have a web and android app based control and monitoring/camera streaming system so the user can keep track of the robot and control it manually if required. The app should also allow the user to follow the progress on a map and have the polygon input for the mowing area from requirement 3.
-It needs to learn to take more efficient paths and avoid trouble areas as it operates over it’s lifetime
-It needs to be able to detect if it’s being tampered with (i.e. lifted unexpectedly, kicked, etc) and stop operating immediately to avoid injury to humans or animals.
-It needs to allow for scheduling for ideal mowing times and adjust if the weather is predicted to interfere with the schedule.
-When the robot is done mowing it needs to go to a sunny location to charge then go to a storage location after it’s fully charged to wait for it’s next scheduled mowing window.
-Bonus points if we can get it to also act as a security robot when not mowing where it can patrol the yard on a intermittent basis and send alerts if it detects anything that would be a threat.
-Super bonus if we can get it to trim patterns and words into the yard in a special mode for holidays/events.
-Here are the sensors and hardware I've procured for the robot:
+1. **Weather Detection**: Detect if conditions are ideal for mowing (i.e., not raining or too cold).
+2. **Obstacle Detection and Avoidance**: Use sensors and the camera to detect and avoid obstacles and ledges in the yard.
+3. **Geofencing**: Stay within an assigned area plotted on Google Maps using the Google Maps JavaScript API, allowing the user to trace their yard with a polygon.
+4. **Mowing Pattern Tracking**: Mow in a pattern and track areas already mowed.
+5. **Battery Management**: Stop mowing and move to a recharging area if the battery is low.
+6. **Control and Monitoring App**: Web and Android app for control, monitoring, and camera streaming. Allows users to track progress on a map and set mowing boundaries.
+7. **Path Optimization**: Learn to take more efficient paths and avoid problematic areas over time.
+8. **Tampering Detection**: Detect if the robot is being tampered with (e.g., lifted, kicked) and stop operation to prevent injury.
+9. **Scheduling**: Allow scheduling of mowing times and adjust based on weather forecasts.
+10. **Post-Mowing Behavior**: Move to a sunny location to charge and then to a storage location after charging.
+11. **Bonus Features**:
+    - **Security Mode**: Act as a security robot when not mowing, patrolling the yard and sending alerts if threats are detected.
+    - **Pattern Trimming**: Trim patterns and words into the yard for holidays/events.
 
-• Raspberry Pi 4 4GB
+### **Hardware Components**
 
-• 64GB micro SD card
+- **Raspberry Pi 4 4GB**
+- **64GB micro SD card**
+- **[8 MP Raspberry Pi Camera Module](https://a.co/d/0AwH90z)**
+- **[20 Watt 12V Solar Panel](https://www.offgridtec.com/offgridtecr-olp-30w-solarpanel-12v-schindeltechnologie-perc.html)**
+- **[10A 12V Solar Charge Controller](https://a.co/d/fi02yps)**
+- **[12V 20AH LiFePO4 Battery](https://a.co/d/0YHIv9B)**
+- **[TP-Link AC1300 WiFi Adapter](https://a.co/d/9hrsDR0)**
+- **[BME280 Sensor Module](https://a.co/d/hE2FmhO)**
+- **[SparkFun GPS-RTK-SMA Kit](https://a.co/d/ar8m13h)**
+  > **NOTE:**  
+  > To use RTK for millimeter accuracy, you will need either a Base Station ([instructions provided here](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to an NTRIP server.  
+  > If accuracy between 1.5-2.5 meters suffices, a NEO-M9N or NEO-M8N will suffice without needing a base station or NTRIP server.
+- **[DC Voltage Regulator/Buck Converter 12V to 5V](https://a.co/d/2fuTrJv)**
+- **[997 DC Motor for Mower Blades](https://a.co/d/gA0PXvn)**
+- **2x [12V Worm Gear Motors for Wheels](https://a.co/d/eC2qFmM)**
+- **[10Amp 7V-30V DC Motor Driver for R/C (2 Channels)](https://www.cytron.io/p-10amp-7v-30v-dc-motor-driver-for-rc-2-channels)**
+- **[MPU-9250 Compass Module](https://a.co/d/iHYSXZ7)**
+- **[BNO085 IMU](https://www.adafruit.com/product/4754)**
+- **2x [VL53L0X Time of Flight Sensors](https://a.co/d/3Zd6glM)**
+- **[INA3221 Power Monitor](https://a.co/d/2HxeiL3)**
+- **2x [KY-003 Hall Effect Magnetic Sensor Modules](https://a.co/d/iRczHRb)**
+- **[IBT-4 Motor Driver Board](https://a.co/d/cl5WV3u)**
+- **[I2C Splitter](https://www.aliexpress.us/item/3256801588962655.html?gatewayAdapt=glo2usa4itemAdapt)**
 
-• [8 MP Raspberry pi camera module](https://a.co/d/0AwH90z)
+**Considering to incorporate:**
 
-• [20 Watt 12V solar panel](https://www.offgridtec.com/offgridtecr-olp-30w-solarpanel-12v-schindeltechnologie-perc.html)
+- **[youyeetoo RPLIDAR C1 Fusion Lidar DTOF](https://a.co/d/4W2Vmj7)**
 
-• [10A 12V solar charge controller](https://a.co/d/fi02yps)
+I'll be happy to share any details you'd be interested in; just let me know.
 
-• [12V 20AH LiFePO4 Battery](https://a.co/d/0YHIv9B)
+---
 
-• [TP-Link AC1300 WiFi Adapter](https://a.co/d/9hrsDR0)
+## **Installation Instructions**
 
-• [BME280 sensor module](https://a.co/d/hE2FmhO)
+You have two options to set up and run the `autonomous_mower` project:
 
-• [SparkFun GPS-RTK-SMA Kit](https://a.co/d/ar8m13h)
+1. **Using the Shell Script (`install_requirements.sh`)**
+2. **Using Docker**
 
-    > **NOTE:** 
-    > To use RTK for millimeter accuracy, you will need either a Base Station (instructions to build provided by @TCIII: [link](https://www.diyrobocars.com/2023/12/28/using-the-donkey-car-path_follow-template-with-rtk-gps/)) or access to a NTRIP server. 
-    > If you are ok with accuracy between 1.5-2.5 meters, then a NEO-M9N or NEO-M8N will suffice without the need for a base station or NTRIP server.
+### **Option 1: Using the Shell Script**
 
+Follow these steps to set up the project using the provided shell script:
 
-• [DC Voltage Regulator/Buck Converter 12V to 5V](https://a.co/d/2fuTrJv)
+1. **Clone the Repository:**
 
-• [997 DC motor for mower blades](https://a.co/d/gA0PXvn)
-
-• 2x [12V worm gear motors for wheels](https://a.co/d/eC2qFmM)
-
-• [10Amp 7V-30V DC Motor Driver for R/C (2 Channels)](https://www.cytron.io/p-10amp-7v-30v-dc-motor-driver-for-rc-2-channels)
-
-• [MPU-9250 Compass Module](https://a.co/d/iHYSXZ7)
-
-• [BNO085 IMU](https://www.adafruit.com/product/4754)
-
-• 2x [VL53L0X Time of flight sensors](https://a.co/d/3Zd6glM)
-
-• [INA3221 Power Monitor](https://a.co/d/2HxeiL3)
-
-• 2x [KY-003 Hall Effect Magnetic Sensor Modules](https://a.co/d/iRczHRb)
-
-• [IBT-4 Motor Driver Board](https://a.co/d/cl5WV3u)
-
-• [I2C splitter](https://www.aliexpress.us/item/3256801588962655.html?gatewayAdapt=glo2usa4itemAdapt)
-
-Considering to incorporate:
-• [youyeetoo RPLIDAR C1 Fusion Lidar DTOF](https://a.co/d/4W2Vmj7)
-
-I'll be happy to share any details you'd be interested in just let me know.
-
-**INSTALLATION INSTRUCTIONS:**
-1. **Clone the repository:**
     ```bash
-    sudo git clone https://github.com/acredsfan/autonomous_mower.git
+    git clone https://github.com/acredsfan/autonomous_mower.git
     ```
 
-2. **Go to the new folder:**
+2. **Navigate to the Project Directory:**
+
     ```bash
     cd autonomous_mower
     ```
 
-3. **Make install_requirements.sh executable**
+3. **Make `install_requirements.sh` Executable:**
+
     ```bash
     chmod +x install_requirements.sh
     ```
 
-4. **Install necessary packages and set up VENV via install_requirements.sh**
+4. **Run the Installation Script:**
+
     ```bash
     ./install_requirements.sh
     ```
-    **NOTE:* *This will output a list of the packages that did not install, make sure you review this as you may need to find an alternative if you encounter errors
-    when running robot.py*
 
-5. **Download your preferred TensorFlow model file for object detection, I'm currently using 'mobilenet_v2_1.0_224.tflite'**
+    **NOTE:** This script will install system dependencies, create a virtual environment, and install Python packages. It will output a list of any packages that failed to install; review this list to address any issues.
+
+5. **Download TensorFlow Model for Object Detection:**
+
     ```bash
     wget https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1.tflite -O /PATH/TO/autonomous_mower/mobilenet_v2_1.0_224.tflite
     ```
 
-    **Note:** If you're transferring via WinSCP, update the folder ownership to avoid transfer errors (change '/home/pi' to the folder where you cloned the repository):
+    **Note:** If transferring via WinSCP, update the folder ownership to avoid transfer errors (change `/home/pi` to the folder where you cloned the repository):
+
     ```bash
     sudo chown -R pi:pi /home/pi/autonomous_mower/
     ```
 
-6. **Obtain a Google Maps JavaScript API key and Map ID following the instructions at the bottom of this README.**
+6. **Obtain a Google Maps JavaScript API Key and Map ID:**
 
-7. **Update and save `.env.example` as `.env` with all necessary information.**
+    Follow the steps outlined below to obtain and configure your Google Maps API credentials.
 
-8. **If using roboHat, take rp2040_code.py from the robohat_files directory and load it on the RP2040 and rename to code.py**
+7. **Update and Save `.env.example` as `.env`:**
 
-9. **Run `robot.py` to start the program:**
+    Populate the `.env` file with all necessary information, including your API keys and other configurations.
+
+8. **If Using roboHat:**
+
+    Take `rp2040_code.py` from the `robohat_files` directory, load it onto the RP2040, and rename it to `code.py`.
+
+9. **Run `robot.py` to Start the Program:**
+
     ```bash
-    python robot.py
+    python autonomous_mower/robot.py
     ```
 
-10. **Go to the web UI at `{hostname}.local:8080` to set up the robot boundaries and schedules as well as to see sensor data/controls.**
+10. **Access the Web UI:**
 
-### Steps to Obtain a Google Maps API Key and Map ID
+    Navigate to `http://{hostname}.local:8080` to set up the robot boundaries and schedules, as well as to view sensor data and controls.
 
-1. **Get a Google Maps API Key**:
+### **Option 2: Using Docker**
+
+Docker provides a consistent environment for running your application across different systems. Follow these steps to set up and run the project using Docker:
+
+#### **a. Prerequisites**
+
+- **Docker Installed**: Ensure Docker is installed on your system. You can download it from [here](https://www.docker.com/get-started).
+
+#### **b. Building the Docker Image**
+
+1. **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/acredsfan/autonomous_mower.git
+    ```
+
+2. **Navigate to the Project Directory:**
+
+    ```bash
+    cd autonomous_mower
+    ```
+
+3. **Build the Docker Image:**
+
+    ```bash
+    docker build -t autonomous_mower:latest .
+    ```
+
+    **Explanation:**
+    - `docker build`: Builds a Docker image from the Dockerfile.
+    - `-t autonomous_mower:latest`: Tags the image as `autonomous_mower` with the `latest` tag.
+    - `.`: Specifies the current directory as the build context.
+
+#### **c. Running the Docker Container**
+
+1. **Create a `.env` File:**
+
+    Copy the example environment variables to create your own `.env` file.
+
+    ```bash
+    cp .env.example .env
+    ```
+
+    **Populate `.env` with Necessary Variables:**
+
+    Open the `.env` file in a text editor and update it with your specific information:
+
+    ```
+    GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+    GOOGLE_MAPS_MAP_ID=your-google-maps-map-id
+    # Add other environment variables as needed
+    ```
+
+2. **Run the Docker Container:**
+
+    ```bash
+    docker run -d \
+      --name autonomous_mower_container \
+      -p 5000:5000 \
+      -p 8080:8080 \
+      --restart unless-stopped \
+      --env-file .env \
+      autonomous_mower:latest
+    ```
+
+    **Explanation:**
+    - `docker run`: Runs a new container from an image.
+    - `-d`: Runs the container in detached mode (in the background).
+    - `--name autonomous_mower_container`: Names the container for easier reference.
+    - `-p 5000:5000`: Maps port `5000` of the host to port `5000` of the container.
+    - `-p 8080:8080`: Maps port `8080` of the host to port `8080` of the container.
+    - `--restart unless-stopped`: Automatically restarts the container unless it is explicitly stopped.
+    - `--env-file .env`: Passes environment variables from the `.env` file to the container.
+    - `autonomous_mower:latest`: Specifies the image to use.
+
+3. **Verify the Container is Running:**
+
+    ```bash
+    docker ps
+    ```
+
+    You should see `autonomous_mower_container` listed as running.
+
+4. **Access the Application:**
+
+    Navigate to `http://{hostname}.local:8080` to access the web UI.
+
+#### **d. Managing the Docker Container**
+
+- **View Running Containers:**
+
+    ```bash
+    docker ps
+    ```
+
+- **Stop the Container:**
+
+    ```bash
+    docker stop autonomous_mower_container
+    ```
+
+- **Start the Container Again:**
+
+    ```bash
+    docker start autonomous_mower_container
+    ```
+
+- **View Logs:**
+
+    ```bash
+    docker logs -f autonomous_mower_container
+    ```
+
+- **Remove the Container:**
+
+    ```bash
+    docker rm -f autonomous_mower_container
+    ```
+
+#### **e. Updating the Application**
+
+To update the Docker image after making changes to your code:
+
+1. **Rebuild the Docker Image:**
+
+    ```bash
+    docker build -t autonomous_mower:latest .
+    ```
+
+2. **Restart the Container:**
+
+    ```bash
+    docker stop autonomous_mower_container
+    docker rm autonomous_mower_container
+    docker run -d \
+      --name autonomous_mower_container \
+      -p 5000:5000 \
+      -p 8080:8080 \
+      --restart unless-stopped \
+      --env-file .env \
+      autonomous_mower:latest
+    ```
+
+---
+
+## **Google Maps API Key and Map ID Configuration**
+
+### **Steps to Obtain a Google Maps API Key and Map ID**
+
+1. **Get a Google Maps API Key:**
    - Visit the [Google Cloud Console](https://console.cloud.google.com/).
    - Create or select a project.
    - Enable the **Maps JavaScript API** in the "APIs & Services > Library" section.
    - Navigate to **APIs & Services > Credentials**, and click **Create Credentials > API Key**.
    - Copy the generated API key.
 
-2. **Get a Map ID**:
+2. **Get a Map ID:**
    - In the Google Cloud Console, navigate to **Google Maps Platform > Maps**.
    - Click **Create Map ID**, provide a name, and configure any settings.
    - Copy the generated Map ID.
 
-3. **Update the `.env` File**:
+3. **Update the `.env` File:**
    - After obtaining your API key and Map ID, update the `.env` file with these values:
+
      ```
-     GOOGLE_MAPS_API_KEY=your-api-key
-     GOOGLE_MAPS_MAP_ID=your-map-id
+     GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+     GOOGLE_MAPS_MAP_ID=your-google-maps-map-id
      ```
 
-4. **Save and Restart**:
-   - After updating the `.env` file, save the changes and restart the application.
+4. **Save and Restart
