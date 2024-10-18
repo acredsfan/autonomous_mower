@@ -8,7 +8,7 @@ import json
 import sys
 import os
 import utm
-from pyngrok import ngrok # type: ignore
+from pyngrok import ngrok
 import paho.mqtt.client as mqtt
 import time
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
