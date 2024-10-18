@@ -1,19 +1,28 @@
+# Standard library imports
+import os
+import sys
+import datetime
+import json
+import threading
+import time
+
+# Modify sys.path to include the project root
+project_root = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..')
+)
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+# Third-party imports
+from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
-import datetime
-import threading
-from flask import Flask, render_template, request, jsonify
-import json
-import sys
-import os
 import utm
 from pyngrok import ngrok
 import paho.mqtt.client as mqtt
-import time
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
-                                            '..'))
-sys.path.append(project_root)
+
+# Local application imports
 from utilities import LoggerConfigInfo as LoggerConfig
 from hardware_interface.sensor_interface import get_sensor_interface
 from hardware_interface.blade_controller import BladeController
@@ -24,8 +33,8 @@ from obstacle_detection.local_obstacle_detection import start_processing
 from navigation_system.navigation import NavigationController
 from navigation_system.path_planning import PathPlanning
 from navigation_system.localization import Localization
-from hardware_interface.camera_instance import capture_frame
-from hardware_interface.camera_instance import start_server_thread
+from hardware_interface.camera_instance import capture_frame, start_server_thread
+
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
