@@ -6,13 +6,14 @@
 # To be copied to teh RP2040-zero on roboHAT
 
 import time
+
 import board
 import busio
+import digitalio
 import neopixel
+import rotaryio
 from pulseio import PulseIn
 from pwmio import PWMOut
-import digitalio
-import rotaryio
 
 # Customisation variables
 DEBUG = False

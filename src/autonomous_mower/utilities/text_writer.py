@@ -1,5 +1,6 @@
-from utilities import LoggerConfigInfo as LoggerConfig
 import os
+
+from utilities import LoggerConfigInfo as LoggerConfig
 
 logger = LoggerConfig.get_logger(__name__)
 

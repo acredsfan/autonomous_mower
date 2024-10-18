@@ -1,9 +1,10 @@
 # constants.py
 import json
+import os
+import sys
+
 from dotenv import load_dotenv
 from utilities import LoggerConfigInfo as LoggerConfig
-import sys
-import os
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -22,7 +23,7 @@ try:
 except FileNotFoundError:
     logging.error("Config file not found.")
     config = {}
-    
+
 try:
     with open("user_polygon.json") as f:
         polygon_coordinates = json.load(f)

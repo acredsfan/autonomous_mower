@@ -1,16 +1,21 @@
 import io
 import os
-import time
 import threading
+import time
 from threading import Condition
-import numpy as np
-import tflite_runtime.interpreter as tflite
-from dotenv import load_dotenv
-import requests
-from PIL import Image, ImageDraw, ImageFont
-from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.camera_instance import get_camera_instance, capture_frame
+
 import cv2
+import numpy as np
+import requests
+import tflite_runtime.interpreter as tflite  # type: ignore
+from dotenv import load_dotenv
+from PIL import Image, ImageDraw, ImageFont
+
+from src.autonomous_mower.hardware_interface.camera_instance import (
+    capture_frame,
+    get_camera_instance
+    )
+from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -21,7 +26,8 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
 MIN_CONF_THRESHOLD = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
-USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'False').lower() == 'true'
+USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'False').lower() == \
+    'true'
 
 # Initialize TFLite interpreter for local detection
 interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
@@ -63,7 +69,7 @@ def capture_frames():
         processed_frame = process_frame(frame)
         with frame_lock:
             saved_frame = processed_frame.copy()
-        img = Image.fromarray(processed_frame)
+        img = Image.fromarray(saved_frame)
         buf = io.BytesIO()
         """ Ensure all images are properly converted
             before saving to prevent errors """
@@ -112,7 +118,9 @@ def detect_drops_local(image):
     """
     image_resized = cv2.resize(image, (width, height))
     edges = cv2.Canny(image_resized, 100, 200)
-    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(edges,
+                                   cv2.RETR_TREE,
+                                   cv2.CHAIN_APPROX_SIMPLE)
     for contour in contours:
         area = cv2.contourArea(contour)
         if area > 1000:
@@ -166,7 +174,7 @@ def process_frame(frame):
 
     image = Image.fromarray(frame)
     if use_remote_detection:
-        obstacle_detected = detect_obstacles_remote(image)
+        detect_obstacles_remote(image)
     else:
         detected_objects = detect_obstacles_local(image)
         draw = ImageDraw.Draw(image)
@@ -178,7 +186,7 @@ def process_frame(frame):
             except IOError:
                 font = ImageFont.load_default()
             draw.text((10, 10), label, fill='red', font=font)
-        obstacle_detected = len(detected_objects) > 0
+        len(detected_objects) > 0
     return np.array(image)
 
 
@@ -228,7 +236,7 @@ def detect_drop():
     return drop_detected
 
 
-def draw_object_boxes_local()
+def draw_object_boxes_local():
     """
     Draw bounding boxes around detected objects.
     """
@@ -289,6 +297,7 @@ def overlay_text(image, text):
         font = ImageFont.load_default()
     draw.text((10, 10), text, fill='red', font=font)
     return image
+
 
 def stream_frame_with_overlays():
     """

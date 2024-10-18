@@ -2,7 +2,7 @@
 # Path: navigation_system\__init__.py
 
 # IMPORTS
-from .gps import GpsNmeaPositions, GpsLatestPosition, GpsPosition, GpsPlayer
+from .gps import GpsLatestPosition, GpsNmeaPositions, GpsPlayer, GpsPosition
 from .localization import Localization
 from .navigation import NavigationController
 

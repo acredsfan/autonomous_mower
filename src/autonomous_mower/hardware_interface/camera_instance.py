@@ -1,15 +1,12 @@
-from picamera2 import Picamera2  # type: ignore
-import socket
-from utilities import LoggerConfigInfo as LoggerConfig
-import threading
 import os
+import socket
+import threading
+
 import cv2
 from dotenv import load_dotenv
+from picamera2 import Picamera2  # type: ignore
 
-# Add the path to the sys path
-script_dir = os.path.dirname(__file__)
-abs_path = os.path.abspath(os.path.join(script_dir, '.'))
-os.sys.path.append(abs_path)
+from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
 
 # Load environment variables
 load_dotenv()

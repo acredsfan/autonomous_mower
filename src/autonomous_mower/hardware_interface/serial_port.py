@@ -1,12 +1,14 @@
-from utilities import LoggerConfigInfo
-from typing import Tuple
-import serial
-import serial.tools.list_ports
+import os
+import platform
 import threading
 import time
-import platform
+from typing import Tuple
+
+import serial
+import serial.tools.list_ports
 from dotenv import load_dotenv
-import os
+
+from src.autonomous_mower.utilities import LoggerConfigInfo
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
@@ -318,8 +320,8 @@ class SerialLineReader:
 
 
 if __name__ == "__main__":
-    import sys
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

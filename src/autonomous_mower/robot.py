@@ -1,18 +1,18 @@
-from utilities import LoggerConfigInfo as LoggerConfig
-from user_interface.web_interface.app import (
-    start_web_interface,
-    position_reader,
-    start_mqtt_client
-)
-from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.gpio_manager import GPIOManager
-from src.autonomous_mower.obstacle_mapper import ObstacleMapper
-from navigation_system.localization import Localization
+import os
+import sys
 import threading
 import time
-import sys
-import os
+
+from hardware_interface.blade_controller import BladeController
+from hardware_interface.gpio_manager import GPIOManager
+from hardware_interface.robohat import RoboHATDriver
+from navigation_system.localization import Localization
+from user_interface.web_interface.app import (position_reader,
+                                              start_mqtt_client,
+                                              start_web_interface)
+from utilities import LoggerConfigInfo as LoggerConfig
+
+from src.autonomous_mower.obstacle_mapper import ObstacleMapper
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))

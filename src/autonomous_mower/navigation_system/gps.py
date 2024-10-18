@@ -1,19 +1,14 @@
 import argparse
-from functools import reduce
 import operator
 import threading
+import time
+from functools import reduce
+
 import pynmea2
 import utm
-import time
-import os
-import sys
 
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.append(project_root)
-
-from utilities import CsvLogger
-from utilities import LoggerConfigInfo as LoggerConfig
+from src.autonomous_mower.utilities import CsvLogger
+from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
@@ -39,7 +34,8 @@ class SingletonMeta(type):
 
 class GpsNmeaPositions(metaclass=SingletonMeta):
     """
-    Converts array of NMEA sentences into array of (easting, northing) positions.
+    Converts array of NMEA sentences into array
+    of (easting, northing) positions.
     """
     def __init__(self, debug=False):
         self.debug = debug
@@ -74,12 +70,12 @@ class GpsPosition(metaclass=SingletonMeta):
     def _read_gps(self):
         while self.running:
             try:
-                #logger.debug("Reading GPS data...")
+                # logger.debug("Reading GPS data...")
                 positions = self.run()
                 if positions:
                     with self.lock:
                         self.position = positions
-                    #logger.debug(f"New GPS position: {positions}")
+                    # logger.debug(f"New GPS position: {positions}")
                 else:
                     logger.debug("No valid GPS position received.")
                 time.sleep(1)  # Adjust as needed
@@ -184,7 +180,9 @@ class GpsPlayer(metaclass=SingletonMeta):
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
-                            nmea_sentences.append((next_nmea_time, next_nmea[1]))
+                            nmea_sentences.append(
+                                (next_nmea_time, next_nmea[1])
+                            )
                             self.index += 1
         return nmea_sentences
 
@@ -217,18 +215,24 @@ def parseGpsPosition(line, debug=False):
     if message in ["GPRMC", "GNRMC"]:
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
-            logger.info(f"NMEA checksum does not match: {nmea_checksum} != {calculated_checksum}")
+            logger.info(
+                f"NMEA checksum does not match: {nmea_checksum} != "
+                f"{calculated_checksum}"
+            )
             return None
 
         if debug:
             try:
-                msg = pynmea2.parse(line)
+                pynmea2.parse(line)
             except pynmea2.ParseError as e:
                 logger.error(f'NMEA parse error detected: {e}')
                 return None
 
         if nmea_parts[2] == 'V':
-            logger.info("GPS receiver warning; position not valid. Ignoring invalid position.")
+            logger.info(
+                "GPS receiver warning; position not valid. "
+                "Ignoring invalid position."
+            )
             return None
 
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
@@ -236,15 +240,27 @@ def parseGpsPosition(line, debug=False):
 
         # if debug:
         #     if hasattr(msg, 'longitude') and msg.longitude != longitude:
-        #         logger.info(f"Longitude mismatch {msg.longitude} != {longitude}")
+        #         logger.info(
+        #             f"Longitude mismatch {msg.longitude} != {longitude}"
+        #         )
         #     if hasattr(msg, 'latitude') and msg.latitude != latitude:
-        #         logger.info(f"Latitude mismatch {msg.latitude} != {latitude}")
+        #         logger.info(
+        #             f"Latitude mismatch {msg.latitude} != {latitude}"
+        #         )
 
         utm_position = utm.from_latlon(latitude, longitude)
         # if debug:
-        #     logger.info(f"UTM easting = {utm_position[0]}, UTM northing = {utm_position[1]}")
+        #     logger.info(
+        #         f"UTM easting = {utm_position[0]}, "
+        #         f"UTM northing = {utm_position[1]}"
+        #     )
 
-        return float(utm_position[0]), float(utm_position[1]), utm_position[2], utm_position[3]
+        return (
+            float(utm_position[0]),
+            float(utm_position[1]),
+            utm_position[2],
+            utm_position[3]
+        )
 
     else:
         pass
@@ -284,8 +300,9 @@ or optionally record a set of waypoints'''
 
 if __name__ == "__main__":
     import math
-    import numpy as np
     import sys
+
+    import numpy as np
     import readchar
     from hardware_interface.serial_port import SerialPort
 
@@ -436,8 +453,9 @@ if __name__ == "__main__":
             """
             Draw the waypoint ellipsoid
             """
-            from matplotlib.patches import Ellipse, Rectangle
             import matplotlib.pyplot as plt
+            from matplotlib.patches import Ellipse, Rectangle
+
             # define Matplotlib figure and axis
             ax = plt.subplot(111, aspect='equal')
 

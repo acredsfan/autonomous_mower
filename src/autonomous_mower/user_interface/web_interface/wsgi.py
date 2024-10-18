@@ -1,7 +1,8 @@
-from utilities import LoggerConfigInfo as LoggerConfig
-from user_interface.web_interface.app import start_web_interface
-import sys
 import os
+import sys
+
+from user_interface.web_interface.app import start_web_interface
+from utilities import LoggerConfigInfo as LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 

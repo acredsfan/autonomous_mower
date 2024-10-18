@@ -1,5 +1,6 @@
 import barbudor_ina3221.full as INA3221
-from utilities import LoggerConfigDebug as LoggerConfig
+
+from src.autonomous_mower.utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -52,7 +53,7 @@ class INA3221Sensor:
         except Exception as e:
             logging.error(f"Error reading battery charge level: {e}")
             return "Error"
-        
+
 
 if __name__ == "__main__":
     # Initialize the INA3221 sensor

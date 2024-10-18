@@ -1,11 +1,14 @@
-from src.autonomous_mower.constants import polygon_coordinates, min_lat, max_lat, min_lng, max_lng
-from navigation_system.gps import GpsNmeaPositions, GpsLatestPosition
-import math
-import time
 import json
-import sys
+import math
 import os
+import sys
+import time
+
+from navigation_system.gps import GpsLatestPosition, GpsNmeaPositions
 from utilities import LoggerConfigDebug as LoggerConfig
+
+from src.autonomous_mower.constants import (max_lat, max_lng, min_lat, min_lng,
+                                            polygon_coordinates)
 
 # Initialize logger
 LoggerConfig.configure_logging()
@@ -46,7 +49,8 @@ class Localization:
 
     def get_sensor_interface(self):
         if self.sensor_interface is None:
-            from hardware_interface.sensor_interface import get_sensor_interface
+            from hardware_interface.sensor_interface import \
+                get_sensor_interface
             self.sensor_interface = get_sensor_interface()
         return self.sensor_interface
 

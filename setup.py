@@ -37,7 +37,8 @@ setup(
         'utm',
         'neopixel',
         'readchar',
-        'paho-mqtt'
+        'paho-mqtt',
+        'gpiod'
     ],
     entry_points={
         'console_scripts': [

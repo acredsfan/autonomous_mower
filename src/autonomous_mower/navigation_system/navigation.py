@@ -1,7 +1,8 @@
 import logging
-import time
 import math
-from math import radians, sin, cos, atan2, sqrt
+import time
+from math import atan2, cos, radians, sin, sqrt
+
 import utm
 from hardware_interface.robohat import RoboHATDriver
 from navigation_system.gps import GpsLatestPosition, GpsPosition
@@ -16,7 +17,9 @@ except Exception as e:
     logger.error(f"Failed to initialize GPS: {e}")
     gps_position_instance = None
 
-gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
+gps_latest_position = GpsLatestPosition(
+    gps_position_instance=gps_position_instance
+    )
 robohat_driver = RoboHATDriver()
 
 
@@ -25,7 +28,8 @@ class NavigationController:
     Handles navigation logic separately from the motor controller.
     """
 
-    def __init__(self, gps_latest_position, robohat_driver, sensor_interface, debug=False):
+    def __init__(self, gps_latest_position, robohat_driver,
+                 sensor_interface, debug=False):
         self.gps_latest_position = gps_latest_position
         self.robohat_driver = robohat_driver
         self.sensor_interface = sensor_interface
@@ -40,7 +44,8 @@ class NavigationController:
                 logger.error('No valid GPS data available.')
                 return False
 
-            while not self.has_reached_location(current_position, target_location):
+            while not self.has_reached_location(current_position,
+                                                target_location):
                 steering, throttle = self.calculate_navigation_commands(
                     current_position, target_location
                 )
@@ -74,7 +79,8 @@ class NavigationController:
                 return None
 
             ts, easting, northing, zone_number, zone_letter = position
-            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+            lat, lon = utm.to_latlon(easting, northing,
+                                     zone_number, zone_letter)
             return (lat, lon)
 
         except Exception as e:
@@ -126,13 +132,16 @@ class NavigationController:
         lat2, lon2 = map(radians, target_location)
         delta_lat = lat2 - lat1
         delta_lon = lon2 - lon1
-        a = sin(delta_lat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
+        a = (sin(delta_lat / 2) ** 2 +
+             cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2)
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         distance = R * c  # Distance in meters
         return distance
 
     @staticmethod
-    def has_reached_location(current_position, target_location, tolerance=0.0001):
+    def has_reached_location(current_position,
+                             target_location,
+                             tolerance=0.0001):
         """Determines if the robot has reached the target location."""
         lat1, lon1 = current_position
         lat2, lon2 = target_location

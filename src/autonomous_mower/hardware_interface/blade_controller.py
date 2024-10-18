@@ -1,7 +1,8 @@
-from .gpio_manager import GPIOManager
 import threading
 import time
-from utilities import LoggerConfigDebug as LoggerConfig
+
+from src.autonomous_mower.hardware_interface.gpio_manager import GPIOManager
+from src.autonomous_mower.utilities import LoggerConfigDebug as LoggerConfig
 
 # Initialize logging
 logging = LoggerConfig.get_logger(__name__)

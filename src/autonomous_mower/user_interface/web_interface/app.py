@@ -1,40 +1,42 @@
 # Standard library imports
-import os
-import sys
 import datetime
 import json
+import os
 import threading
 import time
-
-# Modify sys.path to include the project root
-project_root = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..')
-)
-if project_root not in sys.path:
-    sys.path.append(project_root)
+import paho.mqtt.client as mqtt
+import utm
+from dotenv import load_dotenv
 
 # Third-party imports
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
-from dotenv import load_dotenv
-import utm
 from pyngrok import ngrok
-import paho.mqtt.client as mqtt
-
 # Local application imports
-from utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.sensor_interface import get_sensor_interface
-from hardware_interface.blade_controller import BladeController
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.serial_port import SerialPort
-from navigation_system.gps import GpsPosition, GpsLatestPosition
-from obstacle_detection.local_obstacle_detection import start_processing
-from navigation_system.navigation import NavigationController
-from navigation_system.path_planning import PathPlanning
-from navigation_system.localization import Localization
-from hardware_interface.camera_instance import capture_frame, start_server_thread
-
+from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
+from src.autonomous_mower.hardware_interface.blade_controller import (
+    BladeController
+)
+from src.autonomous_mower.hardware_interface.camera_instance import (
+    capture_frame,
+    start_server_thread
+)
+from src.autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from src.autonomous_mower.hardware_interface.sensor_interface import (
+    get_sensor_interface
+)
+from src.autonomous_mower.hardware_interface.serial_port import SerialPort
+from src.autonomous_mower.navigation_system.gps import (
+    GpsLatestPosition,
+    GpsPosition
+)
+from src.autonomous_mower.navigation_system.localization import Localization
+from src.autonomous_mower.navigation_system.navigation import (
+    NavigationController
+)
+from src.autonomous_mower.navigation_system.path_planning import PathPlanning
+from src.autonomous_mower.obstacle_detection.local_obstacle_detection import start_processing
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

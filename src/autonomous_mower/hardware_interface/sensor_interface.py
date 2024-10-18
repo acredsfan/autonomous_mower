@@ -1,16 +1,21 @@
-import threading
-from utilities import LoggerConfigDebug
-import board
-import busio
-import time
 import signal
 import sys
+import threading
+import time
 
-from .bme280_sensor import BME280Sensor
-from .bno085_sensor import BNO085Sensor
-from .ina3221_sensor import INA3221Sensor
-from .vl53l0x_sensor import VL53L0XSensors
-from .gpio_manager import GPIOManager
+import board
+import busio
+
+from src.autonomous_mower.utilities import LoggerConfigDebug
+from src.autonomous_mower.hardware_interface.bme280_sensor import BME280Sensor
+from src.autonomous_mower.hardware_interface.bno085_sensor import BNO085Sensor
+from src.autonomous_mower.hardware_interface.gpio_manager import GPIOManager
+from src.autonomous_mower.hardware_interface.ina3221_sensor import (
+    INA3221Sensor
+)
+from src.autonomous_mower.hardware_interface.vl53l0x_sensor import (
+    VL53L0XSensors
+)
 
 logging = LoggerConfigDebug.get_logger(__name__)
 

@@ -1,13 +1,12 @@
 # avoidance_algorithm.py
 
 import threading
-from src.autonomous_mower.constants import (
-    CAMERA_OBSTACLE_THRESHOLD,
-    MIN_DISTANCE_THRESHOLD,
-    AVOIDANCE_DELAY
-)
 import time
-from utilities import LoggerConfigDebug as LoggerConfig
+
+from src.autonomous_mower.utilities import LoggerConfigDebug as LoggerConfig
+from src.autonomous_mower.constants import (AVOIDANCE_DELAY,
+                                            CAMERA_OBSTACLE_THRESHOLD,
+                                            MIN_DISTANCE_THRESHOLD)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -56,7 +55,7 @@ class AvoidanceAlgorithm:
         self.dropoff_detected = False
 
     def check_camera_obstacles_and_dropoffs(self):
-        """Check for obstacles and drop-offs using the camera and 
+        """Check for obstacles and drop-offs using the camera and
         update the obstacle_detected attribute."""
         obstacles = self.camera.classify_obstacle()
         dropoff_detected = self.camera.detect_dropoff()
