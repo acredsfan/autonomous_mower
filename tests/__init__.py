@@ -3,7 +3,7 @@
 
 # IMPORTS
 from navigation_system import TestNavigationSystem
-from hardware_interface import TestHardwareInterface
+from autonomous_mower.hardware_interface import TestHardwareInterface
 from obstacle_detection import TestObstacleDetection
 from user_interface import TestUserInterface
 

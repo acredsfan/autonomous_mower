@@ -15,18 +15,18 @@ from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 # Local application imports
 from autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
-from hardware_interface.blade_controller import (
+from autonomous_mower.hardware_interface.blade_controller import (
     BladeController
 )
-from hardware_interface.camera_instance import (
+from autonomous_mower.hardware_interface.camera_instance import (
     capture_frame,
     start_server_thread
 )
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.sensor_interface import (
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.hardware_interface.sensor_interface import (
     get_sensor_interface
 )
-from hardware_interface.serial_port import SerialPort
+from autonomous_mower.hardware_interface.serial_port import SerialPort
 from navigation_system.gps import (
     GpsLatestPosition,
     GpsPosition

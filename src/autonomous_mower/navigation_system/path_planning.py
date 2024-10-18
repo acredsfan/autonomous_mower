@@ -10,7 +10,7 @@ import numpy as np
 import utm
 # Import GPS and navigation modules
 from gps import GpsLatestPosition, GpsPosition
-from hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
 from navigation import NavigationController
 from obstacle_detection.local_obstacle_detection import (detect_drop,
                                                          detect_obstacle)
