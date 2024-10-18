@@ -1,7 +1,7 @@
 
 import gpiod
 
-from autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
+from utilities import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
