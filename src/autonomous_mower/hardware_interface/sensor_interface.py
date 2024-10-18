@@ -6,7 +6,7 @@ import time
 import board
 import busio
 
-from src.autonomous_mower.utilities import LoggerConfigDebug
+from utilities import LoggerConfigDebug
 from .bme280_sensor import BME280Sensor
 from .bno085_sensor import BNO085Sensor
 from .gpio_manager import GPIOManager

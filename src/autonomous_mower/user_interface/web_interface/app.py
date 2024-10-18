@@ -14,29 +14,29 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 # Local application imports
-from src.autonomous_mower.utilities import LoggerConfigInfo as LoggerConfig
-from src.autonomous_mower.hardware_interface.blade_controller import (
+from utilities import LoggerConfigInfo as LoggerConfig
+from hardware_interface.blade_controller import (
     BladeController
 )
-from src.autonomous_mower.hardware_interface.camera_instance import (
+from hardware_interface.camera_instance import (
     capture_frame,
     start_server_thread
 )
-from src.autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from src.autonomous_mower.hardware_interface.sensor_interface import (
+from hardware_interface.robohat import RoboHATDriver
+from hardware_interface.sensor_interface import (
     get_sensor_interface
 )
-from src.autonomous_mower.hardware_interface.serial_port import SerialPort
-from src.autonomous_mower.navigation_system.gps import (
+from hardware_interface.serial_port import SerialPort
+from navigation_system.gps import (
     GpsLatestPosition,
     GpsPosition
 )
-from src.autonomous_mower.navigation_system.localization import Localization
-from src.autonomous_mower.navigation_system.navigation import (
+from navigation_system.localization import Localization
+from navigation_system.navigation import (
     NavigationController
 )
-from src.autonomous_mower.navigation_system.path_planning import PathPlanning
-from src.autonomous_mower.obstacle_detection.local_obstacle_detection import (
+from navigation_system.path_planning import PathPlanning
+from obstacle_detection.local_obstacle_detection import (
     start_processing
 )
 
@@ -253,14 +253,14 @@ def video_disconnect():
 @app.route('/start-mowing', methods=['POST'])
 def start_mowing():
     # Trigger start mowing actions
-    import src.autonomous_mower.robot as robot
+    import robot as robot
     robot.start_mowing()
     return jsonify({'message': 'Mower started.'})
 
 
 @app.route('/stop-mowing', methods=['POST'])
 def stop_mowing():
-    import src.autonomous_mower.robot as robot
+    import robot as robot
     robot.stop_mowing()
     return jsonify({'message': 'Mower stopped.'})
 

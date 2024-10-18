@@ -3,8 +3,8 @@
 import threading
 import time
 
-from src.autonomous_mower.utilities import LoggerConfigDebug as LoggerConfig
-from src.autonomous_mower.constants import (AVOIDANCE_DELAY,
+from utilities import LoggerConfigDebug as LoggerConfig
+from constants import (AVOIDANCE_DELAY,
                                             CAMERA_OBSTACLE_THRESHOLD,
                                             MIN_DISTANCE_THRESHOLD)
 
