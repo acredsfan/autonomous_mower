@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libportaudio2 \
     libportaudiocpp0 \
     portaudio19-dev \
-    pyton3-picamera2\
+    python3-picamera2\
     wget \
     && rm -rf /var/lib/apt/lists/*
 
