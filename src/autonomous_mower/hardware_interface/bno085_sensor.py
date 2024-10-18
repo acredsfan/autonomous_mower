@@ -1,5 +1,6 @@
 import math
 import os
+import sys
 
 import adafruit_bno08x
 import serial
@@ -17,9 +18,27 @@ load_dotenv()
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA4')
 print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 
-uart = serial.Serial(IMU_SERIAL_PORT, baudrate=115200, timeout=1)
-sensor = BNO08X_UART(uart)
+# Define baud rates to try
+BAUD_RATES = [230400, 115200]
 
+sensor = None
+
+for baud in BAUD_RATES:
+    try:
+        print(f"Attempting to open UART port {IMU_SERIAL_PORT} at baudrate {baud}")
+        uart = serial.Serial(IMU_SERIAL_PORT, baudrate=baud, timeout=1)
+        print("UART port opened successfully.")
+        sensor = BNO08X_UART(uart)
+        print("Sensor initialized successfully.")
+        break  # Exit the loop if successful
+    except serial.SerialException as e:
+        logging.error(f"SerialException: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+
+if sensor is None:
+    logging.error("Failed to initialize BNO08X sensor. Exiting.")
+    sys.exit(1)
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor interaction"""
@@ -74,6 +93,7 @@ class BNO085Sensor:
             return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
         except Exception as e:
             logging.error(f"Error calculating Quaternion: {e}")
+            return {}
 
     @staticmethod
     def calculate_heading(sensor):
