@@ -6,7 +6,7 @@ import cv2
 from dotenv import load_dotenv
 from picamera2 import Picamera2  # type: ignore
 
-from utilities import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigConfigInfo as LoggerConfig
 
 # Load environment variables
 load_dotenv()

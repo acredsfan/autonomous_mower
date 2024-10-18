@@ -5,7 +5,7 @@ import sys
 import time
 
 from navigation_system.gps import GpsLatestPosition, GpsNmeaPositions
-from utilities import LoggerConfigDebug as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigConfigDebug as LoggerConfig
 
 from constants import (max_lat, max_lng, min_lat, min_lng,
                        polygon_coordinates)

@@ -2,7 +2,7 @@ import time
 
 import adafruit_vl53l0x
 
-from utilities import LoggerConfigDebug
+from autonomous_mower.utilities.logger_config import LoggerConfigConfigDebug
 
 # Initialize logger
 logging = LoggerConfigDebug.get_logger(__name__)

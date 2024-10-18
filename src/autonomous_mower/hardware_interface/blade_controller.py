@@ -2,7 +2,7 @@ import threading
 import time
 
 from .gpio_manager import GPIOManager
-from utilities import LoggerConfigDebug as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigConfigDebug as LoggerConfig
 
 # Initialize logging
 logging = LoggerConfig.get_logger(__name__)

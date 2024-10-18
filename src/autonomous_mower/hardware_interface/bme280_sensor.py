@@ -1,6 +1,6 @@
 from adafruit_bme280 import basic as adafruit_bme280
 
-from utilities import LoggerConfigDebug as LoggerConfig
+from autonomous_mower.utilities.logger_config import LoggerConfigConfigDebug as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
