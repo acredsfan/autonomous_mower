@@ -4,11 +4,16 @@ import os
 import sys
 import time
 
-from navigation_system.gps import GpsLatestPosition, GpsNmeaPositions
-from utilities import LoggerConfigDebug as LoggerConfig
+from autonomous_mower.navigation_system.gps import (
+    GpsLatestPosition,
+    GpsNmeaPositions
+)
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
-from src.autonomous_mower.constants import (max_lat, max_lng, min_lat, min_lng,
-                                            polygon_coordinates)
+from autonomous_mower.constants import (max_lat, max_lng, min_lat, min_lng,
+                                        polygon_coordinates)
 
 # Initialize logger
 LoggerConfig.configure_logging()

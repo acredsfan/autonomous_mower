@@ -1,13 +1,18 @@
-import logging
 import math
 import time
 from math import atan2, cos, radians, sin, sqrt
 
 import utm
-from hardware_interface.robohat import RoboHATDriver
-from navigation_system.gps import GpsLatestPosition, GpsPosition
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.navigation_system.gps import (
+    GpsLatestPosition,
+    GpsPosition
+)
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
-logger = logging.getLogger(__name__)
+logger = LoggerConfig.getLogger(__name__)
 
 # Initialize GPS and RoboHAT components safely
 try:

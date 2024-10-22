@@ -8,13 +8,15 @@ import serial
 import serial.tools.list_ports
 from dotenv import load_dotenv
 
-from src.autonomous_mower.utilities import LoggerConfigInfo
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
 
 
-logger = LoggerConfigInfo.get_logger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 
 GPS_PORT = os.getenv('GPS_SERIAL_PORT')
