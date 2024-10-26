@@ -14,7 +14,7 @@ load_dotenv()
 
 # Open config file in root folder
 try:
-    with open("config.json") as f:
+    with open("src/config.json") as f:
         config = json.load(f)
 except FileNotFoundError:
     logging.error("Config file not found.")
