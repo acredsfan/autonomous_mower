@@ -23,7 +23,7 @@ from autonomous_mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
                                         MM1_STEERING_MID, MM1_STOPPED_PWM)
 
 
-logger = LoggerConfig.getLogger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 
 class RoboHATController:
