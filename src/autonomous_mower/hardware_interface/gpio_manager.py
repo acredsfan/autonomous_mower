@@ -26,8 +26,8 @@ class GPIOManager:
         :return: Tuple (shutdown_lines, interrupt_lines)
         """
         chip = gpiod.Chip('/dev/gpiochip0')
-        shutdown_lines = [chip.get_info(pin) for pin in shutdown_pins]
-        interrupt_lines = [chip.get_info(pin) for pin in interrupt_pins]
+        shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
+        interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
 
         for line in shutdown_lines:
             line.request(consumer='shutdown', type=gpiod.LINE_REQ_DIR_OUT)
