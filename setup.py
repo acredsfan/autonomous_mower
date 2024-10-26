@@ -38,7 +38,8 @@ setup(
         'neopixel',
         'readchar',
         'paho-mqtt',
-        'gpiod'
+        'gpiod',
+        'pyngrok'
     ],
     entry_points={
         'console_scripts': [
