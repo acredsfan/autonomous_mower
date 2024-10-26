@@ -1,6 +1,8 @@
 import os
 
-from utilities import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
 logger = LoggerConfig.get_logger(__name__)
 

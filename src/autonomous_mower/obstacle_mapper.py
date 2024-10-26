@@ -1,14 +1,13 @@
 import json
 import logging
 import time
-
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.sensor_interface import SensorInterface
-from navigation_system.localization import Localization
-from navigation_system.navigation import NavigationController
 from shapely.geometry import Point, Polygon
 
-from src.autonomous_mower.constants import (MIN_DISTANCE_THRESHOLD,
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.hardware_interface.sensor_interface import SensorInterface
+from autonomous_mower.navigation_system.localization import Localization
+from autonomous_mower.navigation_system.navigation import NavigationController
+from autonomous_mower.constants import (MIN_DISTANCE_THRESHOLD,
                                             polygon_coordinates)
 
 logging.basicConfig(level=logging.INFO)
