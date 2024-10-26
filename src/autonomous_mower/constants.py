@@ -14,7 +14,7 @@ logging = LoggerConfig.get_logger(__name__)
 load_dotenv()
 
 # Set up base directory for consistent file referencing
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = Path(__file__).resolve().parents[0]
 config_path = BASE_DIR / "config.json"
 polygon_path = BASE_DIR / "user_polygon.json"
 
