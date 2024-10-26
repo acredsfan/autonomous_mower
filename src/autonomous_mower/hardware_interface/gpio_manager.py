@@ -25,7 +25,7 @@ class GPIOManager:
         :param interrupt_pins: List of GPIO pins for interrupt functionality.
         :return: Tuple (shutdown_lines, interrupt_lines)
         """
-        chip = gpiod.Chip('gpiochip0')
+        chip = gpiod.Chip('/dev/gpiochip0')
         shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
         interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
 
