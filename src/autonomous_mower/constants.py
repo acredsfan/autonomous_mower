@@ -1,16 +1,10 @@
 # constants.py
 import json
-import os
-import sys
 
 from dotenv import load_dotenv
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
-
-# Add the path to the sys path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-print(sys.path)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
