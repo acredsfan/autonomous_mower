@@ -39,7 +39,8 @@ setup(
         'readchar',
         'paho-mqtt',
         'gpiod',
-        'pyngrok'
+        'pyngrok',
+        'picamera2'
     ],
     entry_points={
         'console_scripts': [
