@@ -21,6 +21,7 @@ print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 
 uart = serial.Serial(IMU_SERIAL_PORT, baudrate=3000000, timeout=0.1)
 print("Serial port initialized.")
+print("Initializing BNO085 sensor...")
 sensor = BNO08X_UART(uart)
 print("BNO085 sensor initialized.")
 
