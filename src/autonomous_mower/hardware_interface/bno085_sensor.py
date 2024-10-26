@@ -17,9 +17,12 @@ logging = LoggerConfig.get_logger(__name__)
 load_dotenv()
 # Get the UART port from the environment variables
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA4')
+print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 
 uart = serial.Serial(IMU_SERIAL_PORT, baudrate=3000000, timeout=0.1)
+print("Serial port initialized.")
 sensor = BNO08X_UART(uart)
+print("BNO085 sensor initialized.")
 
 
 class BNO085Sensor:
