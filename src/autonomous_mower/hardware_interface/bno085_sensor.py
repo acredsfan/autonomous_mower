@@ -6,7 +6,9 @@ import serial
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
 
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigDebug as LoggerConfig
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

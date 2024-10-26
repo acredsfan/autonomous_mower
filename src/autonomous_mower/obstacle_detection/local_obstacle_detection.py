@@ -15,7 +15,9 @@ from autonomous_mower.hardware_interface.camera_instance import (
     capture_frame,
     get_camera_instance
     )
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigDebug as LoggerConfig
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
