@@ -1,5 +1,6 @@
 # constants.py
 import json
+from pathlib import Path
 
 from dotenv import load_dotenv
 from autonomous_mower.utilities.logger_config import (
@@ -11,6 +12,11 @@ logging = LoggerConfig.get_logger(__name__)
 
 # Load .env variables
 load_dotenv()
+
+# Set up base directory for consistent file referencing
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+config_path = BASE_DIR / "config.json"
+polygon_path = BASE_DIR / "user_polygon.json"
 
 # Open config file in root folder
 try:
