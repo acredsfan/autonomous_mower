@@ -19,7 +19,7 @@ load_dotenv()
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA4')
 print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 
-uart = serial.Serial(IMU_SERIAL_PORT, baudrate=3000000, timeout=0.1)
+uart = serial.Serial(IMU_SERIAL_PORT, baudrate=115200, timeout=1)
 print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
 sensor = BNO08X_UART(uart)
