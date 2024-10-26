@@ -12,7 +12,7 @@ from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 
-logger = LoggerConfig.getLogger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 # Initialize GPS and RoboHAT components safely
 try:
