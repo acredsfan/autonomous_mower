@@ -18,19 +18,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 config_path = BASE_DIR / "config.json"
 polygon_path = BASE_DIR / "user_polygon.json"
 
-# Open config file in root folder
+# Open config file
 try:
-    with open("src/config.json") as f:
+    with open(config_path) as f:
         config = json.load(f)
 except FileNotFoundError:
     logging.error("Config file not found.")
     config = {}
 
+# Open user polygon config file
 try:
-    with open("user_polygon.json") as f:
+    with open(polygon_path) as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    print("User polygon config file not found.")
+    logging.error("User polygon config file not found.")
     polygon_coordinates = []
 
 # Constants for the project
