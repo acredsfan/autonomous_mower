@@ -22,7 +22,19 @@ print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 uart = serial.Serial(IMU_SERIAL_PORT, baudrate=115200, timeout=1)
 print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
-sensor = BNO08X_UART(uart)
+# Try for 30 seconds to initialize the BNO085 sensor
+for _ in range(30):
+    try:
+        sensor = BNO08X_UART(uart)
+        print("BNO085 sensor initialized.")
+        break
+    except Exception as e:
+        print(f"Error initializing BNO085 sensor: {e}")
+        print("Retrying...")
+        continue
+else:
+    print("Failed to initialize BNO085 sensor.")
+    raise Exception("Failed to initialize BNO085 sensor.")
 print("BNO085 sensor initialized.")
 
 
