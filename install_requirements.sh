@@ -8,14 +8,14 @@ echo "Installing system dependencies..."
 sudo apt-get update
 sudo apt-get install -y libatlas-base-dev libhdf5-dev libhdf5-serial-dev \
                         python3-dev python3-pip i2c-tools gpsd gpsd-clients \
-                        python3-gps python3-libgpiod libportaudio2 \
+                        python3-gps libportaudio2 \
                         libportaudiocpp0 portaudio19-dev \
 
 echo "System dependencies installed successfully."
 
 # Step 2: Create and activate a virtual environment
 echo "Creating virtual environment..."
-python3 -m venv venv --system-site-packages
+python3 -m venv venv --system-site-packagesy
 
 echo "Virtual environment created."
 

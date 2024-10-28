@@ -88,7 +88,7 @@ Follow these steps to set up the project using the provided shell script:
 3. **Make `install_requirements.sh` Executable:**
 
     ```bash
-    chmod +x install_requirements.sh
+    sudo chmod +x install_requirements.sh
     ```
 
 4. **Run the Installation Script:**
