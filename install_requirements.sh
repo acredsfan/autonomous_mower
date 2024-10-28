@@ -9,7 +9,7 @@ sudo apt-get update
 sudo apt-get install -y libatlas-base-dev libhdf5-dev libhdf5-serial-dev \
                         python3-dev python3-pip i2c-tools gpsd gpsd-clients \
                         python3-gps python3-libgpiod libportaudio2 \
-                        libportaudiocpp0 portaudio19-dev picamera2
+                        libportaudiocpp0 portaudio19-dev \
 
 echo "System dependencies installed successfully."
 

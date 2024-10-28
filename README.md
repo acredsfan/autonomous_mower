@@ -126,7 +126,7 @@ Follow these steps to set up the project using the provided shell script:
 9. **Run `robot.py` to Start the Program:**
 
     ```bash
-    python autonomous_mower/robot.py
+    python -m autonomous_mower.robot
     ```
 
 10. **Access the Web UI:**
