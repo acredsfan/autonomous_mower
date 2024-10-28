@@ -15,7 +15,7 @@ echo "System dependencies installed successfully."
 
 # Step 2: Create and activate a virtual environment
 echo "Creating virtual environment..."
-python3 -m venv venv
+python3 -m venv venv --system-site-packages
 
 echo "Virtual environment created."
 
