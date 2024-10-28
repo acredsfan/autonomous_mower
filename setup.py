@@ -38,16 +38,18 @@ setup(
         'neopixel',
         'readchar',
         'paho-mqtt',
-        'gpiod'
+        'gpiod',
+        'pyngrok',
+        'picamera2'
     ],
     entry_points={
         'console_scripts': [
             'autonomous_mower=autonomous_mower.robot:main',
         ],
     },
-    author='Your Name',
-    author_email='your.email@example.com',
-    description='Autonomous Mower Project',
+    author='Aaron Link',
+    author_email='acredsfan@gmail.com',
+    description='Raspberry Pi Powered Autonomous Mower Project',
     url='https://github.com/acredsfan/autonomous_mower',
     classifiers=[
         'Programming Language :: Python :: 3',

@@ -1,7 +1,6 @@
 # path_planning.py
 
 import json
-import logging
 import math
 import os
 
@@ -9,15 +8,22 @@ import cv2
 import numpy as np
 import utm
 # Import GPS and navigation modules
-from gps import GpsLatestPosition, GpsPosition
-from hardware_interface.robohat import RoboHATDriver
-from navigation import NavigationController
-from obstacle_detection.local_obstacle_detection import (detect_drop,
-                                                         detect_obstacle)
+from autonomous_mower.navigation_system.gps import (
+    GpsLatestPosition,
+    GpsPosition
+    )
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.navigation_system.navigation import NavigationController
+from autonomous_mower.obstacle_detection.local_obstacle_detection import (
+    detect_drop,
+    detect_obstacle
+    )
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+    )
 
 # Initialize logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 # Initialize GPS position instance
 gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0', debug=False)

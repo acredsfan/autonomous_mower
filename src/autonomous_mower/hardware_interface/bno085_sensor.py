@@ -1,13 +1,14 @@
 import math
 import os
-import sys
 
 import adafruit_bno08x
 import serial
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
 
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigDebug as LoggerConfig
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -18,27 +19,24 @@ load_dotenv()
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA4')
 print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 
-# Define baud rates to try
-BAUD_RATES = [230400, 115200]
-
-sensor = None
-
-for baud in BAUD_RATES:
+uart = serial.Serial(IMU_SERIAL_PORT, baudrate=115200, timeout=1)
+print("Serial port initialized.")
+print("Initializing BNO085 sensor...")
+# Try for 30 seconds to initialize the BNO085 sensor
+for _ in range(30):
     try:
-        print(f"Attempting to open UART port {IMU_SERIAL_PORT} at baudrate {baud}")
-        uart = serial.Serial(IMU_SERIAL_PORT, baudrate=baud, timeout=1)
-        print("UART port opened successfully.")
         sensor = BNO08X_UART(uart)
-        print("Sensor initialized successfully.")
-        break  # Exit the loop if successful
-    except serial.SerialException as e:
-        logging.error(f"SerialException: {e}")
+        print("BNO085 sensor initialized.")
+        break
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
+        print(f"Error initializing BNO085 sensor: {e}")
+        print("Retrying...")
+        continue
+else:
+    print("Failed to initialize BNO085 sensor.")
+    raise Exception("Failed to initialize BNO085 sensor.")
+print("BNO085 sensor initialized.")
 
-if sensor is None:
-    logging.error("Failed to initialize BNO08X sensor. Exiting.")
-    sys.exit(1)
 
 class BNO085Sensor:
     """Class to handle BNO085 sensor interaction"""
@@ -93,7 +91,6 @@ class BNO085Sensor:
             return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
         except Exception as e:
             logging.error(f"Error calculating Quaternion: {e}")
-            return {}
 
     @staticmethod
     def calculate_heading(sensor):
@@ -151,16 +148,3 @@ class BNO085Sensor:
             logging.info("BNO085 sensor deinitialized.")
         except Exception as e:
             logging.error(f"Error deinitializing BNO085 sensor: {e}")
-
-
-if __name__ == '__main__':
-    BNO085Sensor.enable_features(sensor)
-    print(BNO085Sensor.read_bno085_accel(sensor))
-    print(BNO085Sensor.read_bno085_gyro(sensor))
-    print(BNO085Sensor.read_bno085_magnetometer(sensor))
-    print(BNO085Sensor.calculate_quaternion(sensor))
-    print(BNO085Sensor.calculate_heading(sensor))
-    print(BNO085Sensor.calculate_pitch(sensor))
-    print(BNO085Sensor.calculate_roll(sensor))
-    print(BNO085Sensor.calculate_speed(sensor))
-    BNO085Sensor.cleanup()

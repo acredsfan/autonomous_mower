@@ -14,28 +14,30 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 # Local application imports
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-from hardware_interface.blade_controller import (
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
+from autonomous_mower.hardware_interface.blade_controller import (
     BladeController
 )
-from hardware_interface.camera_instance import (
+from autonomous_mower.hardware_interface.camera_instance import (
     capture_frame,
     start_server_thread
 )
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.sensor_interface import (
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.hardware_interface.sensor_interface import (
     get_sensor_interface
 )
-from hardware_interface.serial_port import SerialPort
-from navigation_system.gps import (
+from autonomous_mower.hardware_interface.serial_port import SerialPort
+from autonomous_mower.navigation_system.gps import (
     GpsLatestPosition,
     GpsPosition
 )
-from navigation_system.localization import Localization
-from navigation_system.navigation import (
+from autonomous_mower.navigation_system.localization import Localization
+from autonomous_mower.navigation_system.navigation import (
     NavigationController
 )
-from navigation_system.path_planning import PathPlanning
+from autonomous_mower.navigation_system.path_planning import PathPlanning
 from obstacle_detection.local_obstacle_detection import (
     start_processing
 )

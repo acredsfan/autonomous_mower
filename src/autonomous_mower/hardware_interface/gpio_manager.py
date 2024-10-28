@@ -1,7 +1,9 @@
 
 import gpiod
 
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -23,7 +25,7 @@ class GPIOManager:
         :param interrupt_pins: List of GPIO pins for interrupt functionality.
         :return: Tuple (shutdown_lines, interrupt_lines)
         """
-        chip = gpiod.Chip('gpiochip0')
+        chip = gpiod.Chip('/dev/gpiochip0')
         shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
         interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
 

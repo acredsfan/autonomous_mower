@@ -1,14 +1,11 @@
 # constants.py
 import json
-import os
-import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
-from autonomous_mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-
-# Add the path to the sys path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
-print(sys.path)
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -16,19 +13,25 @@ logging = LoggerConfig.get_logger(__name__)
 # Load .env variables
 load_dotenv()
 
-# Open config file in root folder
+# Set up base directory for consistent file referencing
+BASE_DIR = Path(__file__).resolve().parents[0]
+config_path = BASE_DIR / "config.json"
+polygon_path = BASE_DIR / "user_polygon.json"
+
+# Open config file
 try:
-    with open("config.json") as f:
+    with open(config_path) as f:
         config = json.load(f)
 except FileNotFoundError:
     logging.error("Config file not found.")
     config = {}
 
+# Open user polygon config file
 try:
-    with open("user_polygon.json") as f:
+    with open(polygon_path) as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    print("User polygon config file not found.")
+    logging.error("User polygon config file not found.")
     polygon_coordinates = []
 
 # Constants for the project

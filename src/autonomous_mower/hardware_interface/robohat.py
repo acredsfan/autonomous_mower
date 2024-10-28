@@ -10,18 +10,20 @@ Updated version based on recommendations.
 - Removes navigation logic from controller.
 """
 
-import logging
 import os
 import time
 
 import serial
-from utilities import Utils
+from autonomous_mower.utilities.utils import Utils
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
-from constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
-                       MM1_STEERING_MID, MM1_STOPPED_PWM)
+from autonomous_mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
+                                        MM1_STEERING_MID, MM1_STOPPED_PWM)
 
 
-logger = logging.getLogger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 
 class RoboHATController:

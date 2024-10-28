@@ -1,14 +1,13 @@
 import json
 import logging
 import time
-
-from hardware_interface.robohat import RoboHATDriver
-from hardware_interface.sensor_interface import SensorInterface
-from navigation_system.localization import Localization
-from navigation_system.navigation import NavigationController
 from shapely.geometry import Point, Polygon
 
-from constants import (MIN_DISTANCE_THRESHOLD,
+from autonomous_mower.hardware_interface.robohat import RoboHATDriver
+from autonomous_mower.hardware_interface.sensor_interface import SensorInterface
+from autonomous_mower.navigation_system.localization import Localization
+from autonomous_mower.navigation_system.navigation import NavigationController
+from autonomous_mower.constants import (MIN_DISTANCE_THRESHOLD,
                                             polygon_coordinates)
 
 logging.basicConfig(level=logging.INFO)
@@ -104,7 +103,7 @@ class ObstacleMapper:
             # Navigate to each grid point
             for lat, lon in grid_points:
                 self.navigation_controller.navigate_to_location((lat, lon))
-                """
+                """ 
                     Check for obstacles and record them if found,
                     then move around them to get to the target location.
                 """
@@ -131,7 +130,6 @@ class ObstacleMapper:
         # Stop the mower after exploration
         self.driver.run(0.0, 0.0)
         self.save_obstacle_map()
-
 
 # Usage example
 if __name__ == "__main__":

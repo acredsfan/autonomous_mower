@@ -30,3 +30,5 @@ neopixel
 readchar
 paho-mqtt
 gpiod
+pyngrok
+picamera2

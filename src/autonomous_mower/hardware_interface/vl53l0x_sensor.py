@@ -2,10 +2,12 @@ import time
 
 import adafruit_vl53l0x
 
-from autonomous_mower.utilities.logger_config import LoggerConfigDebug
+from autonomous_mower.utilities.logger_config import (
+    LoggerConfigInfo as LoggerConfig
+)
 
 # Initialize logger
-logging = LoggerConfigDebug.get_logger(__name__)
+logging = LoggerConfig.get_logger(__name__)
 
 
 class VL53L0XSensors:
