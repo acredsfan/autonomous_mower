@@ -1,5 +1,5 @@
 # Test to ensure that the sensor readings are being read and reported correctly
-# import SensorInterface from autonomous_mower.hardware_interface folder
+# import EnhancedSensorInterface from autonomous_mower.hardware_interface folder
 import time
 import os
 import sys

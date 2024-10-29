@@ -24,9 +24,9 @@ class ObstacleAvoidance:
     def _update_obstacle_status(self):
         """Update the obstacle status based on the VL53L0X sensor readings."""
         while not self.stop_thread:
-            left_distance = self.sensor_interface.sensor_data.get(
+            left_distance = self.sensor_interface._read_vl53l0x(
                 'left_distance', float('inf'))
-            right_distance = self.sensor_interface.sensor_data.get(
+            right_distance = self.sensor_interface._read_vl53l0x(
                 'right_distance', float('inf'))
 
             self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD

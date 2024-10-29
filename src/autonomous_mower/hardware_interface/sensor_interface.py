@@ -1,17 +1,15 @@
-import signal
-import sys
+# enhanced_sensor_interface.py
+
 import threading
 import time
-
-import board
-import busio
-
+from typing import Dict, Any, Optional
+from dataclasses import dataclass
+from datetime import datetime
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 from autonomous_mower.hardware_interface.bme280_sensor import BME280Sensor
 from autonomous_mower.hardware_interface.bno085_sensor import BNO085Sensor
-from autonomous_mower.hardware_interface.gpio_manager import GPIOManager
 from autonomous_mower.hardware_interface.ina3221_sensor import (
     INA3221Sensor
 )
@@ -22,240 +20,346 @@ from autonomous_mower.hardware_interface.vl53l0x_sensor import (
 logging = LoggerConfig.get_logger(__name__)
 
 
-class SensorInterface:
-    _instance = None
-    _lock = threading.Lock()
+@dataclass
+class SensorStatus:
+    working: bool
+    last_reading: datetime
+    error_count: int
+    last_error: Optional[str]
 
-    def __new__(cls):
-        # Implement thread-safe singleton pattern
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super(SensorInterface, cls).__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
 
-    def __init__(self):
-        # Ensure that __init__ only runs once
-        if self._initialized:
-            return
-        self._initialized = True
-        self.init()
-
-    def init(self):
-        self.sensor_data_lock = threading.Lock()
-        self.sensor_data = {}
-        self.i2c_lock = threading.Lock()  # Lock for I2C access
-        self.i2c = busio.I2C(board.SCL, board.SDA)
-        self.shutdown_pins = [22, 23]
-        self.interrupt_pins = [6, 12]
-        self.shutdown_lines, self.interrupt_lines = GPIOManager.init_gpio(
-            self.shutdown_pins, self.interrupt_pins)
-        self.stop_thread = False
-        self.sensors = {}
-        self.init_sensors()
-        self.start_update_thread()
-
-    def init_sensors(self):
-        # Initialize all sensors with consolidated error handling and retries
-        self.sensors = {
-            'bme280': self.initialize_sensor(
-                lambda: BME280Sensor.init_bme280(self.i2c), "BME280"),
-            'bno085': self.initialize_sensor_with_retry(
-                self.init_bno085_sensor, "BNO085"),
-            'ina3221': self.initialize_sensor_with_retry(
-                lambda: INA3221Sensor.init_ina3221(self.i2c), "INA3221"),
-            'vl53l0x': self.initialize_sensor_with_retry(
-                lambda: VL53L0XSensors.init_vl53l0x_sensors(
-                    self.i2c, self.shutdown_lines), "VL53L0X"),
-        }
-
-    def init_bno085_sensor(self):
-        """Initialize and configure the BNO085 sensor."""
-        from adafruit_bno08x.i2c import BNO08X_I2C
-        sensor = BNO08X_I2C(self.i2c, address=0x4B)
-        BNO085Sensor.enable_features(sensor)  # Enable features in the BNO085
-        return sensor
-
-    def start_update_thread(self):
-        self.sensor_thread = threading.Thread(target=self.update_sensors,
-                                              daemon=True)
-        self.sensor_thread.start()
-
-    def initialize_sensor(self, init_function, sensor_name):
+class EnhancedSensorInterface:
+    """
+    Enhanced sensor interface with improved error handling, health monitoring,
+    and safety features.
+    """
+    def _init_bme280(self):
+        """Initialize BME280 sensor."""
         try:
-            with self.i2c_lock:
-                sensor = init_function()
-            if sensor is None:
-                raise Exception(f"{sensor_name} initialization returned None.")
-            logging.info(f"{sensor_name} initialized successfully.")
-            return sensor
+            with self._locks['i2c']:
+                return BME280Sensor.init_bme280(self._i2c)
         except Exception as e:
-            logging.error(f"Error initializing {sensor_name}: {e}")
+            self._log_error("BME280 initialization failed", e)
             return None
 
-    def initialize_sensor_with_retry(self, init_function, sensor_name,
-                                     retries=3, delay=0.5):
-        for attempt in range(retries):
-            time.sleep(0.1)
-            sensor = self.initialize_sensor(init_function, sensor_name)
-            if sensor is not None:
-                return sensor
-            logging.warning(f"Retrying {sensor_name}"
-                            f"initialization (attempt {attempt + 1})")
-            time.sleep(delay)
-        logging.error(f"Failed to initialize {sensor_name}"
-                      f" after {retries} attempts")
-        return None
-
-    def read_data(self, sensor, read_function, sensor_name):
-        if sensor is None:
-            logging.error(f"{sensor_name} is not initialized.")
-            return {}
+    def _init_bno085(self):
+        """Initialize BNO085 sensor."""
         try:
-            return read_function(sensor)
+            return BNO085Sensor()
         except Exception as e:
-            logging.error(f"Error reading {sensor_name}: {e}")
+            self._log_error("BNO085 initialization failed", e)
+            return None
+
+    def _init_ina3221(self):
+        """Initialize INA3221 sensor."""
+        try:
+            with self._locks['i2c']:
+                return INA3221Sensor.init_ina3221(self._i2c)
+        except Exception as e:
+            self._log_error("INA3221 initialization failed", e)
+            return None
+
+    def _init_vl53l0x(self):
+        """Initialize VL53L0X sensors."""
+        try:
+            with self._locks['i2c']:
+                return VL53L0XSensors.init_vl53l0x_sensors(
+                    self._i2c, self.shutdown_lines)
+        except Exception as e:
+            self._log_error("VL53L0X initialization failed", e)
+            return None
+
+    def _read_bme280(self):
+        """Read BME280 environmental data."""
+        if not self._sensors['bme280']:
             return {}
 
-    def update_sensors(self):
-        """Read sensor data periodically
-        and update shared sensor data."""
-        while not self.stop_thread:
-            try:
-                with self.sensor_data_lock:
-                    ''' Read and Store Battery Data (INA3221 Channel 3) for:
-                    battery-voltage out (shunt-voltage),
-                    battery-current (current),
-                    and battery-charge-level (charge_level) as a percentage.'''
-                    self.sensor_data['battery_voltage'] = self.read_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 3)[
-                            'shunt_voltage'],
-                        "INA3221 Battery"
-                    )
-                    self.sensor_data['battery_current'] = self.read_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 3)['current'],
-                        "INA3221 Battery"
-                    )
-                    self.sensor_data['battery_charge_level'] = self.read_data(
-                        self.sensors['ina3221'],
-                        INA3221Sensor.battery_charge,
-                        "Battery Charge"
-                    )
+        try:
+            data = BME280Sensor.read_bme280(self._sensors['bme280'])
+            return {
+                'temperature': data.get('temperature_f'),
+                'humidity': data.get('humidity'),
+                'pressure': data.get('pressure')
+            }
+        except Exception as e:
+            self._handle_sensor_error('bme280', e)
+            return {}
 
-                    ''' Read and Store Solar Data (INA3221 Channel 1) for:
-                    solar_voltage out (shunt_voltage) and
-                    solar_current (current).'''
-                    self.sensor_data['solar_voltage'] = self.read_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 1)[
-                            'shunt_voltage'],
-                        "INA3221 Solar"
-                    )
-                    self.sensor_data['solar_current'] = self.read_data(
-                        self.sensors['ina3221'],
-                        lambda s: INA3221Sensor.read_ina3221(s, 1)['current'],
-                        "INA3221 Solar"
-                    )
+    def _read_bno085(self):
+        """Read BNO085 IMU data."""
+        if not self._sensors['bno085']:
+            return {}
 
-                    '''Read and store BNO085 sensor data for:
-                    speed (speed),
-                    heading (heading),
-                    pitch (pitch),
-                    and roll (roll).'''
-                    self.sensor_data['speed'] = self.read_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.calculate_speed,
-                        "BNO085 Speed"
-                    )
-                    self.sensor_data['heading'] = self.read_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.calculate_heading,
-                        "BNO085 Heading"
-                    )
-                    self.sensor_data['pitch'] = self.read_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.calculate_pitch,
-                        "BNO085 Pitch"
-                    )
-                    self.sensor_data['roll'] = self.read_data(
-                        self.sensors['bno085'],
-                        BNO085Sensor.calculate_roll,
-                        "BNO085 Roll"
-                    )
+        try:
+            accel = BNO085Sensor.read_bno085_accel(self._sensors['bno085'])
+            heading = BNO085Sensor.calculate_heading(self._sensors['bno085'])
+            roll = BNO085Sensor.calculate_roll(self._sensors['bno085'])
+            speed = BNO085Sensor.calculate_speed(self._sensors['bno085'])
+            compass = BNO085Sensor.read_bno085_magnetometer(
+                self._sensors['bno085']
+            )
+            return {
+                'acceleration': accel,
+                'heading': heading,
+                'roll': roll,
+                'speed': speed,
+                'compass': compass
+            }
+        except Exception as e:
+            self._handle_sensor_error('bno085', e)
+            return {}
 
-                    ''' Read and store BME280 sensor data for:
-                    temperature in F (temperature_f),
-                    humidity (humidity),
-                    and pressure (pressure).'''
-                    self.sensor_data['temperature'] = self.read_data(
-                        self.sensors['bme280'],
-                        lambda s: BME280Sensor.read_bme280(s)['temperature_f'],
-                        "BME280"
-                    )
-                    self.sensor_data['humidity'] = self.read_data(
-                        self.sensors['bme280'],
-                        lambda s: BME280Sensor.read_bme280(s)['humidity'],
-                        "BME280"
-                    )
-                    self.sensor_data['pressure'] = self.read_data(
-                        self.sensors['bme280'],
-                        lambda s: BME280Sensor.read_bme280(s)['pressure'],
-                        "BME280"
-                    )
+    def _read_ina3221(self):
+        """Read INA3221 power monitoring data."""
+        if not self._sensors['ina3221']:
+            return {}
 
-                    ''' Read and store VL53L0X sensor data for:
-                    left distance and right distance as a float
-                    to 1 decimal place.'''
+        try:
+            solar_data = INA3221Sensor.read_ina3221(
+                self._sensors['ina3221'], 1
+            )
+            battery_data = INA3221Sensor.read_ina3221(
+                self._sensors['ina3221'], 3
+            )
+            return {
+                'solar_voltage': solar_data.get('bus_voltage'),
+                'solar_current': solar_data.get('current'),
+                'battery_voltage': battery_data.get('bus_voltage'),
+                'battery_current': battery_data.get('current'),
+                'battery_level': battery_data.get('charge_level')
+            }
+        except Exception as e:
+            self._handle_sensor_error('ina3221', e)
+            return {}
 
-                    self.sensor_data['left_distance'] = self.read_data(
-                        self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(s[0]),
-                        "VL53L0X Left Distance"
-                    )
-                    self.sensor_data['right_distance'] = self.read_data(
-                        self.sensors['vl53l0x'],
-                        lambda s: VL53L0XSensors.read_vl53l0x(s[1]),
-                        "VL53L0X Right Distance"
-                    )
-                time.sleep(0.5)
-            except Exception as e:
-                logging.error(f"Error updating sensors: {e}")
-                time.sleep(1.0)  # Wait before retrying
+    def _read_vl53l0x(self):
+        """Read VL53L0X distance sensor data."""
+        if not self._sensors['vl53l0x']:
+            return {}
+
+        try:
+            left, right = self._sensors['vl53l0x']
+            return {
+                'left_distance': VL53L0XSensors.read_vl53l0x(left),
+                'right_distance': VL53L0XSensors.read_vl53l0x(right)
+            }
+        except Exception as e:
+            self._handle_sensor_error('vl53l0x', e)
+            return {}
+
+    def _start_monitoring(self):
+        """Start sensor monitoring threads."""
+        self._monitoring_thread = threading.Thread(
+            target=self._monitor_sensors,
+            daemon=True
+        )
+        self._monitoring_thread.start()
+
+        self._update_thread = threading.Thread(
+            target=self._update_sensor_data,
+            daemon=True
+        )
+        self._update_thread.start()
+
+    def _monitor_sensors(self):
+        """Monitor sensor health and perform recovery if needed."""
+        while not self._stop_event.is_set():
+            for sensor_name in self._sensors:
+                self._check_sensor_health(sensor_name)
+            time.sleep(1)
+
+    def _check_sensor_health(self, sensor_name: str):
+        """Check health of a specific sensor and attempt recovery if needed."""
+        with self._locks['status']:
+            status = self._sensor_status[sensor_name]
+            if not status.working:
+                if status.error_count >= self._error_thresholds[sensor_name]:
+                    self._attempt_sensor_recovery(sensor_name)
+                    return
+
+            # Check if readings are stale
+            if (datetime.now() - status.last_reading).seconds > 5:
+                status.working = False
+                status.error_count += 1
+                status.last_error = "Stale readings"
+
+    def _attempt_sensor_recovery(self, sensor_name: str):
+        """Attempt to recover a failed sensor."""
+        logging.info(f"Attempting to recover {sensor_name}")
+        initializer = getattr(self, f"_init_{sensor_name}")
+        self._init_sensor_with_retry(sensor_name, initializer)
+
+    def _update_sensor_data(self):
+        """Update sensor readings with error handling."""
+        while not self._stop_event.is_set():
+            for sensor_name in self._sensors:
+                try:
+                    self._update_single_sensor(sensor_name)
+                except Exception as e:
+                    self._handle_sensor_error(sensor_name, e)
+            time.sleep(0.1)
+
+    def _update_single_sensor(self, sensor_name: str):
+        """Update readings for a single sensor."""
+        sensor = self._sensors[sensor_name]
+        if not sensor:
+            return
+
+        with self._locks['data']:
+            if sensor_name == 'bme280':
+                self._data.update(self._read_bme280())
+            elif sensor_name == 'bno085':
+                self._data.update(self._read_bno085())
+            elif sensor_name == 'ina3221':
+                self._data.update(self._read_ina3221())
+            elif sensor_name == 'vl53l0x':
+                self._data.update(self._read_vl53l0x())
+
+            # Update sensor status
+            with self._locks['status']:
+                status = self._sensor_status[sensor_name]
+                status.last_reading = datetime.now()
+                status.working = True
+                status.error_count = 0
+                status.last_error = None
+
+    def _handle_sensor_error(self, sensor_name: str, error: Exception):
+        """Handle sensor errors with proper logging and status updates."""
+        with self._locks['status']:
+            status = self._sensor_status[sensor_name]
+            status.working = False
+            status.error_count += 1
+            status.last_error = str(error)
+            self._log_error(f"{sensor_name} reading failed", error)
+
+    def get_sensor_data(self) -> Dict[str, Any]:
+        """Get current sensor data in a thread-safe way."""
+        with self._locks['data']:
+            return self._data.copy()
+
+    def get_sensor_status(self) -> Dict[str, SensorStatus]:
+        """Get current sensor status in a thread-safe way."""
+        with self._locks['status']:
+            return self._sensor_status.copy()
 
     def shutdown(self):
-        # Ensure sensors and threads are properly cleaned up
-        self.stop_thread = True
-        if self.sensor_thread.is_alive():
-            self.sensor_thread.join()
-        GPIOManager.clean()
-        logging.info("SensorInterface shutdown complete.")
+        """Properly shutdown all sensors and threads."""
+        self._stop_event.set()
+        if hasattr(self, '_monitoring_thread'):
+            self._monitoring_thread.join()
+        if hasattr(self, '_update_thread'):
+            self._update_thread.join()
+        self._cleanup_sensors()
 
-    @staticmethod
-    def ideal_mowing_conditions():
-        # Check temperature is >0, and humidity is <85% on BME for ideal mowing
-        # conditions
-        if SensorInterface.read_bme280()['temperature'] > 0 and \
-                SensorInterface.read_bme280()['humidity'] < 85:
-            return True
-        else:
-            return False
+    def _cleanup_sensors(self):
+        """Clean up sensor resources."""
+        for sensor_name, sensor in self._sensors.items():
+            try:
+                if hasattr(sensor, 'cleanup'):
+                    sensor.cleanup()
+            except Exception as e:
+                self._log_error(f"Error cleaning up {sensor_name}", e)
 
-    # Graceful shutdown handling with signal
-    @staticmethod
-    def signal_handler(sig, frame):
-        logging.info("Received shutdown signal. Cleaning up...")
-        SensorInterface().shutdown()  # Clean up sensors and threads
-        sys.exit(0)
+    def _log_error(self, message: str, error: Exception):
+        """Centralized error logging."""
+        logging.error(f"{message}: {str(error)}")
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    def is_safe_to_operate(self) -> bool:
+        """
+        Check if all critical sensors are functioning
+        properly for safe operation.
+        """
+        with self._locks['status']:
+            critical_sensors = ['bno085', 'vl53l0x']  # Add or remove as needed
+            return all(
+                self._sensor_status[sensor].working
+                for sensor in critical_sensors
+            )
+
+
+class SafetyMonitor:
+    """
+    Safety monitoring system for the autonomous mower.
+    """
+
+    def __init__(self, sensor_interface: EnhancedSensorInterface):
+        self.sensor_interface = sensor_interface
+        self.safety_violations = []
+        self.stop_event = threading.Event()
+        self.monitoring_thread = threading.Thread(
+            target=self._monitor_safety,
+            daemon=True
+        )
+        self.monitoring_thread.start()
+
+    def _monitor_safety(self):
+        """Continuously monitor safety conditions."""
+        while not self.stop_event.is_set():
+            try:
+                self._check_safety_conditions()
+                time.sleep(0.1)
+            except Exception as e:
+                logging.error(f"Safety monitoring error: {e}")
+
+    def _check_safety_conditions(self):
+        """Check all safety conditions."""
+        sensor_data = self.sensor_interface.get_sensor_data()
+
+        # Check proximity sensors
+        if self._check_proximity_violation(sensor_data):
+            self.safety_violations.append("Proximity violation")
+
+        # Check orientation (tilt)
+        if self._check_tilt_violation(sensor_data):
+            self.safety_violations.append("Tilt violation")
+
+        # Check power system
+        if self._check_power_violation(sensor_data):
+            self.safety_violations.append("Power system violation")
+
+    def _check_proximity_violation(self, sensor_data: Dict) -> bool:
+        """Check if any proximity sensor indicates an obstacle too close."""
+        min_safe_distance = 30  # cm
+        return any(
+            sensor_data.get(
+                f'{direction}_distance', float('inf')
+            ) < min_safe_distance
+            for direction in ['left', 'right', 'front']
+        )
+
+    def _check_tilt_violation(self, sensor_data: Dict) -> bool:
+        """Check if the mower's tilt angle is unsafe."""
+        max_safe_tilt = 25  # degrees
+        return abs(sensor_data.get('pitch', 0)) > max_safe_tilt or \
+            abs(sensor_data.get('roll', 0)) > max_safe_tilt
+
+    def _check_power_violation(self, sensor_data: Dict) -> bool:
+        """Check if power system parameters are within safe ranges."""
+        min_safe_voltage = 11.0  # volts
+        max_safe_current = 20.0  # amps
+        return sensor_data.get('battery_voltage', 12) < min_safe_voltage or \
+            sensor_data.get('motor_current', 0) > max_safe_current
+
+    def get_safety_status(self) -> Dict[str, Any]:
+        """Get current safety status."""
+        return {
+            'violations': self.safety_violations.copy(),
+            'is_safe': len(self.safety_violations) == 0,
+            'sensors_ok': self.sensor_interface.is_safe_to_operate()
+        }
+
+    def clear_violations(self):
+        """Clear safety violations after they've been addressed."""
+        self.safety_violations.clear()
+
+    def shutdown(self):
+        """Properly shutdown the safety monitor."""
+        self.stop_event.set()
+        self.monitoring_thread.join()
 
 
 # Singleton accessor function
-sensor_interface_instance = SensorInterface()
+sensor_interface_instance = EnhancedSensorInterface()
 
 
 def get_sensor_interface():
@@ -263,7 +367,7 @@ def get_sensor_interface():
 
 
 if __name__ == "__main__":
-    sensor_interface = SensorInterface()
+    sensor_interface = EnhancedSensorInterface()
     while True:
         print(sensor_interface.sensor_data)
         time.sleep(1)

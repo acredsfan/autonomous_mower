@@ -1,8 +1,12 @@
-import json
 import math
 import os
 import sys
 import time
+from typing import Tuple, Dict
+from dataclasses import dataclass
+
+import numpy as np
+from shapely.geometry import Point, Polygon
 
 from autonomous_mower.navigation_system.gps import (
     GpsLatestPosition,
@@ -11,181 +15,394 @@ from autonomous_mower.navigation_system.gps import (
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
+from autonomous_mower.constants import (
+    max_lat,
+    max_lng,
+    min_lat,
+    min_lng,
+    polygon_coordinates
+)
 
-from autonomous_mower.constants import (max_lat, max_lng, min_lat, min_lng,
-                                        polygon_coordinates)
 
-# Initialize logger
 LoggerConfig.configure_logging()
 logging = LoggerConfig.get_logger(__name__)
 
-# Add the parent directory to the system path for importing modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
+@dataclass
+class Position:
+    """Data class to store position information."""
+
+    latitude: float
+    longitude: float
+    altitude: float
+    heading: float
+    accuracy: float
+    last_update: float
+
+
 class Localization:
-    """Handles localization by estimating position and orientation."""
+    """Enhanced localization system with sensor fusion and error handling."""
+
     _instance = None
 
     def __new__(cls):
+        """Ensure singleton instance."""
         if cls._instance is None:
             cls._instance = super(Localization, cls).__new__(cls)
             cls.__init__(cls._instance)
         return cls._instance
 
     def __init__(self):
-        # Initialize GPS-related objects and set default values for position
-        # and boundaries
+        """Initialize the localization system."""
+        if hasattr(self, '_initialized'):
+            return
+        self._initialized = True
+
+        # Initialize GPS components
         self.position_reader = GpsNmeaPositions(debug=False)
         self.latest_position = GpsLatestPosition(debug=False)
-        self.sensor_interface = None  # Lazy initialization of SensorInterface
-        self.position = None
-        # Define the yard boundary coordinates
-        self.yard_boundary = polygon_coordinates
-        self.current_latitude = 0.0
-        self.current_longitude = 0.0
-        self.current_altitude = 0.0
-        self.current_heading = 0.0
-        self.min_lat = min_lat
-        self.max_lat = max_lat
-        self.min_lng = min_lng
-        self.max_lng = max_lng
+
+        # Initialize position tracking
+        self.position = Position(
+            latitude=0.0,
+            longitude=0.0,
+            altitude=0.0,
+            heading=0.0,
+            accuracy=0.0,
+            last_update=time.time()
+        )
+
+        # Initialize sensor interface and position tracking
         self.sensor_interface = None
+        self.fused_position = None
+        self.time_since_last_update = 0
+
+        # Initialize boundaries
+        self.yard_boundary = polygon_coordinates
+        self.boundaries = {
+            'min_lat': min_lat,
+            'max_lat': max_lat,
+            'min_lng': min_lng,
+            'max_lng': max_lng
+        }
+
+        # Kalman filter parameters
+        self.kalman_state = None
+        self.kalman_covariance = None
+        self.process_noise = 0.1
+        self.measurement_noise = 0.5
 
     def get_sensor_interface(self):
+        """Get or initialize the enhanced sensor interface."""
         if self.sensor_interface is None:
-            from hardware_interface.sensor_interface import \
-                get_sensor_interface
-            self.sensor_interface = get_sensor_interface()
+            from autonomous_mower.hardware_interface.sensor_interface import (
+                EnhancedSensorInterface
+            )
+            self.sensor_interface = EnhancedSensorInterface()
         return self.sensor_interface
 
-    def load_json_file(self, file_name):
-        """Load data from a JSON file."""
+    def estimate_position(self) -> Tuple[float, float]:
+        """
+        Estimate current position using sensor fusion of GPS and IMU data.
+
+        Returns:
+            Tuple[float, float]: Estimated latitude and longitude
+        """
         try:
-            with open(file_name) as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            logging.exception("An error occurred while loading JSON file")
-            return []
+            # Get sensor data
+            sensor_interface = self.get_sensor_interface()
+            sensor_data = sensor_interface.get_sensor_data()
 
-    def estimate_position(self):
-        """Estimate the current position using GPS UTM data
-          fused with IMU data from the BNO085."""
-        # Get latest GPS and IMU data
-        gps_data = self.latest_position.run()
-        imu_data = self.get_sensor_interface().update_sensors()
+            # Get GPS data
+            gps_data = self.latest_position.run()
 
-        if gps_data and imu_data:
-            # Extract relevant data
-            gps_lat, gps_lon = gps_data['latitude'], gps_data['longitude']
-            imu_heading = imu_data['heading']
+            if gps_data and 'heading' in sensor_data:
+                return self._process_sensor_data(gps_data, sensor_data)
+            else:
+                return self._handle_limited_data(sensor_data)
 
-            # Simple complementary filter
-            alpha = 0.95  # Adjust this value to tune the filter
+        except Exception as e:
+            logging.error(f"Position estimation error: {str(e)}")
+            return (self.position.latitude, self.position.longitude)
 
-            # If this is the first GPS reading, initialize the fused position
-            if self.fused_position is None:
-                self.fused_position = (gps_lat, gps_lon)
+    def _process_sensor_data(
+        self,
+        gps_data: Dict,
+        sensor_data: Dict
+    ) -> Tuple[float, float]:
+        """
+        Process GPS and sensor data for position estimation.
 
-            # Predict position based on IMU heading and previous fused position
-            predicted_lat, predicted_lon = self.predict_position(
-                self.fused_position,
-                imu_heading,
-                self.time_since_last_update
+        Args:
+            gps_data: Dictionary containing GPS data
+            sensor_data: Dictionary containing sensor readings
+
+        Returns:
+            Tuple[float, float]: Processed latitude and longitude
+        """
+        gps_lat = gps_data['latitude']
+        gps_lon = gps_data['longitude']
+        imu_heading = sensor_data['heading']
+
+        # Initialize Kalman filter if needed
+        if self.kalman_state is None:
+            self.kalman_state = np.array([gps_lat, gps_lon])
+            self.kalman_covariance = np.eye(2) * 0.1
+
+        # Predict step
+        predicted_pos = self._predict_position(
+            self.kalman_state,
+            imu_heading,
+            sensor_data.get('speed', 0),
+            time.time() - self.position.last_update
+        )
+
+        # Update Kalman filter
+        kalman_gain = self._calculate_kalman_gain()
+        self.kalman_state = self._update_kalman_state(
+            predicted_pos,
+            kalman_gain,
+            gps_lat,
+            gps_lon
+        )
+
+        # Update position data
+        self._update_position_data(imu_heading)
+
+        return (self.position.latitude, self.position.longitude)
+
+    def _handle_limited_data(self, sensor_data: Dict) -> Tuple[float, float]:
+        """
+        Handle position estimation with limited sensor data.
+
+        Args:
+            sensor_data: Dictionary containing sensor readings
+
+        Returns:
+            Tuple[float, float]: Best estimate of position
+        """
+        if self.kalman_state is not None and 'heading' in sensor_data:
+            predicted_pos = self._predict_position(
+                self.kalman_state,
+                sensor_data['heading'],
+                sensor_data.get('speed', 0),
+                time.time() - self.position.last_update
             )
+            self.kalman_state = predicted_pos
+            self.kalman_covariance += self.process_noise
 
-            # Update fused position using the complementary filter
-            self.fused_position = (
-                alpha * predicted_lat + (1 - alpha) * gps_lat,
-                alpha * predicted_lon + (1 - alpha) * gps_lon
-            )
+            self._update_position_from_kalman()
 
-            self.time_since_last_update = 0  # Reset timer
+            return (self.position.latitude, self.position.longitude)
 
-        else:
-            # If GPS is unavailable, rely solely on IMU
-            # for short-term prediction
-            if imu_data:
-                predicted_lat, predicted_lon = self.predict_position(
-                    self.fused_position,
-                    imu_heading,
-                    self.time_since_last_update
-                )
-                self.fused_position = (predicted_lat, predicted_lon)
-                self.time_since_last_update += 1  # Increment timer
-        return self.fused_position
+        logging.warning("Insufficient data for position estimation")
+        return (self.position.latitude, self.position.longitude)
 
-    def predict_position(self, position, heading, time_delta):
-        """Predict the next position based on the current position,
-          heading, and time."""
-        # Convert heading to radians
+    def _predict_position(
+        self,
+        current_pos: np.ndarray,
+        heading: float,
+        speed: float,
+        time_delta: float
+    ) -> np.ndarray:
+        """
+        Predict next position based on current motion.
+
+        Args:
+            current_pos: Current position as numpy array
+            heading: Current heading in degrees
+            speed: Current speed
+            time_delta: Time since last update
+
+        Returns:
+            np.ndarray: Predicted position
+        """
         heading_rad = math.radians(heading)
-        sensor_interface = self.get_sensor_interface()
-
-        # Calculate distance traveled based on speed and time
-        speed = sensor_interface().update_sensors().get("speed")
         distance = speed * time_delta
 
-        # Calculate the change in latitude and longitude
-        lat, lon = position
         lat_change = distance * math.cos(heading_rad)
         lon_change = distance * math.sin(heading_rad)
 
-        # Predict the next position
-        predicted_lat = lat + lat_change
-        predicted_lon = lon + lon_change
+        return current_pos + np.array([lat_change, lon_change])
 
-        return predicted_lat, predicted_lon
+    def _calculate_kalman_gain(self) -> float:
+        """Calculate Kalman gain for position updating."""
+        return (self.kalman_covariance /
+                (self.kalman_covariance + self.measurement_noise))
 
-    def estimate_orientation(self):
-        """Estimate the current orientation using compass data."""
-        sensor_interface = self.get_sensor_interface()
-        try:
-            sensor_data = sensor_interface().update_sensors()
-            compass_data = sensor_data.get("compass")
-            if compass_data is not None:
-                x, y, z = compass_data
-                self.current_heading = math.degrees(math.atan2(y, x))
-                if self.current_heading < 0:
-                    self.current_heading += 360
-            else:
-                logging.warning("Compass data is None.")
-        except Exception:
-            logging.exception("An error occurred while estimating orientation")
+    def _update_kalman_state(
+        self,
+        predicted_pos: np.ndarray,
+        kalman_gain: float,
+        gps_lat: float,
+        gps_lon: float
+    ) -> np.ndarray:
+        """
+        Update Kalman filter state with new measurements.
 
-    def update(self):
-        """Update the position and orientation of the mower."""
-        self.estimate_position()
-        self.estimate_orientation()
-        if not self.is_within_yard(
-            self.current_latitude,
-            self.current_longitude
-        ):
-            logging.warning("Outside yard boundary!")
+        Args:
+            predicted_pos: Predicted position
+            kalman_gain: Calculated Kalman gain
+            gps_lat: GPS latitude
+            gps_lon: GPS longitude
 
-    def is_within_yard(self, lat, lon):
-        """Check if the current position is within the yard boundary."""
-        return (
-            self.min_lat <= lat <= self.max_lat and
-            self.min_lng <= lon <= self.max_lng
+        Returns:
+            np.ndarray: Updated Kalman state
+        """
+        measurement = np.array([gps_lat, gps_lon])
+        self.kalman_covariance = (
+            (1 - kalman_gain) * self.kalman_covariance + self.process_noise
         )
+        return predicted_pos + kalman_gain * (measurement - predicted_pos)
+
+    def _update_position_data(self, heading: float):
+        """
+        Update position object with new data.
+
+        Args:
+            heading: Current heading in degrees
+        """
+        self.position.latitude = float(self.kalman_state[0])
+        self.position.longitude = float(self.kalman_state[1])
+        self.position.heading = heading
+        self.position.last_update = time.time()
+        self.position.accuracy = float(
+            np.sqrt(self.kalman_covariance.diagonal().mean())
+        )
+
+    def _update_position_from_kalman(self):
+        """Update position object from Kalman state."""
+        self.position.latitude = float(self.kalman_state[0])
+        self.position.longitude = float(self.kalman_state[1])
+        self.position.last_update = time.time()
+
+    def update(self) -> Dict:
+        """
+        Update position and orientation, returning current state.
+
+        Returns:
+            Dict: Current position and status information
+        """
+        try:
+            new_lat, new_lon = self.estimate_position()
+
+            # Update orientation from IMU
+            sensor_data = self.get_sensor_interface().get_sensor_data()
+            if 'heading' in sensor_data:
+                self.position.heading = sensor_data['heading']
+
+            # Check boundary
+            in_bounds = self.is_within_yard(new_lat, new_lon)
+            if not in_bounds:
+                logging.warning("Position outside"
+                                "yard boundary!")
+
+            return {
+                'latitude': new_lat,
+                'longitude': new_lon,
+                'heading': self.position.heading,
+                'accuracy': self.position.accuracy,
+                'last_update': self.position.last_update,
+                'in_bounds': in_bounds
+            }
+
+        except Exception as e:
+            logging.error(f"Update error: {str(e)}")
+            return self._generate_error_status(str(e))
+
+    def _generate_error_status(self, error_msg: str) -> Dict:
+        """
+        Generate status dictionary for error conditions.
+
+        Args:
+            error_msg: Error message to include
+
+        Returns:
+            Dict: Status dictionary with error information
+        """
+        return {
+            'latitude': self.position.latitude,
+            'longitude': self.position.longitude,
+            'heading': self.position.heading,
+            'accuracy': self.position.accuracy,
+            'last_update': self.position.last_update,
+            'in_bounds': False,
+            'error': error_msg
+        }
+
+    def is_within_yard(self, lat: float, lon: float) -> bool:
+        """
+        Check if position is within yard boundary.
+
+        Args:
+            lat: Latitude to check
+            lon: Longitude to check
+
+        Returns:
+            bool: True if position is within yard boundary
+        """
+        try:
+            # First check simple rectangular bounds
+            in_rectangle = (
+                self.boundaries['min_lat'] <= lat <= self.boundaries['max_lat']
+                and
+                self.boundaries['min_lng'] <= lon <= self.boundaries['max_lng']
+            )
+
+            if not in_rectangle:
+                return False
+
+            # Then check against detailed polygon if available
+            if self.yard_boundary:
+                point = Point(lon, lat)
+                polygon = Polygon(self.yard_boundary)
+                return polygon.contains(point)
+
+            return True
+
+        except Exception as e:
+            logging.error(f"Boundary check error: {str(e)}")
+            return False
+
+    def get_position_accuracy(self) -> float:
+        """
+        Get estimated accuracy of current position.
+
+        Returns:
+            float: Estimated accuracy in meters
+        """
+        return self.position.accuracy
+
+    def get_last_update_age(self) -> float:
+        """
+        Get age of last position update in seconds.
+
+        Returns:
+            float: Time since last update in seconds
+        """
+        return time.time() - self.position.last_update
 
 
 def main():
-    """Run the Localization update loop."""
+    """Test the localization system."""
     localization = Localization()
     try:
         while True:
-            localization.update()
+            status = localization.update()
             print(
-                f"Latitude: {localization.current_latitude}, "
-                f"Longitude: {localization.current_longitude}, "
-                f"Altitude: {localization.current_altitude}, "
-                f"Heading: {localization.current_heading}"
+                f"Position: ({status['latitude']:.6f}, "
+                f"{status['longitude']:.6f})\n"
+                f"Heading: {status['heading']:.1f}°\n"
+                f"Accuracy: {status['accuracy']:.2f}m\n"
+                f"In Bounds: {status['in_bounds']}\n"
+                f"Update Age: {localization.get_last_update_age():.1f}s"
             )
             time.sleep(1)
+
     except KeyboardInterrupt:
-        print("Program terminated by user.")
+        print("\nProgram terminated by user.")
 
 
 if __name__ == "__main__":

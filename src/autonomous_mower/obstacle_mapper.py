@@ -4,7 +4,7 @@ import time
 from shapely.geometry import Point, Polygon
 
 from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.hardware_interface.sensor_interface import SensorInterface
+from autonomous_mower.hardware_interface.sensor_interface import EnhancedSensorInterface
 from autonomous_mower.navigation_system.localization import Localization
 from autonomous_mower.navigation_system.navigation import NavigationController
 from autonomous_mower.constants import (MIN_DISTANCE_THRESHOLD,
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class ObstacleMapper:
-    def __init__(self, localization: Localization, sensors: SensorInterface, driver: RoboHATDriver):
+    def __init__(self, localization: Localization, sensors: EnhancedSensorInterface, driver: RoboHATDriver):
         self.localization = localization  # Store the instance properly
         self.sensors = sensors
         self.driver = driver
@@ -134,7 +134,7 @@ class ObstacleMapper:
 # Usage example
 if __name__ == "__main__":
     localization = Localization()  # Ensure proper instantiation
-    sensors = SensorInterface()
+    sensors = EnhancedSensorInterface()
     driver = RoboHATDriver()
 
     mapper = ObstacleMapper(localization, sensors, driver)

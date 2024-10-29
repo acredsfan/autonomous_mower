@@ -10,9 +10,7 @@ from autonomous_mower.hardware_interface.gpio_manager import GPIOManager
 from autonomous_mower.hardware_interface.robohat import RoboHATDriver
 from autonomous_mower.navigation_system.localization import Localization
 from autonomous_mower.user_interface.web_interface.app import (
-    position_reader,
-    start_mqtt_client,
-    start_web_interface
+    WebInterface
     )
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
@@ -87,23 +85,46 @@ def mow_yard():
     """
     Mow the yard autonomously.
     """
+    global position_reader, path_planner
+    position_reader = WebInterface.position_reader
+    path_planner = PathPlanner(position_reader)
+
+    # Start the mower
+    robohat_driver.start()
+
+    # Start the blade controller
+    blade_controller.start()
+
+    # Start the path planner
+    path_planner.start()
+
+    # Start the obstacle mapper
+    obstacle_mapper.start()
+
+    # Start the localization system
+    localization.start()
+
+    # Start the web interface
+    WebInterface.start()
 
 
 if __name__ == "__main__":
     try:
         # Initialize resources
         initialize_resources()
-        if not position_reader:
+        if not WebInterface.position_reader:
             logging.error("Failed to initialize GPS position reader.")
             sys.exit(1)
 
         # Start the MQTT client in a separate thread
-        mqtt_thread = threading.Thread(target=start_mqtt_client, daemon=True)
+        mqtt_thread = threading.Thread(
+            target=WebInterface._on_mqtt_connect, daemon=True
+        )
         mqtt_thread.start()
         logging.info("MQTT client started.")
 
         # Start the web interface in a separate thread
-        web_thread = threading.Thread(target=start_web_interface, daemon=True)
+        web_thread = threading.Thread(target=WebInterface.start, daemon=True)
         web_thread.start()
         logging.info("Web interface started.")
 
@@ -123,6 +144,8 @@ if __name__ == "__main__":
 
         # Keep the main thread alive
         while True:
+            # Start the autonomous mower
+            mow_yard()
             time.sleep(1)
     except KeyboardInterrupt:
         logging.info("KeyboardInterrupt: Stopping the application.")
