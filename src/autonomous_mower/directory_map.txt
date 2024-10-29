@@ -1,38 +1,71 @@
 autonomous_mower/
     .env.example
-    config.json
-    constants.py
-    directory_map.txt
-    navigation_test.py
+    Dockerfile
+    install_requirements.sh
     README.md
     requirements.txt
-    robot_test.py
-    .vscode/
-        extensions.json
-    hardware_interface/
-        blade_controller.py
-        bme280_sensor.py
-        bno085_sensor.py
-        camera.py
-        gpio_manager.py
-        ina3221_sensor.py
-        robohat.py
-        sensor_interface.py
-        serial_port.py
-        vl53l0x_sensor.py
-        __init__.py
-    navigation_system/
-        gps.py
-        localization.py
-        path_planning.py
-        __init__.py
-    obstacle_detection/
-        avoidance_algorithm.py
-        tf_model_downloads.py
-        __init__.py
-    robohat_files/
-        rp2040_code.py
+    setup.py
+    src/
+        autonomous_mower/
+            config.json
+            constants.py
+            directory_map.txt
+            obstacle_mapper.py
+            robot.py
+            __init__.py
+            hardware_interface/
+                blade_controller.py
+                bme280_sensor.py
+                bno085_sensor.py
+                camera_instance.py
+                gpio_manager.py
+                ina3221_sensor.py
+                robohat.py
+                sensor_interface.py
+                serial_port.py
+                vl53l0x_sensor.py
+                __init__.py
+            navigation_system/
+                gps.py
+                localization.py
+                navigation.py
+                path_planning.py
+                __init__.py
+            obstacle_detection/
+                avoidance_algorithm.py
+                local_obstacle_detection.py
+                tf_model_downloads.py
+                __init__.py
+            robohat_files/
+                rp2040_code.py
+            user_interface/
+                mobile_app/
+                    __init__.py
+                web_interface/
+                    app.py
+                    wsgi.py
+                    __init__.py
+                    static/
+                        css/
+                            main.css
+                        js/
+                            main.js
+                    templates/
+                        area.html
+                        base.html
+                        camera.html
+                        control.html
+                        index.html
+                        settings.html
+                        status.html
+            utilities/
+                logger_config.py
+                text_writer.py
+                utils.py
+                __init__.py
     tests/
+        bno085_calibrate.py
+        robohat_comm_test.py
         test_bme280.py
         test_bno085.py
         test_camera.py
@@ -40,35 +73,4 @@ autonomous_mower/
         test_ina3221.py
         test_move.py
         test_sensor_readings.py
-        __init__.py
-    user_interface/
-        mobile_app/
-        web_interface/
-            app.py
-            test_camera.py
-            wsgi.py
-            __init__.py
-            static/
-                css/
-                    main.css
-                js/
-                    jsmpeg.min.js
-                    main.js
-            templates/
-                area.html
-                base.html
-                camera.html
-                control.html
-                index.html
-                settings.html
-                status.html
-            __pycache__/
-                app.cpython-312.pyc
-                __init__.cpython-312.pyc
-        __pycache__/
-            __init__.cpython-312.pyc
-    utils/
-        logger_config.py
-        text_writer.py
-        utils.py
         __init__.py
