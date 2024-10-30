@@ -9,7 +9,7 @@ from mower.hardware.blade_controller import (
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.localization import Localization
-from mower.user_interface.web_interface.app import (
+from mower.ui.web_ui.app import (
     WebInterface
     )
 from mower.utilities.logger_config import (
