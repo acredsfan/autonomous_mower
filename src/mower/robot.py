@@ -3,20 +3,20 @@ import sys
 import threading
 import time
 
-from autonomous_mower.hardware_interface.blade_controller import (
+from mower.hardware.blade_controller import (
     BladeController
 )
-from autonomous_mower.hardware_interface.gpio_manager import GPIOManager
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.navigation_system.localization import Localization
-from autonomous_mower.user_interface.web_interface.app import (
+from mower.hardware.gpio_manager import GPIOManager
+from mower.hardware.robohat import RoboHATDriver
+from mower.navigation.localization import Localization
+from mower.user_interface.web_interface.app import (
     WebInterface
     )
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
-from autonomous_mower.obstacle_mapper import ObstacleMapper
-from autonomous_mower.navigation_system.path_planning import PathPlanner
+from mower.obstacle_mapper import ObstacleMapper
+from mower.navigation.path_planning import PathPlanner
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -30,7 +30,7 @@ logging = LoggerConfig.get_logger(__name__)
 # Function to initialize all resources
 def initialize_resources():
     global sensor_interface, blade_controller, robohat_driver
-    from autonomous_mower.hardware_interface.sensor_interface import (
+    from mower.hardware.sensor_interface import (
         get_sensor_interface
     )
 

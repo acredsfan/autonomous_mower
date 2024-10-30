@@ -5,15 +5,15 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
-from autonomous_mower.hardware_interface.bme280 import BME280Sensor
-from autonomous_mower.hardware_interface.imu import BNO085Sensor
-from autonomous_mower.hardware_interface.ina3221 import (
+from mower.hardware.bme280 import BME280Sensor
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.ina3221 import (
     INA3221Sensor
 )
-from autonomous_mower.hardware_interface.tof import (
+from mower.hardware.tof import (
     VL53L0XSensors
 )
 

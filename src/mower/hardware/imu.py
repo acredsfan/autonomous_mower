@@ -5,10 +5,10 @@ import time
 import adafruit_bno08x
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigDebug as LoggerConfig
 )
-from autonomous_mower.hardware_interface.serial_port import SerialPort
+from mower.hardware.serial_port import SerialPort
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

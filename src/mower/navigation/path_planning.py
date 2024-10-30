@@ -8,17 +8,17 @@ import cv2
 import numpy as np
 import utm
 # Import GPS and navigation modules
-from autonomous_mower.navigation_system.gps import (
+from mower.navigation.gps import (
     GpsLatestPosition,
     GpsPosition
     )
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.navigation_system.navigation import NavigationController
-from autonomous_mower.obstacle_detection.local_obstacle_detection import (
+from mower.hardware.robohat import RoboHATDriver
+from mower.navigation.navigation import NavigationController
+from mower.obstacle_detection.local_obstacle_detection import (
     detect_drop,
     detect_obstacle
     )
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
 

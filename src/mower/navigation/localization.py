@@ -8,14 +8,14 @@ from dataclasses import dataclass
 import numpy as np
 from shapely.geometry import Point, Polygon
 
-from autonomous_mower.navigation_system.gps import (
+from mower.navigation.gps import (
     GpsLatestPosition,
     GpsNmeaPositions
 )
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
-from autonomous_mower.constants import (
+from mower.constants import (
     max_lat,
     max_lng,
     min_lat,
@@ -97,7 +97,7 @@ class Localization:
     def get_sensor_interface(self):
         """Get or initialize the enhanced sensor interface."""
         if self.sensor_interface is None:
-            from autonomous_mower.hardware_interface.sensor_interface import (
+            from mower.hardware.sensor_interface import (
                 EnhancedSensorInterface
             )
             self.sensor_interface = EnhancedSensorInterface()

@@ -13,29 +13,29 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from pyngrok import ngrok
 
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
-from autonomous_mower.hardware_interface.blade_controller import (
+from mower.hardware.blade_controller import (
     BladeController
 )
-from autonomous_mower.hardware_interface.camera_instance import (
+from mower.hardware.camera_instance import (
     capture_frame,
     start_server_thread
 )
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.hardware_interface.sensor_interface import (
+from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.sensor_interface import (
     get_sensor_interface,
     EnhancedSensorInterface,
     SafetyMonitor
 )
-from autonomous_mower.hardware_interface.serial_port import SerialPort
-from autonomous_mower.navigation_system.gps import GpsLatestPosition
-from autonomous_mower.navigation_system.gps import GpsPosition
-from autonomous_mower.navigation_system.localization import Localization
-from autonomous_mower.navigation_system.navigation import NavigationController
-from autonomous_mower.navigation_system.path_planning import PathPlanning
-from autonomous_mower.robot import mow_yard
+from mower.hardware.serial_port import SerialPort
+from mower.navigation.gps import GpsLatestPosition
+from mower.navigation.gps import GpsPosition
+from mower.navigation.localization import Localization
+from mower.navigation.navigation import NavigationController
+from mower.navigation.path_planning import PathPlanning
+from mower.robot import mow_yard
 
 
 # Initialize logging

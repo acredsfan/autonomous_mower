@@ -1,7 +1,7 @@
 
 import gpiod
 
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 

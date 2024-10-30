@@ -14,12 +14,12 @@ import os
 import time
 
 import serial
-from autonomous_mower.utilities.utils import Utils
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.utils import Utils
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 
-from autonomous_mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
+from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
                                         MM1_STEERING_MID, MM1_STOPPED_PWM)
 
 

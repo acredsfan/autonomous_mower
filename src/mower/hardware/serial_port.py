@@ -8,7 +8,7 @@ import serial
 import serial.tools.list_ports
 from dotenv import load_dotenv
 
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 

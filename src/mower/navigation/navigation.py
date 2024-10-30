@@ -6,12 +6,12 @@ from typing import Optional, Tuple, Dict
 import utm
 from dataclasses import dataclass
 
-from autonomous_mower.hardware_interface.robohat import RoboHATDriver
-from autonomous_mower.navigation_system.gps import (
+from mower.hardware.robohat import RoboHATDriver
+from mower.navigation.gps import (
     GpsLatestPosition,
     GpsPosition
 )
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
 

@@ -1,6 +1,6 @@
 from adafruit_bme280 import basic as adafruit_bme280
 
-from autonomous_mower.utilities.logger_config import (
+from mower.utilities.logger_config import (
     LoggerConfigDebug as LoggerConfig
 )
 
