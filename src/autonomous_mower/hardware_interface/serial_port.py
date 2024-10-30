@@ -239,7 +239,7 @@ class SerialLineReader:
             while line is not None:
                 lines.append((time.time(), line))
                 line = None
-                if (self.max_lines is None or self.max_lines == 0 or 
+                if (self.max_lines is None or self.max_lines == 0 or
                         len(lines) < self.max_lines):
                     line = self._readline()
             return lines

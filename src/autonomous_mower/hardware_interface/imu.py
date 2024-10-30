@@ -1,5 +1,6 @@
 import math
 import os
+import time
 
 import adafruit_bno08x
 from adafruit_bno08x.uart import BNO08X_UART
@@ -26,7 +27,9 @@ print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
 
 # Try for 30 seconds to initialize the BNO085 sensor
-for _ in range(30):
+sensor = None
+start_time = time.time()
+while time.time() - start_time < 30:
     try:
         sensor = BNO08X_UART(imu_serial_port.ser)
         print("BNO085 sensor initialized.")
@@ -34,11 +37,13 @@ for _ in range(30):
     except Exception as e:
         print(f"Error initializing BNO085 sensor: {e}")
         print("Retrying...")
-        continue
+        time.sleep(1)
 else:
     print("Failed to initialize BNO085 sensor.")
     raise Exception("Failed to initialize BNO085 sensor.")
-print("BNO085 sensor initialized.")
+
+if sensor is not None:
+    print("BNO085 sensor initialized.")
 
 
 class BNO085Sensor:
