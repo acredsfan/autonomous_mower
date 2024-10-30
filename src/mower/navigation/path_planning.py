@@ -23,8 +23,8 @@ from mower.obstacle_detection.local_obstacle_detection import (
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
-from src.mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT
-from src.mower.navigation.path_planning import serial_port
+from mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT
+from mower.navigation.path_planning import serial_port
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
