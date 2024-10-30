@@ -1,7 +1,7 @@
 import os
 import sys
 
-from user_interface.web_interface.app import start_web_interface
+from mower.ui.web_ui.app import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -11,4 +11,4 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 logging = LoggerConfig.get_logger(__name__)
 
 if __name__ == "__main__":
-    start_web_interface()
+    WebInterface.start()

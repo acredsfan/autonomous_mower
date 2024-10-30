@@ -20,7 +20,7 @@ from mower.utilities.logger_config import (
 )
 
 from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
-                                        MM1_STEERING_MID, MM1_STOPPED_PWM)
+                             MM1_STEERING_MID, MM1_STOPPED_PWM)
 
 
 logger = LoggerConfig.get_logger(__name__)

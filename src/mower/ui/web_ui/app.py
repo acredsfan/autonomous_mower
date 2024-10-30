@@ -464,6 +464,7 @@ class WebInterface:
         self._publish_path_data()
         mow_yard()
 
+
 def main():
     """Main entry point for the web interface."""
     web_interface = WebInterface()
