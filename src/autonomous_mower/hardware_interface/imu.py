@@ -1,24 +1,34 @@
 import math
-import adafruit_bno08x
-import board
-import busio
-from adafruit_bno08x.uart import BNO08X_UART
+import os
 
+import adafruit_bno08x
+from adafruit_bno08x.uart import BNO08X_UART
+from dotenv import load_dotenv
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigDebug as LoggerConfig
 )
+from autonomous_mower.hardware_interface.serial_port import SerialPort
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-uart = busio.UART(board.TX2, board.RX2,
-                  baudrate=3000000, receiver_buffer_size=2048)
+# Load environment variables
+load_dotenv()
+# Get the UART port from the environment variables
+IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
+IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
+
+# Initialize SerialPort for IMU
+imu_serial_port = SerialPort(port=IMU_SERIAL_PORT, baudrate=IMU_BAUDRATE)
+imu_serial_port.start()
+print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
+
 # Try for 30 seconds to initialize the BNO085 sensor
 for _ in range(30):
     try:
-        sensor = BNO08X_UART(uart)
+        sensor = BNO08X_UART(imu_serial_port.ser)
         print("BNO085 sensor initialized.")
         break
     except Exception as e:
@@ -134,7 +144,7 @@ class BNO085Sensor:
             return -1
 
     @staticmethod
-    def cleanup():
+    def cleanup(sensor):
         """Cleanup BNO085 sensor resources."""
         try:
             sensor.deinit()

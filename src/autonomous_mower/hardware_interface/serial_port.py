@@ -20,7 +20,9 @@ logger = LoggerConfig.get_logger(__name__)
 
 
 GPS_PORT = os.getenv('GPS_SERIAL_PORT')
-GPS_BAUDRATE = os.getenv('GPS_BAUD_RATE')
+GPS_BAUDRATE = int(os.getenv('GPS_BAUD_RATE', '9600'))
+IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT')
+IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
 
 
 class SerialPort:
@@ -37,8 +39,8 @@ class SerialPort:
 
     def __init__(
             self,
-            port: str = GPS_PORT,
-            baudrate: int = GPS_BAUDRATE,
+            port: str,
+            baudrate: int,
             bits: int = 8,
             parity: str = 'N',
             stop_bits: int = 1,
@@ -54,8 +56,6 @@ class SerialPort:
         self.ser = None
 
     def start(self):
-        # for item in serial.tools.list_ports.comports():
-        #    logger.info(item)  # list all the serial ports
         logger.debug(f"Attempting to open serial port {self.port}...")
         try:
             self.ser = serial.Serial(
@@ -78,6 +78,7 @@ class SerialPort:
             sp.close()
         return self
 
+    @staticmethod
     def is_mac():
         return "Darwin" == platform.system()
 
@@ -115,40 +116,28 @@ class SerialPort:
         bytes: number of bytes to read
         return: tuple of
                 bool: True if count bytes were available to read,
-                      false if not enough bytes were avaiable
-                bytes: string string if count bytes read (may be blank),
+                      false if not enough bytes were available
+                bytes: bytes string if count bytes read (may be blank),
                        blank if count bytes are not available
         """
         if self.ser is None or not self.ser.is_open:
             return (False, b'')
 
         try:
-            input = ''
             waiting = self.buffered() >= count
-            # read the serial port and see if there's any data there
             if waiting:
-                input = self.ser.read(count)
-            return (waiting, input)
+                input_bytes = self.ser.read(count)
+                return (waiting, input_bytes)
+            return (False, b'')
         except (serial.serialutil.SerialException, TypeError):
-            logger.warning("failed reading bytes from serial port")
+            logger.warning("Failed reading bytes from serial port")
             return (False, b'')
 
     def read(self, count: int = 0) -> Tuple[bool, str]:
-        """
-        if there are characters waiting,
-        then read them from the serial port
-        bytes: number of bytes to read
-        return: tuple of
-                bool: True if count bytes were available to read,
-                      false if not enough bytes were available
-                str: ascii string if count bytes read (may be blank),
-                     blank if count bytes are not available
-        """
         ok, bytestring = self.readBytes(count)
         try:
             return (ok, bytestring.decode(self.charset))
         except UnicodeDecodeError:
-            # the first read often includes mis-framed garbase
             return (False, "")
 
     def readln(self) -> Tuple[bool, str]:
@@ -166,19 +155,16 @@ class SerialPort:
             return (False, "")
 
         try:
-            input = ''
             waiting = self.buffered() > 0
-            # read the serial port and see if there's any data there
             if waiting:
                 buffer = self.ser.readline()
-                input = buffer.decode(self.charset)
-            return (waiting, input)
+                return (True, buffer.decode(self.charset))
+            return (False, "")
         except (serial.serialutil.SerialException, TypeError):
-            logger.warning("failed reading line from serial port")
+            logger.warning("Failed reading line from serial port")
             return (False, "")
         except UnicodeDecodeError:
-            # the first read often includes mis-framed garbase
-            logger.warning("failed decoding unicode line from serial port")
+            logger.warning("Failed decoding unicode line from serial port")
             return (False, "")
 
     def writeBytes(self, value: bytes):
@@ -192,15 +178,9 @@ class SerialPort:
                 logger.warning("Can't write to serial port")
 
     def write(self, value: str):
-        """
-        write string to serial port
-        """
         self.writeBytes(value.encode())
 
     def writeln(self, value: str):
-        """
-        write line to serial port
-        """
         self.write(value + '\n')
 
 
@@ -216,7 +196,7 @@ class SerialLineReader:
             max_lines: int = 0,
             debug: bool = False):
         self.serial = serial
-        self.max_lines = max_lines  # Max number of lines per read cycle
+        self.max_lines = max_lines
         self.debug = debug
         self.lines = []
         self.lock = threading.Lock()
@@ -233,24 +213,17 @@ class SerialLineReader:
             self.serial.stop()
 
     def clear(self):
-        """
-        Clear the lines buffer and serial port input buffer
-        """
         with self.lock:
             self.lines = []
             self.serial.clear()
 
+    @staticmethod
     def is_mac():
         return "Darwin" == platform.system()
 
     def _readline(self) -> str:
-        """
-        Read a line from the serial port in a threadsafe manner
-        returns line if read and None if no line was read
-        """
         if self.lock.acquire(blocking=False):
             try:
-                # TODO: Serial.in_waiting _always_ returns 0 in Macintosh
                 if SerialLineReader.is_mac() or (self.serial.buffered() > 0):
                     success, buffer = self.serial.readln()
                     if success:
@@ -261,16 +234,13 @@ class SerialLineReader:
 
     def run(self):
         if self.running:
-            #
-            # in non-threaded mode, just max_lines and return them
-            #
             lines = []
             line = self._readline()
             while line is not None:
                 lines.append((time.time(), line))
                 line = None
-                if self.max_lines is None or self.max_lines == 0 or len(
-                        lines) < self.max_lines:
+                if (self.max_lines is None or self.max_lines == 0 or 
+                        len(lines) < self.max_lines):
                     line = self._readline()
             return lines
         return []
@@ -279,42 +249,25 @@ class SerialLineReader:
         if not self.running:
             return []
 
-        #
-        # return the accumulated readings
-        #
         with self.lock:
             lines = self.lines
             self.lines = []
             return lines
 
     def update(self):
-        #
-        # open serial port and run an infinite loop.
-        # NOTE: this is NOT compatible with non-threaded run()
-        #
-        buffered_lines = []  # local read buffer
+        buffered_lines = []
         while self.running:
             line = self._readline()
             if line:
                 buffered_lines.append((time.time(), line))
             if buffered_lines:
-                #
-                # make sure we access self.positions in
-                # a threadsafe manner.
-                # This will NOT block:
-                # - If it can't write then it will leave
-                #   readings in buffered_lines.
-                # - If it can write then it will moved the
-                #   buffered_lines into self.positions
-                #   and clear the buffer.
-                #
                 if self.lock.acquire(blocking=False):
                     try:
                         self.lines += buffered_lines
                         buffered_lines = []
                     finally:
                         self.lock.release()
-            time.sleep(0)  # give other threads time
+            time.sleep(0)
 
     def shutdown(self):
         self.running = False
@@ -386,10 +339,6 @@ if __name__ == "__main__":
             max_lines=args.samples,
             debug=args.debug)
 
-        #
-        # start the threaded part
-        # and a threaded window to show plot
-        #
         if args.threaded:
             update_thread = threading.Thread(
                 target=line_reader.update, args=())
@@ -404,7 +353,6 @@ if __name__ == "__main__":
         while line_reader.running:
             readings = read_lines()
             if readings:
-                # just log the readings
                 for line in readings:
                     print(line)
     finally:
