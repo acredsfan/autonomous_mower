@@ -8,12 +8,12 @@ from datetime import datetime
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
 )
-from autonomous_mower.hardware_interface.bme280_sensor import BME280Sensor
-from autonomous_mower.hardware_interface.bno085_sensor import BNO085Sensor
-from autonomous_mower.hardware_interface.ina3221_sensor import (
+from autonomous_mower.hardware_interface.bme280 import BME280Sensor
+from autonomous_mower.hardware_interface.imu import BNO085Sensor
+from autonomous_mower.hardware_interface.ina3221 import (
     INA3221Sensor
 )
-from autonomous_mower.hardware_interface.vl53l0x_sensor import (
+from autonomous_mower.hardware_interface.tof import (
     VL53L0XSensors
 )
 
