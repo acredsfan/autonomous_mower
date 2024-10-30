@@ -1,10 +1,8 @@
 import math
-import os
-
 import adafruit_bno08x
-import serial
+import board
+import busio
 from adafruit_bno08x.uart import BNO08X_UART
-from dotenv import load_dotenv
 
 from autonomous_mower.utilities.logger_config import (
     LoggerConfigDebug as LoggerConfig
@@ -13,13 +11,8 @@ from autonomous_mower.utilities.logger_config import (
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-# Load environment variables
-load_dotenv()
-# Get the UART port from the environment variables
-IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
-print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
-
-uart = serial.Serial(IMU_SERIAL_PORT, baudrate=3000000, timeout=1)
+uart = busio.UART(board.TX2, board.RX2,
+                  baudrate=3000000, receiver_buffer_size=2048)
 print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
 # Try for 30 seconds to initialize the BNO085 sensor
