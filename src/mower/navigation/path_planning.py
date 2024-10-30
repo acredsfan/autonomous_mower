@@ -3,9 +3,11 @@
 import json
 import math
 import os
+from dotenv import load_dotenv
 
 import cv2
 import numpy as np
+import serial
 import utm
 # Import GPS and navigation modules
 from mower.navigation.gps import (
@@ -13,6 +15,7 @@ from mower.navigation.gps import (
     GpsPosition
     )
 from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.serial_port import SerialPort
 from mower.navigation.navigation import NavigationController
 from mower.obstacle_detection.local_obstacle_detection import (
     detect_drop,
@@ -21,12 +24,21 @@ from mower.obstacle_detection.local_obstacle_detection import (
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
+from src.mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
 
+# Load environment variables
+load_dotenv()
+
+GPS_PORT = os.getenv('GPS_PORT', '/dev/ttyACM0')
+GPS_BAUDRATE = int(os.getenv('GPS_BAUDRATE', '9600'))
+
+serial_port = SerialPort(GPS_PORT, GPS_BAUDRATE, timeout=1)
+
 # Initialize GPS position instance
-gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0', debug=False)
+gps_position_instance = GpsPosition(serial_port, debug=False)
 gps_position_instance.start()
 gps_latest_position = GpsLatestPosition(
     gps_position_instance=gps_position_instance
@@ -77,6 +89,8 @@ class PathPlanner:
         self.grid_points = []
         self.planned_path = []
         self.obstacles = []
+        serial_port = SerialPort(args.serial, baudrate=args.baudrate,
+                                 timeout=args.timeout)
 
         # Initialize GPS position instance
         self.gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0',
