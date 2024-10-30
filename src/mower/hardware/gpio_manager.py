@@ -1,5 +1,5 @@
 
-import gpiod
+import gpiod  # type: ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig

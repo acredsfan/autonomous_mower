@@ -44,7 +44,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'autonomous_mower=autonomous_mower.robot:main',
+            'autonomous_mower=mower.robot:main',
         ],
     },
     author='Aaron Link',
