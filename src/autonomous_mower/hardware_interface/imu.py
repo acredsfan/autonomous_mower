@@ -163,3 +163,34 @@ class BNO085Sensor:
             logging.info("BNO085 sensor deinitialized.")
         except Exception as e:
             logging.error(f"Error deinitializing BNO085 sensor: {e}")
+
+
+if __name__ == '__main__':
+    try:
+        imu_serial_port.start()
+        sensor = BNO08X_UART(imu_serial_port.ser)
+        BNO085Sensor.enable_features(sensor)
+        while True:
+            accel_data = BNO085Sensor.read_bno085_accel(sensor)
+            gyro_data = BNO085Sensor.read_bno085_gyro(sensor)
+            mag_data = BNO085Sensor.read_bno085_magnetometer(sensor)
+            quaternion = BNO085Sensor.calculate_quaternion(sensor)
+            heading = BNO085Sensor.calculate_heading(sensor)
+            pitch = BNO085Sensor.calculate_pitch(sensor)
+            roll = BNO085Sensor.calculate_roll(sensor)
+            speed = BNO085Sensor.calculate_speed(sensor)
+            print(f"Accelerometer: {accel_data}")
+            print(f"Gyroscope: {gyro_data}")
+            print(f"Magnetometer: {mag_data}")
+            print(f"Quaternion: {quaternion}")
+            print(f"Heading: {heading}")
+            print(f"Pitch: {pitch}")
+            print(f"Roll: {roll}")
+            print(f"Speed: {speed}")
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        BNO085Sensor.cleanup(sensor)
+        imu_serial_port.stop()
+        print("IMU SerialPort stopped.")
