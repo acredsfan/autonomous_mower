@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 import cv2
 import numpy as np
-import serial
 import utm
 # Import GPS and navigation modules
 from mower.navigation.gps import (
@@ -25,17 +24,13 @@ from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
 from src.mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT
+from src.mower.navigation.path_planning import serial_port
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-
-GPS_PORT = os.getenv('GPS_PORT', '/dev/ttyACM0')
-GPS_BAUDRATE = int(os.getenv('GPS_BAUDRATE', '9600'))
-
-serial_port = SerialPort(GPS_PORT, GPS_BAUDRATE, timeout=1)
 
 # Initialize GPS position instance
 gps_position_instance = GpsPosition(serial_port, debug=False)
@@ -89,11 +84,10 @@ class PathPlanner:
         self.grid_points = []
         self.planned_path = []
         self.obstacles = []
-        serial_port = SerialPort(args.serial, baudrate=args.baudrate,
-                                 timeout=args.timeout)
+        self.serial_port = SerialPort(GPS_PORT, GPS_BAUDRATE, timeout=1)
 
         # Initialize GPS position instance
-        self.gps_position_instance = GpsPosition(serial_port='/dev/ttyACM0',
+        self.gps_position_instance = GpsPosition(serial_port,
                                                  debug=False
                                                  )
         self.gps_position_instance.start()
