@@ -26,10 +26,10 @@ print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
 print("Serial port initialized.")
 print("Initializing BNO085 sensor...")
 
-# Try for 30 seconds to initialize the BNO085 sensor
+# Try for 5 seconds to initialize the BNO085 sensor
 sensor = None
 start_time = time.time()
-while time.time() - start_time < 30:
+while time.time() - start_time < 5:
     try:
         sensor = BNO08X_UART(imu_serial_port.ser)
         print("BNO085 sensor initialized.")
