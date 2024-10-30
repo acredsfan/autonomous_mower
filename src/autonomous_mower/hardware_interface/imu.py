@@ -21,29 +21,36 @@ IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
 
 # Initialize SerialPort for IMU
 imu_serial_port = SerialPort(port=IMU_SERIAL_PORT, baudrate=IMU_BAUDRATE)
-imu_serial_port.start()
-print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
-print("Serial port initialized.")
-print("Initializing BNO085 sensor...")
+try:
+    imu_serial_port.start()
+    print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
+    print("Serial port initialized.")
+    print("Initializing BNO085 sensor...")
 
-# Try for 5 seconds to initialize the BNO085 sensor
-sensor = None
-start_time = time.time()
-while time.time() - start_time < 5:
-    try:
-        sensor = BNO08X_UART(imu_serial_port.ser)
+    # Try for 30 seconds to initialize the BNO085 sensor
+    sensor = None
+    start_time = time.time()
+    while time.time() - start_time < 30:
+        try:
+            sensor = BNO08X_UART(imu_serial_port.ser)
+            print("BNO085 sensor initialized.")
+            break
+        except Exception as e:
+            print(f"Error initializing BNO085 sensor: {e}")
+            print("Retrying...")
+            time.sleep(1)
+    else:
+        print("Failed to initialize BNO085 sensor.")
+        raise Exception("Failed to initialize BNO085 sensor.")
+
+    if sensor is not None:
         print("BNO085 sensor initialized.")
-        break
-    except Exception as e:
-        print(f"Error initializing BNO085 sensor: {e}")
-        print("Retrying...")
-        time.sleep(1)
-else:
-    print("Failed to initialize BNO085 sensor.")
-    raise Exception("Failed to initialize BNO085 sensor.")
 
-if sensor is not None:
-    print("BNO085 sensor initialized.")
+except Exception as e:
+    logging.error(f"Failed to start IMU SerialPort: {e}")
+finally:
+    imu_serial_port.stop()
+    print("IMU SerialPort stopped.")
 
 
 class BNO085Sensor:
