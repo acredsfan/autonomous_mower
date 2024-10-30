@@ -24,13 +24,14 @@ from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
 from mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT
-from mower.navigation.path_planning import serial_port
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
+
+serial_port = SerialPort(GPS_PORT, GPS_BAUDRATE, timeout=1)
 
 # Initialize GPS position instance
 gps_position_instance = GpsPosition(serial_port, debug=False)
