@@ -34,7 +34,7 @@ from mower.navigation.gps import GpsLatestPosition
 from mower.navigation.gps import GpsPosition
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
-from mower.navigation.path_planning import PathPlanning
+from mower.navigation.path_planning import PathPlanner
 from mower.robot import mow_yard
 
 
@@ -132,7 +132,7 @@ class WebInterface:
         """Initialize various controller components."""
         self.blade_controller = BladeController()
         self.localization = Localization()
-        self.path_planning = PathPlanning(self.localization)
+        self.path_planning = PathPlanner(self.localization)
         self.robohat_driver = RoboHATDriver()
 
         # Initialize sensor interface
