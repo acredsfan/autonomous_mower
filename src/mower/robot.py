@@ -9,9 +9,6 @@ from mower.hardware.blade_controller import (
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.localization import Localization
-from mower.ui.web_ui.app import (
-    start_web_interface
-    )
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
@@ -82,6 +79,15 @@ def monitor_gps_status(position_reader):
             time.sleep(2)
 
 
+def start_web_ui():
+    from mower.ui.web_ui.app import WebInterface
+    # Check if the web interface is already running
+    if WebInterface.is_running():
+        logging.info("Web interface is already running.")
+        return
+    WebInterface.start()
+
+
 def mow_yard():
     """
     Mow the yard autonomously.
@@ -106,7 +112,7 @@ def mow_yard():
     localization.start()
 
     # Start the web interface
-    start_web_interface()
+    start_web_ui()
 
 
 if __name__ == "__main__":
@@ -118,7 +124,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
         # Start the web interface in a separate thread
-        web_thread = threading.Thread(target=start_web_interface, daemon=True)
+        web_thread = threading.Thread(target=start_web_ui, daemon=True)
         web_thread.start()
         logging.info("Web interface started.")
 
