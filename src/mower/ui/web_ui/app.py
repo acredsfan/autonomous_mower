@@ -413,10 +413,10 @@ class WebInterface:
 
     def start(self):
         """Start the web interface."""
+        self.socketio.run(self.app, host='0.0.0.0', port=8080)
         if self.use_ngrok:
             self._start_ngrok()
 
-        self.socketio.run(self.app, host='0.0.0.0', port=8080)
 
     def _start_ngrok(self):
         """Start ngrok tunnel if enabled."""
