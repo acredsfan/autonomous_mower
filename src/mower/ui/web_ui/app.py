@@ -36,6 +36,7 @@ from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planning import PathPlanner
 from mower.robot import mow_yard
+from src.mower.navigation.gps import GpsNmeaPositions
 
 
 # Initialize logging
@@ -123,7 +124,7 @@ class WebInterface:
             serial_port=self.serial_port, debug=True
         )
         self.gps_position.start()
-        self.position_reader = GpsLatestPosition(
+        self.position_reader = GpsNmeaPositions(
             gps_position_instance=self.gps_position,
             debug=True
         )
