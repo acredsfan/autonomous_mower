@@ -417,7 +417,6 @@ class WebInterface:
         if self.use_ngrok:
             self._start_ngrok()
 
-
     def _start_ngrok(self):
         """Start ngrok tunnel if enabled."""
         try:
@@ -471,10 +470,6 @@ class WebInterface:
 
 # Start the web interface thread to avoid multiprocessing issues
 def start_web_interface():
-    # Check if the web interface has already been started
-    if getattr(WebInterface, 'web_interface', None):
-        return
-    # If not started, initialize and start the web interface
     WebInterface.web_interface = WebInterface()
     WebInterface.web_interface.start()
 
