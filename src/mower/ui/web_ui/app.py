@@ -30,13 +30,12 @@ from mower.hardware.sensor_interface import (
     SafetyMonitor
 )
 from mower.hardware.serial_port import SerialPort
-from mower.navigation.gps import GpsLatestPosition
+from mower.navigation.gps import GpsNmeaPositions
 from mower.navigation.gps import GpsPosition
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planning import PathPlanner
 from mower.robot import mow_yard
-from src.mower.navigation.gps import GpsNmeaPositions
 
 
 # Initialize logging
@@ -464,6 +463,10 @@ class WebInterface:
         self.path_data = self._get_path_data()
         self._publish_path_data()
         mow_yard()
+
+    def is_running(self):
+        """Check if the web interface is running."""
+        return self.socketio.server.running
 
 
 # Start the web interface thread to avoid multiprocessing issues

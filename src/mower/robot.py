@@ -14,7 +14,7 @@ from mower.utilities.logger_config import (
     )
 from mower.obstacle_mapper import ObstacleMapper
 from mower.navigation.path_planning import PathPlanner
-from src.mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
+from src.mower.navigation.gps import GpsNmeaPositions
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
