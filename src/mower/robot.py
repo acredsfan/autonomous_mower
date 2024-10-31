@@ -10,13 +10,14 @@ from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.localization import Localization
 from mower.ui.web_ui.app import (
-    WebInterface
+    start_web_interface
     )
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
 from mower.obstacle_mapper import ObstacleMapper
 from mower.navigation.path_planning import PathPlanner
+from src.mower.navigation.gps import GpsNmeaPositions
 
 # Add the path to the sys path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
@@ -86,7 +87,7 @@ def mow_yard():
     Mow the yard autonomously.
     """
     global position_reader, path_planner
-    position_reader = WebInterface.position_reader
+    position_reader = GpsNmeaPositions()
     path_planner = PathPlanner(position_reader)
 
     # Start the mower
@@ -105,26 +106,19 @@ def mow_yard():
     localization.start()
 
     # Start the web interface
-    WebInterface.start()
+    start_web_interface()
 
 
 if __name__ == "__main__":
     try:
         # Initialize resources
         initialize_resources()
-        if not WebInterface.position_reader:
+        if not position_reader:
             logging.error("Failed to initialize GPS position reader.")
             sys.exit(1)
 
-        # Start the MQTT client in a separate thread
-        mqtt_thread = threading.Thread(
-            target=WebInterface._on_mqtt_connect, daemon=True
-        )
-        mqtt_thread.start()
-        logging.info("MQTT client started.")
-
         # Start the web interface in a separate thread
-        web_thread = threading.Thread(target=WebInterface.start, daemon=True)
+        web_thread = threading.Thread(target=start_web_interface, daemon=True)
         web_thread.start()
         logging.info("Web interface started.")
 

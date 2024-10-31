@@ -36,6 +36,7 @@ from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planning import PathPlanner
 from mower.robot import mow_yard
+from src.mower.hardware.camera_instance import start_server_thread
 
 
 # Initialize logging
@@ -465,11 +466,15 @@ class WebInterface:
         mow_yard()
 
 
-def main():
-    """Main entry point for the web interface."""
-    web_interface = WebInterface()
-    web_interface.start()
+# Start the web interface thread to avoid multiprocessing issues
+def start_web_interface():
+    # Check if the web interface has already been started
+    if getattr(WebInterface, 'web_interface', None):
+        return
+    # If not started, initialize and start the web interface
+    WebInterface.web_interface = WebInterface()
+    WebInterface.web_interface.start()
 
 
 if __name__ == '__main__':
-    main()
+    start_web_interface()
