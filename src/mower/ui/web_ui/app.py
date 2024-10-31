@@ -36,7 +36,6 @@ from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planning import PathPlanner
 from mower.robot import mow_yard
-from src.mower.hardware.camera_instance import start_server_thread
 
 
 # Initialize logging
