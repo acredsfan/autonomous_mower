@@ -68,7 +68,7 @@ def initialize_resources():
 def start_web_ui():
     from mower.ui.web_ui.app import WebInterface
     # Check if the web interface is already running
-    if WebInterface.is_running():
+    if WebInterface.is_running:
         logging.info("Web interface is already running.")
         return
     WebInterface.start()
