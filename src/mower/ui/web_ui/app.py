@@ -1,8 +1,11 @@
+# Updated 11.1.24
+
 import datetime
 import json
 import os
 import threading
 import time
+import ngrok
 from typing import Dict, Any, Tuple
 
 import paho.mqtt.client as mqtt
@@ -11,32 +14,23 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
-from pyngrok import ngrok
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.mower import (
+    get_blade_controller,
+    get_robohat_driver,
+    get_sensor_interface,
+    get_localization,
+    get_path_planner,
+    get_serial_port,
+    get_gps_position,
+    get_gps_nmea_positions,
 )
-from mower.hardware.blade_controller import (
-    BladeController
-)
+from mower.navigation.navigation import NavigationController
 from mower.hardware.camera_instance import (
     capture_frame,
-    start_server_thread
+    start_server_thread,
 )
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.sensor_interface import (
-    get_sensor_interface,
-    EnhancedSensorInterface,
-    SafetyMonitor
-)
-from mower.hardware.serial_port import SerialPort
-from mower.navigation.gps import GpsNmeaPositions
-from mower.navigation.gps import GpsPosition
-from mower.navigation.localization import Localization
-from mower.navigation.navigation import NavigationController
-from mower.navigation.path_planning import PathPlanner
-from mower.robot import mow_yard
-
 
 # Initialize logging
 logging = LoggerConfig.get_logger(__name__)
@@ -60,12 +54,12 @@ class WebInterface:
             template_folder=(
                 '/home/pi/autonomous_mower/user_interface/web_interface/'
                 'templates'
-            )
+            ),
         )
         self.socketio = SocketIO(
             self.app,
             cors_allowed_origins="*",
-            async_mode='threading'
+            async_mode='threading',
         )
         CORS(self.app)
 
@@ -90,8 +84,8 @@ class WebInterface:
             'topics': {
                 'path': 'mower/path',
                 'sensor': 'mower/sensor_data',
-                'command': 'mower/commands'
-            }
+                'command': 'mower/commands',
+            },
         }
 
     def _initialize_components(self):
@@ -112,48 +106,37 @@ class WebInterface:
 
     def _init_serial_and_gps(self):
         """Initialize serial communication and GPS components."""
-        serial_config = {
-            'port': os.getenv("GPS_SERIAL_PORT", "/dev/ttyACM0"),
-            'baudrate': int(os.getenv("GPS_BAUD_RATE", "9600")),
-            'timeout': float(os.getenv("GPS_SERIAL_TIMEOUT", "1"))
-        }
-
-        self.serial_port = SerialPort(**serial_config)
-        self.gps_position = GpsPosition(
-            serial_port=self.serial_port, debug=True
-        )
+        self.serial_port = get_serial_port()
+        self.gps_position = get_gps_position()
         self.gps_position.start()
-        self.position_reader = GpsNmeaPositions(
-            gps_position_instance=self.gps_position,
-            debug=True
-        )
+        self.position_reader = get_gps_nmea_positions()
 
     def _init_controllers(self):
         """Initialize various controller components."""
-        self.blade_controller = BladeController()
-        self.localization = Localization()
-        self.path_planning = PathPlanner(self.localization)
-        self.robohat_driver = RoboHATDriver()
+        self.blade_controller = get_blade_controller()
+        self.localization = get_localization()
+        self.path_planning = get_path_planner()
+        self.robohat_driver = get_robohat_driver()
 
         # Initialize sensor interface
         self.sensor_interface = get_sensor_interface()
-        self.safety_monitor = SafetyMonitor(self.sensor_interface)
+        self.safety_monitor = self.sensor_interface.get_safety_monitor()
 
         self.navigation_controller = NavigationController(
             self.position_reader,
             self.robohat_driver,
-            self.sensor_interface
+            self.sensor_interface,
         )
 
     def _init_sensors(self):
-        """Initialize and start sensor monitoring."""
-        self.sensor_interface = EnhancedSensorInterface()
-        self.safety_monitor = SafetyMonitor(self.sensor_interface)
+        """Sensors are already initialized in interfaces.py."""
+        self.sensor_interface = get_sensor_interface()
+        self.safety_monitor = self.sensor_interface.get_safety_monitor()
 
         # Start sensor monitoring thread
         self.sensor_thread = threading.Thread(
             target=self._monitor_sensors,
-            daemon=True
+            daemon=True,
         )
         self.sensor_thread.start()
 
@@ -169,7 +152,7 @@ class WebInterface:
             # Start camera processing
             self.camera_thread = threading.Thread(
                 target=self._process_camera,
-                daemon=True
+                daemon=True,
             )
             self.camera_thread.start()
             logging.info("Camera system initialized successfully")
@@ -188,7 +171,7 @@ class WebInterface:
                         self.socketio.emit(
                             'video_frame',
                             frame,
-                            namespace='/video'
+                            namespace='/video',
                         )
                 time.sleep(1 / self.streaming_fps)
             except Exception as e:
@@ -205,7 +188,7 @@ class WebInterface:
         self.mqtt_client.connect(
             self.mqtt_config['broker'],
             self.mqtt_config['port'],
-            60
+            60,
         )
         self.mqtt_client.loop_start()
 
@@ -227,11 +210,11 @@ class WebInterface:
         # WebSocket handlers
         self.socketio.on(
             'connect',
-            namespace='/video'
+            namespace='/video',
         )(self.handle_video_connect)
         self.socketio.on(
             'disconnect',
-            namespace='/video'
+            namespace='/video',
         )(self.handle_video_disconnect)
         self.socketio.on('request_status')(self.handle_status_request)
 
@@ -249,7 +232,7 @@ class WebInterface:
                 self.socketio.emit('sensor_update', {
                     'sensor_data': sensor_data,
                     'safety_status': safety_status,
-                    'timestamp': datetime.datetime.now().isoformat()
+                    'timestamp': datetime.datetime.now().isoformat(),
                 })
 
             except Exception as e:
@@ -263,7 +246,7 @@ class WebInterface:
         return render_template(
             'index.html',
             google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
-            next_scheduled_mow=self.next_scheduled_mow
+            next_scheduled_mow=self.next_scheduled_mow,
         )
 
     def status(self):
@@ -284,7 +267,7 @@ class WebInterface:
         if not getattr(self, 'camera_enabled', False):
             return render_template(
                 'error.html',
-                message="Camera system is not available"
+                message="Camera system is not available",
             )
         return render_template('camera.html')
 
@@ -311,7 +294,7 @@ class WebInterface:
         """Handle video WebSocket connection."""
         if not getattr(self, 'camera_enabled', False):
             emit('camera_error', {
-                'message': 'Camera system is not available'
+                'message': 'Camera system is not available',
             })
             return
 
@@ -342,15 +325,11 @@ class WebInterface:
             'mowing_status': self.mowing_status,
             'next_scheduled_mow': self.next_scheduled_mow,
             'sensor_data': sensor_data,
-            'safety_status': self.safety_monitor.get_safety_status()
+            'safety_status': self.safety_monitor.get_safety_status(),
         }
 
     def _calculate_next_scheduled_mow(self) -> str:
-        '''Calculate the next scheduled mow date.
-        Based on the inputs recored in mowing_schedule.json file.
-        json is fromatted as:
-        {"mowDays": [], "mowHours": [], "patternType": "checkerboard"}
-        '''
+        """Calculate the next scheduled mow date."""
         try:
             with open('mowing_schedule.json', 'r') as f:
                 schedule = json.load(f)
@@ -375,7 +354,7 @@ class WebInterface:
             if not self.safety_monitor.get_safety_status()['is_safe']:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Cannot execute command - safety check failed'
+                    'message': 'Cannot execute command - safety check failed',
                 }), 400
 
             self.robohat_driver.run(-steering, throttle)
@@ -385,12 +364,12 @@ class WebInterface:
             logging.error(f"Control error: {e}")
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': str(e),
             }), 500
 
     def _convert_utm_to_latlon(
         self,
-        utm_data: Tuple[float, float, float, float, str]
+        utm_data: Tuple[float, float, float, float, str],
     ) -> Tuple[float, float]:
         """Convert UTM coordinates to latitude/longitude."""
         _, easting, northing, zone_number, zone_letter = utm_data
@@ -407,15 +386,19 @@ class WebInterface:
             'bme280': sensor_data.get('bme280', {}),
             'distances': {
                 'left': sensor_data.get('left_distance', 'N/A'),
-                'right': sensor_data.get('right_distance', 'N/A')
-            }
+                'right': sensor_data.get('right_distance', 'N/A'),
+            },
         }
 
     def start(self):
         """Start the web interface."""
-        self.socketio.run(self.app, host='0.0.0.0', port=8080)
-        if self.use_ngrok:
-            self._start_ngrok()
+        if not getattr(self, 'is_running', False):
+            self.is_running = True
+            if self.use_ngrok:
+                self._start_ngrok()
+            self.socketio.run(self.app, host='0.0.0.0', port=8080)
+        else:
+            logging.info("Web interface is already running.")
 
     def _start_ngrok(self):
         """Start ngrok tunnel if enabled."""
@@ -424,6 +407,11 @@ class WebInterface:
             logging.info(f"Ngrok tunnel URL: {tunnel.public_url}")
         except Exception as e:
             logging.error(f"Ngrok tunnel error: {e}")
+
+    def shutdown(self):
+        """Shutdown the web interface."""
+        self.is_running = False
+        # Perform any necessary cleanup here
 
     # MQTT event handlers
     def _on_mqtt_connect(self, client, userdata, flags, rc):
@@ -461,18 +449,27 @@ class WebInterface:
         self.mowing_status = "Mowing"
         self.path_data = self._get_path_data()
         self._publish_path_data()
+        # Call mow_yard() from robot module
+        from mower.robot import mow_yard
         mow_yard()
+
+    def _stop_mowing(self):
+        """Stop the autonomous mowing process."""
+        self.mowing_status = "Not mowing"
+        # Implement stopping logic here
+
+    def _get_path_data(self):
+        """Retrieve path data."""
+        # Implement path retrieval logic here
+        return {"path": []}
+
+    def _publish_path_data(self):
+        """Publish path data over MQTT."""
+        self.mqtt_client.publish(
+            self.mqtt_config['topics']['path'],
+            json.dumps(self.path_data),
+        )
 
     def is_running(self):
         """Check if the web interface is running."""
-        return self.socketio.server.running
-
-
-# Start the web interface thread to avoid multiprocessing issues
-def start_web_interface():
-    WebInterface.web_interface = WebInterface()
-    WebInterface.web_interface.start()
-
-
-if __name__ == '__main__':
-    start_web_interface()
+        return getattr(self, 'is_running', False)
