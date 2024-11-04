@@ -1,5 +1,3 @@
-# enhanced_sensor_interface.py
-
 import threading
 import time
 from typing import Dict, Any, Optional
@@ -28,26 +26,44 @@ class SensorStatus:
     last_error: Optional[str]
 
 
+def _log_error(message: str, error: Exception):
+    """Centralized error logging."""
+    logging.error(f"{message}: {str(error)}")
+
+
+def _init_bno085():
+    """Initialize BNO085 sensor."""
+    try:
+        return BNO085Sensor()
+    except Exception as e:
+        _log_error("BNO085 initialization failed", e)
+        return None
+
+
 class EnhancedSensorInterface:
     """
     Enhanced sensor interface with improved error handling, health monitoring,
     and safety features.
     """
+
+    def __init__(self):
+        self.sensor_data = None
+        self._data = None
+        self._error_thresholds = None
+        self._sensor_status = None
+        self._stop_event = None
+        self._sensors = None
+        self.shutdown_lines = None
+        self._i2c = None
+        self._locks = None
+
     def _init_bme280(self):
         """Initialize BME280 sensor."""
         try:
             with self._locks['i2c']:
                 return BME280Sensor.init_bme280(self._i2c)
         except Exception as e:
-            self._log_error("BME280 initialization failed", e)
-            return None
-
-    def _init_bno085(self):
-        """Initialize BNO085 sensor."""
-        try:
-            return BNO085Sensor()
-        except Exception as e:
-            self._log_error("BNO085 initialization failed", e)
+            _log_error("BME280 initialization failed", e)
             return None
 
     def _init_ina3221(self):
@@ -56,7 +72,7 @@ class EnhancedSensorInterface:
             with self._locks['i2c']:
                 return INA3221Sensor.init_ina3221(self._i2c)
         except Exception as e:
-            self._log_error("INA3221 initialization failed", e)
+            _log_error("INA3221 initialization failed", e)
             return None
 
     def _init_vl53l0x(self):
@@ -66,7 +82,7 @@ class EnhancedSensorInterface:
                 return VL53L0XSensors.init_vl53l0x_sensors(
                     self._i2c, self.shutdown_lines)
         except Exception as e:
-            self._log_error("VL53L0X initialization failed", e)
+            _log_error("VL53L0X initialization failed", e)
             return None
 
     def _read_bme280(self):
@@ -230,7 +246,7 @@ class EnhancedSensorInterface:
             status.working = False
             status.error_count += 1
             status.last_error = str(error)
-            self._log_error(f"{sensor_name} reading failed", error)
+            _log_error(f"{sensor_name} reading failed", error)
 
     def get_sensor_data(self) -> Dict[str, Any]:
         """Get current sensor data in a thread-safe way."""
@@ -258,11 +274,7 @@ class EnhancedSensorInterface:
                 if hasattr(sensor, 'cleanup'):
                     sensor.cleanup()
             except Exception as e:
-                self._log_error(f"Error cleaning up {sensor_name}", e)
-
-    def _log_error(self, message: str, error: Exception):
-        """Centralized error logging."""
-        logging.error(f"{message}: {str(error)}")
+                _log_error(f"Error cleaning up {sensor_name}", e)
 
     def is_safe_to_operate(self) -> bool:
         """
@@ -276,14 +288,35 @@ class EnhancedSensorInterface:
                 for sensor in critical_sensors
             )
 
+    def _init_sensor_with_retry(self, sensor_name, initializer):
+        pass
+
+
+def _check_proximity_violation(sensor_data: Dict) -> bool:
+    """Check if any proximity sensor indicates an obstacle too close."""
+    min_safe_distance = 30  # cm
+    return any(
+        sensor_data.get(
+            f'{direction}_distance', float('inf')
+        ) < min_safe_distance
+        for direction in ['left', 'right', 'front']
+    )
+
+
+def _check_tilt_violation(sensor_data: Dict) -> bool:
+    """Check if the mower's tilt angle is unsafe."""
+    max_safe_tilt = 25  # degrees
+    return abs(sensor_data.get('pitch', 0)) > max_safe_tilt or \
+        abs(sensor_data.get('roll', 0)) > max_safe_tilt
+
 
 class SafetyMonitor:
     """
     Safety monitoring system for the autonomous mower.
     """
 
-    def __init__(self, sensor_interface: EnhancedSensorInterface):
-        self.sensor_interface = sensor_interface
+    def __init__(self, enhanced_sensor_interface):
+        self.sensor_interface = enhanced_sensor_interface
         self.safety_violations = []
         self.stop_event = threading.Event()
         self.monitoring_thread = threading.Thread(
@@ -306,34 +339,19 @@ class SafetyMonitor:
         sensor_data = self.sensor_interface.get_sensor_data()
 
         # Check proximity sensors
-        if self._check_proximity_violation(sensor_data):
+        if _check_proximity_violation(sensor_data):
             self.safety_violations.append("Proximity violation")
 
         # Check orientation (tilt)
-        if self._check_tilt_violation(sensor_data):
+        if _check_tilt_violation(sensor_data):
             self.safety_violations.append("Tilt violation")
 
         # Check power system
         if self._check_power_violation(sensor_data):
             self.safety_violations.append("Power system violation")
 
-    def _check_proximity_violation(self, sensor_data: Dict) -> bool:
-        """Check if any proximity sensor indicates an obstacle too close."""
-        min_safe_distance = 30  # cm
-        return any(
-            sensor_data.get(
-                f'{direction}_distance', float('inf')
-            ) < min_safe_distance
-            for direction in ['left', 'right', 'front']
-        )
-
-    def _check_tilt_violation(self, sensor_data: Dict) -> bool:
-        """Check if the mower's tilt angle is unsafe."""
-        max_safe_tilt = 25  # degrees
-        return abs(sensor_data.get('pitch', 0)) > max_safe_tilt or \
-            abs(sensor_data.get('roll', 0)) > max_safe_tilt
-
-    def _check_power_violation(self, sensor_data: Dict) -> bool:
+    @staticmethod
+    def _check_power_violation(sensor_data: Dict) -> bool:
         """Check if power system parameters are within safe ranges."""
         min_safe_voltage = 11.0  # volts
         max_safe_current = 20.0  # amps
