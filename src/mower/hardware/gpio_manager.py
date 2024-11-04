@@ -18,6 +18,7 @@ class GPIOManager:
             cls.__init__(cls._instance)
         return cls._instance
 
+    @staticmethod
     def init_gpio(shutdown_pins, interrupt_pins):
         """
         Initialize GPIO pins for shutdown and interrupt.

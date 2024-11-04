@@ -152,7 +152,8 @@ def get_gps_nmea_positions():
 def get_gps_latest_position():
     global _gps_latest_position
     if _gps_latest_position is None:
-        _gps_latest_position = GpsLatestPosition()
+        _gps_latest_position = GpsLatestPosition(
+            get_gps_nmea_positions())
     return _gps_latest_position
 
 
