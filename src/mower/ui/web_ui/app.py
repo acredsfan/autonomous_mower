@@ -1,19 +1,14 @@
-# Updated 11.1.24
-
-import datetime
-import json
-import os
-import threading
-import time
-import ngrok
-from typing import Dict, Any, Tuple
-
-import paho.mqtt.client as mqtt
-import utm
-from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+
+import os
+import threading
+import datetime
+import json
+import time
+import paho.mqtt.client as mqtt
+from dotenv import load_dotenv
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.mower import (
@@ -24,13 +19,10 @@ from mower.mower import (
     get_path_planner,
     get_serial_port,
     get_gps_position,
-    get_gps_nmea_positions,
+    get_gps_nmea_positions
 )
 from mower.navigation.navigation import NavigationController
-from mower.hardware.camera_instance import (
-    capture_frame,
-    start_server_thread,
-)
+from mower.hardware.camera_instance import capture_frame, start_server_thread
 
 # Initialize logging
 logging = LoggerConfig.get_logger(__name__)
@@ -49,34 +41,20 @@ class WebInterface:
 
     def _initialize_flask(self):
         """Initialize Flask application and extensions."""
-        self.app = Flask(
-            __name__,
-            template_folder=(
-                '/home/pi/autonomous_mower/user_interface/web_interface/'
-                'templates'
-            ),
-        )
-        self.socketio = SocketIO(
-            self.app,
-            cors_allowed_origins="*",
-            async_mode='threading',
-        )
+        template_folder = os.getenv('TEMPLATE_FOLDER',
+                                    '/home/pi/autonomous_mower/user_interface/web_interface/templates')
+        self.app = Flask(__name__, template_folder=template_folder)
+        self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='threading')
         CORS(self.app)
 
     def _load_environment_variables(self):
         """Load and set environment variables."""
-        project_root = os.path.dirname(
-            os.path.dirname(os.path.abspath(__file__))
-        )
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         dotenv_path = os.path.join(project_root, '.env')
         load_dotenv(dotenv_path)
 
-        self.use_remote_planning = (
-            os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
-        )
+        self.use_remote_planning = os.getenv("USE_REMOTE_PATH_PLANNING", "False").lower() == "true"
         self.use_ngrok = os.getenv("USE_NGROK", "False").lower() == "true"
-
-        # MQTT configuration
         self.mqtt_config = {
             'broker': self._get_ip_address(),
             'port': int(os.getenv("MQTT_PORT", 1883)),
@@ -95,11 +73,9 @@ class WebInterface:
             self._init_controllers()
             self._init_sensors()
             self._init_camera()
-
             self.path_data = {"path": []}
             self.mowing_status = "Not mowing"
             self.next_scheduled_mow = self._calculate_next_scheduled_mow()
-
         except Exception as e:
             logging.error(f"Component initialization error: {e}")
             raise
@@ -117,27 +93,19 @@ class WebInterface:
         self.localization = get_localization()
         self.path_planning = get_path_planner()
         self.robohat_driver = get_robohat_driver()
-
-        # Initialize sensor interface
         self.sensor_interface = get_sensor_interface()
         self.safety_monitor = self.sensor_interface.get_safety_monitor()
-
         self.navigation_controller = NavigationController(
             self.position_reader,
             self.robohat_driver,
-            self.sensor_interface,
+            self.sensor_interface
         )
 
     def _init_sensors(self):
-        """Sensors are already initialized in interfaces.py."""
+        """Initialize sensor interfaces and monitoring."""
         self.sensor_interface = get_sensor_interface()
         self.safety_monitor = self.sensor_interface.get_safety_monitor()
-
-        # Start sensor monitoring thread
-        self.sensor_thread = threading.Thread(
-            target=self._monitor_sensors,
-            daemon=True,
-        )
+        self.sensor_thread = threading.Thread(target=self._monitor_sensors, daemon=True)
         self.sensor_thread.start()
 
     def _init_camera(self):
@@ -148,15 +116,9 @@ class WebInterface:
             self.streaming_fps = int(os.getenv('STREAMING_FPS', 15))
             self.stream_active = False
             self.active_streams = set()
-
-            # Start camera processing
-            self.camera_thread = threading.Thread(
-                target=self._process_camera,
-                daemon=True,
-            )
+            self.camera_thread = threading.Thread(target=self._process_camera, daemon=True)
             self.camera_thread.start()
             logging.info("Camera system initialized successfully")
-
         except Exception as e:
             logging.error(f"Camera initialization error: {e}")
             self.camera_enabled = False
@@ -167,12 +129,8 @@ class WebInterface:
             try:
                 if self.active_streams:
                     frame = capture_frame()
-                    if frame is not None:
-                        self.socketio.emit(
-                            'video_frame',
-                            frame,
-                            namespace='/video',
-                        )
+                    if frame:
+                        self.socketio.emit('video_frame', frame, namespace='/video')
                 time.sleep(1 / self.streaming_fps)
             except Exception as e:
                 logging.error(f"Camera processing error: {e}")
@@ -184,38 +142,24 @@ class WebInterface:
         self.mqtt_client.on_connect = self._on_mqtt_connect
         self.mqtt_client.on_message = self._on_mqtt_message
         self.mqtt_client.on_publish = self._on_mqtt_publish
-
         self.mqtt_client.connect(
             self.mqtt_config['broker'],
             self.mqtt_config['port'],
-            60,
+            60
         )
         self.mqtt_client.loop_start()
 
     def _setup_routes(self):
         """Set up Flask routes and WebSocket handlers."""
-        # Main routes
         self.app.route('/')(self.index)
         self.app.route('/status')(self.status)
         self.app.route('/control', methods=['GET', 'POST'])(self.control)
         self.app.route('/camera')(self.camera_route)
-
-        # API routes
         self.app.route('/api/sensor-status')(self.get_sensor_status)
         self.app.route('/api/gps', methods=['GET'])(self.get_gps)
-        self.app.route('/api/mowing-area', methods=['GET', 'POST'])(
-            self.handle_mowing_area
-        )
-
-        # WebSocket handlers
-        self.socketio.on(
-            'connect',
-            namespace='/video',
-        )(self.handle_video_connect)
-        self.socketio.on(
-            'disconnect',
-            namespace='/video',
-        )(self.handle_video_disconnect)
+        self.app.route('/api/mowing-area', methods=['GET', 'POST'])(self.handle_mowing_area)
+        self.socketio.on('connect', namespace='/video')(self.handle_video_connect)
+        self.socketio.on('disconnect', namespace='/video')(self.handle_video_disconnect)
         self.socketio.on('request_status')(self.handle_status_request)
 
     def _get_ip_address(self) -> str:
@@ -228,25 +172,21 @@ class WebInterface:
             try:
                 sensor_data = self.sensor_interface.get_sensor_data()
                 safety_status = self.safety_monitor.get_safety_status()
-
                 self.socketio.emit('sensor_update', {
                     'sensor_data': sensor_data,
                     'safety_status': safety_status,
                     'timestamp': datetime.datetime.now().isoformat(),
                 })
-
             except Exception as e:
                 logging.error(f"Sensor monitoring error: {e}")
-
             time.sleep(0.5)
 
-    # Route handlers
     def index(self):
         """Handle main page request."""
         return render_template(
             'index.html',
             google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
-            next_scheduled_mow=self.next_scheduled_mow,
+            next_scheduled_mow=self.next_scheduled_mow
         )
 
     def status(self):
@@ -258,218 +198,101 @@ class WebInterface:
         """Handle control page request and commands."""
         if request.method == 'GET':
             return render_template('control.html')
-
         data = request.get_json()
         return self._handle_control_command(data)
 
     def camera_route(self):
         """Handle camera page request."""
         if not getattr(self, 'camera_enabled', False):
-            return render_template(
-                'error.html',
-                message="Camera system is not available",
-            )
-        return render_template('camera.html')
+            return render_template('error.html')
 
-    # API handlers
     def get_sensor_status(self):
-        """Get current sensor status."""
-        return jsonify(self.sensor_interface.get_sensor_status())
+        """API endpoint to get sensor status."""
+        try:
+            sensor_data = self.sensor_interface.get_sensor_data()
+            safety_status = self.safety_monitor.get_safety_status()
+            return jsonify({
+                'sensor_data': sensor_data,
+                'safety_status': safety_status,
+                'timestamp': datetime.datetime.now().isoformat(),
+            })
+        except Exception as e:
+            logging.error(f"Error getting sensor status: {e}")
+            return jsonify({'error': str(e)}), 500
 
     def get_gps(self):
-        """Get current GPS position."""
+        """API endpoint to get GPS data."""
         try:
-            position = self.position_reader.run()
-            if position and len(position) == 5:
-                lat, lon = self._convert_utm_to_latlon(position)
-                return jsonify({'latitude': lat, 'longitude': lon})
-            return jsonify({'error': 'No GPS data available'}), 404
-
+            position = self.gps_position.read()
+            return jsonify(position)
         except Exception as e:
-            logging.error(f"GPS error: {e}")
-            return jsonify({'error': 'Server error'}), 500
+            logging.error(f"Error getting GPS data: {e}")
+            return jsonify({'error': str(e)}), 500
 
-    # WebSocket handlers
-    def handle_video_connect(self, auth):
-        """Handle video WebSocket connection."""
-        if not getattr(self, 'camera_enabled', False):
-            emit('camera_error', {
-                'message': 'Camera system is not available',
-            })
-            return
+    def handle_mowing_area(self):
+        """API endpoint to handle mowing area."""
+        if request.method == 'GET':
+            return jsonify(self.path_data)
+        elif request.method == 'POST':
+            data = request.get_json()
+            if 'path' in data:
+                self.path_data = data
+                return jsonify({'status': 'success'})
+            return jsonify({'error': 'Invalid data provided'}), 400
 
-        client_id = request.sid
-        self.active_streams.add(client_id)
-        logging.info(f"Video client connected: {client_id}")
-
-    def handle_video_disconnect(self):
-        """Handle video streaming disconnection."""
-        try:
-            client_id = request.sid
-            self.active_streams.discard(client_id)
-            logging.info(f"Video client disconnected: {client_id}")
-
-        except Exception as e:
-            logging.error(f"Video disconnection error: {e}")
-
-    def handle_status_request(self):
-        """Handle status request via WebSocket."""
-        sensor_data = self.sensor_interface.get_sensor_data()
-        emit('update_status', self._format_status_data(sensor_data))
-
-    # Helper methods
-    def _get_status_info(self) -> Dict[str, Any]:
-        """Get comprehensive status information."""
-        sensor_data = self.sensor_interface.get_sensor_data()
-        return {
-            'mowing_status': self.mowing_status,
-            'next_scheduled_mow': self.next_scheduled_mow,
-            'sensor_data': sensor_data,
-            'safety_status': self.safety_monitor.get_safety_status(),
-        }
-
-    def _calculate_next_scheduled_mow(self) -> str:
-        """Calculate the next scheduled mow date."""
-        try:
-            with open('mowing_schedule.json', 'r') as f:
-                schedule = json.load(f)
-                mow_days = schedule.get('mowDays', [])
-                mow_hours = schedule.get('mowHours', [])
-
-            if not mow_days or not mow_hours:
-                return "No schedule set"
-
-            return f"Next mow: {mow_days[0]} at {mow_hours[0]}"
-
-        except Exception as e:
-            logging.error(f"Next mow calculation error: {e}")
-            return "Error calculating next mow"
-
-    def _handle_control_command(self, data: Dict) -> Tuple[Dict, int]:
-        """Process control commands."""
-        try:
-            steering = float(data.get('steering', 0))
-            throttle = float(data.get('throttle', 0))
-
-            if not self.safety_monitor.get_safety_status()['is_safe']:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Cannot execute command - safety check failed',
-                }), 400
-
-            self.robohat_driver.run(-steering, throttle)
-            return jsonify({'status': 'success'})
-
-        except Exception as e:
-            logging.error(f"Control error: {e}")
-            return jsonify({
-                'status': 'error',
-                'message': str(e),
-            }), 500
-
-    def _convert_utm_to_latlon(
-        self,
-        utm_data: Tuple[float, float, float, float, str],
-    ) -> Tuple[float, float]:
-        """Convert UTM coordinates to latitude/longitude."""
-        _, easting, northing, zone_number, zone_letter = utm_data
-        return utm.to_latlon(easting, northing, zone_number, zone_letter)
-
-    def _format_status_data(self, sensor_data: Dict) -> Dict:
-        """Format sensor data for status updates."""
-        return {
-            'battery': sensor_data.get('battery', {}),
-            'battery_charge': sensor_data.get('battery_charge', 'N/A'),
-            'solar': sensor_data.get('solar', {}),
-            'speed': sensor_data.get('speed', 'N/A'),
-            'heading': sensor_data.get('heading', 'N/A'),
-            'bme280': sensor_data.get('bme280', {}),
-            'distances': {
-                'left': sensor_data.get('left_distance', 'N/A'),
-                'right': sensor_data.get('right_distance', 'N/A'),
-            },
-        }
-
-    def start(self):
-        """Start the web interface."""
-        if not getattr(self, 'is_running', False):
-            self.is_running = True
-            if self.use_ngrok:
-                self._start_ngrok()
-            self.socketio.run(self.app, host='0.0.0.0', port=8080)
-        else:
-            logging.info("Web interface is already running.")
-
-    def _start_ngrok(self):
-        """Start ngrok tunnel if enabled."""
-        try:
-            tunnel = ngrok.connect(8080)
-            logging.info(f"Ngrok tunnel URL: {tunnel.public_url}")
-        except Exception as e:
-            logging.error(f"Ngrok tunnel error: {e}")
-
-    def shutdown(self):
-        """Shutdown the web interface."""
-        self.is_running = False
-        # Perform any necessary cleanup here
-
-    # MQTT event handlers
     def _on_mqtt_connect(self, client, userdata, flags, rc):
-        """Handle MQTT connection event."""
+        """Handle MQTT connection."""
         logging.info(f"Connected to MQTT broker with result code {rc}")
-        self.mqtt_client.subscribe(self.mqtt_config['topics']['command'])
+        for topic in self.mqtt_config['topics'].values():
+            client.subscribe(topic)
 
-    def _on_mqtt_message(self, client, userdata, message):
-        """Handle incoming MQTT messages."""
-        try:
-            payload = json.loads(message.payload.decode('utf-8'))
-            self._handle_mqtt_command(payload)
-
-        except Exception as e:
-            logging.error(f"MQTT message error: {e}")
+    def _on_mqtt_message(self, client, userdata, msg):
+        """Handle MQTT message."""
+        topic = msg.topic
+        payload = msg.payload.decode()
+        logging.info(f"MQTT message received on topic {topic}: {payload}")
+        # Process message here
 
     def _on_mqtt_publish(self, client, userdata, mid):
-        """Handle MQTT publish event."""
-        logging.info(f"Message published with ID: {mid}")
+        """Handle MQTT publish acknowledgment."""
+        logging.info(f"MQTT message published with mid: {mid}")
 
-    def _handle_mqtt_command(self, command: Dict):
-        """Handle incoming MQTT commands."""
-        if command.get('command') == 'start_mowing':
-            self._start_mowing()
-        elif command.get('command') == 'stop_mowing':
-            self._stop_mowing()
-        else:
-            logging.warning(f"Unknown command: {command}")
+    def _handle_control_command(self, data: Dict[str, Any]) -> str:
+        """Handle control commands received."""
+        logging.info(f"Received control command: {json.dumps(data)}")
+        # Implement actual control handling logic here
+        return jsonify({'status': 'success'})
 
-    def _start_mowing(self):
-        """Start the autonomous mowing process."""
-        if self.mowing_status == "Mowing":
-            return
+    def _get_status_info(self) -> Dict[str, Any]:
+        """Get status information for the status page."""
+        status_info = {
+            'mowing_status': self.mowing_status,
+            'next_scheduled_mow': self.next_scheduled_mow,
+        }
+        return status_info
 
-        self.mowing_status = "Mowing"
-        self.path_data = self._get_path_data()
-        self._publish_path_data()
-        # Call mow_yard() from robot module
-        from mower.robot import mow_yard
-        mow_yard()
+    # WebSocket Handlers
+    def handle_video_connect(self):
+        """Handle WebSocket video connect."""
+        logging.info("Video client connected")
+        self.active_streams.add(request.sid)
 
-    def _stop_mowing(self):
-        """Stop the autonomous mowing process."""
-        self.mowing_status = "Not mowing"
-        # Implement stopping logic here
+    def handle_video_disconnect(self):
+        """Handle WebSocket video disconnect."""
+        logging.info("Video client disconnected")
+        self.active_streams.remove(request.sid)
 
-    def _get_path_data(self):
-        """Retrieve path data."""
-        # Implement path retrieval logic here
-        return {"path": []}
+    def handle_status_request(self):
+        """Handle WebSocket status request."""
+        status_info = self._get_status_info()
+        self.socketio.emit('status_update', status_info)
 
-    def _publish_path_data(self):
-        """Publish path data over MQTT."""
-        self.mqtt_client.publish(
-            self.mqtt_config['topics']['path'],
-            json.dumps(self.path_data),
-        )
+    def _calculate_next_scheduled_mow(self) -> datetime.datetime:
+        """Calculate the next scheduled mow (stub method)."""
+        # Implement your logic to calculate the next mowing time
+        return datetime.datetime.now() + datetime.timedelta(days=1)
 
-    def is_running(self):
-        """Check if the web interface is running."""
-        return getattr(self, 'is_running', False)
+
+if __name__ == '__main__':
+    web_interface = WebInterface()
+    web_interface.socketio.run(web_interface.app, host='0.0.0.0', port=5000)
