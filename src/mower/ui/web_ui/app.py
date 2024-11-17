@@ -42,7 +42,7 @@ class WebInterface:
     def _initialize_flask(self):
         """Initialize Flask application and extensions."""
         template_folder = os.getenv('TEMPLATE_FOLDER',
-                                    '/home/pi/autonomous_mower/user_interface/web_interface/templates')
+                                    '/home/pi/autonomous_mower/src/mower/ui/web_ui/templates')
         self.app = Flask(__name__, template_folder=template_folder)
         self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='threading')
         CORS(self.app)
