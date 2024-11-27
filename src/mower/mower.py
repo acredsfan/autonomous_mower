@@ -24,6 +24,7 @@ from mower.navigation.gps import (
 )
 from mower.navigation.localization import Localization
 from mower.navigation.path_planning import PathPlanner
+from mower.navigation.navigation import NavigationController, NavigationStatus
 
 # Obstacle Detection imports
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
@@ -176,6 +177,16 @@ def get_path_planner():
     if _path_planner is None:
         _path_planner = PathPlanner(get_localization())
     return _path_planner
+
+
+def get_navigation_controller():
+    global _navigation_controller
+    if _navigation_controller is None:
+        _navigation_controller = NavigationController(
+            gps_latest_position=get_gps_latest_position(),
+            robohat_driver=get_robohat_driver(),
+            sensor_interface=get_sensor_interface())
+    return _navigation_controller
 
 # Obstacle Detection initialization functions
 
