@@ -38,6 +38,17 @@ class WebInterface:
         self._initialize_components()
         self._initialize_mqtt()
         self._setup_routes()
+        self.path_planner = get_path_planner()
+        self.planned_path = []
+        self.load_existing_data()
+
+    def load_existing_data(self):
+        # Load existing mowing area and planned path
+        self.path_planner.load_mowing_area_polygon()
+        self.path_planner.gps_polygon_to_utm_polygon()
+        self.path_planner.generate_grid_from_polygon(grid_size=1.0)
+        waypoints = self.path_planner.create_pattern()
+        self.planned_path = self.path_planner.create_waypoint_map()
 
     def _initialize_flask(self):
         """Initialize Flask application and extensions."""
@@ -158,6 +169,9 @@ class WebInterface:
         self.app.route('/api/sensor-status')(self.get_sensor_status)
         self.app.route('/api/gps', methods=['GET'])(self.get_gps)
         self.app.route('/api/mowing-area', methods=['GET', 'POST'])(self.handle_mowing_area)
+        self.app.route('/api/home-location', methods=['GET', 'POST'])(self.handle_home_location)
+        self.app.route('/api/robot-position', methods=['GET'])(self.get_robot_position)
+        self.app.route('/api/planned-path', methods=['GET'])(self.get_planned_path)
         self.socketio.on('connect', namespace='/video')(self.handle_video_connect)
         self.socketio.on('disconnect', namespace='/video')(self.handle_video_disconnect)
         self.socketio.on('request_status')(self.handle_status_request)
@@ -230,15 +244,60 @@ class WebInterface:
             return jsonify({'error': str(e)}), 500
 
     def handle_mowing_area(self):
-        """API endpoint to handle mowing area."""
         if request.method == 'GET':
-            return jsonify(self.path_data)
+            mowing_area_polygon = self.get_mowing_area_polygon()
+            return jsonify({'polygon': mowing_area_polygon})
         elif request.method == 'POST':
             data = request.get_json()
-            if 'path' in data:
-                self.path_data = data
+            if data and 'polygon' in data:
+                self.save_mowing_area_polygon(data['polygon'])
+                # Regenerate planned path
+                self.load_existing_data()
                 return jsonify({'status': 'success'})
-            return jsonify({'error': 'Invalid data provided'}), 400
+            else:
+                return jsonify({'error': 'Invalid data provided'}), 400
+
+    def handle_home_location(self):
+        if request.method == 'GET':
+            home_location = self.get_home_location()
+            return jsonify({'location': home_location})
+        elif request.method == 'POST':
+            data = request.get_json()
+            if data and 'location' in data:
+                self.save_home_location(data['location'])
+                return jsonify({'status': 'success'})
+            else:
+                return jsonify({'error': 'Invalid data provided'}), 400
+
+    def get_planned_path(self):
+        return jsonify(self.planned_path)
+
+        # Helper methods to get and save data
+
+    def get_mowing_area_polygon(self):
+        if os.path.exists('user_polygon.json'):
+            with open('user_polygon.json', 'r') as f:
+                polygon_data = json.load(f)
+            return polygon_data
+        else:
+            return []
+
+    def save_mowing_area_polygon(self, polygon):
+        with open('user_polygon.json', 'w') as f:
+            json.dump(polygon, f)
+
+    def get_home_location(self):
+        if os.path.exists('home_location.json'):
+            with open('home_location.json', 'r') as f:
+                location_data = json.load(f)
+            return location_data
+        else:
+            return None
+
+    def save_home_location(self, location):
+        with open('home_location.json', 'w') as f:
+            json.dump(location, f)
+
 
     def _on_mqtt_connect(self, client, userdata, flags, rc):
         """Handle MQTT connection."""

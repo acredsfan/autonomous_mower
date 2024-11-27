@@ -407,6 +407,19 @@ class PathPlanner:
 
         return waypoints
 
+    def create_waypoint_map(self):
+        waypoints = self.create_pattern()
+        waypoint_map = []
+        for waypoint in waypoints:
+            lat, lon = self.utm_to_gps(waypoint[0], waypoint[1])
+            waypoint_map.append({"lat": lat, "lon": lon})
+        return waypoint_map
+
+    def waypoint_map_to_json(self, waypoint_map):
+        """Convert a list of waypoints to a JSON string."""
+        return json.dumps(waypoint_map)
+
+
     def main(self):
         self.load_mowing_area_polygon()
         self.gps_polygon_to_utm_polygon()
