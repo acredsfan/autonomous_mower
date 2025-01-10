@@ -1,76 +1,100 @@
+/* Modernized CSS Updates */
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Inter', sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f5f5dc; /* Beige background for a natural feel */
+    background-color: #f7f9fc; /* Light modern background */
+    color: #333; /* Dark gray for text readability */
 }
 
 .header {
-    background-color: #228B22; /* ForestGreen header for a grassy feel */
+    background-color: #2d87f0; /* Modern blue header */
     color: #fff;
     padding: 20px;
     text-align: center;
-    border-bottom: 2px solid #808000; /* Olive border */
+    border-bottom: 3px solid #1c6fdc; /* Slightly darker border */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
 }
 
 .content {
     margin: 25px;
     font-size: 18px;
+    line-height: 1.6; /* Improve readability */
 }
 
-#map {
-    width: 100%;
-    height: 600px;
-}
-
-h1 {
-    color: #808000; /* Olive color for titles */
-    font-size: 28px;
-    font-weight: bold;
-    padding-bottom: 10px;
+.error-message {
+    color: #b00020;
+    background-color: #ffeef0;
+    border: 1px solid #b00020;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    font-size: 16px;
+    text-align: center;
+    role: alert;
 }
 
 button {
-    background-color: #228B22; /* ForestGreen for buttons */
+    background-color: #2d87f0;
     border: none;
     color: white;
-    padding: 20px 36px;
+    padding: 14px 28px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 18px;
-    margin: 10px 2px;
+    font-size: 16px;
+    margin: 10px 5px;
     cursor: pointer;
-    border-radius: 4px;
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Add a shadow effect */
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 button:hover {
-    background-color: #1c6e1c; /* Darker green on hover */
+    background-color: #1c6fdc; /* Darker hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Elevated shadow */
+}
+
+button:focus {
+    outline: 2px solid #00a1e0;
+    box-shadow: 0 0 6px rgba(0, 161, 224, 0.5);
 }
 
 form {
     margin: 0 auto;
     width: 60%;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 label {
     display: block;
-    margin-bottom: 15px;
-    font-size: 18px;
-    font-weight: bold;
-    color: #808000; /* Olive color for labels */
+    margin-bottom: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #555; /* Neutral gray for labels */
 }
 
 input[type="text"], select {
     width: 100%;
-    padding: 16px 24px;
-    margin: 10px 0;
+    padding: 12px 16px;
+    margin: 8px 0;
     display: inline-block;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
     box-sizing: border-box;
-    font-size: 18px;
+    font-size: 16px;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+input[type="text"]:focus, select:focus {
+    outline: none;
+    border-color: #2d87f0;
+    box-shadow: 0 0 4px rgba(45, 135, 240, 0.5);
 }
 
 .status-table {
@@ -80,138 +104,35 @@ input[type="text"], select {
 }
 
 .status-table td {
-    border: 1px solid #228B22; /* ForestGreen border */
-    padding: 15px;
+    border: 1px solid #ddd;
+    padding: 12px;
     text-align: center;
-    font-size: 18px;
+    font-size: 16px;
 }
 
 .status-table td:first-child {
-    font-weight: bold;
-    width: 25%;
-}
-
-.text-color {
-    color: #228B22; /* Change the color to your desired color */
-}
-
-.controller {
-    display: grid;
-    grid-template-areas:
-        'up up up'
-        'left stop right'
-        'down down down';
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.btn {
-    background-color: #228B22;
-    border: none;
-    color: white;
-    padding: 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 18px;
-    margin: 10px 2px;
-    cursor: pointer;
-    border-radius: 50%;
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.btn:hover {
-    background-color: #1c6e1c; /* Darker green on hover */
-}
-
-.btn-up { grid-area: up; }
-.btn-left { grid-area: left; }
-.btn-down { grid-area: down; }
-.btn-right { grid-area: right; }
-.btn-stop { grid-area: stop; }
-
-.mower-controls {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.btn-blades-on { background-color: #228B22; } /* Green for blades on */
-.btn-blades-off { background-color: #8B0000; } /* Red for blades off */
-.btn-start-mowing { background-color: #006400; } /* DarkGreen for start mowing */
-.btn-stop-mowing { background-color: #8B4513; } /* SaddleBrown for stop mowing */
-
-.main-content {
-    display: flex;
-    justify-content: center;
-    align-items: start;
-    gap: 20px;
-}
-
-.control-panel {
-    flex: 1;
-    max-width: 600px; /* Adjust as needed */
-}
-
-.video-stream {
-    flex: 1;
-    max-width: 600px; /* Adjust as needed */
-}
-
-#video {
-    width: 100%;
-    height: auto;
-}
-
-/* Font Awesome Icons */
-.fas {
-    font-size: 24px;
+    font-weight: 600;
+    background-color: #f7f9fc;
 }
 
 .checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 20px;
 }
 
-.checkbox-group.days {
-    /* Optional: Specific styles for days */
-    max-height: 400px;
-    overflow-y: auto; /* Add scroll if too many days */
-}
-
-.checkbox-group.hours {
-    /* Optional: Specific styles for hours */
-    max-height: 400px;
-    overflow-y: auto; /* Add scroll if too many hours */
-}
-
 .checkbox-group input[type="checkbox"] {
-    margin-right: 5px;
+    margin-right: 8px;
 }
 
 .checkbox-group label {
-    margin-right: 15px;
+    margin-right: 12px;
+    font-weight: 500;
 }
 
-.checkbox-group.days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 3 columns for days */
-}
-
-.checkbox-group.hours {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr); /* 6 columns for hours */
-}
-
-@media (max-width: 600px) {
-    .checkbox-group.days,
-    .checkbox-group.hours {
-        grid-template-columns: repeat(2, 1fr); /* 2 columns on small screens */
+@media (max-width: 768px) {
+    .checkbox-group {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
