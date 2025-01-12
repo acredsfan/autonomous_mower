@@ -1,4 +1,4 @@
-// main.js
+// Modernized JavaScript with Fixes
 
 // Constants
 const DEFAULT_LAT = 39.095657;
@@ -15,14 +15,27 @@ let robotMarker = null;
 let mapId;
 let apiKey;
 let pathPolyline = null;
-let defaultCoordinates = {lat: DEFAULT_LAT, lng: DEFAULT_LNG};
+const defaultCoordinates = {lat: DEFAULT_LAT, lng: DEFAULT_LNG};
+
+// Utility function for fetch requests with error handling
+async function fetchWithLogging(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            console.error(`Error fetching ${url}: ${response.statusText}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+    } catch (error) {
+        console.error(`Fetch failed for ${url}:`, error);
+        return null; // Return null to handle gracefully
+    }
+}
 
 // Function to fetch sensor data
-function fetchSensorData() {
-    fetch('/get_sensor_data')
-        .then(response => response.json())
-        .then(updateSensorDisplay)
-        .catch(error => console.error('Error fetching sensor data:', error));
+async function fetchSensorData() {
+    const data = await fetchWithLogging('/get_sensor_data');
+    if (data) updateSensorDisplay(data);
 }
 
 setInterval(fetchSensorData, FETCH_INTERVAL);
@@ -30,20 +43,20 @@ setInterval(fetchSensorData, FETCH_INTERVAL);
 // Function to update sensor display
 function updateSensorDisplay(data) {
     const elements = {
-        'battery_voltage': `Battery Voltage: ${data.battery_voltage}`,
-        'battery_current': `Battery Current: ${data.battery_current}`,
-        'battery_charge': `Battery Charge: ${data.battery_charge_level}`,
-        'solar_voltage': `Solar Voltage: ${data.solar_voltage}`,
-        'solar_current': `Solar Current: ${data.solar_current}`,
-        'speed': `Speed: ${data.speed}`,
-        'heading': `Heading: ${data.heading}`,
-        'pitch': `Pitch: ${data.pitch}`,
-        'roll': `Roll: ${data.roll}`,
-        'temperature': `Temperature: ${data.temperature}`,
-        'humidity': `Humidity: ${data.humidity}`,
-        'pressure': `Pressure: ${data.pressure}`,
-        'left_distance': `Left Distance: ${data.left_distance}`,
-        'right_distance': `Right Distance: ${data.right_distance}`
+        battery_voltage: `Battery Voltage: ${data.battery_voltage}`,
+        battery_current: `Battery Current: ${data.battery_current}`,
+        battery_charge: `Battery Charge: ${data.battery_charge_level}`,
+        solar_voltage: `Solar Voltage: ${data.solar_voltage}`,
+        solar_current: `Solar Current: ${data.solar_current}`,
+        speed: `Speed: ${data.speed}`,
+        heading: `Heading: ${data.heading}`,
+        pitch: `Pitch: ${data.pitch}`,
+        roll: `Roll: ${data.roll}`,
+        temperature: `Temperature: ${data.temperature}`,
+        humidity: `Humidity: ${data.humidity}`,
+        pressure: `Pressure: ${data.pressure}`,
+        left_distance: `Left Distance: ${data.left_distance}`,
+        right_distance: `Right Distance: ${data.right_distance}`
     };
     for (const [id, text] of Object.entries(elements)) {
         const element = document.getElementById(id);
@@ -54,17 +67,13 @@ function updateSensorDisplay(data) {
 }
 
 // Function to save settings for mowing days and hours
-function saveSettings(mowDays, mowHours, patternType) {
-    fetch('/save_settings', {
+async function saveSettings(mowDays, mowHours, patternType) {
+    const response = await fetchWithLogging('/save_settings', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({mowDays, mowHours, patternType})
-    })
-    .then(response => response.json())
-        .then(data => alert('Settings saved successfully.'))
-        .catch(error => console.error('Error:', error));
+    });
+    if (response) alert('Settings saved successfully.');
 }
 
 // Function to update areaCoordinates when the polygon's path changes
@@ -117,39 +126,25 @@ function loadMapScript(apiKey, mapId) {
     document.head.appendChild(script);
 }
 
-window.addEventListener('load', () => {
-    Promise.all([
-        fetch('/get_google_maps_api_key').then(response => response.json()),
-        fetch('/get_map_id').then(response => response.json())
-    ])
-        .then(([keyData, mapIdData]) => {
-            apiKey = keyData.api_key;
-            mapId = mapIdData.map_id;
-            if (!apiKey) {
-                console.error('API key not found or invalid.');
-                return;
-            }
-            loadMapScript(apiKey, mapId);
-        })
-        .catch(error => console.error('Error fetching API key or Map ID:', error));
+window.addEventListener('load', async () => {
+    const [keyData, mapIdData] = await Promise.all([
+        fetchWithLogging('/get_google_maps_api_key'),
+        fetchWithLogging('/get_map_id')
+    ]);
+
+    if (keyData && mapIdData) {
+        apiKey = keyData.api_key;
+        mapId = mapIdData.map_id;
+        if (apiKey) loadMapScript(apiKey, mapId);
+        else console.error('API key not found or invalid.');
+    }
 });
 
 // Function to initialize map
 async function initMap() {
-    const {Map: GoogleMap} = await google.maps.importLibrary('maps');
-    const {DrawingManager} = await google.maps.importLibrary('drawing');
+    const {Map: GoogleMap, DrawingManager} = await google.maps.importLibrary(['maps', 'drawing']);
 
-    let coordinates = await fetch('/get_default_coordinates')
-        .then(response => response.json())
-        .catch(() => ({lat: DEFAULT_LAT, lng: DEFAULT_LNG}));
-
-    coordinates.lat = parseFloat(coordinates.lat);
-    coordinates.lng = parseFloat(coordinates.lng);
-
-    if (isNaN(coordinates.lat) || isNaN(coordinates.lng)) {
-        coordinates = {lat: DEFAULT_LAT, lng: DEFAULT_LNG};
-    }
-
+    const coordinates = await fetchWithLogging('/get_default_coordinates') || defaultCoordinates;
     map = new GoogleMap(document.getElementById('map'), {
         zoom: 20,
         center: coordinates,
@@ -162,10 +157,7 @@ async function initMap() {
         drawingControl: true,
         drawingControlOptions: {
             position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: [
-                google.maps.drawing.OverlayType.POLYGON,
-                google.maps.drawing.OverlayType.MARKER
-            ]
+            drawingModes: ['polygon', 'marker']
         }
     });
     drawingManager.setMap(map);
@@ -183,18 +175,13 @@ async function initMap() {
             paths: polygonCoords,
             map: map,
             editable: true
-    });
+        });
         areaCoordinates = polygonCoords;
         attachPolygonListeners(areaPolygon);
     }
 
     // Display home location marker
-    if (homeLoc) {
-        homeLocation = homeLoc;
-    } else {
-        homeLocation = coordinates;
-    }
-
+    homeLocation = homeLoc || coordinates;
     homeLocationMarker = new google.maps.Marker({
         map: map,
         position: homeLocation,
@@ -208,14 +195,7 @@ async function initMap() {
             strokeWeight: 1
         }
     });
-
-    homeLocationMarker.addListener('dragend', function () {
-        homeLocation = {
-            lat: homeLocationMarker.getPosition().lat(),
-            lng: homeLocationMarker.getPosition().lng()
-        };
-        saveHomeLocation();
-    });
+    homeLocationMarker.addListener('dragend', saveHomeLocation);
 
     // Display robot marker
     robotMarker = new google.maps.Marker({
@@ -231,169 +211,69 @@ async function initMap() {
         }
     });
 
-    // Display planned path
-    if (plannedPath && plannedPath.length > 0) {
-        const pathCoordinates = plannedPath.map(point => ({
-            lat: point.lat,
-            lng: point.lon
-        }));
-        pathPolyline = new google.maps.Polyline({
-            path: pathCoordinates,
-            geodesic: true,
-            strokeColor: '#FF0000',
-            strokeOpacity: 1.0,
-            strokeWeight: 2,
-            map: map
-        });
-    }
-
     // Update robot position periodically
     setInterval(async () => {
         const robotPosition = await fetchRobotPosition();
-        if (robotPosition) {
-            robotMarker.setPosition(robotPosition);
-        }
+        if (robotPosition) robotMarker.setPosition(robotPosition);
     }, FETCH_INTERVAL);
-
-    // Handle overlay complete events
-    google.maps.event.addListener(drawingManager, 'overlaycomplete', function (event) {
-        if (event.type === 'polygon') {
-            if (areaPolygon) {
-                areaPolygon.setMap(null);
-            }
-            areaPolygon = event.overlay;
-            areaPolygon.setEditable(true);
-            areaCoordinates = areaPolygon.getPath().getArray().map(coord => ({
-                lat: coord.lat(),
-                lng: coord.lng()
-            }));
-            attachPolygonListeners(areaPolygon);
-            saveMowingArea();
-        } else if (event.type === 'marker') {
-            if (homeLocationMarker) {
-                homeLocationMarker.setMap(null);
-            }
-            const position = event.overlay.getPosition();
-            homeLocation = {
-                lat: position.lat(),
-                lng: position.lng()
-            };
-            homeLocationMarker = new google.maps.Marker({
-                map: map,
-                position: homeLocation,
-                draggable: true,
-                title: 'Robot Home Location - Drag to Change.',
-                icon: {
-                    path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-                    scale: 5,
-                    fillColor: '#00a1e0',
-                    fillOpacity: 1,
-                    strokeWeight: 1
-                }
-            });
-            homeLocationMarker.addListener('dragend', function () {
-                homeLocation = {
-                    lat: homeLocationMarker.getPosition().lat(),
-                    lng: homeLocationMarker.getPosition().lng()
-                };
-                saveHomeLocation();
-            });
-            saveHomeLocation();
-            event.overlay.setMap(null); // Remove the temporary marker
-        }
-    });
 }
 
 // Fetch functions
-function fetchMowingAreaPolygon() {
-    return fetch('/api/mowing-area')
-        .then(response => response.json())
-        .then(data => data.polygon || [])
-        .catch(error => {
-            console.error('Error fetching mowing area polygon:', error);
-            return [];
-        });
+async function fetchMowingAreaPolygon() {
+    const data = await fetchWithLogging('/api/mowing-area');
+    return data ? data.polygon : [];
 }
 
-function fetchHomeLocation() {
-    return fetch('/api/home-location')
-        .then(response => response.json())
-        .then(data => data.location)
-        .catch(error => {
-            console.error('Error fetching home location:', error);
-            return null;
-        });
+async function fetchHomeLocation() {
+    const data = await fetchWithLogging('/api/home-location');
+    return data ? data.location : null;
 }
 
-function fetchPlannedPath() {
-    return fetch('/api/planned-path')
-        .then(response => response.json())
-        .catch(error => {
-            console.error('Error fetching planned path:', error);
-            return [];
-    });
+async function fetchPlannedPath() {
+    const data = await fetchWithLogging('/api/planned-path');
+    return data || [];
 }
 
-function fetchRobotPosition() {
-    return fetch('/api/robot-position')
-        .then(response => response.json())
-        .then(data => {
-            if (data.lat && data.lon) {
-                return {lat: data.lat, lng: data.lon};
-            } else {
-                console.error('Invalid robot position data:', data);
-                return null;
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching robot position:', error);
-            return null;
-        });
+async function fetchRobotPosition() {
+    const data = await fetchWithLogging('/api/robot-position');
+    if (data?.lat && data?.lon) {
+        return {lat: data.lat, lng: data.lon};
+    } else {
+        console.error('Invalid robot position data:', data);
+        return null;
+    }
 }
 
 // Save functions
-function saveMowingArea() {
-    fetch('/api/mowing-area', {
+async function saveMowingArea() {
+    const response = await fetchWithLogging('/api/mowing-area', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({polygon: areaCoordinates})
-    })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Mowing area saved successfully');
-            // Update planned path
-            fetchPlannedPath().then(plannedPath => {
-                if (pathPolyline) {
-                    pathPolyline.setMap(null);
-                }
-                if (plannedPath && plannedPath.length > 0) {
-                    const pathCoordinates = plannedPath.map(point => ({
-                        lat: point.lat,
-                        lng: point.lon
-                    }));
-                    pathPolyline = new google.maps.Polyline({
-                        path: pathCoordinates,
-                        geodesic: true,
-                        strokeColor: '#FF0000',
-                        strokeOpacity: 1.0,
-                        strokeWeight: 2,
-                        map: map
-                    });
-                }
+    });
+    if (response) {
+        console.log('Mowing area saved successfully');
+        const plannedPath = await fetchPlannedPath();
+        if (pathPolyline) pathPolyline.setMap(null);
+        if (plannedPath.length > 0) {
+            const pathCoordinates = plannedPath.map(point => ({lat: point.lat, lng: point.lon}));
+            pathPolyline = new google.maps.Polyline({
+                path: pathCoordinates,
+                geodesic: true,
+                strokeColor: '#FF0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+                map: map
             });
-        })
-        .catch(error => console.error('Error saving mowing area:', error));
+        }
+    }
 }
 
-function saveHomeLocation() {
-    fetch('/api/home-location', {
+async function saveHomeLocation() {
+    const response = await fetchWithLogging('/api/home-location', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({location: homeLocation})
-    })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Home location saved successfully');
-        })
-        .catch(error => console.error('Error saving home location:', error));
+    });
+    if (response) console.log('Home location saved successfully');
 }

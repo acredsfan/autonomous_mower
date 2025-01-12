@@ -4,28 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Mower Web UI</title>
-    <!-- Add your custom CSS and JavaScript files here -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.3/css/all.css"> 
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <nav>
-        <!-- Add your navigation menu with links to the different pages -->
         <a href="{{ url_for('status') }}">Status</a>
         <a href="{{ url_for('control') }}">Control</a>
         <a href="{{ url_for('area') }}">Mowing Area</a>
         <a href="{{ url_for('settings') }}">Settings</a>
-        <a href="{{ url_for('camera_route') }}">Camera Stream</a> 
-        </nav>
-        <main>
-            {% block content %}
-            {% endblock %}
-        </main>
-        <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
-        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-        {% block scripts %}
+        <a href="{{ url_for('camera_route') }}">Camera Stream</a>
+    </nav>
+    <main>
+        {% block content %}
         {% endblock %}
-
-    </body>
-    </html>
+    </main>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

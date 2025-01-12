@@ -3,22 +3,18 @@
 {% block content %}
 <h1>Mowing Area and Home Location</h1>
 <div id="map"></div>
-<button id="confirm-area-button" disabled>Confirm Area</button>
-<button id="confirm-home-button" disabled>Set Home Location</button>
-<button id="check-polygon-button">Check Polygon Points</button>
+<button id="confirm-area-button" class="btn" disabled>Confirm Area</button>
+<button id="confirm-home-button" class="btn" disabled>Set Home Location</button>
+<button id="check-polygon-button" class="btn">Check Polygon Points</button>
 
-<style>
-    #map {
-        width: 100%;
-        height: 600px;
-    }
-</style>
-
-<h1>Camera Stream</h1>
-<img id="video_feed" alt="Loading video stream...">
-
+<h2>Camera Stream</h2>
+<div class="video-stream">
+    <img id="video_feed" alt="Loading video stream...">
+</div>
 {% endblock %}
 
 {% block scripts %}
-<!-- Additional scripts specific to this page can go here -->
+<script>
+    // Additional scripts specific to this page
+</script>
 {% endblock %}
