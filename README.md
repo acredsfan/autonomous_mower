@@ -303,3 +303,15 @@ To update the Docker image after making changes to your code:
      ```
 
 4. **Save and Restart
+## Features and Functionalities
+
+The autonomous mower project includes the following key features and functionalities:
+
+1. **Hardware Control**: Manages blade control, motor control, and sensor interfacing.
+2. **Navigation and Path Planning**: Implements GPS-based navigation, localization, and path planning algorithms.
+3. **Obstacle Detection and Avoidance**: Uses sensors and machine learning models to detect and avoid obstacles.
+4. **User Interface**: Provides a web-based user interface for monitoring and controlling the mower.
+5. **Battery Management**: Monitors battery levels and manages charging.
+6. **Logging and Diagnostics**: Logs system events and provides diagnostic information for troubleshooting.
+
+These features work together to provide a fully autonomous mowing solution that can navigate and mow a designated area while avoiding obstacles and maintaining optimal performance.
