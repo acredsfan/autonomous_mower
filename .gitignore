@@ -9,4 +9,3 @@ venv/
 vscode/
 *.idea/
 file_server.py
-notes.txt
