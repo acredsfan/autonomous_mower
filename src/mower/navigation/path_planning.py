@@ -355,9 +355,8 @@ class PathPlanner:
         all_points = []  # List to store all generated points
                      radius, grid_points, step=15):
         """Generate waypoints for a circle with a given radius."""
-        waypoinid_points):
-        
-                for i in range(0, 360, step):
+                
+        for i in range(0, 360, step):
             angle = np.radians(i)
             x = center_x + radius * np.cos(angle)
             y = center_y + radius * np.sin(angle)
