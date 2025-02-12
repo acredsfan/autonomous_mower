@@ -10,11 +10,11 @@
 </head>
 <body>
     <nav>
-        <a href="{{ url_for('status') }}">Status</a>
-        <a href="{{ url_for('control') }}">Control</a>
-        <a href="{{ url_for('area') }}">Mowing Area</a>
-        <a href="{{ url_for('settings') }}">Settings</a>
-        <a href="{{ url_for('camera_route') }}">Camera Stream</a>
+        <a href="{{ url_for('status') }}"<i class="fas fa-info-circle"i> >Status</a>
+        <a href="{{ url_for('control') }}<i class="fas fa-sliders-h"></i">Control</a>
+        <a href="{{ url_for('area') }}">M<i class="fas fa-map"></i> owing Area</a>
+        <a href="{{ url_for('settings') }<i class="fas fa-cogs"></i> }">Settings</a>
+        <a href="{{ url_for('camera_route<i class="fas fa-video"></i> ') }}">Camera Stream</a>
     </nav>
     <main>
         {% block content %}

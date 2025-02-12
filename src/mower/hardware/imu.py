@@ -20,12 +20,15 @@ IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
 IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
 
 # Initialize SerialPort for IMU
-imu_serial_port = SerialPort(port=IMU_SERIAL_PORT, baudrate=IMU_BAUDRATE)
+imu_serial_port = SerialPort(port=IMU_SERIAL_PORT, baudrate=IMU_BAUDRATE
+
 try:
     imu_serial_port.start()
     print(f"IMU_SERIAL_PORT: {IMU_SERIAL_PORT}")
     print("Serial port initialized.")
     print("Initializing BNO085 sensor...")
+except Exception as e:
+    print(f"Error initializing IMU: {e}")
 
     # Try for 30 seconds to initialize the BNO085 sensor
     sensor = None
