@@ -349,16 +349,23 @@ class PathPlanner:
 
         return waypoints
 
+  
     def circle_waypoints(self, center_x, center_y,
-                         radius, grid_points, step=15):
+    
+        all_points = []  # List to store all generated points
+                     radius, grid_points, step=15):
         """Generate waypoints for a circle with a given radius."""
-        waypoints = []
-        for angle in np.arange(0, 360, step):
-            x = center_x + radius * np.cos(np.radians(angle))
-            y = center_y + radius * np.sin(np.radians(angle))
-            point = (x, y)
-            if self.point_in_polygon(x, y, grid_points):
-                waypoints.append(point)
+        waypoinid_points):
+        
+                for i in range(0, 360, step):
+            angle = np.radians(i)
+            x = center_x + radius * np.cos(angle)
+            y = center_y + radius * np.sin(angle)
+            all_points.append((x, y))
+
+        # Filter points based on the polygon check
+        waypoints = [point for point in all_points if self.point_in_polygon(point[0], point[1], grid_points)]
+        waypoints.append(point)
         return waypoints
 
     def star_waypoints(self, center_x, center_y, radius, grid_points):

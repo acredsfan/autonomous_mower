@@ -272,3 +272,135 @@ The `rp2040_code.py` file contains code for controlling the Donkey Car driver fo
 ## Notes
 
 - This module is essential for controlling the mower's movement and reading sensor data, ensuring precise navigation and obstacle avoidance.
+# Web Interface (app.py) Documentation
+
+## Overview
+The `app.py` file contains the Flask application code that serves the web UI for the robotic mower. It includes routing, WebSocket handlers, and integration with various hardware and software components.
+
+## Functions and Methods
+
+### Initialization
+- **__init__(self):** Initializes the `WebInterface` instance, loading environment variables, initializing hardware and software components, and setting up Socket.IO for real-time communication.
+
+### Camera Processing
+- **_process_camera(self):** Processes camera frames in a background thread and emits the video frames to the client using Socket.IO. Used for streaming the video feed to the 'camera.html' template.
+
+### Routing
+- **_setup_routes(self):** Sets up the routes and WebSocket handlers for the Flask application.
+  - **/**: Serves the index page.
+  - **/status**: Serves the status page.
+  - **/control**: Serves the control page.
+  - **/camera**: Serves the camera page.
+  - **/api/sensor-status**: Provides sensor status information.
+  - **/api/gps**: Provides GPS data.
+  - **/api/moving-area**: Handles moving area requests.
+  - **/api/home-location**: Handles home location requests.
+  - **/api/robot-position**: Provides the robot's position.
+  - **/api/planned-path**: Provides the planned path for the robot.
+
+### WebSocket Handlers
+- **video_connect(self):** Handles video connection events.
+- **video_disconnect(self):** Handles video disconnection events.
+- **status(self):** Handles status requests.
+
+### MQTT Handlers
+- **_on_mqtt_connect(self, client, userdata, flags, rc):** Handles MQTT connection events.
+- **_on_mqtt_message(self, client, userdata, msg):** Processes received MQTT messages.
+- **_on_mqtt_publish(self, client, userdata, mid):** Handles message publication acknowledgments.
+- **handle_command(self, command):** Processes control commands received from the client.
+
+### Helper Methods
+- **_get_ip_address(self):** Retrieves the IP address of the device.
+- **_monitor_sensors(self):** Monitors sensors and emits updates via WebSocket.
+- **get_status_info(self):** Provides status information for the status page.
+- **calculate_next_scheduled_mow(self):** Calculates the next scheduled mowing time (currently returns a stub value).
+
+## Dependencies
+- **Flask:** Web framework for serving the web UI.
+- **Socket.IO:** For real-time communication between the server and clients.
+- **MQTT:** For communication with the robotic mower's hardware components.
+- **Camera:** For streaming video from the robot's camera.
+- **Sensor Interface:** For monitoring sensor data.
+
+## Inputs and Outputs
+- **Inputs:** HTTP requests, WebSocket messages, MQTT messages, camera frames, sensor data.
+- **Outputs:** HTML templates, JSON responses, WebSocket messages, MQTT messages, video streams.
+
+# Obstacle Mapper (obstacle_mapper.py) Documentation
+
+## Overview
+The `obstacle_mapper.py` file contains the `ObstacleMapper` class, which is responsible for detecting and recording obstacles within the yard boundary. It includes methods for loading the yard boundary, detecting obstacles using sensor data, recording obstacle positions, and saving the obstacle map to a JSON file.
+
+## Methods
+
+### Initialization
+- **__init__(self):** Initializes the `ObstacleMapper` instance, loads the yard boundary, and sets up the initial obstacle map.
+
+### Obstacle Detection
+- **detect_obstacle(self):** Detects if an obstacle is present using sensor data.
+- **record_obstacle(self):** Records the current GPS position as an obstacle if it is inside the yard boundary.
+- **save_obstacle_map(self):** Saves the obstacle map to a JSON file.
+- **is_within_yard(self, position):** Checks if a given position is within the yard boundary.
+
+### Yard Exploration
+- **explore_yard(self, duration):** Explores the yard to map obstacles for a given duration. It navigates the robot within the yard boundary, records obstacle positions, and navigates around obstacles if necessary.
+
+## Dependencies
+- **GPS:** For obtaining the current GPS position of the robot.
+- **Sensor Interface:** For detecting obstacles using sensor data.
+- **Yard Boundary:** A JSON file containing the yard boundary polygon.
+
+## Inputs and Outputs
+- **Inputs:** GPS positions, sensor data, yard boundary polygon.
+- **Outputs:** Obstacle map (JSON file).
+
+
+## Path Planning (path_planning.py) Documentation
+
+### Overview
+The 'path_planning.py' file contains the 'PathPlanner' class, which is responsible for planning the mowing path within the yard boundary. It includes methods for loading the yard boundary, generating grid points, planning the mowing path, and saving the planned path to a JSON file.
+
+### Methods
+
+#### Initialization
+- `__init__`: Initializes the `PathPlanner` instance, loads environment variables, and sets up paths for user polygon and mowing schedule.
+
+#### Coordinate Conversion
+- `utm_to_gps`: Converts UTM coordinates to GPS coordinates.
+- `gps_to_utm`: Converts GPS coordinates to UTM coordinates.
+
+#### Yard Boundary
+- `load_user_polygon`: Loads the user polygon from a JSON file.
+
+#### Grid Points
+- `generate_grid_points`: Generates grid points within the user polygon for mowing.
+
+#### Mowing Path
+- `plan_mowing_path`: Plans the mowing path based on the grid points.
+- `save_mowing_schedule`: Saves the planned mowing schedule to a JSON file.
+
+#### Obstacle Handling
+- `handle_obstacle`: Re-plans the path when an obstacle is encountered.
+
+#### Waypoint Navigation
+- `navigate_to_waypoints`: Navigates the robot through a series of waypoints.
+
+#### Waypoint Generation
+- `create_waypoints`: Creates waypoints based on the selected mowing pattern.
+- `circle_waypoints`: Generates waypoints for a circle with a given radius.
+- `star_waypoints`: Generates waypoints for a star pattern.
+
+#### Image Processing
+- `image_to_waypoints`: Converts an image to a set of waypoints.
+
+#### Map Creation
+- `create_map`: Generates a map of waypoints based on the selected mowing pattern.
+- `waypoint_map_to_json`: Converts a map of waypoints to a JSON string.
+
+### Potential Improvements and Recommendations
+
+- **Optimization**: Consider optimizing the `circle_waypoints` and `star_waypoints` methods by performing the point-in-polygon check after generating all waypoints, rather than within the loop for each point.
+- **Error Handling**: Add error handling for the "custom_image" pattern to handle cases where the image path is not provided or the image file is not found.
+- **User Experience**: Handle unsupported pattern types gracefully by providing a default pattern or prompting the user to select a valid pattern, rather than exiting the program.
+- **Comments and Documentation**: Add additional comments to explain the logic behind complex calculations and algorithms, such as the A* algorithm and grid generation.
+- **Timeout Mechanism**: Implement a timeout mechanism in the `navigate_to_waypoints` method to prevent the robot from getting stuck in a loop if it repeatedly encounters obstacles.
