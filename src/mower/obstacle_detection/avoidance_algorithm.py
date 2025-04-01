@@ -1,7 +1,30 @@
-# avoidance_algorithm.py
+"""
+Obstacle avoidance algorithm for the autonomous mower.
+
+This module implements real-time obstacle detection and avoidance functionality,
+allowing the mower to safely navigate around obstacles in its path while
+continuing to follow the planned mowing route.
+
+The avoidance algorithm:
+1. Continuously monitors sensor data for obstacles
+2. Implements various avoidance strategies based on obstacle type and location
+3. Coordinates with the path planner to adjust routes when obstacles are detected
+4. Manages thread-safe interaction between sensors, motors, and navigation
+
+Key features:
+- Thread-safe operation with proper synchronization
+- Multiple avoidance strategies (turn, backup, reroute)
+- Dynamic path adjustment based on obstacle proximity
+- Integration with machine learning-based obstacle detection
+"""
 
 import threading
 import time
+import logging
+import random
+import math
+from enum import Enum
+from typing import Optional, Tuple, List, Dict, Any
 
 from mower.utilities.logger_config import (
     LoggerConfigDebug as LoggerConfig
@@ -9,125 +32,859 @@ from mower.utilities.logger_config import (
 from mower.constants import (AVOIDANCE_DELAY,
                              CAMERA_OBSTACLE_THRESHOLD,
                              MIN_DISTANCE_THRESHOLD)
+from mower.navigation.path_planning import PathPlanner
+from mower.navigation.navigation import NavigationController
+from mower.hardware.sensor_interface import SensorInterface
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+class AvoidanceState(Enum):
+    """
+    Enum representing the different states of the avoidance algorithm.
+    
+    These states define the current avoidance mode and dictate the
+    behavior of the robot when encountering obstacles.
+    
+    States:
+        NORMAL: Regular operation, no obstacle detected
+        OBSTACLE_DETECTED: An obstacle has been detected, initiating avoidance
+        AVOIDING: Currently executing an avoidance maneuver
+        RECOVERY: Unable to avoid obstacle, attempting recovery procedure
+    """
+    NORMAL = 0
+    OBSTACLE_DETECTED = 1
+    AVOIDING = 2
+    RECOVERY = 3
 
-class ObstacleAvoidance:
-    def __init__(self, sensor_interface):
+class AvoidanceAlgorithm:
+    """
+    Implements obstacle detection and avoidance for the autonomous mower.
+    
+    This class coordinates between sensors, path planning, and motor control
+    to ensure the mower can safely navigate around obstacles while maintaining
+    its mowing path as much as possible.
+    
+    The algorithm uses a state machine approach to manage different phases
+    of obstacle detection and avoidance, with thread-safe operation to handle
+    concurrent sensing and motion control.
+    
+    Attributes:
+        path_planner: Interface to the path planning system
+        motor_controller: Interface to the motor control system
+        sensor_interface: Interface to all onboard sensors
+        camera: Optional camera instance for visual obstacle detection
+        current_state: Current state of the avoidance algorithm
+        obstacle_data: Information about detected obstacles
+        thread_lock: Lock for thread-safe operation
+        avoidance_thread: Background thread for continuous monitoring
+        
+    Troubleshooting:
+        - If the robot frequently stops for non-existent obstacles, check
+          sensor calibration and detection thresholds
+        - If avoidance maneuvers are too aggressive, adjust turning and
+          speed parameters
+        - If the robot gets stuck in avoidance loops, check the recovery
+          strategy parameters
+        - For issues with thread synchronization, inspect lock acquisition
+          patterns in the logs
+    """
+
+    def __init__(self, path_planner: PathPlanner, 
+                 motor_controller: NavigationController,
+                 sensor_interface: SensorInterface,
+                 camera=None):
+        """
+        Initialize the avoidance algorithm.
+        
+        Args:
+            path_planner: Reference to the path planning system
+            motor_controller: Reference to the motor controller for movement
+            sensor_interface: Reference to the sensor interface for obstacle detection
+            camera: Optional camera instance for visual obstacle detection
+            
+        This initializes the avoidance system in NORMAL state and
+        sets up the thread lock for safe concurrent operation.
+        """
+        self.path_planner = path_planner
+        self.motor_controller = motor_controller
         self.sensor_interface = sensor_interface
+        self.camera = camera
+
+        # State management
+        self.current_state = AvoidanceState.NORMAL
+        self.obstacle_data = None
         self.obstacle_left = False
         self.obstacle_right = False
+        self.camera_obstacle_detected = False
+        self.dropoff_detected = False
+        
+        # Thread management
+        self.thread_lock = threading.RLock()
+        self.running = False
         self.stop_thread = False
+        self.avoidance_thread = None
+        
+        # Configuration parameters
+        self.obstacle_threshold = 30.0  # cm
+        self.safe_distance = 50.0  # cm
+        self.recovery_attempts = 0
+        self.max_recovery_attempts = 3
+        self.avoidance_strategies = [
+            self._turn_right_strategy,
+            self._turn_left_strategy,
+            self._backup_strategy,
+            self._alternative_route_strategy
+        ]
+        
+        logging.info("Avoidance algorithm initialized")
 
-    def _update_obstacle_status(self):
-        """Update the obstacle status based on the VL53L0X sensor readings."""
-        while not self.stop_thread:
+    def check_camera_obstacles_and_dropoffs(self):
+        """
+        Check for obstacles and drop-offs using the camera.
+        
+        Updates the camera_obstacle_detected and dropoff_detected flags
+        based on camera processing results.
+        
+        Returns:
+            tuple: (obstacle_detected, dropoff_detected) - boolean flags
+        """
+        if not self.camera:
+            return False, False
+            
+        try:
+            with self.thread_lock:
+                # Reset previous detections
+                self.camera_obstacle_detected = False
+                self.dropoff_detected = False
+                
+                # Get camera classifications
+                obstacles = self.camera.classify_obstacle()
+                dropoff = self.camera.detect_dropoff()
+    
+                # Check for dropoffs first (higher priority)
+                if dropoff:
+                    self.dropoff_detected = True
+                    logging.info("Drop-off detected! Avoiding this area.")
+    
+                # Check for obstacles
+                if obstacles and len(obstacles) > 0:
+                    for obstacle in obstacles:
+                        _, _, w, h = obstacle['box']
+                        if w * h > CAMERA_OBSTACLE_THRESHOLD:
+                            self.camera_obstacle_detected = True
+                            logging.info(f"Camera detected obstacle: {obstacle['class']}")
+                            break
+                            
+                return self.camera_obstacle_detected, self.dropoff_detected
+                            
+        except Exception as e:
+            logging.error(f"Error checking camera obstacles: {e}")
+            return False, False
+
+    def start(self) -> None:
+        """
+        Start the avoidance algorithm background monitoring.
+        
+        This initializes and starts the background thread that continuously
+        monitors sensor data for obstacles and manages the avoidance state machine.
+        
+        The thread runs until explicitly stopped by calling stop().
+        """
+        if self.running:
+            logging.warning("Avoidance algorithm already running")
+            return
+            
+        with self.thread_lock:
+            self.running = True
+            self.stop_thread = False
+            self.current_state = AvoidanceState.NORMAL
+            
+        # Start the avoidance monitoring thread
+        self.avoidance_thread = threading.Thread(
+            target=self._avoidance_loop,
+            daemon=True
+        )
+        self.avoidance_thread.start()
+        logging.info("Avoidance algorithm started")
+
+    def stop(self) -> None:
+        """
+        Stop the avoidance algorithm background monitoring.
+        
+        This signals the monitoring thread to terminate and waits for it
+        to complete before returning. This ensures a clean shutdown.
+        """
+        if not self.running:
+            return
+            
+        logging.info("Stopping avoidance algorithm...")
+        
+        with self.thread_lock:
+            self.stop_thread = True
+            self.running = False
+        
+        # Wait for thread to terminate
+        if self.avoidance_thread and self.avoidance_thread.is_alive():
+            try:
+                self.avoidance_thread.join(timeout=5.0)
+                if self.avoidance_thread.is_alive():
+                    logging.warning("Avoidance thread did not terminate within timeout")
+            except Exception as e:
+                logging.error(f"Error stopping avoidance thread: {e}")
+        
+        self.avoidance_thread = None
+        logging.info("Avoidance algorithm stopped")
+
+    def _update_sensor_obstacle_status(self):
+        """
+        Update obstacle status based on distance sensor readings.
+        
+        This method checks the VL53L0X distance sensors and updates
+        the obstacle_left and obstacle_right flags accordingly.
+        """
+        try:
             left_distance = self.sensor_interface._read_vl53l0x(
                 'left_distance', float('inf'))
             right_distance = self.sensor_interface._read_vl53l0x(
                 'right_distance', float('inf'))
 
-            self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
-            self.obstacle_right = right_distance < MIN_DISTANCE_THRESHOLD
-            time.sleep(AVOIDANCE_DELAY)
+            with self.thread_lock:
+                self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
+                self.obstacle_right = right_distance < MIN_DISTANCE_THRESHOLD
+                
+            if self.obstacle_left:
+                logging.debug(f"Left obstacle detected: {left_distance}cm")
+            if self.obstacle_right:
+                logging.debug(f"Right obstacle detected: {right_distance}cm")
+                
+        except Exception as e:
+            logging.error(f"Error updating sensor obstacle status: {e}")
 
-    def start(self):
-        """Start the obstacle avoidance thread."""
-        self.thread = threading.Thread(target=self._update_obstacle_status,
-                                       daemon=True)
-        self.thread.start()
-
-    def stop(self):
-        """Stop the obstacle avoidance thread."""
-        self.stop_thread = True
-        self.thread.join()
-
-
-class AvoidanceAlgorithm:
-    def __init__(self, path_planner, motor_controller, sensor_interface):
-        self.camera_obstacle_flag = None
-        self.path_planner = path_planner
-        self.motor_controller = motor_controller
-        self.sensor_interface = sensor_interface
-
-        self.obstacle_avoidance = ObstacleAvoidance(sensor_interface)
-        self.obstacle_detected = False
-        self.dropoff_detected = False
-
-    def check_camera_obstacles_and_dropoffs(self):
-        """Check for obstacles and drop-offs using the camera and
-        update the obstacle_detected attribute."""
-        obstacles = self.camera.classify_obstacle()
-        dropoff_detected = self.camera.detect_dropoff()
-
-        if dropoff_detected:
-            self.dropoff_detected = True
-            logging.info("Drop-off detected! Avoiding this area.")
-            return
-
-        for obstacle in obstacles or []:
-            _, _, w, h = obstacle['box']
-            if w * h > CAMERA_OBSTACLE_THRESHOLD:
-                self.obstacle_detected = True
-                logging.info("Obstacle detected! Avoiding this area.")
-                return
-
-        self.obstacle_detected = False
-        self.dropoff_detected = False
-
-    def handle_avoidance(self):
-        """Handle the obstacle and drop-off avoidance logic."""
-        logging.info("Handling avoidance...")
-        self.motor_controller.stop()  # Stop the mower
-
-        # Get current position
-        current_position = self.motor_controller.gps_latest_position.run()
-
-        # Get the obstacle position (assuming it's at the current position)
-        obstacle_position = (current_position[1], current_position[2])
-
-        # Update obstacles in path planner
-        self.path_planner.update_obstacle_map([obstacle_position])
-
-        # Re-plan the path to avoid the obstacle
-        goal = self.path_planner.goal  # Assuming goal is set
-        if goal is None:
-            logging.error("Goal not set in path planner.")
-            return
-
-        start_grid = self.path_planner.coord_to_grid(*obstacle_position)
-        goal_grid = goal  # Goal is already in grid coordinates
-
-        # Plan a new path
-        new_path = self.path_planner.get_path(start_grid, goal_grid)
-
-        # Follow the new path
-        for coord in new_path:
-            self.motor_controller.navigate_to_location((coord['lat'],
-                                                        coord['lng']))
-            time.sleep(0.1)  # Adjust as needed
-
-    def run_avoidance(self):
-        """Continuously run the avoidance algorithm
-        using data from sensors and the camera."""
-        self.obstacle_avoidance.start()
-
+    def _avoidance_loop(self) -> None:
+        """
+        Main loop for obstacle detection and avoidance.
+        
+        This method runs in a separate thread and continuously:
+        1. Checks sensors for obstacles
+        2. Updates the internal state based on sensor readings
+        3. Executes appropriate avoidance actions based on the state
+        4. Transitions between states as obstacles are detected and avoided
+        
+        The loop handles state transitions and execution logic using the
+        avoidance state machine.
+        """
+        logging.info("Avoidance monitoring loop started")
+        
         try:
-            while True:
-                self.check_camera_obstacles_and_dropoffs()
+            while not self.stop_thread and self.running:
+                # Read updated sensor data
+                self._update_sensor_obstacle_status()
+                
+                # Check camera if available
+                if self.camera:
+                    self.check_camera_obstacles_and_dropoffs()
+                
+                # Get current state (thread-safe)
+                current_state = None
+                with self.thread_lock:
+                    current_state = self.current_state
+                
+                # State machine logic
+                if current_state == AvoidanceState.NORMAL:
+                    # Check for obstacles
+                    obstacle_detected, obstacle_data = self._detect_obstacle()
+                    if obstacle_detected:
+                        logging.info("Obstacle detected, initiating avoidance")
+                        with self.thread_lock:
+                            self.current_state = AvoidanceState.OBSTACLE_DETECTED
+                            self.obstacle_data = obstacle_data
+                
+                elif current_state == AvoidanceState.OBSTACLE_DETECTED:
+                    # Start avoidance procedure
+                    success = self._start_avoidance()
+                    with self.thread_lock:
+                        if success:
+                            self.current_state = AvoidanceState.AVOIDING
+                        else:
+                            # Failed to start avoidance, try recovery
+                            self.current_state = AvoidanceState.RECOVERY
+                            self.recovery_attempts = 0
+                
+                elif current_state == AvoidanceState.AVOIDING:
+                    # Continue avoidance procedure
+                    avoidance_complete = self._continue_avoidance()
+                    
+                    if avoidance_complete:
+                        logging.info("Avoidance complete, returning to normal operation")
+                        with self.thread_lock:
+                            self.current_state = AvoidanceState.NORMAL
+                            self.obstacle_data = None
+                    
+                    # Check if we still detect obstacles after avoidance maneuver
+                    still_detected, _ = self._detect_obstacle()
+                    if still_detected:
+                        logging.warning("Obstacle still detected after avoidance maneuver")
+                        with self.thread_lock:
+                            self.current_state = AvoidanceState.RECOVERY
+                            self.recovery_attempts = 0
+                
+                elif current_state == AvoidanceState.RECOVERY:
+                    # Execute recovery strategy
+                    recovery_success = self._execute_recovery()
+                    
+                    with self.thread_lock:
+                        if recovery_success:
+                            # Check if obstacle is still present
+                            still_detected, _ = self._detect_obstacle()
+                            if not still_detected:
+                                logging.info("Recovery successful, returning to normal operation")
+                                self.current_state = AvoidanceState.NORMAL
+                                self.obstacle_data = None
+                            else:
+                                logging.warning("Obstacle still present after recovery, trying again")
+                                self.recovery_attempts += 1
+                                if self.recovery_attempts >= self.max_recovery_attempts:
+                                    logging.error("Max recovery attempts reached, cannot avoid obstacle")
+                                    # Keep in RECOVERY state, main controller will handle this
+                        else:
+                            logging.error("Recovery strategy failed")
+                            self.recovery_attempts += 1
+                
+                # Brief pause to avoid CPU spinning
+                time.sleep(AVOIDANCE_DELAY)
+                
+        except Exception as e:
+            logging.error(f"Error in avoidance loop: {e}")
+            with self.thread_lock:
+                self.running = False
+        
+        logging.info("Avoidance monitoring loop ended")
 
-                if (self.obstacle_avoidance.obstacle_left or
-                        self.obstacle_avoidance.obstacle_right or
-                        self.obstacle_detected or
-                        self.dropoff_detected):
-                    self.handle_avoidance()
+    def _detect_obstacle(self) -> Tuple[bool, Optional[dict]]:
+        """
+        Check all sensors to detect obstacles.
+        
+        This method combines data from distance sensors and camera (if available)
+        to determine if an obstacle is present and its characteristics.
+        
+        Returns:
+            Tuple[bool, Optional[dict]]: 
+                - bool: True if an obstacle is detected, False otherwise
+                - dict: Data about the detected obstacle, or None if no obstacle
+        """
+        with self.thread_lock:
+            # Check distance sensors
+            obstacle_left = self.obstacle_left
+            obstacle_right = self.obstacle_right
+            
+            # Check camera obstacles
+            camera_obstacle = self.camera_obstacle_detected
+            dropoff = self.dropoff_detected
+            
+            # Determine if any obstacle is detected
+            obstacle_detected = obstacle_left or obstacle_right or camera_obstacle or dropoff
+            
+            if not obstacle_detected:
+                return False, None
+            
+            # Collect data about the obstacle for avoidance strategy
+            obstacle_data = {
+                "left_sensor": obstacle_left,
+                "right_sensor": obstacle_right,
+                "camera_detected": camera_obstacle,
+                "dropoff_detected": dropoff,
+                "timestamp": time.time()
+            }
+            
+            # Add position estimation if we can determine it
+            obstacle_position = self._estimate_obstacle_position()
+            if obstacle_position:
+                obstacle_data.update(obstacle_position)
+            
+            return True, obstacle_data
+
+    def _start_avoidance(self) -> bool:
+        """
+        Initiate the obstacle avoidance procedure.
+        
+        This method:
+        1. Stops the robot's current movement
+        2. Analyzes the obstacle data to determine the best avoidance strategy
+        3. Begins executing the selected avoidance maneuver
+        
+        Returns:
+            bool: True if avoidance initiated successfully, False otherwise
+        """
+        logging.info("Starting obstacle avoidance")
+        
+        try:
+            # Stop current movement
+            self.motor_controller.stop()
+            
+            # Get the obstacle data
+            obstacle_data = None
+            with self.thread_lock:
+                obstacle_data = self.obstacle_data
+            
+            if not obstacle_data:
+                logging.error("No obstacle data available to start avoidance")
+                return False
+            
+            # Determine avoidance strategy based on sensor data
+            if obstacle_data.get("dropoff_detected", False):
+                # Always back up from dropoffs
+                logging.info("Dropoff detected, backing up")
+                return self._backup_strategy(distance=50.0)
+                
+            # If obstacle is only on one side, turn away from it
+            elif obstacle_data.get("left_sensor", False) and not obstacle_data.get("right_sensor", False):
+                logging.info("Obstacle on left side, turning right")
+                return self._turn_right_strategy(angle=45.0)
+                
+            elif obstacle_data.get("right_sensor", False) and not obstacle_data.get("left_sensor", False):
+                logging.info("Obstacle on right side, turning left")
+                return self._turn_left_strategy(angle=45.0)
+                
+            # If obstacles detected on both sides or by camera, back up then try alternative route
+            elif obstacle_data.get("camera_detected", False) or (
+                    obstacle_data.get("left_sensor", False) and 
+                    obstacle_data.get("right_sensor", False)):
+                logging.info("Obstacle detected ahead, backing up")
+                backup_success = self._backup_strategy(distance=40.0)
+                if not backup_success:
+                    return False
+                
+                # After backing up, try to find an alternative route
+                return self._select_random_strategy()
+            
+            # If no specific strategy determined, use a random one
+            else:
+                logging.info("Using random avoidance strategy")
+                return self._select_random_strategy()
+                
+        except Exception as e:
+            logging.error(f"Error starting avoidance: {e}")
+            return False
+            
+    def _continue_avoidance(self) -> bool:
+        """
+        Continue the current avoidance maneuver.
+        
+        This method:
+        1. Checks if the current avoidance maneuver is complete
+        2. Returns True if the avoidance is complete, False if still in progress
+        3. Updates obstacle data if needed during avoidance
+        
+        Returns:
+            bool: True if avoidance is complete, False if still in progress
+        """
+        # Check navigation status
+        nav_status = self.motor_controller.get_status()
+        
+        # Determine if the current maneuver is complete
+        if nav_status == NavigationStatus.TARGET_REACHED:
+            # We've completed the avoidance maneuver
+            logging.info("Avoidance maneuver completed")
+            return True
+            
+        elif nav_status == NavigationStatus.MOVING:
+            # Still executing the avoidance maneuver
+            logging.debug("Continuing avoidance maneuver")
+            return False
+            
+        elif nav_status == NavigationStatus.ERROR:
+            # Something went wrong with the maneuver
+            logging.error("Error during avoidance maneuver")
+            return False
+            
+        else:
+            # Check how long we've been trying to avoid
+            obstacle_data = None
+            with self.thread_lock:
+                obstacle_data = self.obstacle_data
+                
+            if not obstacle_data:
+                logging.warning("No obstacle data available during avoidance")
+                return True  # Assume complete if no data
+                
+            # Check if we've been trying to avoid for too long
+            start_time = obstacle_data.get("timestamp", 0)
+            current_time = time.time()
+            
+            # If we've been in avoidance for more than 30 seconds, consider it complete
+            # and let the recovery process take over if needed
+            if current_time - start_time > 30.0:
+                logging.warning("Avoidance timeout, considering maneuver complete")
+                return True
+                
+            return False
+    
+    def _execute_recovery(self) -> bool:
+        """
+        Execute a recovery strategy when normal avoidance fails.
+        
+        This method is called when the robot cannot avoid an obstacle using
+        standard strategies. It implements more aggressive recovery maneuvers
+        to get the robot out of difficult situations.
+        
+        Recovery strategies increase in aggressiveness with each attempt:
+        1. First attempt: larger turn angle
+        2. Second attempt: longer backup distance
+        3. Third attempt: combination of backup and turn
+        
+        Returns:
+            bool: True if recovery initiated successfully, False otherwise
+        """
+        logging.info(f"Executing recovery (attempt {self.recovery_attempts + 1})")
+        
+        try:
+            # Get current recovery attempt
+            attempt = 0
+            with self.thread_lock:
+                attempt = self.recovery_attempts
+            
+            # Choose strategy based on attempt number
+            if attempt == 0:
+                # First recovery: more aggressive turn
+                turn_angle = 90.0  # Larger angle for first recovery
+                
+                # Choose turn direction based on obstacle position
+                obstacle_data = None
+                with self.thread_lock:
+                    obstacle_data = self.obstacle_data
+                
+                if obstacle_data and obstacle_data.get("left_sensor", False):
+                    # Obstacle on left, turn right
+                    logging.info(f"Recovery attempt {attempt+1}: aggressive right turn")
+                    return self._turn_right_strategy(angle=turn_angle)
                 else:
-                    # Continue normal operation
-                    time.sleep(0.1)
-        except KeyboardInterrupt:
-            logging.info("Stopping the avoidance algorithm...")
-        finally:
-            self.obstacle_avoidance.stop()
-            logging.info("Avoidance algorithm stopped.")
+                    # Default or obstacle on right, turn left
+                    logging.info(f"Recovery attempt {attempt+1}: aggressive left turn")
+                    return self._turn_left_strategy(angle=turn_angle)
+                    
+            elif attempt == 1:
+                # Second recovery: longer backup
+                logging.info(f"Recovery attempt {attempt+1}: extended backup")
+                return self._backup_strategy(distance=80.0)  # Longer distance
+                
+            else:
+                # Third recovery: try alternative route calculation
+                logging.info(f"Recovery attempt {attempt+1}: alternative route")
+                return self._alternative_route_strategy()
+                
+        except Exception as e:
+            logging.error(f"Error executing recovery: {e}")
+            return False
+    
+    def _select_random_strategy(self) -> bool:
+        """
+        Select and execute a random avoidance strategy.
+        
+        This method chooses a random strategy from the available
+        avoidance strategies when no specific strategy is indicated
+        by the sensor data.
+        
+        Returns:
+            bool: True if strategy executed successfully, False otherwise
+        """
+        try:
+            # Pick a random strategy from the list, excluding alternative route
+            # because it's more complex and should be used as a last resort
+            strategies = [
+                self._turn_right_strategy,
+                self._turn_left_strategy,
+                self._backup_strategy
+            ]
+            
+            strategy = random.choice(strategies)
+            strategy_name = strategy.__name__
+            
+            logging.info(f"Selected random strategy: {strategy_name}")
+            
+            # Execute the selected strategy
+            if strategy == self._turn_right_strategy or strategy == self._turn_left_strategy:
+                # For turning, use random angle between 30 and 60 degrees
+                angle = random.uniform(30.0, 60.0)
+                return strategy(angle=angle)
+            elif strategy == self._backup_strategy:
+                # For backup, use random distance between 20 and 40 cm
+                distance = random.uniform(20.0, 40.0)
+                return strategy(distance=distance)
+            else:
+                return strategy()
+                
+        except Exception as e:
+            logging.error(f"Error selecting random strategy: {e}")
+            return False
+    
+    def _turn_right_strategy(self, angle: float = 45.0) -> bool:
+        """
+        Execute a right turn to avoid an obstacle.
+        
+        Args:
+            angle: Turn angle in degrees (default: 45.0)
+            
+        Returns:
+            bool: True if turn initiated successfully, False otherwise
+        """
+        try:
+            logging.info(f"Executing right turn avoidance ({angle}°)")
+            
+            # Get current orientation
+            current_heading = self.motor_controller.get_current_heading()
+            
+            # Calculate new heading (add angle for right turn)
+            new_heading = current_heading + angle
+            # Normalize to 0-360 range
+            new_heading = new_heading % 360
+            
+            # Execute the turn
+            self.motor_controller.rotate_to_heading(new_heading)
+            
+            return True
+        except Exception as e:
+            logging.error(f"Error executing right turn: {e}")
+            return False
+    
+    def _turn_left_strategy(self, angle: float = 45.0) -> bool:
+        """
+        Execute a left turn to avoid an obstacle.
+        
+        Args:
+            angle: Turn angle in degrees (default: 45.0)
+            
+        Returns:
+            bool: True if turn initiated successfully, False otherwise
+        """
+        try:
+            logging.info(f"Executing left turn avoidance ({angle}°)")
+            
+            # Get current orientation
+            current_heading = self.motor_controller.get_current_heading()
+            
+            # Calculate new heading (subtract angle for left turn)
+            new_heading = current_heading - angle
+            # Normalize to 0-360 range
+            new_heading = new_heading % 360
+            
+            # Execute the turn
+            self.motor_controller.rotate_to_heading(new_heading)
+            
+            return True
+        except Exception as e:
+            logging.error(f"Error executing left turn: {e}")
+            return False
+    
+    def _backup_strategy(self, distance: float = 30.0) -> bool:
+        """
+        Execute a backward movement to avoid an obstacle.
+        
+        Args:
+            distance: Backup distance in cm (default: 30.0)
+            
+        Returns:
+            bool: True if backup initiated successfully, False otherwise
+        """
+        try:
+            logging.info(f"Executing backup avoidance ({distance} cm)")
+            
+            # Get current heading
+            current_heading = self.motor_controller.get_current_heading()
+            
+            # Calculate reverse heading (180° from current)
+            reverse_heading = (current_heading + 180) % 360
+            
+            # First rotate to face backward
+            self.motor_controller.rotate_to_heading(reverse_heading)
+            
+            # Wait for rotation to complete
+            time.sleep(2.0)  # Adjust based on rotation speed
+            
+            # Then move forward (which is backward relative to original direction)
+            # Convert cm to appropriate distance unit used by the navigation controller
+            self.motor_controller.move_distance(distance / 100.0)  # Convert cm to meters
+            
+            return True
+        except Exception as e:
+            logging.error(f"Error executing backup: {e}")
+            return False
+    
+    def _alternative_route_strategy(self) -> bool:
+        """
+        Calculate and follow an alternative route to avoid an obstacle.
+        
+        This strategy:
+        1. Identifies the obstacle location
+        2. Updates the path planner's obstacle map
+        3. Requests a new path that avoids the obstacle
+        4. Begins following the new path
+        
+        Returns:
+            bool: True if alternative route initiated successfully, False otherwise
+        """
+        try:
+            logging.info("Calculating alternative route")
+            
+            # Get current position and orientation
+            current_position = self.motor_controller.get_current_position()
+            if not current_position:
+                logging.error("Unable to get current position for alternative route")
+                return False
+            
+            # Estimate obstacle position
+            obstacle_position = self._estimate_obstacle_position()
+            if not obstacle_position or not obstacle_position.get('position'):
+                logging.error("Unable to estimate obstacle position")
+                return False
+            
+            # Extract obstacle coordinates
+            obstacle_coords = obstacle_position['position']
+            
+            # Update path planner with obstacle
+            logging.info(f"Adding obstacle at position {obstacle_coords}")
+            self.path_planner.update_obstacle_map([obstacle_coords])
+            
+            # Get navigation goal
+            goal = self.path_planner.get_current_goal()
+            if not goal:
+                logging.error("No goal available for alternative route")
+                return False
+            
+            # Calculate new path
+            logging.info("Requesting new path to avoid obstacle")
+            start_point = self.path_planner.coord_to_grid(current_position[0], current_position[1])
+            goal_point = self.path_planner.coord_to_grid(goal[0], goal[1])
+            
+            new_path = self.path_planner.get_path(start_point, goal_point)
+            if not new_path or len(new_path) == 0:
+                logging.error("Failed to calculate alternative route")
+                return False
+            
+            logging.info(f"Found alternative route with {len(new_path)} waypoints")
+            
+            # Begin following new path
+            # Just navigate to the first waypoint of the new path for now
+            # The main navigation system will handle the rest
+            first_waypoint = new_path[0]
+            self.motor_controller.navigate_to_location((first_waypoint['lat'], first_waypoint['lng']))
+            
+            return True
+            
+        except Exception as e:
+            logging.error(f"Error calculating alternative route: {e}")
+            return False
+    
+    def _estimate_obstacle_position(self) -> Dict[str, Any]:
+        """
+        Estimate the position of detected obstacles in world coordinates.
+        
+        This method combines sensor data with the robot's current position
+        and orientation to estimate where obstacles are located in the
+        world coordinate system. This information is used to update the
+        path planning obstacle map.
+        
+        Returns:
+            Dict: Information about the obstacle position and type, including:
+                - 'position': (lat, lng) tuple of obstacle coordinates
+                - 'type': String identifier of obstacle type ('static', 'moving', etc.)
+                - 'confidence': Confidence level of the detection (0.0-1.0)
+                - 'sensor': Which sensor detected the obstacle
+        """
+        try:
+            # Get the current robot position
+            current_position = self.motor_controller.get_current_position()
+            if not current_position:
+                logging.warning("Couldn't get current position for obstacle estimation")
+                return {}
+                
+            current_lat, current_lng = current_position[0], current_position[1]
+            
+            # Get robot heading
+            heading = self.motor_controller.get_current_heading()
+            if heading is None:
+                logging.warning("Couldn't get current heading for obstacle estimation")
+                return {}
+                
+            # Convert heading from degrees to radians for calculations
+            heading_rad = math.radians(heading)
+            
+            # Get obstacle data
+            obstacle_data = None
+            with self.thread_lock:
+                obstacle_data = self.obstacle_data
+                
+            if not obstacle_data:
+                logging.warning("No obstacle data available for position estimation")
+                return {}
+                
+            # Initialize results with default values
+            result = {
+                'position': None,
+                'type': 'static',
+                'confidence': 0.8,
+                'sensor': 'unknown'
+            }
+            
+            # Determine distance and direction to obstacle based on which sensors detected it
+            distance = 0.0
+            obstacle_angle = 0.0
+            
+            if obstacle_data.get('left_sensor', False) and obstacle_data.get('right_sensor', False):
+                # Both sensors detected - obstacle is directly ahead
+                distance = self.obstacle_threshold  # Use configured threshold
+                obstacle_angle = 0.0  # Straight ahead
+                result['sensor'] = 'tof_both'
+                
+            elif obstacle_data.get('left_sensor', False):
+                # Left sensor detected - obstacle is to the left
+                distance = self.obstacle_threshold
+                obstacle_angle = math.radians(30.0)  # 30 degrees to the left
+                result['sensor'] = 'tof_left'
+                
+            elif obstacle_data.get('right_sensor', False):
+                # Right sensor detected - obstacle is to the right
+                distance = self.obstacle_threshold
+                obstacle_angle = math.radians(-30.0)  # 30 degrees to the right
+                result['sensor'] = 'tof_right'
+                
+            elif obstacle_data.get('camera_detected', False):
+                # Camera detected obstacle - assume it's directly ahead
+                distance = self.obstacle_threshold * 1.5  # Camera usually detects at greater distance
+                obstacle_angle = 0.0
+                result['sensor'] = 'camera'
+                result['confidence'] = 0.9  # Higher confidence for camera detection
+                
+            else:
+                # No specific sensor data available
+                logging.warning("Cannot determine obstacle direction from sensor data")
+                return {}
+                
+            # Calculate obstacle position in world coordinates
+            # Using simplified lat/lng calculation without accounting for Earth curvature
+            # For high precision, Haversine formula or similar should be used
+            
+            # Calculate heading to obstacle
+            obstacle_heading = (heading_rad + obstacle_angle) % (2 * math.pi)
+            
+            # Convert meters to approximate lat/lng offsets
+            # These are simple approximations that work for small distances
+            # 1 meter is roughly 0.0000089 degrees latitude
+            # 1 meter longitude depends on latitude, approx 0.0000089 / cos(lat)
+            meters_to_lat = 0.0000089
+            meters_to_lng = 0.0000089 / math.cos(math.radians(current_lat))
+            
+            # Calculate obstacle position
+            obstacle_lat = current_lat + (distance * math.cos(obstacle_heading) * meters_to_lat)
+            obstacle_lng = current_lng + (distance * math.sin(obstacle_heading) * meters_to_lng)
+            
+            # Update result with calculated position
+            result['position'] = (obstacle_lat, obstacle_lng)
+            
+            logging.debug(f"Estimated obstacle position: {result['position']}")
+            
+            return result
+                
+        except Exception as e:
+            logging.error(f"Error estimating obstacle position: {e}")
+            return {}

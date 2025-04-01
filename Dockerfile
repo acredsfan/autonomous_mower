@@ -30,15 +30,21 @@ WORKDIR /app
 # Copy project files to the container
 COPY . /app/
 
-# Install Python dependencies
+# Create necessary directories
+RUN mkdir -p /app/src/mower/config/models
+
+# Download the TensorFlow model
+RUN wget -q https://storage.googleapis.com/tfhub-lite-models/tensorflow/lite-model/mobilenet_v2_1.0_224/1/metadata/1.tflite -O /app/src/mower/config/models/mobilenet_v2_1.0_224.tflite
+
+# Install Python dependencies using setup.py
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -e .
 
 # Expose necessary ports
 EXPOSE 5000 8080
 
 # Define environment variable for Flask
-ENV FLASK_APP=autonomous_mower.robot:main
+ENV FLASK_APP=mower.main_controller:main
 
 # Entry point to run the application
-CMD ["python", "autonomous_mower/robot.py"]
+CMD ["python", "-m", "mower.main_controller"]

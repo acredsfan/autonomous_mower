@@ -26,11 +26,23 @@ logger = get_logger_config()
 load_dotenv()
 
 class PathPlanner:
-    def __init__(self):
+    def __init__(self, localization=None, resource_manager=None):
         self.pattern_type = None
-        PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        self.USER_POLYGON_PATH = os.path.join(PROJECT_ROOT, 'user_polygon.json')
-        self.MOWING_SCHEDULE_PATH = os.path.join(PROJECT_ROOT, 'mowing_schedule.json')
+        self.localization = localization
+        self.resource_manager = resource_manager
+        
+        # Use paths from resource_manager if available, otherwise define defaults
+        if resource_manager:
+            self.USER_POLYGON_PATH = resource_manager.user_polygon_path
+            self.MOWING_SCHEDULE_PATH = resource_manager.mowing_schedule_path
+        else:
+            # Fallback to default paths
+            PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            self.USER_POLYGON_PATH = os.path.join(PROJECT_ROOT, 'config', 'user_polygon.json')
+            self.MOWING_SCHEDULE_PATH = os.path.join(PROJECT_ROOT, 'config', 'mowing_schedule.json')
+            
+            # Create config directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.USER_POLYGON_PATH), exist_ok=True)
 
         self.mowing_area_polygon_gps = []
         self.mowing_area_polygon_utm = []
@@ -39,19 +51,54 @@ class PathPlanner:
         self.grid_points = []
         self.planned_path = []
         self.obstacles = []
+        self.goal = None  # Store the goal position
 
-        self.gps_position_instance = get_gps_position()
-        self.gps_latest_position = get_gps_latest_position()
-
-        self.robohat_driver = get_robohat_driver()
-        self.controller = get_navigation_controller()
+        # These will be acquired from resource_manager or directly
+        # Get core components from resource_manager if available
+        if resource_manager:
+            try:
+                self.controller = resource_manager.get_navigation_controller()
+                self.gps_position_instance = resource_manager.get_gps_position()
+                self.gps_latest_position = resource_manager.get_gps_latest_position()
+                self.robohat_driver = resource_manager.get_robohat_driver()
+            except Exception as e:
+                logger.error(f"Error getting resources from manager: {e}")
+                self.controller = None
+                self.gps_position_instance = None
+                self.gps_latest_position = None
+                self.robohat_driver = None
+        else:
+            # Fallback to direct imports when resource_manager not available
+            try:
+                from mower.mower import (
+                    get_gps_position,
+                    get_gps_latest_position,
+                    get_robohat_driver,
+                    get_navigation_controller
+                )
+                self.gps_position_instance = get_gps_position()
+                self.gps_latest_position = get_gps_latest_position()
+                self.robohat_driver = get_robohat_driver()
+                self.controller = get_navigation_controller()
+            except Exception as e:
+                logger.error(f"Error importing required modules: {e}")
+                self.gps_position_instance = None
+                self.gps_latest_position = None
+                self.robohat_driver = None
+                self.controller = None
 
     def utm_to_gps(self, easting, northing):
         """Convert UTM coordinates to GPS coordinates."""
-        zone_number = self.utm_zone_number
-        zone_letter = self.utm_zone_letter
-        lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
-        return lat, lon
+        if not self.utm_zone_number or not self.utm_zone_letter:
+            logger.error("UTM zone not initialized. Cannot convert coordinates.")
+            return None, None
+            
+        try:
+            lat, lon = utm.to_latlon(easting, northing, self.utm_zone_number, self.utm_zone_letter)
+            return lat, lon
+        except Exception as e:
+            logger.error(f"Error converting UTM to GPS: {e}")
+            return None, None
 
     def compute_grid_dimensions(self, grid_points, grid_size, min_x, min_y):
         max_x = max(point[0] for point in grid_points)
@@ -61,15 +108,24 @@ class PathPlanner:
         return width, height
 
     def load_mowing_area_polygon(self):
+        """Load the mowing area polygon from the user_polygon.json file."""
         if not os.path.exists(self.USER_POLYGON_PATH):
-            logger.error("Mowing area polygon file 'user_polygon.json' not found.")
-            exit(1)
-        with open(self.USER_POLYGON_PATH, 'r') as f:
-            polygon_data = json.load(f)
-            self.mowing_area_polygon_gps = [(point['lat'], point['lng']) for point in polygon_data]
-        if not self.mowing_area_polygon_gps:
-            logger.error("'user_polygon.json' does not contain valid polygon data.")
-            exit(1)
+            logger.error(f"Mowing area polygon file '{self.USER_POLYGON_PATH}' not found.")
+            return False
+            
+        try:
+            with open(self.USER_POLYGON_PATH, 'r') as f:
+                polygon_data = json.load(f)
+                self.mowing_area_polygon_gps = [(point['lat'], point['lng']) for point in polygon_data]
+                
+            if not self.mowing_area_polygon_gps:
+                logger.error(f"'{self.USER_POLYGON_PATH}' does not contain valid polygon data.")
+                return False
+                
+            return True
+        except Exception as e:
+            logger.error(f"Error loading mowing area polygon: {e}")
+            return False
 
     def gps_polygon_to_utm_polygon(self):
         self.mowing_area_polygon_utm = []
@@ -201,27 +257,97 @@ class PathPlanner:
                 break
 
     def load_mowing_pattern(self):
+        """Load the mowing pattern from the mowing_schedule.json file."""
         if not os.path.exists(self.MOWING_SCHEDULE_PATH):
             logger.error(
-                "Mowing schedule file 'mowing_schedule.json' not found. "
+                f"Mowing schedule file '{self.MOWING_SCHEDULE_PATH}' not found. "
                 "Please set the schedule via the user interface."
             )
             # Default to "stripes" pattern if schedule file not found
             self.pattern_type = "stripes"
-        else:
-            try:
-                with open(self.MOWING_SCHEDULE_PATH, 'r') as f:
-                    pattern_data = json.load(f)
-                    self.pattern_type = pattern_data.get(
-                        'patternType', 'stripes'
-                    )
-            except json.JSONDecodeError:
-                logger.error(
-                    "Error decoding 'mowing_schedule.json'. "
-                    "Please ensure it contains valid JSON."
+            return
+            
+        try:
+            with open(self.MOWING_SCHEDULE_PATH, 'r') as f:
+                pattern_data = json.load(f)
+                self.pattern_type = pattern_data.get(
+                    'patternType', 'stripes'
                 )
-                # Default to "stripes" pattern if error occurs
-                self.pattern_type = "stripes"
+        except json.JSONDecodeError:
+            logger.error(
+                f"Error decoding '{self.MOWING_SCHEDULE_PATH}'. "
+                "Please ensure it contains valid JSON."
+            )
+            # Default to "stripes" pattern if error occurs
+            self.pattern_type = "stripes"
+        except Exception as e:
+            logger.error(f"Error loading mowing pattern: {e}")
+            self.pattern_type = "stripes"
+            
+    def save_mowing_pattern(self, pattern_type="stripes"):
+        """Save the mowing pattern to the mowing_schedule.json file."""
+        try:
+            self.pattern_type = pattern_type
+            pattern_data = {"patternType": pattern_type}
+            
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(self.MOWING_SCHEDULE_PATH), exist_ok=True)
+            
+            with open(self.MOWING_SCHEDULE_PATH, 'w') as f:
+                json.dump(pattern_data, f)
+                
+            logger.info(f"Mowing pattern '{pattern_type}' saved to {self.MOWING_SCHEDULE_PATH}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving mowing pattern: {e}")
+            return False
+            
+    def generate_path(self, polygon_data):
+        """
+        Generate a mowing path from a polygon.
+        This is a simplified interface for the WebUI to call.
+        """
+        try:
+            # Convert the polygon data to the expected format
+            self.mowing_area_polygon_gps = [(point['lat'], point['lng']) for point in polygon_data]
+            
+            # Convert GPS coordinates to UTM
+            self.gps_polygon_to_utm_polygon()
+            
+            # Generate grid points within the polygon
+            self.generate_grid_from_polygon(grid_size=1.0)
+            
+            # Create the mowing pattern
+            self.create_pattern()
+            
+            # Create and return the waypoint map
+            return self.create_waypoint_map()
+        except Exception as e:
+            logger.error(f"Error generating path: {e}")
+            return []
+            
+    def start(self):
+        """Start the path planner."""
+        try:
+            # Load saved data
+            self.load_mowing_area_polygon()
+            self.load_mowing_pattern()
+            
+            # Generate the path
+            if self.mowing_area_polygon_gps:
+                self.gps_polygon_to_utm_polygon()
+                self.generate_grid_from_polygon(grid_size=1.0)
+                self.create_pattern()
+                
+            logger.info("Path planner started successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Error starting path planner: {e}")
+            return False
+            
+    def shutdown(self):
+        """Shutdown the path planner."""
+        logger.info("Path planner shutting down.")
 
     # Create mowing pattern
 
@@ -350,11 +476,9 @@ class PathPlanner:
         return waypoints
 
   
-    def circle_waypoints(self, center_x, center_y,
-    
-        all_points = []  # List to store all generated points
-                     radius, grid_points, step=15):
+    def circle_waypoints(self, center_x, center_y, radius, grid_points, step=15):
         """Generate waypoints for a circle with a given radius."""
+        all_points = []  # List to store all generated points
                 
         for i in range(0, 360, step):
             angle = np.radians(i)
@@ -364,7 +488,6 @@ class PathPlanner:
 
         # Filter points based on the polygon check
         waypoints = [point for point in all_points if self.point_in_polygon(point[0], point[1], grid_points)]
-        waypoints.append(point)
         return waypoints
 
     def star_waypoints(self, center_x, center_y, radius, grid_points):

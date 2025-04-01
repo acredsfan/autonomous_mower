@@ -3,25 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Mower Web UI</title>
+    <title>{% block title %}Autonomous Mower{% endblock %}</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    {% block head_extra %}{% endblock %}
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('status') }}"<i class="fas fa-info-circle"i> >Status</a>
-        <a href="{{ url_for('control') }}<i class="fas fa-sliders-h"></i">Control</a>
-        <a href="{{ url_for('area') }}">M<i class="fas fa-map"></i> owing Area</a>
-        <a href="{{ url_for('settings') }<i class="fas fa-cogs"></i> }">Settings</a>
-        <a href="{{ url_for('camera_route<i class="fas fa-video"></i> ') }}">Camera Stream</a>
-    </nav>
-    <main>
-        {% block content %}
-        {% endblock %}
-    </main>
+    <div class="page-wrapper">
+        <!-- Header -->
+        <header class="header">
+            <div class="container header-content">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Autonomous Mower Logo" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Cpath fill%3D%22%234a8e39%22 d%3D%22M20 2C9.5 2 2 9.5 2 20c0 10.5 7.5 18 18 18s18-7.5 18-18c0-10.5-7.5-18-18-18zm0 30c-6.6 0-12-5.4-12-12S13.4 8 20 8s12 5.4 12 12-5.4 12-12 12z%22%2F%3E%3C%2Fsvg%3E'">
+                    <span>Autonomous Mower</span>
+                </div>
+                
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                
+                <nav class="nav-main">
+                    <ul>
+                        <li><a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a></li>
+                        <li><a href="{{ url_for('control') }}" class="{% if request.path == url_for('control') %}active{% endif %}">
+                            <i class="fas fa-gamepad"></i> Control
+                        </a></li>
+                        <li><a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">
+                            <i class="fas fa-map"></i> Map
+                        </a></li>
+                        <li><a href="{{ url_for('diagnostics') }}" class="{% if request.path == url_for('diagnostics') %}active{% endif %}">
+                            <i class="fas fa-stethoscope"></i> Diagnostics
+                        </a></li>
+                        <li><a href="{{ url_for('settings') }}" class="{% if request.path == url_for('settings') %}active{% endif %}">
+                            <i class="fas fa-cogs"></i> Settings
+                        </a></li>
+                    </ul>
+                </nav>
+                
+                <div class="connection-status">
+                    <span class="status-indicator status-online" id="connectionStatus"></span>
+                    <span id="connectionText">Connected</span>
+                </div>
+            </div>
+        </header>
+        
+        <div class="content-wrapper">
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-content">
+                    <h4>System Status</h4>
+                    <div class="system-status mb-3">
+                        <div class="status-item d-flex justify-between mb-1">
+                            <span>Battery:</span>
+                            <span id="batteryStatus">---%</span>
+                        </div>
+                        <div class="status-item d-flex justify-between mb-1">
+                            <span>Mower:</span>
+                            <span id="mowerStatus">Idle</span>
+                        </div>
+                        <div class="status-item d-flex justify-between mb-1">
+                            <span>GPS:</span>
+                            <span id="gpsStatus">--</span>
+                        </div>
+                    </div>
+                    
+                    <h4>Quick Controls</h4>
+                    <div class="quick-controls mb-3">
+                        <button class="btn btn-primary btn-block mb-1" id="startMowingBtn">
+                            <i class="fas fa-play"></i> Start Mowing
+                        </button>
+                        <button class="btn btn-danger btn-block mb-1" id="stopMowingBtn">
+                            <i class="fas fa-stop"></i> Stop Mower
+                        </button>
+                        <button class="btn btn-success btn-block" id="returnHomeBtn">
+                            <i class="fas fa-home"></i> Return Home
+                        </button>
+                    </div>
+                    
+                    <h4>Navigation</h4>
+                    <ul class="sidebar-nav">
+                        <li><a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a></li>
+                        <li><a href="{{ url_for('control') }}" class="{% if request.path == url_for('control') %}active{% endif %}">
+                            <i class="fas fa-gamepad"></i> Manual Control
+                        </a></li>
+                        <li><a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">
+                            <i class="fas fa-map-marked-alt"></i> Mowing Area
+                        </a></li>
+                        <li><a href="#camera" class="{% if request.path == url_for('camera') %}active{% endif %}">
+                            <i class="fas fa-video"></i> Camera Feed
+                        </a></li>
+                        <li><a href="{{ url_for('settings') }}" class="{% if request.path == url_for('settings') %}active{% endif %}">
+                            <i class="fas fa-sliders-h"></i> Settings
+                        </a></li>
+                        <li><a href="{{ url_for('diagnostics') }}" class="{% if request.path == url_for('diagnostics') %}active{% endif %}">
+                            <i class="fas fa-stethoscope"></i> Diagnostics
+                        </a></li>
+                        <li><a href="#logs">
+                            <i class="fas fa-clipboard-list"></i> System Logs
+                        </a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <!-- Main content -->
+            <main class="main-content">
+                <!-- Alerts container -->
+                <div id="alertsContainer"></div>
+                
+                <!-- Page content -->
+                {% block content %}
+                {% endblock %}
+            </main>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="container footer-content">
+                <div>
+                    <p>&copy; 2023 Autonomous Mower Project</p>
+                </div>
+                <div>
+                    <p>Version 1.0.0 | <a href="https://github.com/yourusername/autonomous_mower">GitHub</a></p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Core JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.6.1/dist/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block scripts %}
-    {% endblock %}
+    
+    <!-- Mobile menu toggle script -->
+    <script>
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('show');
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
 </body>
 </html>

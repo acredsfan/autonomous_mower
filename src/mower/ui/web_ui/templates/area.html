@@ -1,20 +1,476 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h1>Mowing Area and Home Location</h1>
-<div id="map"></div>
-<button id="confirm-area-button" class="btn" disabled>Confirm Area</button>
-<button id="confirm-home-button" class="btn" disabled>Set Home Location</button>
-<button id="check-polygon-button" class="btn">Check Polygon Points</button>
+{% block title %}Mowing Area - Autonomous Mower{% endblock %}
 
-<h2>Camera Stream</h2>
-<div class="video-stream">
-    <img id="video_feed" alt="Loading video stream...">
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Mowing Area Configuration</h1>
+    <div class="d-flex align-center">
+        <span class="status-indicator" id="areaConnectionStatus"></span>
+        <span id="areaStatusText" class="mr-2">Connected</span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Map View</h3>
+        <div class="card-header-actions">
+            <button id="toggle-satellite" class="btn btn-sm btn-secondary">
+                <i class="fas fa-satellite"></i> Toggle Satellite
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="map" class="map-container"></div>
+        <div class="map-instructions mt-2">
+            <p><i class="fas fa-info-circle"></i> Use the drawing tools to define your mowing area. Click points to create a polygon.</p>
+        </div>
+    </div>
+</div>
+
+<div class="map-controls">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Configuration Controls</h3>
+        </div>
+        <div class="card-body">
+            <div class="control-buttons mb-3">
+                <button id="confirm-area-button" class="btn btn-success btn-lg control-btn" disabled>
+                    <i class="fas fa-check-circle"></i> Confirm Mowing Area
+                </button>
+                <button id="confirm-home-button" class="btn btn-primary btn-lg control-btn" disabled>
+                    <i class="fas fa-home"></i> Set Home Location
+                </button>
+            </div>
+            <div class="control-buttons">
+                <button id="reset-area-button" class="btn btn-danger control-btn">
+                    <i class="fas fa-trash"></i> Reset Area
+                </button>
+                <button id="check-polygon-button" class="btn btn-secondary control-btn">
+                    <i class="fas fa-search"></i> View Coordinates
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Camera Feed</h3>
+            <div class="card-header-actions">
+                <button id="toggleCameraBtn" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-video"></i> Toggle Camera
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="camera-container">
+                <img id="video_feed" src="{{ url_for('video_feed') }}" alt="Camera Feed" class="camera-feed">
+                <div class="camera-overlay" id="cameraOverlay">
+                    <div class="camera-status">Camera Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-3" id="coordinatesCard" style="display: none;">
+    <div class="card-header">
+        <h3>Area Coordinates</h3>
+        <div class="card-header-actions">
+            <button id="close-coordinates" class="btn btn-sm btn-secondary">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <pre id="coordinates-display" class="coordinates-display"></pre>
+        <button id="copy-coordinates" class="btn btn-secondary mt-2">
+            <i class="fas fa-copy"></i> Copy to Clipboard
+        </button>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Additional scripts specific to this page
+    let map;
+    let drawControl;
+    let drawnItems;
+    let homeMarker;
+    let isPolygonComplete = false;
+    let isSatelliteView = false;
+    
+    // Initialize map when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+        initControls();
+        updateAreaConnectionStatus();
+        initCameraControls();
+    });
+    
+    function initMap() {
+        // Initialize the map
+        map = L.map('map').setView([0, 0], 18); // Default view, will be updated with GPS
+        
+        // Add the OpenStreetMap tile layer
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 22,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Add satellite layer
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 22,
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        // Initialize the FeatureGroup to store editable layers
+        drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        // Initialize the draw control and pass it the FeatureGroup
+        drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                circle: false,
+                rectangle: false,
+                circlemarker: false,
+                marker: false,
+                polygon: {
+                    allowIntersection: false,
+                    shapeOptions: {
+                        color: 'var(--grass-medium)',
+                        fillColor: 'var(--grass-pale)',
+                        fillOpacity: 0.5
+                    }
+                }
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true,
+                edit: true
+            }
+        });
+        map.addControl(drawControl);
+        
+        // Get current position from GPS and center map
+        sendCommand('get_position', {}, function(response) {
+            if (response.success && response.data.latitude && response.data.longitude) {
+                map.setView([response.data.latitude, response.data.longitude], 18);
+            } else {
+                showAlert('Unable to get current position. Using default view.', 'warning');
+            }
+        });
+        
+        // Load existing polygon if available
+        loadExistingArea();
+        
+        // Handle map events
+        map.on(L.Draw.Event.CREATED, function(event) {
+            const layer = event.layer;
+            drawnItems.addLayer(layer);
+            isPolygonComplete = true;
+            document.getElementById('confirm-area-button').disabled = false;
+        });
+        
+        // Toggle satellite/street view
+        document.getElementById('toggle-satellite').addEventListener('click', function() {
+            if (isSatelliteView) {
+                map.removeLayer(satelliteLayer);
+                osmLayer.addTo(map);
+                this.innerHTML = '<i class="fas fa-satellite"></i> Show Satellite';
+            } else {
+                map.removeLayer(osmLayer);
+                satelliteLayer.addTo(map);
+                this.innerHTML = '<i class="fas fa-map"></i> Show Street Map';
+            }
+            isSatelliteView = !isSatelliteView;
+        });
+    }
+    
+    function initControls() {
+        // Confirm area button
+        document.getElementById('confirm-area-button').addEventListener('click', function() {
+            if (isPolygonComplete) {
+                const polygonLayer = drawnItems.getLayers().find(layer => layer instanceof L.Polygon);
+                if (polygonLayer) {
+                    const coordinates = polygonLayer.getLatLngs()[0].map(point => [point.lat, point.lng]);
+                    sendCommand('save_area', { coordinates: coordinates }, function(response) {
+                        if (response.success) {
+                            showAlert('Mowing area saved successfully!', 'success');
+                            document.getElementById('confirm-home-button').disabled = false;
+                        } else {
+                            showAlert('Failed to save mowing area.', 'danger');
+                        }
+                    });
+                }
+            }
+        });
+        
+        // Set home location button
+        document.getElementById('confirm-home-button').addEventListener('click', function() {
+            sendCommand('get_position', {}, function(response) {
+                if (response.success && response.data.latitude && response.data.longitude) {
+                    const homeLocation = [response.data.latitude, response.data.longitude];
+                    
+                    // Add or update home marker
+                    if (homeMarker) {
+                        map.removeLayer(homeMarker);
+                    }
+                    
+                    homeMarker = L.marker(homeLocation, {
+                        icon: L.divIcon({
+                            className: 'home-marker',
+                            html: '<i class="fas fa-home"></i>',
+                            iconSize: [30, 30]
+                        })
+                    }).addTo(map);
+                    
+                    sendCommand('save_home', { location: homeLocation }, function(response) {
+                        if (response.success) {
+                            showAlert('Home location saved successfully!', 'success');
+                        } else {
+                            showAlert('Failed to save home location.', 'danger');
+                        }
+                    });
+                } else {
+                    showAlert('Unable to get current position for home location.', 'danger');
+                }
+            });
+        });
+        
+        // Check polygon button
+        document.getElementById('check-polygon-button').addEventListener('click', function() {
+            const polygonLayer = drawnItems.getLayers().find(layer => layer instanceof L.Polygon);
+            if (polygonLayer) {
+                const coordinates = polygonLayer.getLatLngs()[0].map(point => [point.lat.toFixed(6), point.lng.toFixed(6)]);
+                document.getElementById('coordinates-display').textContent = JSON.stringify(coordinates, null, 2);
+                document.getElementById('coordinatesCard').style.display = 'block';
+            } else {
+                showAlert('No polygon defined yet.', 'warning');
+            }
+        });
+        
+        // Close coordinates card
+        document.getElementById('close-coordinates').addEventListener('click', function() {
+            document.getElementById('coordinatesCard').style.display = 'none';
+        });
+        
+        // Copy coordinates
+        document.getElementById('copy-coordinates').addEventListener('click', function() {
+            const coordText = document.getElementById('coordinates-display').textContent;
+            navigator.clipboard.writeText(coordText).then(function() {
+                showAlert('Coordinates copied to clipboard!', 'success', 2000);
+            }, function() {
+                showAlert('Failed to copy coordinates.', 'danger');
+            });
+        });
+        
+        // Reset area button
+        document.getElementById('reset-area-button').addEventListener('click', function() {
+            drawnItems.clearLayers();
+            if (homeMarker) {
+                map.removeLayer(homeMarker);
+                homeMarker = null;
+            }
+            isPolygonComplete = false;
+            document.getElementById('confirm-area-button').disabled = true;
+            document.getElementById('confirm-home-button').disabled = true;
+            document.getElementById('coordinatesCard').style.display = 'none';
+        });
+    }
+    
+    function loadExistingArea() {
+        sendCommand('get_area', {}, function(response) {
+            if (response.success && response.data.coordinates && response.data.coordinates.length > 0) {
+                // Create a polygon from the coordinates
+                const polygon = L.polygon(response.data.coordinates, {
+                    color: 'var(--grass-medium)',
+                    fillColor: 'var(--grass-pale)',
+                    fillOpacity: 0.5
+                });
+                drawnItems.addLayer(polygon);
+                
+                // Fit the map to the polygon
+                map.fitBounds(polygon.getBounds());
+                
+                isPolygonComplete = true;
+                document.getElementById('confirm-area-button').disabled = false;
+                document.getElementById('confirm-home-button').disabled = false;
+                
+                showAlert('Loaded existing mowing area.', 'success', 3000);
+            }
+        });
+        
+        // Load home location if available
+        sendCommand('get_home', {}, function(response) {
+            if (response.success && response.data.location && response.data.location.length === 2) {
+                const homeLocation = response.data.location;
+                
+                homeMarker = L.marker(homeLocation, {
+                    icon: L.divIcon({
+                        className: 'home-marker',
+                        html: '<i class="fas fa-home"></i>',
+                        iconSize: [30, 30]
+                    })
+                }).addTo(map);
+            }
+        });
+    }
+    
+    // Initialize camera controls
+    function initCameraControls() {
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const videoFeed = document.getElementById('video_feed');
+        const cameraOverlay = document.getElementById('cameraOverlay');
+        
+        let cameraActive = true;
+        
+        if (toggleCameraBtn && videoFeed) {
+            toggleCameraBtn.addEventListener('click', function() {
+                cameraActive = !cameraActive;
+                if (cameraActive) {
+                    videoFeed.style.opacity = '1';
+                    this.innerHTML = '<i class="fas fa-video"></i> Disable Camera';
+                } else {
+                    videoFeed.style.opacity = '0.2';
+                    this.innerHTML = '<i class="fas fa-video-slash"></i> Enable Camera';
+                }
+                sendCommand('toggle_camera', { enabled: cameraActive });
+            });
+        }
+        
+        // Handle video feed loading
+        if (videoFeed && cameraOverlay) {
+            videoFeed.onload = function() {
+                cameraOverlay.style.display = 'none';
+            };
+            
+            videoFeed.onerror = function() {
+                cameraOverlay.style.display = 'flex';
+                cameraOverlay.innerHTML = '<div class="camera-status">Camera Unavailable</div>';
+            };
+        }
+    }
+    
+    // Update the area page connection status
+    function updateAreaConnectionStatus() {
+        const statusIndicator = document.getElementById('areaConnectionStatus');
+        const statusText = document.getElementById('areaStatusText');
+        
+        if (statusIndicator && statusText) {
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+    }
+    
+    // Clean up when navigating away
+    window.addEventListener('beforeunload', function() {
+        if (map) {
+            map.remove();
+        }
+    });
 </script>
+
+<style>
+    /* Area page specific styles */
+    .map-container {
+        height: 400px;
+        width: 100%;
+        border-radius: var(--border-radius);
+        z-index: 1;
+    }
+    
+    .map-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    
+    .map-instructions {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+    
+    .coordinates-display {
+        background-color: var(--dark);
+        color: var(--light);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        font-family: monospace;
+        white-space: pre-wrap;
+        overflow-x: auto;
+        max-height: 200px;
+    }
+    
+    .home-marker {
+        color: var(--primary);
+        font-size: 24px;
+        text-align: center;
+        line-height: 30px;
+    }
+    
+    .camera-container {
+        position: relative;
+        width: 100%;
+        height: 250px;
+        background-color: var(--dirt-pale);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+    
+    .camera-feed {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .camera-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+    }
+    
+    .camera-status {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .map-controls {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .map-container {
+            height: 300px;
+        }
+        
+        .camera-container {
+            height: 200px;
+        }
+    }
+</style>
 {% endblock %}

@@ -1,23 +1,457 @@
 {% extends "base.html" %}
 
+{% block title %}Manual Control - Autonomous Mower{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.1/dist/nipplejs.min.js"></script>
+{% endblock %}
+
 {% block content %}
-    <h1>Control</h1>
-    <div class="main-content">
-        <div class="control-panel">
-            <h1>Manual Control</h1>
-            <div id="controller-container">
-                <canvas id="joystick" width="300" height="300"></canvas>
-            </div>           
-            <div class="mower-controls">
-                <button class="btn btn-blades-on" onclick="toggleBlades('on')"><i class="fas fa-power-off"></i></button>
-                <button class="btn btn-blades-off" onclick="toggleBlades('off')"><i class="fas fa-ban"></i></button>
-                <button class="btn btn-start-mowing" onclick="startMowing()">Start Mowing</button>
-                <button class="btn btn-stop-mowing" onclick="stopMowing()">Stop Mowing</button>
+<div class="dashboard-header">
+    <h1>Manual Control</h1>
+    <div class="d-flex align-center">
+        <span class="status-indicator" id="controlConnectionStatus"></span>
+        <span id="controlStatusText" class="mr-2">Connected</span>
+        <button id="emergencyStopBtn" class="btn btn-danger btn-sm">
+            <i class="fas fa-exclamation-triangle"></i> EMERGENCY STOP
+        </button>
+    </div>
+</div>
+
+<div class="control-layout">
+    <!-- Left column - Control joystick -->
+    <div class="control-column">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Movement Controls</h3>
+            </div>
+            <div class="card-body text-center">
+                <div id="joystickContainer" class="joystick-container">
+                    <div id="joystickZone"></div>
+                </div>
+                <div class="joystick-status mt-3">
+                    <p>Direction: <span id="direction">none</span></p>
+                    <p>Power: <span id="power">0%</span></p>
+                </div>
+                <div class="control-help mt-3">
+                    <p><i class="fas fa-info-circle"></i> Move the joystick to control the mower's movement.</p>
+                    <p>Forward/backward controls speed, left/right controls turning.</p>
+                </div>
             </div>
         </div>
-        <h1>Camera Stream</h1>
-        <div class="video-stream">
-            <img id="video_feed" alt="Loading video stream...">
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Blade Controls</h3>
+            </div>
+            <div class="card-body">
+                <div class="control-buttons">
+                    <button class="btn btn-success btn-lg control-btn" data-command="blade_on">
+                        <i class="fas fa-play-circle"></i> Start Blades
+                    </button>
+                    <button class="btn btn-danger btn-lg control-btn" data-command="blade_off">
+                        <i class="fas fa-stop-circle"></i> Stop Blades
+                    </button>
+                </div>
+                <div class="blade-status mt-3">
+                    <p>Blade Status: <span id="bladeStatus">Stopped</span></p>
+                    <div class="blade-speed-control mt-2">
+                        <label for="bladeSpeedSlider">Blade Speed:</label>
+                        <input type="range" id="bladeSpeedSlider" min="0" max="100" value="0" class="w-100">
+                        <div class="d-flex justify-between">
+                            <span>0%</span>
+                            <span id="bladeSpeedValue">0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    
+    <!-- Right column - Camera and status -->
+    <div class="control-column">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Camera Feed</h3>
+                <div class="card-header-actions">
+                    <button id="toggleCameraBtn" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-video"></i> Toggle Camera
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="camera-container">
+                    <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Camera Feed" class="camera-feed">
+                    <div class="camera-overlay" id="cameraOverlay">
+                        <div class="camera-status">Camera Loading...</div>
+                    </div>
+                </div>
+                <div class="camera-controls mt-2">
+                    <button id="toggleDetectionBtn" class="btn btn-sm btn-primary">
+                        <i class="fas fa-eye"></i> Toggle Detection
+                    </button>
+                    <button id="captureImageBtn" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-camera"></i> Capture Image
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Mower Status</h3>
+            </div>
+            <div class="card-body">
+                <div class="status-data">
+                    <div class="info-item">
+                        <div class="info-label">Speed:</div>
+                        <div class="info-value" id="speedStatus">0 m/s</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Heading:</div>
+                        <div class="info-value" id="headingStatus">0°</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Motor Left:</div>
+                        <div class="info-value" id="motor_left">0%</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Motor Right:</div>
+                        <div class="info-value" id="motor_right">0%</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Position:</div>
+                        <div class="info-value">
+                            <span id="position_latitude">0.000000</span>, 
+                            <span id="position_longitude">0.000000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Quick Actions</h3>
+            </div>
+            <div class="card-body">
+                <div class="control-buttons">
+                    <button class="btn btn-primary control-btn" data-command="start_mowing">
+                        <i class="fas fa-play"></i> Start Auto Mowing
+                    </button>
+                    <button class="btn btn-success control-btn" data-command="return_home">
+                        <i class="fas fa-home"></i> Return to Home
+                    </button>
+                </div>
+                <div class="control-buttons mt-2">
+                    <button class="btn btn-secondary control-btn" data-command="stop">
+                        <i class="fas fa-stop"></i> Stop All Movement
+                    </button>
+                    <button class="btn btn-danger control-btn" data-command="emergency_stop">
+                        <i class="fas fa-exclamation-triangle"></i> Emergency Stop
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let joystick;
+    let lastJoystickCommand = null;
+    let joystickCommandInterval = null;
+    const JOYSTICK_UPDATE_MS = 200; // Send joystick commands every 200ms
+
+    // Initialize the joystick control
+    function initializeJoystick() {
+        const options = {
+            zone: document.getElementById('joystickZone'),
+            mode: 'static',
+            position: { left: '50%', top: '50%' },
+            color: 'var(--grass-medium)',
+            size: 150,
+            lockX: false,
+            lockY: false
+        };
+        
+        joystick = nipplejs.create(options);
+        
+        // Joystick event handlers
+        joystick.on('move', function(evt, data) {
+            updateJoystickValues(data);
+            
+            // Update lastJoystickCommand for interval sending
+            lastJoystickCommand = {
+                forward: Math.cos(data.angle.radian) * Math.min(data.force / 50, 1),
+                turn: -Math.sin(data.angle.radian) * Math.min(data.force / 50, 1)
+            };
+            
+            // Display direction and power
+            document.getElementById('direction').textContent = data.direction ? data.direction.angle : 'none';
+            document.getElementById('power').textContent = Math.round(data.force) + '%';
+        });
+        
+        joystick.on('end', function() {
+            // Reset values when joystick is released
+            lastJoystickCommand = { forward: 0, turn: 0 };
+            document.getElementById('direction').textContent = 'none';
+            document.getElementById('power').textContent = '0%';
+            
+            // Send stop command immediately
+            sendCommand('manual_drive', { forward: 0, turn: 0 });
+        });
+        
+        // Start interval for sending joystick commands
+        joystickCommandInterval = setInterval(sendJoystickCommand, JOYSTICK_UPDATE_MS);
+    }
+    
+    // Send joystick command on interval
+    function sendJoystickCommand() {
+        if (lastJoystickCommand && isConnected) {
+            sendCommand('manual_drive', lastJoystickCommand);
+        }
+    }
+    
+    // Update visual representation of joystick values
+    function updateJoystickValues(data) {
+        // Additional visual feedback could be implemented here
+        // For example, showing arrows or indicators based on direction
+    }
+    
+    // Initialize blade speed slider
+    function initializeBladeSpeedSlider() {
+        const slider = document.getElementById('bladeSpeedSlider');
+        const valueDisplay = document.getElementById('bladeSpeedValue');
+        
+        slider.addEventListener('input', function() {
+            const value = this.value;
+            valueDisplay.textContent = value + '%';
+        });
+        
+        slider.addEventListener('change', function() {
+            const value = this.value;
+            sendCommand('set_blade_speed', { speed: value / 100 });
+        });
+    }
+    
+    // Handle camera controls
+    function initializeCameraControls() {
+        const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+        const toggleDetectionBtn = document.getElementById('toggleDetectionBtn');
+        const captureImageBtn = document.getElementById('captureImageBtn');
+        const videoFeed = document.getElementById('videoFeed');
+        const cameraOverlay = document.getElementById('cameraOverlay');
+        
+        let cameraActive = true;
+        let detectionActive = false;
+        
+        if (toggleCameraBtn) {
+            toggleCameraBtn.addEventListener('click', function() {
+                cameraActive = !cameraActive;
+                if (cameraActive) {
+                    videoFeed.style.opacity = '1';
+                    this.innerHTML = '<i class="fas fa-video"></i> Disable Camera';
+                } else {
+                    videoFeed.style.opacity = '0.2';
+                    this.innerHTML = '<i class="fas fa-video-slash"></i> Enable Camera';
+                }
+                sendCommand('toggle_camera', { enabled: cameraActive });
+            });
+        }
+        
+        if (toggleDetectionBtn) {
+            toggleDetectionBtn.addEventListener('click', function() {
+                detectionActive = !detectionActive;
+                if (detectionActive) {
+                    this.innerHTML = '<i class="fas fa-eye"></i> Disable Detection';
+                } else {
+                    this.innerHTML = '<i class="fas fa-eye-slash"></i> Enable Detection';
+                }
+                sendCommand('toggle_detection', { enabled: detectionActive });
+            });
+        }
+        
+        if (captureImageBtn) {
+            captureImageBtn.addEventListener('click', function() {
+                sendCommand('capture_image');
+                showAlert('Image captured!', 'success', 2000);
+            });
+        }
+        
+        // Handle video feed loading
+        if (videoFeed) {
+            videoFeed.onload = function() {
+                cameraOverlay.style.display = 'none';
+            };
+            
+            videoFeed.onerror = function() {
+                cameraOverlay.style.display = 'flex';
+                cameraOverlay.innerHTML = '<div class="camera-status">Camera Unavailable</div>';
+            };
+        }
+    }
+    
+    // Initialize all control page elements
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize joystick control
+        initializeJoystick();
+        
+        // Initialize blade speed slider
+        initializeBladeSpeedSlider();
+        
+        // Initialize camera controls
+        initializeCameraControls();
+        
+        // Emergency stop button
+        const emergencyStopBtn = document.getElementById('emergencyStopBtn');
+        if (emergencyStopBtn) {
+            emergencyStopBtn.addEventListener('click', function() {
+                sendCommand('emergency_stop');
+                showAlert('EMERGENCY STOP ACTIVATED!', 'danger');
+            });
+        }
+        
+        // Update control connection status to match main connection
+        updateControlConnectionStatus();
+    });
+    
+    // Update the control page connection status
+    function updateControlConnectionStatus() {
+        const statusIndicator = document.getElementById('controlConnectionStatus');
+        const statusText = document.getElementById('controlStatusText');
+        
+        if (statusIndicator && statusText) {
+            if (isConnected) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+    }
+    
+    // Clean up intervals when navigating away
+    window.addEventListener('beforeunload', function() {
+        if (joystickCommandInterval) {
+            clearInterval(joystickCommandInterval);
+        }
+    });
+</script>
+
+<style>
+    /* Control page specific styles */
+    .control-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    
+    #joystickZone {
+        width: 200px;
+        height: 200px;
+        background-color: var(--dirt-pale);
+        border-radius: 50%;
+        margin: 0 auto;
+        position: relative;
+        border: 3px solid var(--dirt-medium);
+    }
+    
+    .joystick-status {
+        text-align: center;
+        font-size: 1.1rem;
+    }
+    
+    .control-help {
+        color: var(--gray);
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    
+    .camera-container {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        background-color: var(--dirt-pale);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+    }
+    
+    .camera-feed {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .camera-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+    }
+    
+    .camera-status {
+        font-size: 1.2rem;
+        text-align: center;
+    }
+    
+    .blade-speed-control {
+        margin-top: 1rem;
+    }
+    
+    #bladeSpeedSlider {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 10px;
+        background: var(--dirt-pale);
+        border-radius: 5px;
+        outline: none;
+        margin: 10px 0;
+    }
+    
+    #bladeSpeedSlider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--grass-medium);
+        cursor: pointer;
+    }
+    
+    #bladeSpeedSlider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--grass-medium);
+        cursor: pointer;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+        .control-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        #joystickZone {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .camera-container {
+            height: 200px;
+        }
+    }
+</style>
 {% endblock %}

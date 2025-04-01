@@ -1,279 +1,565 @@
-// Modernized JavaScript with Fixes
+/**
+ * Autonomous Mower Web Interface JavaScript
+ * 
+ * Manages the WebSocket connection, real-time updates, and UI interactions
+ * for the autonomous mower control interface.
+ */
 
-// Constants
-const DEFAULT_LAT = 39.095657;
-const DEFAULT_LNG = -84.515959;
-const FETCH_INTERVAL = 1000;
+// Initialize socket connection when the document is ready
+let socket;
+let isConnected = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY = 3000; // 3 seconds
 
-// Global variables
-let areaCoordinates = [];
-let homeLocation = null;
-let map;
-let areaPolygon = null;
-let homeLocationMarker = null;
-let robotMarker = null;
-let mapId;
-let apiKey;
-let pathPolyline = null;
-const defaultCoordinates = {lat: DEFAULT_LAT, lng: DEFAULT_LNG};
-
-// Utility function for fetch requests with error handling
-async function fetchWithLogging(url, options = {}) {
-    try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            console.error(`Error fetching ${url}: ${response.statusText}`);
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    } catch (error) {
-        console.error(`Fetch failed for ${url}:`, error);
-        return null; // Return null to handle gracefully
+// Store for system state
+const systemState = {
+    battery: {
+        voltage: 0,
+        percentage: 0,
+        charging: false
+    },
+    gps: {
+        satellites: 0,
+        fix: false,
+        latitude: 0,
+        longitude: 0
+    },
+    imu: {
+        heading: 0,
+        roll: 0,
+        pitch: 0
+    },
+    motors: {
+        leftSpeed: 0,
+        rightSpeed: 0,
+        bladeSpeed: 0
+    },
+    status: {
+        mowerState: 'IDLE',
+        errorMessage: '',
+        currentAction: '',
+        autonomousMode: false
+    },
+    sensors: {
+        temperature: 0,
+        humidity: 0,
+        pressure: 0,
+        leftDistance: 0,
+        rightDistance: 0
+    },
+    position: {
+        currentPosition: [0, 0],
+        homePosition: [0, 0],
+        waypoints: []
     }
-}
+};
 
-// Function to fetch sensor data
-async function fetchSensorData() {
-    const data = await fetchWithLogging('/get_sensor_data');
-    if (data) updateSensorDisplay(data);
-}
-
-setInterval(fetchSensorData, FETCH_INTERVAL);
-
-// Function to update sensor display
-function updateSensorDisplay(data) {
-    const elements = {
-        battery_voltage: `Battery Voltage: ${data.battery_voltage}`,
-        battery_current: `Battery Current: ${data.battery_current}`,
-        battery_charge: `Battery Charge: ${data.battery_charge_level}`,
-        solar_voltage: `Solar Voltage: ${data.solar_voltage}`,
-        solar_current: `Solar Current: ${data.solar_current}`,
-        speed: `Speed: ${data.speed}`,
-        heading: `Heading: ${data.heading}`,
-        pitch: `Pitch: ${data.pitch}`,
-        roll: `Roll: ${data.roll}`,
-        temperature: `Temperature: ${data.temperature}`,
-        humidity: `Humidity: ${data.humidity}`,
-        pressure: `Pressure: ${data.pressure}`,
-        left_distance: `Left Distance: ${data.left_distance}`,
-        right_distance: `Right Distance: ${data.right_distance}`
-    };
-    for (const [id, text] of Object.entries(elements)) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = text;
-        }
-    }
-}
-
-// Function to save settings for mowing days and hours
-async function saveSettings(mowDays, mowHours, patternType) {
-    const response = await fetchWithLogging('/save_settings', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({mowDays, mowHours, patternType})
-    });
-    if (response) alert('Settings saved successfully.');
-}
-
-// Function to update areaCoordinates when the polygon's path changes
-function updateAreaCoordinates() {
-    if (areaPolygon) {
-        areaCoordinates = areaPolygon.getPath().getArray().map(coord => ({
-            lat: coord.lat(),
-            lng: coord.lng()
-        }));
-        console.log('Updated areaCoordinates:', areaCoordinates);
-        saveMowingArea();
-    }
-}
-
-// Function to attach listeners to a polygon's path
-function attachPolygonListeners(polygon) {
-    const path = polygon.getPath();
-    path.addListener('set_at', updateAreaCoordinates);
-    path.addListener('insert_at', updateAreaCoordinates);
-    path.addListener('remove_at', updateAreaCoordinates);
-}
-
-// Function to handle form submission
-function handleFormSubmission() {
-    const mowDays = document.querySelectorAll('input[name="mowDays"]:checked');
-    const mowHours = document.querySelectorAll('input[name="mowHours"]:checked');
-    const patternType = document.getElementById('patternType').value;
-    const selectedDays = Array.from(mowDays).map(input => input.value);
-    const selectedHours = Array.from(mowHours).map(input => input.value);
-    saveSettings(selectedDays, selectedHours, patternType);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('settings-form');
-    if (form) {
-        form.addEventListener('submit', event => {
-            event.preventDefault();
-            handleFormSubmission();
-        });
-    }
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    initializeUI();
+    setupSocketConnection();
+    setupEventListeners();
 });
 
-// Function to load the Google Maps script
-function loadMapScript(apiKey, mapId) {
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&map_ids=${mapId}&libraries=drawing`;
-    script.type = 'module';
-    script.setAttribute('loading', 'async');
-    script.onload = initMap;
-    document.head.appendChild(script);
+/**
+ * Initialize the UI components and set default values
+ */
+function initializeUI() {
+    updateConnectionStatus(false);
+    
+    // Initialize any charts or visualizations
+    if (typeof initializeCharts === 'function') {
+        initializeCharts();
+    }
+    
+    // Initialize map if on map page
+    if (typeof initializeMap === 'function') {
+        initializeMap();
+    }
+    
+    // Initialize joystick if on control page
+    if (typeof initializeJoystick === 'function') {
+        initializeJoystick();
+    }
+    
+    // Show a welcome message in the alerts container
+    showAlert('System initializing. Connecting to mower...', 'info');
 }
 
-window.addEventListener('load', async () => {
-    const [keyData, mapIdData] = await Promise.all([
-        fetchWithLogging('/get_google_maps_api_key'),
-        fetchWithLogging('/get_map_id')
-    ]);
+/**
+ * Set up the Socket.IO connection to the server
+ */
+function setupSocketConnection() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socketUrl = `${protocol}//${window.location.host}`;
+    
+    socket = io(socketUrl);
+    
+    // Connection established
+    socket.on('connect', function() {
+        isConnected = true;
+        reconnectAttempts = 0;
+        updateConnectionStatus(true);
+        showAlert('Connected to mower system', 'success', 3000);
+        
+        // Request initial data
+        socket.emit('request_data', { type: 'all' });
+    });
+    
+    // Connection lost
+    socket.on('disconnect', function() {
+        isConnected = false;
+        updateConnectionStatus(false);
+        showAlert('Connection lost. Attempting to reconnect...', 'warning');
+        
+        attemptReconnect();
+    });
+    
+    // Handle errors
+    socket.on('connect_error', function(error) {
+        isConnected = false;
+        updateConnectionStatus(false);
+        console.error('Connection error:', error);
+        showAlert('Connection error: ' + error.message, 'danger');
+        
+        attemptReconnect();
+    });
+    
+    // Handle system status updates
+    socket.on('status_update', function(data) {
+        updateSystemStatus(data);
+    });
+    
+    // Handle sensor data updates
+    socket.on('sensor_data', function(data) {
+        updateSensorData(data);
+    });
+    
+    // Handle position updates
+    socket.on('position_update', function(data) {
+        updatePositionData(data);
+    });
+    
+    // Handle command responses
+    socket.on('command_response', function(data) {
+        handleCommandResponse(data);
+    });
+    
+    // Handle alert messages from server
+    socket.on('alert', function(data) {
+        showAlert(data.message, data.type, data.duration);
+    });
+}
 
-    if (keyData && mapIdData) {
-        apiKey = keyData.api_key;
-        mapId = mapIdData.map_id;
-        if (apiKey) loadMapScript(apiKey, mapId);
-        else console.error('API key not found or invalid.');
+/**
+ * Attempt to reconnect after connection loss
+ */
+function attemptReconnect() {
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        showAlert('Maximum reconnection attempts reached. Please refresh the page.', 'danger');
+        return;
     }
-});
-
-// Function to initialize map
-async function initMap() {
-    const {Map: GoogleMap, DrawingManager} = await google.maps.importLibrary(['maps', 'drawing']);
-
-    const coordinates = await fetchWithLogging('/get_default_coordinates') || defaultCoordinates;
-    map = new GoogleMap(document.getElementById('map'), {
-        zoom: 20,
-        center: coordinates,
-        mapTypeId: 'satellite',
-        mapId
-    });
-
-    const drawingManager = new DrawingManager({
-        drawingMode: null,
-        drawingControl: true,
-        drawingControlOptions: {
-            position: google.maps.ControlPosition.TOP_CENTER,
-            drawingModes: ['polygon', 'marker']
+    
+    reconnectAttempts++;
+    
+    setTimeout(function() {
+        if (!isConnected) {
+            socket.connect();
+            showAlert(`Reconnection attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}...`, 'info');
         }
-    });
-    drawingManager.setMap(map);
+    }, RECONNECT_DELAY * reconnectAttempts);
+}
 
-    // Fetch existing data
-    const [polygonCoords, homeLoc, plannedPath] = await Promise.all([
-        fetchMowingAreaPolygon(),
-        fetchHomeLocation(),
-        fetchPlannedPath()
-    ]);
-
-    // Display mowing area polygon
-    if (polygonCoords.length > 0) {
-        areaPolygon = new google.maps.Polygon({
-            paths: polygonCoords,
-            map: map,
-            editable: true
+/**
+ * Set up event listeners for UI elements
+ */
+function setupEventListeners() {
+    // Quick controls in the sidebar
+    const startMowingBtn = document.getElementById('startMowingBtn');
+    const stopMowingBtn = document.getElementById('stopMowingBtn');
+    const returnHomeBtn = document.getElementById('returnHomeBtn');
+    
+    if (startMowingBtn) {
+        startMowingBtn.addEventListener('click', function() {
+            sendCommand('start_mowing');
         });
-        areaCoordinates = polygonCoords;
-        attachPolygonListeners(areaPolygon);
     }
-
-    // Display home location marker
-    homeLocation = homeLoc || coordinates;
-    homeLocationMarker = new google.maps.Marker({
-        map: map,
-        position: homeLocation,
-        draggable: true,
-        title: 'Robot Home Location - Drag to Change.',
-        icon: {
-            path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-            scale: 5,
-            fillColor: '#00a1e0',
-            fillOpacity: 1,
-            strokeWeight: 1
-        }
-    });
-    homeLocationMarker.addListener('dragend', saveHomeLocation);
-
-    // Display robot marker
-    robotMarker = new google.maps.Marker({
-        map: map,
-        position: coordinates,
-        title: 'Robot Current Position',
-        icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 5,
-            fillColor: '#FF0000',
-            fillOpacity: 1,
-            strokeWeight: 0
-        }
-    });
-
-    // Update robot position periodically
-    setInterval(async () => {
-        const robotPosition = await fetchRobotPosition();
-        if (robotPosition) robotMarker.setPosition(robotPosition);
-    }, FETCH_INTERVAL);
-}
-
-// Fetch functions
-async function fetchMowingAreaPolygon() {
-    const data = await fetchWithLogging('/api/mowing-area');
-    return data ? data.polygon : [];
-}
-
-async function fetchHomeLocation() {
-    const data = await fetchWithLogging('/api/home-location');
-    return data ? data.location : null;
-}
-
-async function fetchPlannedPath() {
-    const data = await fetchWithLogging('/api/planned-path');
-    return data || [];
-}
-
-async function fetchRobotPosition() {
-    const data = await fetchWithLogging('/api/robot-position');
-    if (data?.lat && data?.lon) {
-        return {lat: data.lat, lng: data.lon};
-    } else {
-        console.error('Invalid robot position data:', data);
-        return null;
+    
+    if (stopMowingBtn) {
+        stopMowingBtn.addEventListener('click', function() {
+            sendCommand('stop');
+        });
     }
+    
+    if (returnHomeBtn) {
+        returnHomeBtn.addEventListener('click', function() {
+            sendCommand('return_home');
+        });
+    }
+    
+    // Set up page-specific event listeners
+    setupPageSpecificListeners();
 }
 
-// Save functions
-async function saveMowingArea() {
-    const response = await fetchWithLogging('/api/mowing-area', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({polygon: areaCoordinates})
-    });
-    if (response) {
-        console.log('Mowing area saved successfully');
-        const plannedPath = await fetchPlannedPath();
-        if (pathPolyline) pathPolyline.setMap(null);
-        if (plannedPath.length > 0) {
-            const pathCoordinates = plannedPath.map(point => ({lat: point.lat, lng: point.lon}));
-            pathPolyline = new google.maps.Polyline({
-                path: pathCoordinates,
-                geodesic: true,
-                strokeColor: '#FF0000',
-                strokeOpacity: 1.0,
-                strokeWeight: 2,
-                map: map
+/**
+ * Set up event listeners specific to the current page
+ */
+function setupPageSpecificListeners() {
+    // Control page buttons
+    const controlButtons = document.querySelectorAll('.control-btn');
+    if (controlButtons.length > 0) {
+        controlButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const command = this.dataset.command;
+                const params = this.dataset.params ? JSON.parse(this.dataset.params) : {};
+                sendCommand(command, params);
             });
+        });
+    }
+    
+    // Settings form
+    const settingsForm = document.getElementById('settingsForm');
+    if (settingsForm) {
+        settingsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const settings = {};
+            
+            for (const [key, value] of formData.entries()) {
+                settings[key] = value;
+            }
+            
+            sendCommand('update_settings', settings);
+        });
+    }
+}
+
+/**
+ * Send a command to the server
+ * 
+ * @param {string} command - The command to send
+ * @param {Object} params - Optional parameters for the command
+ */
+function sendCommand(command, params = {}) {
+    if (!isConnected) {
+        showAlert('Cannot send command: Not connected to the server', 'danger');
+        return;
+    }
+    
+    showAlert(`Sending command: ${command}`, 'info', 2000);
+    
+    socket.emit('control_command', {
+        command: command,
+        params: params
+    });
+}
+
+/**
+ * Update the connection status indicator
+ * 
+ * @param {boolean} connected - Whether the system is connected
+ */
+function updateConnectionStatus(connected) {
+    const statusIndicator = document.getElementById('connectionStatus');
+    const statusText = document.getElementById('connectionText');
+    
+    if (statusIndicator && statusText) {
+        if (connected) {
+            statusIndicator.className = 'status-indicator status-online';
+            statusText.textContent = 'Connected';
+        } else {
+            statusIndicator.className = 'status-indicator status-offline';
+            statusText.textContent = 'Disconnected';
         }
     }
 }
 
-async function saveHomeLocation() {
-    const response = await fetchWithLogging('/api/home-location', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({location: homeLocation})
-    });
-    if (response) console.log('Home location saved successfully');
+/**
+ * Update the system status display with new data
+ * 
+ * @param {Object} data - Status data from the server
+ */
+function updateSystemStatus(data) {
+    // Update our internal state
+    Object.assign(systemState.status, data);
+    
+    // Update battery status
+    if (data.battery !== undefined) {
+        Object.assign(systemState.battery, data.battery);
+        
+        const batteryStatus = document.getElementById('batteryStatus');
+        if (batteryStatus) {
+            const batteryPercentage = Math.round(systemState.battery.percentage);
+            batteryStatus.textContent = `${batteryPercentage}%`;
+            
+            // Add charging indicator if applicable
+            if (systemState.battery.charging) {
+                batteryStatus.innerHTML += ' <i class="fas fa-bolt"></i>';
+            }
+            
+            // Color coding based on battery level
+            if (batteryPercentage < 20) {
+                batteryStatus.className = 'text-danger';
+            } else if (batteryPercentage < 40) {
+                batteryStatus.className = 'text-warning';
+            } else {
+                batteryStatus.className = '';
+            }
+        }
+    }
+    
+    // Update mower status
+    if (data.state !== undefined) {
+        const mowerStatus = document.getElementById('mowerStatus');
+        if (mowerStatus) {
+            mowerStatus.textContent = formatRobotState(data.state);
+            
+            // Apply appropriate styling based on state
+            if (data.state === 'ERROR' || data.state === 'EMERGENCY_STOP') {
+                mowerStatus.className = 'text-danger';
+            } else if (data.state === 'MOWING' || data.state === 'AVOIDING') {
+                mowerStatus.className = 'text-success';
+            } else {
+                mowerStatus.className = '';
+            }
+        }
+    }
+    
+    // Update GPS status
+    if (data.gps !== undefined) {
+        Object.assign(systemState.gps, data.gps);
+        
+        const gpsStatus = document.getElementById('gpsStatus');
+        if (gpsStatus) {
+            if (systemState.gps.fix) {
+                gpsStatus.textContent = `${systemState.gps.satellites} satellites`;
+                gpsStatus.className = systemState.gps.satellites >= 4 ? 'text-success' : 'text-warning';
+            } else {
+                gpsStatus.textContent = 'No fix';
+                gpsStatus.className = 'text-danger';
+            }
+        }
+    }
+    
+    // Update additional status elements if they exist
+    updateAdditionalStatusElements();
+}
+
+/**
+ * Format robot state enum values into user-friendly strings
+ * 
+ * @param {string} state - Robot state from the server
+ * @returns {string} User-friendly state description
+ */
+function formatRobotState(state) {
+    const stateMap = {
+        'IDLE': 'Idle',
+        'INITIALIZING': 'Starting Up',
+        'MANUAL_CONTROL': 'Manual Control',
+        'MOWING': 'Mowing',
+        'AVOIDING': 'Avoiding Obstacle',
+        'RETURNING_HOME': 'Returning Home',
+        'DOCKED': 'Docked',
+        'ERROR': 'Error',
+        'EMERGENCY_STOP': 'Emergency Stop'
+    };
+    
+    return stateMap[state] || state;
+}
+
+/**
+ * Update any additional status elements that may be page-specific
+ */
+function updateAdditionalStatusElements() {
+    // Current action display
+    const currentActionElement = document.getElementById('currentAction');
+    if (currentActionElement && systemState.status.currentAction) {
+        currentActionElement.textContent = systemState.status.currentAction;
+    }
+    
+    // Error message display
+    const errorMessageElement = document.getElementById('errorMessage');
+    if (errorMessageElement) {
+        if (systemState.status.errorMessage) {
+            errorMessageElement.textContent = systemState.status.errorMessage;
+            errorMessageElement.parentElement.style.display = 'block';
+        } else {
+            errorMessageElement.parentElement.style.display = 'none';
+        }
+    }
+    
+    // Mode indicator (Autonomous/Manual)
+    const modeIndicator = document.getElementById('modeIndicator');
+    if (modeIndicator) {
+        modeIndicator.textContent = systemState.status.autonomousMode ? 'Autonomous' : 'Manual';
+        modeIndicator.className = systemState.status.autonomousMode ? 'text-success' : 'text-warning';
+    }
+}
+
+/**
+ * Update sensor data displays with new data
+ * 
+ * @param {Object} data - Sensor data from the server
+ */
+function updateSensorData(data) {
+    // Update our internal state
+    Object.assign(systemState.sensors, data);
+    
+    // Update sensor readings on the page
+    for (const [key, value] of Object.entries(data)) {
+        const element = document.getElementById(`sensor_${key}`);
+        if (element) {
+            // Format the value appropriately based on sensor type
+            let formattedValue = value;
+            let unit = '';
+            
+            switch (key) {
+                case 'temperature':
+                    formattedValue = value.toFixed(1);
+                    unit = '°C';
+                    break;
+                case 'humidity':
+                    formattedValue = value.toFixed(1);
+                    unit = '%';
+                    break;
+                case 'pressure':
+                    formattedValue = value.toFixed(0);
+                    unit = 'hPa';
+                    break;
+                case 'leftDistance':
+                case 'rightDistance':
+                    formattedValue = value.toFixed(1);
+                    unit = 'cm';
+                    break;
+                default:
+                    formattedValue = value.toString();
+            }
+            
+            element.textContent = `${formattedValue}${unit}`;
+        }
+    }
+    
+    // Update IMU data if available
+    if (data.imu) {
+        Object.assign(systemState.imu, data.imu);
+        
+        const headingElement = document.getElementById('sensor_heading');
+        if (headingElement) {
+            headingElement.textContent = `${Math.round(systemState.imu.heading)}°`;
+        }
+        
+        const rollElement = document.getElementById('sensor_roll');
+        if (rollElement) {
+            rollElement.textContent = `${systemState.imu.roll.toFixed(1)}°`;
+        }
+        
+        const pitchElement = document.getElementById('sensor_pitch');
+        if (pitchElement) {
+            pitchElement.textContent = `${systemState.imu.pitch.toFixed(1)}°`;
+        }
+    }
+    
+    // Update motor data if available
+    if (data.motors) {
+        Object.assign(systemState.motors, data.motors);
+        
+        const leftSpeedElement = document.getElementById('motor_left');
+        if (leftSpeedElement) {
+            leftSpeedElement.textContent = `${Math.round(systemState.motors.leftSpeed * 100)}%`;
+        }
+        
+        const rightSpeedElement = document.getElementById('motor_right');
+        if (rightSpeedElement) {
+            rightSpeedElement.textContent = `${Math.round(systemState.motors.rightSpeed * 100)}%`;
+        }
+        
+        const bladeSpeedElement = document.getElementById('motor_blade');
+        if (bladeSpeedElement) {
+            bladeSpeedElement.textContent = `${Math.round(systemState.motors.bladeSpeed * 100)}%`;
+        }
+    }
+}
+
+/**
+ * Update position data and map displays
+ * 
+ * @param {Object} data - Position data from the server
+ */
+function updatePositionData(data) {
+    // Update our internal state
+    Object.assign(systemState.position, data);
+    
+    // Update position display elements
+    const latElement = document.getElementById('position_latitude');
+    const lngElement = document.getElementById('position_longitude');
+    
+    if (latElement && lngElement && data.currentPosition) {
+        latElement.textContent = data.currentPosition[0].toFixed(6);
+        lngElement.textContent = data.currentPosition[1].toFixed(6);
+    }
+    
+    // Update map if it exists and the updateMap function is available
+    if (typeof updateMap === 'function' && data.currentPosition) {
+        updateMap(data);
+    }
+}
+
+/**
+ * Handle responses to commands sent to the server
+ * 
+ * @param {Object} data - Response data from the server
+ */
+function handleCommandResponse(data) {
+    if (data.success) {
+        showAlert(data.message || 'Command executed successfully', 'success', 3000);
+    } else {
+        showAlert(data.message || 'Command failed', 'danger');
+    }
+    
+    // If the command was a settings update, show success message
+    if (data.command === 'update_settings' && data.success) {
+        showAlert('Settings updated successfully', 'success', 3000);
+    }
+    
+    // If we need to refresh the page after a command
+    if (data.refresh) {
+        setTimeout(function() {
+            window.location.reload();
+        }, 1500);
+    }
+}
+
+/**
+ * Display an alert message to the user
+ * 
+ * @param {string} message - The message to display
+ * @param {string} type - Alert type: 'success', 'info', 'warning', or 'danger'
+ * @param {number} duration - Optional duration in ms before auto-hiding (0 for persistent)
+ */
+function showAlert(message, type = 'info', duration = 0) {
+    const alertsContainer = document.getElementById('alertsContainer');
+    if (!alertsContainer) return;
+    
+    const alertId = 'alert_' + Date.now();
+    const alertHtml = `
+        <div id="${alertId}" class="alert alert-${type} d-flex justify-between align-center">
+            <div>${message}</div>
+            <button type="button" class="btn-close" onclick="this.parentElement.remove();">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    alertsContainer.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // Auto-hide the alert after duration (if not 0)
+    if (duration > 0) {
+        setTimeout(function() {
+            const alertElement = document.getElementById(alertId);
+            if (alertElement) {
+                alertElement.remove();
+            }
+        }, duration);
+    }
 }
