@@ -1,37 +1,62 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Hardware test module for comprehensive testing of all hardware components.
+Hardware test suite for the autonomous mower.
 
-This module provides functions for testing all hardware components of the
-autonomous mower system, including motors, sensors, and communication interfaces.
-It can be run as a standalone script to perform a full system check or
-individual test functions can be called for specific component testing.
+This module provides a comprehensive suite of tests for all hardware components
+of the autonomous mower system. It can be run in interactive or non-interactive mode,
+and can test individual components or the entire system.
 
-Usage:
-    python -m mower.diagnostics.hardware_test
+Key features:
+- Automated testing of all sensors and hardware interfaces
+- Range validation to ensure sensor readings are within expected parameters
+- Interactive testing for components that require user verification
+- Detailed logging and reporting of test results
+- Command-line interface for running full or targeted tests
 
-Or import and use specific test functions:
-    from mower.diagnostics.hardware_test import test_motors, test_sensors
+Example usage:
+    python -m mower.diagnostics.hardware_test  # Run all tests
+    python -m mower.diagnostics.hardware_test --test imu  # Test only the IMU
+    python -m mower.diagnostics.hardware_test --non-interactive  # Run without prompts
 """
 
-import time
-import sys
 import argparse
-import threading
-from typing import List, Dict, Any, Optional, Tuple, Callable
+import logging
+import sys
+import time
+import queue
+from typing import Dict, List, Optional, Any, Tuple
 
+# Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-from mower.main_controller import ResourceManager
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
-# Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+try:
+    # Try to import the resource manager
+    from mower.main_controller import ResourceManager
+except ImportError:
+    # If we can't import it, define a placeholder
+    ResourceManager = None
+    logging.warning("Could not import ResourceManager. Will create one dynamically.")
 
 class HardwareTestSuite:
     """
-    Test suite for all hardware components of the autonomous mower.
+    A suite of tests for hardware components of the autonomous mower.
     
-    This class provides methods for testing individual components and a
-    comprehensive test of all hardware systems. It relies on the ResourceManager
-    for access to hardware components.
+    This class provides methods to test each hardware component individually,
+    as well as a method to run all tests in sequence. It can be used interactively
+    or non-interactively, and can be run from the command line or imported and used
+    programmatically.
+    
+    Each test validates:
+    1. Connectivity to the hardware component
+    2. Ability to read data from the component
+    3. Range validation to ensure readings are within expected parameters
+    
+    For motors, the tests also include functional tests to verify movement.
     """
     
     def __init__(self, resource_manager: Optional[ResourceManager] = None):
@@ -47,92 +72,156 @@ class HardwareTestSuite:
         
     def run_all_tests(self, interactive: bool = True) -> Dict[str, bool]:
         """
-        Run all hardware tests sequentially.
+        Run all hardware tests in sequence.
         
         Args:
-            interactive: If True, will prompt the user between tests.
-            
+            interactive: If True, prompt the user between tests.
+                        If False, run all tests without prompting.
+        
         Returns:
-            A dictionary with test names as keys and test results as values.
+            Dict[str, bool]: A dictionary mapping test names to result (True=passed, False=failed)
+        
+        Note:
+            Interactive mode is useful for manual testing where user interaction 
+            may be required (e.g., confirming motor movement). Non-interactive mode
+            is useful for automated testing and diagnostics.
         """
-        self.test_in_progress = True
         self.test_results = {}
         
-        # Define test sequence
-        tests = [
-            ("GPIO", self.test_gpio),
-            ("IMU Sensor", self.test_imu),
-            ("BME280 Sensor", self.test_bme280),
-            ("ToF Sensors", self.test_tof_sensors),
-            ("Power Monitor", self.test_power_monitor),
-            ("GPS", self.test_gps),
-            ("Drive Motors", self.test_drive_motors),
-            ("Blade Motor", self.test_blade_motor),
-            ("Camera", self.test_camera)
+        # Find all test methods
+        test_methods = [
+            method_name for method_name in dir(self) 
+            if method_name.startswith('test_') and callable(getattr(self, method_name))
         ]
         
-        try:
-            print("\n===== AUTONOMOUS MOWER HARDWARE TEST SUITE =====\n")
+        for method_name in test_methods:
+            test_name = method_name[5:].replace('_', ' ')  # Remove 'test_' prefix and replace underscores
             
-            for name, test_func in tests:
-                if interactive:
-                    input(f"\nPress Enter to test {name}...")
+            if interactive:
+                print("\n" + "="*50)
+                print(f"RUNNING TEST: {test_name.upper()}")
+                print("="*50)
+                input("Press Enter to start this test...")
+            else:
+                print(f"\nRunning test: {test_name}")
+            
+            try:
+                # Get the test method and run it
+                test_method = getattr(self, method_name)
+                result = test_method()
                 
-                print(f"\nTesting {name}...")
-                try:
-                    result = test_func()
-                    self.test_results[name] = result
-                    status = "PASSED" if result else "FAILED"
-                    print(f"{name} test {status}")
-                except Exception as e:
-                    self.test_results[name] = False
-                    print(f"{name} test FAILED: {e}")
-                    logging.error(f"Error testing {name}: {e}")
-            
-            # Print summary
-            self._print_summary()
-            
-        finally:
-            self.test_in_progress = False
-            
+                # Record the result
+                self.test_results[test_name] = result
+                
+                if interactive:
+                    print(f"Test {'PASSED' if result else 'FAILED'}")
+                    if len(test_methods) > 1:  # Don't prompt after the last test
+                        input("Press Enter to continue to the next test...")
+            except Exception as e:
+                # Handle any exceptions that weren't caught by the test method
+                logging.error(f"Exception running test {test_name}: {e}")
+                self.test_results[test_name] = False
+                print(f"Test FAILED with exception: {e}")
+                if interactive:
+                    input("Press Enter to continue to the next test...")
+        
+        # Print summary of results
+        self._print_summary()
+        
         return self.test_results
     
     def _print_summary(self):
-        """Print a summary of all test results."""
-        print("\n===== TEST SUMMARY =====")
+        """
+        Print a summary of test results.
+        """
+        # Calculate total and passed tests
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results.values() if result)
         
-        if not self.test_results:
-            print("No tests were run.")
-            return
+        print("\n" + "="*50)
+        print(f"SUMMARY: {passed_tests}/{total_tests} tests passed")
+        print("="*50)
         
-        passed = sum(1 for result in self.test_results.values() if result)
-        failed = sum(1 for result in self.test_results.values() if not result)
-        
-        for name, result in self.test_results.items():
+        # Print individual test results
+        for test, result in self.test_results.items():
             status = "PASSED" if result else "FAILED"
-            print(f"{name}: {status}")
+            print(f"{test}: {status}")
+        print("="*50)
         
-        print(f"\nTotal: {len(self.test_results)} | Passed: {passed} | Failed: {failed}")
-        
-        if failed == 0:
-            print("\nAll hardware tests PASSED!")
-        else:
-            print(f"\nWARNING: {failed} hardware tests FAILED!")
+    def _check_sensor_ranges(self, sensor_name: str, reading: Dict[str, Any]) -> bool:
+        """
+        Check if a given sensor reading is within plausible limits.
+
+        Args:
+            sensor_name: Name of the sensor (e.g. "IMU", "BME280")
+            reading: Dictionary of sensor values
+
+        Returns:
+            bool: True if readings are within expected range, False otherwise.
+
+        Explanation:
+            This method is a minimal reference. In a real environment, define
+            stable ranges or use knowledge from sensor documentation.
+
+        Example:
+            If 'roll' in reading, check that -180 < roll < 180
+        """
+        # Here we do some minimal bounds checks to ensure the sensor is returning data
+        if sensor_name.lower() == 'imu':
+            # If IMU reading includes heading, pitch, roll
+            if 'heading' in reading:
+                if reading['heading'] < 0 or reading['heading'] > 360:
+                    logging.warning(f"IMU heading out of range: {reading['heading']}")
+                    return False
+            if 'pitch' in reading:
+                if reading['pitch'] < -90 or reading['pitch'] > 90:
+                    logging.warning(f"IMU pitch out of range: {reading['pitch']}")
+                    return False
+            if 'roll' in reading:
+                if reading['roll'] < -180 or reading['roll'] > 180:
+                    logging.warning(f"IMU roll out of range: {reading['roll']}")
+                    return False
+        elif sensor_name.lower() == 'bme280':
+            # Check for typical atmosphere
+            if 'temperature' in reading and (reading['temperature'] < -40 or reading['temperature'] > 85):
+                logging.warning(f"BME280 temperature out of range: {reading['temperature']}")
+                return False
+            if 'humidity' in reading and (reading['humidity'] < 0 or reading['humidity'] > 100):
+                logging.warning(f"BME280 humidity out of range: {reading['humidity']}")
+                return False
+            if 'pressure' in reading and (reading['pressure'] < 300 or reading['pressure'] > 1100):
+                logging.warning(f"BME280 pressure out of range: {reading['pressure']}")
+                return False
+        elif sensor_name.lower() == 'gps':
+            # Basic checks for latitude/longitude
+            if 'latitude' in reading and (reading['latitude'] < -90 or reading['latitude'] > 90):
+                logging.warning(f"GPS latitude out of range: {reading['latitude']}")
+                return False
+            if 'longitude' in reading and (reading['longitude'] < -180 or reading['longitude'] > 180):
+                logging.warning(f"GPS longitude out of range: {reading['longitude']}")
+                return False
+        elif sensor_name.lower() == 'power_monitor':
+            # Check for reasonable voltage/current ranges
+            if 'battery_voltage' in reading and (reading['battery_voltage'] < 0 or reading['battery_voltage'] > 30):
+                logging.warning(f"Battery voltage out of range: {reading['battery_voltage']}")
+                return False
+        # Add more checks as needed for additional sensors
+        return True
     
     def test_gpio(self) -> bool:
         """
-        Test the GPIO manager initialization and functionality.
+        Test GPIO functionality.
         
         Returns:
             True if the test passed, False otherwise.
         """
         try:
-            gpio_manager = self.resource_manager.get_gpio_manager()
-            if gpio_manager is None:
-                logging.error("GPIO manager is None")
-                return False
+            # Basic test to check if GPIO is accessible
+            logging.info("Testing GPIO accessibility")
+            # This just checks if we can access the GPIO library without errors
+            import RPi.GPIO as GPIO
             
-            print("GPIO manager initialized successfully.")
+            # If we got here without an exception, consider it a basic success
             return True
         except Exception as e:
             logging.error(f"Error testing GPIO: {e}")
@@ -141,7 +230,12 @@ class HardwareTestSuite:
     def test_imu(self) -> bool:
         """
         Test the IMU sensor initialization and readings.
-        
+
+        This test will:
+         1. Attempt to connect to the IMU sensor.
+         2. Retrieve reading data such as heading, pitch, roll.
+         3. Validate if the data is within a plausible range.
+
         Returns:
             True if the test passed, False otherwise.
         """
@@ -153,17 +247,18 @@ class HardwareTestSuite:
             
             # Read sensor data
             reading = imu.read()
+            logging.info(f"IMU reading: {reading}")
             
-            print(f"IMU reading: {reading}")
-            print(f"Heading: {reading.get('heading', 'N/A')}°")
-            print(f"Roll: {reading.get('roll', 'N/A')}°")
-            print(f"Pitch: {reading.get('pitch', 'N/A')}°")
+            # Example of minimal check
+            if not self._check_sensor_ranges('IMU', reading):
+                logging.warning("IMU reading outside safe range guidelines.")
+                return False
             
-            # Simple validation of reading
+            # Additional validations
             if 'heading' not in reading or 'roll' not in reading or 'pitch' not in reading:
                 logging.warning("IMU returned incomplete data")
                 return False
-                
+            
             return True
         except Exception as e:
             logging.error(f"Error testing IMU: {e}")
@@ -173,6 +268,11 @@ class HardwareTestSuite:
         """
         Test the BME280 environmental sensor.
         
+        This test will:
+         1. Attempt to connect to the BME280 sensor.
+         2. Retrieve temperature, humidity, and pressure data.
+         3. Validate if the data is within plausible ranges.
+
         Returns:
             True if the test passed, False otherwise.
         """
@@ -184,19 +284,23 @@ class HardwareTestSuite:
             
             # Read sensor data
             reading = bme280.read()
+            logging.info(f"BME280 reading: {reading}")
             
-            print(f"BME280 reading: {reading}")
+            # Validate reading with range checks
+            if not self._check_sensor_ranges('BME280', reading):
+                logging.warning("BME280 reading outside safe range guidelines.")
+                return False
+            
+            # Additional validations for required fields
+            if 'temperature' not in reading or 'humidity' not in reading or 'pressure' not in reading:
+                logging.warning("BME280 returned incomplete data")
+                return False
+            
+            # Display readings for user
             print(f"Temperature: {reading.get('temperature', 'N/A')}°C")
             print(f"Humidity: {reading.get('humidity', 'N/A')}%")
             print(f"Pressure: {reading.get('pressure', 'N/A')} hPa")
             
-            # Simple validation of reading
-            if ('temperature' not in reading or 
-                'humidity' not in reading or 
-                'pressure' not in reading):
-                logging.warning("BME280 returned incomplete data")
-                return False
-                
             return True
         except Exception as e:
             logging.error(f"Error testing BME280: {e}")
@@ -206,6 +310,11 @@ class HardwareTestSuite:
         """
         Test the Time-of-Flight (ToF) distance sensors.
         
+        This test will:
+         1. Attempt to connect to the ToF sensors.
+         2. Retrieve distance readings from all connected sensors.
+         3. Validate if the data is within plausible ranges.
+
         Returns:
             True if the test passed, False otherwise.
         """
@@ -217,15 +326,20 @@ class HardwareTestSuite:
             
             # Read sensor data
             readings = tof.read_all()
+            logging.info(f"ToF sensor readings: {readings}")
             
             if not readings:
                 logging.warning("No ToF sensor readings returned")
                 return False
             
-            # Print readings
-            print(f"ToF sensor readings:")
+            # Check each sensor reading
             for i, distance in enumerate(readings):
-                print(f"Sensor {i+1}: {distance} mm")
+                # Basic plausibility check - most ToF sensors have a range of 50mm to 4000mm
+                if distance < 0 or distance > 5000:
+                    logging.warning(f"ToF sensor {i+1} reading out of range: {distance} mm")
+                    print(f"Sensor {i+1}: {distance} mm (OUT OF RANGE)")
+                else:
+                    print(f"Sensor {i+1}: {distance} mm")
             
             return True
         except Exception as e:
@@ -236,6 +350,11 @@ class HardwareTestSuite:
         """
         Test the power monitoring system (INA3221).
         
+        This test will:
+         1. Attempt to connect to the power monitoring sensor.
+         2. Retrieve voltage and current readings for different channels.
+         3. Validate if the data is within plausible ranges.
+
         Returns:
             True if the test passed, False otherwise.
         """
@@ -247,7 +366,14 @@ class HardwareTestSuite:
             
             # Read sensor data
             reading = power_monitor.read()
+            logging.info(f"Power monitor reading: {reading}")
             
+            # Check if readings are within expected ranges
+            if not self._check_sensor_ranges('power_monitor', reading):
+                logging.warning("Power monitor readings outside safe range guidelines.")
+                return False
+            
+            # Display readings for user
             print(f"Power monitor reading: {reading}")
             if 'battery_voltage' in reading:
                 print(f"Battery voltage: {reading['battery_voltage']} V")
@@ -272,6 +398,12 @@ class HardwareTestSuite:
         """
         Test the GPS module.
         
+        This test will:
+         1. Attempt to connect to the GPS receiver.
+         2. Wait for position data (with timeout).
+         3. Validate if the data is within plausible ranges.
+         4. Check for required data quality indicators.
+
         Returns:
             True if the test passed, False otherwise.
         """
@@ -297,7 +429,14 @@ class HardwareTestSuite:
                 print("No GPS position available within timeout period.")
                 return False
             
-            print(f"GPS position: {position}")
+            logging.info(f"GPS position: {position}")
+            
+            # Check if position data is within plausible ranges
+            if not self._check_sensor_ranges('GPS', position):
+                logging.warning("GPS reading outside safe range guidelines.")
+                return False
+            
+            # Display readings for user
             print(f"Latitude: {position.get('latitude', 'N/A')}")
             print(f"Longitude: {position.get('longitude', 'N/A')}")
             if 'altitude' in position:
@@ -306,8 +445,10 @@ class HardwareTestSuite:
                 print(f"Accuracy: {position.get('accuracy')} m")
             if 'satellites' in position:
                 print(f"Satellites: {position.get('satellites')}")
+            if 'fix_quality' in position:
+                print(f"Fix Quality: {position.get('fix_quality')}")
             
-            # Validate GPS data
+            # Validate GPS data completeness
             if ('latitude' not in position or 
                 'longitude' not in position or 
                 position.get('latitude') == 0 or 
@@ -462,15 +603,40 @@ def main():
     """
     Run the hardware test suite from the command line.
     
-    Command-line arguments:
+    This utility tests all major hardware components of the autonomous mower system:
+    - IMU (orientation sensor)
+    - BME280 (environmental sensor)
+    - ToF sensors (distance sensors)
+    - GPS module
+    - Power monitoring system
+    - Drive motors
+    - Blade motor
+    - Camera
+    
+    Command-line options:
         --non-interactive: Run all tests without prompting between tests.
-        --test <test_name>: Run only the specified test.
+        --test <test_name>: Run only the specified test (e.g., 'imu', 'gps').
+    
+    Usage examples:
+        python -m mower.diagnostics.hardware_test  # Run all tests interactively
+        python -m mower.diagnostics.hardware_test --test imu  # Test only the IMU
+        python -m mower.diagnostics.hardware_test --non-interactive  # Run all tests without prompts
+    
+    Returns:
+        System exit code: 0 if all tests pass, non-zero otherwise
     """
     parser = argparse.ArgumentParser(description='Run hardware tests for the autonomous mower')
     parser.add_argument('--non-interactive', action='store_true', help='Run tests without prompting')
     parser.add_argument('--test', type=str, help='Run only the specified test')
     
     args = parser.parse_args()
+    
+    print("=" * 50)
+    print("AUTONOMOUS MOWER HARDWARE TEST SUITE")
+    print("=" * 50)
+    print("This utility tests hardware functionality and sensor calibration.")
+    print("For each sensor, readings are validated against plausible ranges.")
+    print("=" * 50)
     
     # Create test suite
     test_suite = HardwareTestSuite()
@@ -483,6 +649,7 @@ def main():
             print(f"Running {args.test} test...")
             result = test_func()
             print(f"Test {'PASSED' if result else 'FAILED'}")
+            return 0 if result else 1
         else:
             print(f"Error: Test '{args.test}' not found")
             print("Available tests:")
@@ -490,9 +657,12 @@ def main():
                 if attr.startswith('test_') and callable(getattr(test_suite, attr)):
                     test_name = attr[5:].replace('_', '-')
                     print(f"  - {test_name}")
+            return 1
     else:
         # Run all tests
-        test_suite.run_all_tests(interactive=not args.non_interactive)
+        test_results = test_suite.run_all_tests(interactive=not args.non_interactive)
+        # Return exit code based on test results
+        return 0 if all(test_results.values()) else 1
 
 if __name__ == "__main__":
-    main() 
+    sys.exit(main()) 

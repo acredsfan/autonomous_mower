@@ -549,15 +549,15 @@ class WebInterface:
         real-time responsiveness and system resource usage.
         
         Troubleshooting:
-            - If broadcasts stop, check for exceptions in the thread
-            - For high CPU usage, increase the sleep interval
-            - Verify client-side event listeners are properly registered
+            - If broadcasts stop, check for exceptions in the thread.
+            - For high CPU usage, increase the sleep interval.
+            - Verify client-side event listeners are properly registered.
         """
         logging.info("Background thread started")
-        
+
         # Set the broadcast interval in seconds
         broadcast_interval = 1.0
-        
+
         while self.running:
             # Get and broadcast system status
             try:
@@ -565,12 +565,11 @@ class WebInterface:
                 self.socketio.emit('status_update', status_data)
             except Exception as e:
                 logging.error(f"Error getting system status: {e}")
-                # Send error notification to clients
                 self.socketio.emit('status_update', {
                     "error": True,
                     "message": "Failed to retrieve system status"
                 })
-            
+
             # Get and broadcast sensor data
             try:
                 sensor_data = self._get_sensor_data()
@@ -581,7 +580,7 @@ class WebInterface:
                     "error": True,
                     "message": "Failed to retrieve sensor data"
                 })
-            
+
             # Get and broadcast position updates
             try:
                 position_data = self._get_position_data()
@@ -592,13 +591,13 @@ class WebInterface:
                     "error": True,
                     "message": "Failed to retrieve position data"
                 })
-            
+
             # Sleep to control broadcast frequency
             try:
                 time.sleep(broadcast_interval)
             except Exception as e:
                 logging.error(f"Error in sleep: {e}")
-                # Prevent tight error loops
+                # Prevent a tight error loop
                 time.sleep(5)
 
     def _get_system_status(self):

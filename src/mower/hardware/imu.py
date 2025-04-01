@@ -140,66 +140,83 @@ class BNO085Sensor:
     def connect(self):
         """
         Establish connection to the IMU sensor.
-        
+
         This method:
-        1. Tries to open the serial port (or auto-discover it)
-        2. Sets up the communication parameters
-        3. Validates the connection by checking sensor response
-        4. Starts the read thread if successful
-        
+        1. Tries to open the serial port (or auto-discover it).
+        2. Sets up the communication parameters.
+        3. Validates the connection by checking sensor response.
+        4. Starts the read thread if successful.
+
         Returns:
             bool: True if connection successful, False otherwise
-            
+
+        Raises:
+            RuntimeError: If repeated connection attempts fail.
+
         Troubleshooting:
-            - If port not found, check device enumeration and permissions
-            - If connection fails, try cycling power to the IMU
-            - Verify correct wiring and voltage levels
+            - If port not found, check device enumeration and permissions.
+            - If connection fails, try cycling power to the IMU.
+            - Verify correct wiring and voltage levels.
         """
         if self.connected:
             return True
             
-        try:
-            # Create and open the serial port first
-            self.serial_port = SerialPort(
-                port=self.serial_port_name or IMU_SERIAL_PORT, 
-                baudrate=self.baudrate or IMU_BAUDRATE
-            )
-            success = self.serial_port.start()
-            
-            if not success:
-                logging.error("Failed to start IMU serial port")
-                return False
+        # Track repeated failures
+        failure_count = 0
+        max_connect_attempts = 3  # Define max retry attempts before raising error
+        reconnection_delay = 2    # Seconds to wait between retry attempts
+
+        while failure_count < max_connect_attempts:
+            try:
+                # Create and open the serial port
+                self.serial_port = SerialPort(
+                    port=self.serial_port_name or IMU_SERIAL_PORT,
+                    baudrate=self.baudrate or IMU_BAUDRATE
+                )
+                success = self.serial_port.start()
+                if not success:
+                    logging.error("Failed to start IMU serial port")
+                    failure_count += 1
+                    time.sleep(reconnection_delay)
+                    continue
                 
-            logging.info(f"IMU serial port {self.serial_port_name or IMU_SERIAL_PORT} opened at {self.baudrate or IMU_BAUDRATE} baud")
-            
-            # Try multiple times to initialize the sensor
-            max_retries = 5
-            for attempt in range(1, max_retries + 1):
-                try:
-                    self.sensor = BNO08X_UART(self.serial_port.ser)
-                    self.enable_features(self.sensor)
-                    self.connected = True
-                    logging.info(f"BNO085 sensor successfully initialized on attempt {attempt}")
-                    return True
-                except Exception as e:
-                    logging.warning(f"Failed to initialize BNO085 sensor on attempt {attempt}: {e}")
-                    if attempt < max_retries:
-                        time.sleep(1)  # Wait before retrying
-            
-            logging.error(f"Failed to initialize BNO085 sensor after {max_retries} attempts")
-            # If we couldn't initialize the sensor, close the serial port
-            if self.serial_port:
-                self.serial_port.stop()
-                self.serial_port = None
-            return False
-            
-        except Exception as e:
-            logging.error(f"Error during BNO085 sensor initialization: {e}")
-            # Ensure port is closed if initialization fails
-            if self.serial_port:
-                self.serial_port.stop()
-                self.serial_port = None
-            return False
+                logging.info(f"IMU serial port {self.serial_port_name or IMU_SERIAL_PORT} opened at {self.baudrate or IMU_BAUDRATE} baud")
+                
+                # Try multiple times to initialize the sensor
+                max_retries = 5
+                for attempt in range(1, max_retries + 1):
+                    try:
+                        self.sensor = BNO08X_UART(self.serial_port.ser)
+                        self.enable_features(self.sensor)
+                        self.connected = True
+                        logging.info(f"BNO085 sensor successfully initialized on attempt {attempt}")
+                        return True
+                    except Exception as e:
+                        logging.warning(f"Failed to initialize BNO085 sensor on attempt {attempt}: {e}")
+                        if attempt < max_retries:
+                            time.sleep(1)  # Wait before retrying
+                
+                logging.error(f"Failed to initialize BNO085 sensor after {max_retries} attempts")
+                # If we couldn't initialize the sensor, close the serial port
+                if self.serial_port:
+                    self.serial_port.stop()
+                    self.serial_port = None
+                
+                failure_count += 1
+                time.sleep(reconnection_delay)
+                
+            except Exception as e:
+                logging.error(f"Error during BNO085 sensor initialization: {e}")
+                # Ensure port is closed if initialization fails
+                if self.serial_port:
+                    self.serial_port.stop()
+                    self.serial_port = None
+                
+                failure_count += 1
+                time.sleep(reconnection_delay)
+        
+        # If we reach here, repeated attempts have failed
+        raise RuntimeError(f"Repeated IMU connection failures exceeded threshold ({max_connect_attempts} attempts)")
     
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""

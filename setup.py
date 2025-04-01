@@ -9,7 +9,7 @@ setup(
     install_requires=[
         'smbus2',
         'pyserial',
-        'numpy',
+        'numpy>=1.19.0',
         'adafruit-circuitpython-bme280',
         'adafruit-circuitpython-vl53l0x',
         'easydict',
@@ -18,11 +18,12 @@ setup(
         'python-dotenv',
         'imutils',
         'pathfinding',
-        'shapely',
+        'shapely>=1.7.1',
         'networkx',
         'rtree',
-        'tflite-runtime',
-        'flask-socketio',
+        'tflite-runtime>=2.5.0;platform_machine!="x86_64"',  # For Raspberry Pi
+        'tensorflow>=2.5.0;platform_machine=="x86_64"',  # For x86 systems (development)
+        'flask-socketio>=5.0.0',
         'opencv-contrib-python',
         'gpsd-py3',
         'adafruit-circuitpython-tca9548a',
@@ -30,7 +31,7 @@ setup(
         'eventlet',
         'flask-cors',
         'donkeycar',
-        'pynmea2',
+        'pynmea2>=1.18.0',
         'requests',
         'pyubx2',
         'adafruit-circuitpython-bno08x',
@@ -40,8 +41,26 @@ setup(
         'paho-mqtt',
         'gpiod',
         'pyngrok',
-        'picamera2'
+        'picamera2',
+        'scipy>=1.6.0',
+        'pillow>=8.2.0',
+        'geopy>=2.1.0',
+        'psutil>=5.8.0',
     ],
+    extras_require={
+        'dev': [
+            'pytest>=6.2.5',
+            'black>=21.5b2',
+            'flake8>=3.9.2',
+            'mypy>=0.812',
+        ],
+        'coral': [
+            'pycoral>=2.0.0',  # Google Coral Edge TPU support
+        ],
+        'simulation': [
+            'pygame>=2.0.1',
+        ],
+    },
     entry_points={
         'console_scripts': [
             'autonomous_mower=mower.mower:main',

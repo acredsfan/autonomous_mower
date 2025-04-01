@@ -3,11 +3,11 @@ import os
 import threading
 import time
 from threading import Condition
+import logging
 
 import cv2
 import numpy as np
 import requests
-import tflite_runtime.interpreter as tflite  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
@@ -28,17 +28,16 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
 MIN_CONF_THRESHOLD = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
-USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'False').lower() == \
-    'true'
+USE_REMOTE_DETECTION = os.getenv('USE_REMOTE_DETECTION', 'False').lower() == 'true'
 
-# Initialize TFLite interpreter for local detection
-interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
-interpreter.allocate_tensors()
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-height = input_details[0]['shape'][1]
-width = input_details[0]['shape'][2]
-floating_model = (input_details[0]['dtype'] == np.float32)
+# Global variables for resource management
+_resource_manager = None
+_interpreter = None
+_input_details = None
+_output_details = None
+_height = 0
+_width = 0
+_floating_model = False
 input_mean = 127.5
 input_std = 127.5
 
@@ -51,7 +50,7 @@ if labels[0] == '???':
 # Get the camera instance
 camera = get_camera_instance()
 
-# A flag to indicate whether to use remote detection (default to True)
+# A flag to indicate whether to use remote detection
 use_remote_detection = USE_REMOTE_DETECTION
 
 # Condition variable for thread synchronization
@@ -59,25 +58,88 @@ frame_condition = Condition()
 frame = None
 frame_lock = threading.Lock()
 
-
-def capture_frames():
+def initialize_with_resource_manager(resource_manager):
     """
-    Capture frames from Picamera2 and process them.
-    This function runs continuously and calls the `process_frame`
-    function on each captured frame.
+    Initialize the obstacle detection module with a ResourceManager instance.
+    
+    This allows the detection to use an interpreter (CPU or Edge TPU) that's
+    already been initialized by the ResourceManager.
+    
+    Args:
+        resource_manager: The ResourceManager instance to use
     """
-    while True:
-        frame = capture_frame()
-        processed_frame = process_frame(frame)
-        with frame_lock:
-            saved_frame = processed_frame.copy()
-        img = Image.fromarray(saved_frame)
-        buf = io.BytesIO()
-        """ Ensure all images are properly converted
-            before saving to prevent errors """
-        img = img.convert('RGB')
-        img.save(buf, format='JPEG')
+    global _resource_manager, _interpreter, _input_details, _output_details, _height, _width, _floating_model
+    
+    logging.info("Initializing obstacle detection with ResourceManager")
+    _resource_manager = resource_manager
+    
+    # Get model details from ResourceManager
+    _interpreter = _resource_manager.get_inference_interpreter()
+    if _interpreter:
+        _input_details = _resource_manager.get_model_input_details()
+        _output_details = _resource_manager.get_model_output_details()
+        _height, _width = _resource_manager.get_model_input_size()
+        
+        # Check if floating point model
+        if _input_details and len(_input_details) > 0:
+            _floating_model = (_input_details[0]['dtype'] == np.float32)
+        
+        interpreter_type = _resource_manager.get_interpreter_type()
+        logging.info(f"Using {interpreter_type} for obstacle detection inference")
+    else:
+        # Fallback to direct initialization
+        _initialize_local_interpreter()
 
+def _initialize_local_interpreter():
+    """
+    Initialize the TFLite interpreter directly if ResourceManager is not available.
+    
+    This is a fallback method when the obstacle detection module is used
+    as a standalone component without ResourceManager integration.
+    """
+    global _interpreter, _input_details, _output_details, _height, _width, _floating_model
+    
+    logging.info("Fallback: Initializing local TFLite interpreter directly")
+    
+    # Import tflite_runtime for direct initialization
+    import tflite_runtime.interpreter as tflite
+    
+    try:
+        # Initialize TFLite interpreter for local detection
+        _interpreter = tflite.Interpreter(model_path=PATH_TO_OBJECT_DETECTION_MODEL)
+        _interpreter.allocate_tensors()
+        _input_details = _interpreter.get_input_details()
+        _output_details = _interpreter.get_output_details()
+        _height = _input_details[0]['shape'][1]
+        _width = _input_details[0]['shape'][2]
+        _floating_model = (_input_details[0]['dtype'] == np.float32)
+        logging.info(f"TFLite model loaded with input size: {_height}x{_width}")
+    except Exception as e:
+        logging.error(f"Failed to initialize TFLite interpreter: {e}")
+        _interpreter = None
+
+def _ensure_interpreter():
+    """
+    Ensure that the interpreter is initialized.
+    
+    This function checks if the interpreter is initialized, and if not,
+    attempts to initialize it using the fallback method.
+    
+    Returns:
+        bool: True if interpreter is initialized, False otherwise
+    """
+    global _interpreter
+    
+    if _interpreter is not None:
+        return True
+    
+    # Try to initialize if not already done
+    if _resource_manager is not None:
+        _interpreter = _resource_manager.get_inference_interpreter()
+        return _interpreter is not None
+    else:
+        _initialize_local_interpreter()
+        return _interpreter is not None
 
 def detect_obstacles_local(image):
     """
@@ -87,18 +149,22 @@ def detect_obstacles_local(image):
     Returns:
         A list of detected objects, each containing the name and score.
     """
-    image_resized = image.resize((width, height))
+    if not _ensure_interpreter():
+        logging.error("TFLite interpreter not available for object detection")
+        return []
+    
+    image_resized = image.resize((_width, _height))
     input_data = np.expand_dims(image_resized, axis=0)
     if len(input_data.shape) == 4 and input_data.shape[-1] != 3:
         input_data = input_data[:, :, :, :3]
-    if floating_model:
+    if _floating_model:
         input_data = (np.float32(input_data) - input_mean) / input_std
     else:
         input_data = np.uint8(input_data)
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    interpreter.invoke()
+    _interpreter.set_tensor(_input_details[0]['index'], input_data)
+    _interpreter.invoke()
 
-    output_data = interpreter.get_tensor(output_details[0]['index'])[0]
+    output_data = _interpreter.get_tensor(_output_details[0]['index'])[0]
     top_k = 1  # Top prediction
     top_indices = np.argsort(-output_data)[:top_k]
     detected_objects = []
@@ -316,6 +382,25 @@ def stream_frame_with_overlays():
     if drop_detected:
         image = overlay_text(image, "Drop detected!")
     return image
+
+
+def capture_frames():
+    """
+    Capture frames from Picamera2 and process them.
+    This function runs continuously and calls the `process_frame`
+    function on each captured frame.
+    """
+    while True:
+        frame = capture_frame()
+        processed_frame = process_frame(frame)
+        with frame_lock:
+            saved_frame = processed_frame.copy()
+        img = Image.fromarray(saved_frame)
+        buf = io.BytesIO()
+        """ Ensure all images are properly converted
+            before saving to prevent errors """
+        img = img.convert('RGB')
+        img.save(buf, format='JPEG')
 
 
 if __name__ == "__main__":

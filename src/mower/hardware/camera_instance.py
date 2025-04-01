@@ -136,7 +136,23 @@ class CameraInstance:
             return False
     
     def _capture_loop(self):
-        """Background thread loop to capture frames at the specified FPS"""
+        """
+        Background thread loop to capture frames at the specified FPS.
+
+        In this loop:
+          1. We continuously grab a frame from the camera hardware using picamera2.
+          2. We store the latest frame under a lock to ensure thread safety.
+          3. We push older frames out of the queue if it's full, maintaining a small buffer.
+
+        If any hardware or I/O error occurs, we log it and sleep briefly to avoid flooding logs.
+
+        The capturing runs until self.running is set to False.
+        
+        Thread safety:
+          - All frame buffer access is protected by locks
+          - Frame queue manipulations use nowait methods to prevent deadlocks
+          - Error handling ensures the thread continues despite transient failures
+        """
         interval = 1.0 / FPS
         while self.running:
             try:

@@ -113,6 +113,7 @@ class ResourceManager:
     - Obstacle detection (cameras, distance sensors, avoidance logic)
     - User interfaces (web UI, mobile app connectivity)
     - Utilities (logging, data storage)
+    - Machine Learning inference (with optional Coral TPU acceleration)
     
     Configuration files are stored in standardized locations:
     - user_polygon_path: Defines the mowing area boundaries
@@ -124,6 +125,7 @@ class ResourceManager:
     - For serial port issues, verify port names in .env configuration
     - For hardware errors, check power supply and connection status
     - For software errors, check log files for specific error messages
+    - For Coral TPU issues, check USB connections and Edge TPU runtime installation
     """
     
     def __init__(self):
@@ -156,6 +158,13 @@ class ResourceManager:
         # Obstacle Detection resources
         self._avoidance_algorithm = None
         
+        # Machine Learning resources
+        self._inference_interpreter = None
+        self._interpreter_type = "CPU"  # Default
+        self._model_input_details = None
+        self._model_output_details = None
+        self._model_input_size = (0, 0)  # Store expected input size
+        
         # UI resources
         self._web_interface = None
         
@@ -169,6 +178,146 @@ class ResourceManager:
         self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
         self.home_location_path = CONFIG_DIR / "home_location.json"
         self.mowing_schedule_path = CONFIG_DIR / "mowing_schedule.json"
+        
+        # Load configuration from .env
+        self._config = {}
+        self._load_env_config()
+        
+        # Initialize the ML inference engine if not using remote detection
+        if not self._config.get('USE_REMOTE_DETECTION', False):
+            self._initialize_inference_engine()
+
+    def _load_env_config(self):
+        """
+        Load configuration from environment variables.
+        """
+        from dotenv import load_dotenv
+        import os
+        
+        # Load .env file
+        load_dotenv()
+        
+        # Store relevant configuration
+        self._config = {
+            'OBSTACLE_MODEL_PATH': os.getenv('OBSTACLE_MODEL_PATH'),
+            'EDGE_TPU_MODEL_PATH': os.getenv('EDGE_TPU_MODEL_PATH'),
+            'USE_CORAL_ACCELERATOR': os.getenv('USE_CORAL_ACCELERATOR', 'False').lower() == 'true',
+            'USE_REMOTE_DETECTION': os.getenv('USE_REMOTE_DETECTION', 'False').lower() == 'true',
+            'LABEL_MAP_PATH': os.getenv('LABEL_MAP_PATH'),
+            'MIN_CONF_THRESHOLD': float(os.getenv('MIN_CONF_THRESHOLD', '0.5')),
+        }
+        
+        logging.info(f"Configuration loaded: USE_CORAL_ACCELERATOR={self._config['USE_CORAL_ACCELERATOR']}")
+
+    def _initialize_inference_engine(self):
+        """
+        Initialize TensorFlow Lite interpreter with Edge TPU acceleration if available.
+        
+        This method:
+        1. Checks for Google Coral Edge TPU device
+        2. Loads appropriate TFLite model based on hardware
+        3. Sets up interpreter for object detection inference
+        
+        Fallbacks to CPU if Edge TPU is not available.
+        
+        Troubleshooting:
+            - For permissions issues: verify user is in 'plugdev' group
+            - For installation issues: verify libedgetpu1-std is installed
+            - For model issues: ensure both TPU and CPU models exist
+        """
+        import os
+        import logging
+        from pathlib import Path
+        
+        logger = logging.getLogger('mower.resources')
+        
+        # Configuration variables from environment
+        model_dir = os.environ.get('ML_MODEL_PATH', './models')
+        model_file = os.environ.get('DETECTION_MODEL', 'detect.tflite')
+        tpu_model_file = os.environ.get('TPU_DETECTION_MODEL', 'detect_edgetpu.tflite')
+        
+        # Ensure model directory exists
+        model_dir_path = Path(model_dir)
+        if not model_dir_path.exists():
+            logger.warning(f"Model directory {model_dir} does not exist. Creating it.")
+            model_dir_path.mkdir(parents=True, exist_ok=True)
+        
+        # Set to None initially
+        self._inference_interpreter = None
+        self._is_tpu_available = False
+        
+        try:
+            # Try to import Edge TPU libraries
+            import tflite_runtime.interpreter as tflite
+            from pycoral.utils.edgetpu import list_edge_tpus
+            
+            # Check if any Edge TPU devices are available
+            available_tpus = list_edge_tpus()
+            
+            if available_tpus:
+                logger.info(f"Found {len(available_tpus)} Edge TPU device(s). Using hardware acceleration.")
+                tpu_path = str(model_dir_path / tpu_model_file)
+                
+                # Verify TPU model exists
+                if not Path(tpu_path).exists():
+                    logger.error(f"TPU model not found at {tpu_path}. Falling back to CPU model.")
+                    raise FileNotFoundError(f"TPU model not found: {tpu_path}")
+                
+                from pycoral.utils.edgetpu import make_interpreter
+                
+                # Create Edge TPU interpreter
+                self._inference_interpreter = make_interpreter(tpu_path)
+                self._is_tpu_available = True
+                logger.info(f"Successfully initialized Edge TPU with model: {tpu_path}")
+            else:
+                # Fall back to CPU model
+                raise ImportError("No Edge TPU devices found. Falling back to CPU.")
+                
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.warning(f"Edge TPU libraries not available or no TPU found: {e}. Using CPU model.")
+            
+            try:
+                # Try to use tflite_runtime if available (recommended)
+                import tflite_runtime.interpreter as tflite
+                
+                cpu_path = str(model_dir_path / model_file)
+                if not Path(cpu_path).exists():
+                    logger.error(f"CPU model not found at {cpu_path}")
+                    raise FileNotFoundError(f"CPU model not found: {cpu_path}")
+                
+                self._inference_interpreter = tflite.Interpreter(model_path=cpu_path)
+                logger.info(f"Successfully initialized TFLite CPU interpreter with model: {cpu_path}")
+                
+            except (ImportError, ModuleNotFoundError):
+                # Fall back to TensorFlow if tflite_runtime is not available
+                logger.warning("tflite_runtime not available. Trying to use TensorFlow.")
+                try:
+                    import tensorflow as tf
+                    
+                    cpu_path = str(model_dir_path / model_file)
+                    if not Path(cpu_path).exists():
+                        logger.error(f"CPU model not found at {cpu_path}")
+                        raise FileNotFoundError(f"CPU model not found: {cpu_path}")
+                    
+                    self._inference_interpreter = tf.lite.Interpreter(model_path=cpu_path)
+                    logger.info(f"Successfully initialized TensorFlow CPU interpreter with model: {cpu_path}")
+                    
+                except (ImportError, ModuleNotFoundError) as tf_error:
+                    logger.error(f"Failed to initialize any ML inference engine: {tf_error}")
+                    return
+        
+        except Exception as e:
+            logger.error(f"Unexpected error initializing inference engine: {e}")
+            return
+        
+        # Allocate tensors if interpreter was successfully created
+        if self._inference_interpreter:
+            try:
+                self._inference_interpreter.allocate_tensors()
+                logger.info("Successfully allocated tensors for inference")
+            except Exception as e:
+                logger.error(f"Failed to allocate tensors: {e}")
+                self._inference_interpreter = None
 
     # Hardware getters
 
@@ -445,22 +594,43 @@ class ResourceManager:
         """
         Get or initialize the obstacle avoidance algorithm.
         
-        Detects and navigates around obstacles in the mowing path.
+        Controls how the mower responds to detected obstacles.
         
         Returns:
-            AvoidanceAlgorithm: Instance for obstacle avoidance
+            AvoidanceAlgorithm: Instance for avoiding obstacles
             
         Troubleshooting:
-            - For false detections, adjust sensitivity thresholds
-            - Check sensor calibration
-            - For avoidance issues, verify path planning settings
+            - For erratic avoidance behavior, check sensor alignment
+            - Verify detection thresholds are appropriate
+            - For camera integration, check vision model configuration
         """
         if self._avoidance_algorithm is None:
-            self._avoidance_algorithm = AvoidanceAlgorithm(
-                path_planner=self.get_path_planner(),
-                motor_controller=self.get_navigation_controller(),
-                sensor_interface=self.get_sensors())
+            self._avoidance_algorithm = AvoidanceAlgorithm()
         return self._avoidance_algorithm
+
+    def get_obstacle_detector(self):
+        """
+        Get or initialize the obstacle detector.
+        
+        Handles visual object detection, optionally using Edge TPU acceleration if available.
+        
+        Returns:
+            ObstacleDetector: Instance for detecting obstacles using machine learning
+            
+        Troubleshooting:
+            - For Edge TPU issues, check USB connection and runtime installation
+            - Verify model paths are correct in .env configuration
+            - For detection issues, check camera positioning and model threshold
+            - Use CPU fallback if Coral device is unavailable
+        """
+        # Import here to avoid circular imports
+        from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
+        
+        # Initialize inference engine if not already done
+        if self._inference_interpreter is None and not self._config.get('USE_REMOTE_DETECTION', False):
+            self._initialize_inference_engine()
+            
+        return get_obstacle_detector(self)
 
     def get_detect_obstacle(self):
         """
@@ -581,6 +751,66 @@ class ResourceManager:
             self._utils = Utils()
         return self._utils
 
+    # Getters for ML inference resources
+    
+    def get_inference_interpreter(self):
+        """
+        Get the TensorFlow Lite interpreter instance.
+        
+        Returns:
+            TFLite.Interpreter: The initialized interpreter or None if not available
+        """
+        return self._inference_interpreter
+        
+    def is_tpu_available(self):
+        """
+        Check if Edge TPU acceleration is available and being used.
+        
+        Returns:
+            bool: True if Edge TPU is being used, False otherwise
+        """
+        return self._is_tpu_available
+    
+    def get_interpreter_type(self):
+        """
+        Get the type of interpreter currently loaded.
+        
+        Returns:
+            str: 'CPU' or 'EdgeTPU'
+        """
+        return self._interpreter_type
+    
+    def get_model_input_details(self):
+        """
+        Get the input details of the loaded TFLite model.
+        
+        Returns:
+            list: Input tensor details including shape, type, etc.
+        """
+        if self._model_input_details is None and self._inference_interpreter is not None:
+            self._model_input_details = self._inference_interpreter.get_input_details()
+        return self._model_input_details
+    
+    def get_model_output_details(self):
+        """
+        Get the output details of the loaded TFLite model.
+        
+        Returns:
+            list: Output tensor details including shape, type, etc.
+        """
+        if self._model_output_details is None and self._inference_interpreter is not None:
+            self._model_output_details = self._inference_interpreter.get_output_details()
+        return self._model_output_details
+    
+    def get_model_input_size(self):
+        """
+        Get the expected input size for the model.
+        
+        Returns:
+            tuple: (height, width) expected by the model
+        """
+        return self._model_input_size
+
     def init_all_resources(self):
         """
         Initialize all hardware and software resources at once.
@@ -621,6 +851,10 @@ class ResourceManager:
             
             # Obstacle Detection initialization
             self.get_avoidance_algorithm()
+            
+            # ML initialization (if not using remote detection)
+            if not self._config.get('USE_REMOTE_DETECTION', False):
+                self.get_inference_interpreter()
             
             # UI initialization
             self.get_web_interface()

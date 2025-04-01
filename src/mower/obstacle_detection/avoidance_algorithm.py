@@ -23,6 +23,7 @@ import time
 import logging
 import random
 import math
+import os
 from enum import Enum
 from typing import Optional, Tuple, List, Dict, Any
 
@@ -90,28 +91,53 @@ class AvoidanceAlgorithm:
           patterns in the logs
     """
 
-    def __init__(self, path_planner: PathPlanner, 
-                 motor_controller: NavigationController,
-                 sensor_interface: SensorInterface,
-                 camera=None):
+    def __init__(self, resource_manager=None):
         """
         Initialize the avoidance algorithm.
         
         Args:
-            path_planner: Reference to the path planning system
-            motor_controller: Reference to the motor controller for movement
-            sensor_interface: Reference to the sensor interface for obstacle detection
-            camera: Optional camera instance for visual obstacle detection
-            
-        This initializes the avoidance system in NORMAL state and
-        sets up the thread lock for safe concurrent operation.
+            resource_manager: Optional ResourceManager instance to access system resources
         """
-        self.path_planner = path_planner
-        self.motor_controller = motor_controller
-        self.sensor_interface = sensor_interface
-        self.camera = camera
+        self.logger = logging.getLogger('mower.avoidance')
+        
+        # Get resource manager if not provided
+        if resource_manager is None:
+            from mower.main_controller import ResourceManager
+            resource_manager = ResourceManager()
+            
+        # Store resource manager reference
+        self._resource_manager = resource_manager
+        
+        # Camera-related settings
+        self.use_camera = bool(os.environ.get('USE_CAMERA', 'True').lower() == 'true')
+        self.camera = None
+        self.obstacle_detector = None
+        
+        if self.use_camera:
+            try:
+                # Get camera instance through resource manager
+                self.camera = self._resource_manager.get_camera()
+                
+                # Get obstacle detector through resource manager
+                self.obstacle_detector = self._resource_manager.get_obstacle_detector()
+                self.logger.info("Initialized camera and obstacle detector for visual detection")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize camera components: {e}")
+                self.use_camera = False
+        
+        # Initialize algorithm state
+        self.reset_state()
 
-        # State management
+    def reset_state(self):
+        """
+        Reset the state of the avoidance algorithm.
+        
+        This method initializes all necessary attributes to start a new
+        avoidance session.
+        """
+        self.path_planner = None
+        self.motor_controller = None
+        self.sensor_interface = None
         self.current_state = AvoidanceState.NORMAL
         self.obstacle_data = None
         self.obstacle_left = False
@@ -141,46 +167,59 @@ class AvoidanceAlgorithm:
 
     def check_camera_obstacles_and_dropoffs(self):
         """
-        Check for obstacles and drop-offs using the camera.
-        
-        Updates the camera_obstacle_detected and dropoff_detected flags
-        based on camera processing results.
+        Check for obstacles and drop-offs using camera.
         
         Returns:
-            tuple: (obstacle_detected, dropoff_detected) - boolean flags
+            tuple: (has_obstacle, has_dropoff)
         """
-        if not self.camera:
+        if not self.use_camera or self.camera is None or self.obstacle_detector is None:
             return False, False
             
+        has_obstacle = False
+        has_dropoff = False
+        
         try:
-            with self.thread_lock:
-                # Reset previous detections
-                self.camera_obstacle_detected = False
-                self.dropoff_detected = False
-                
-                # Get camera classifications
-                obstacles = self.camera.classify_obstacle()
-                dropoff = self.camera.detect_dropoff()
-    
-                # Check for dropoffs first (higher priority)
-                if dropoff:
-                    self.dropoff_detected = True
-                    logging.info("Drop-off detected! Avoiding this area.")
-    
-                # Check for obstacles
-                if obstacles and len(obstacles) > 0:
-                    for obstacle in obstacles:
-                        _, _, w, h = obstacle['box']
-                        if w * h > CAMERA_OBSTACLE_THRESHOLD:
-                            self.camera_obstacle_detected = True
-                            logging.info(f"Camera detected obstacle: {obstacle['class']}")
+            # Use the obstacle detector to check for obstacles
+            # This now handles capturing the frame from the camera
+            detected_objects = self.obstacle_detector.detect_obstacles()
+            
+            if detected_objects:
+                # Check if any detected objects require avoidance
+                for obj in detected_objects:
+                    if obj['class_name'] in self._objects_to_avoid():
+                        score = obj['score']
+                        box = obj['box']  # Format is [ymin, xmin, ymax, xmax]
+                        
+                        # If object is large enough and confidence is high
+                        # Call it an obstacle
+                        box_area = (box[2] - box[0]) * (box[3] - box[1])
+                        if score > 0.5 and box_area > 0.1:
+                            has_obstacle = True
+                            self.logger.info(f"Camera detected obstacle: {obj['class_name']} "
+                                             f"(confidence: {score:.2f})")
                             break
-                            
-                return self.camera_obstacle_detected, self.dropoff_detected
-                            
+            
+            # TODO: Implement drop-off detection using depth analysis or edge detection
+            # Currently not implemented
+            
         except Exception as e:
-            logging.error(f"Error checking camera obstacles: {e}")
-            return False, False
+            self.logger.error(f"Error during camera obstacle detection: {e}")
+            
+        return has_obstacle, has_dropoff
+    
+    def _objects_to_avoid(self):
+        """
+        Return list of object classes that should be treated as obstacles.
+        
+        Returns:
+            list: Object class names to avoid
+        """
+        # Objects the mower should recognize and avoid
+        return [
+            'person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck', 
+            'dog', 'cat', 'horse', 'sheep', 'cow', 'animal',
+            'bench', 'potted plant', 'fence', 'rock', 'stone'
+        ]
 
     def start(self) -> None:
         """
