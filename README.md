@@ -228,7 +228,7 @@ The autonomous mower is a powerful machine with moving parts. Always:
 
 ## Acknowledgments
 
-- Thanks to all contributors who have helped develop this project, especially @TCII.
+- Thanks to all contributors who have helped develop this project, especially @TCIII.
 - Special thanks to the open-source communities whose libraries made this possible
 - Inspired by various autonomous robotics projects and commercial mowing solutions
 
