@@ -1,5 +1,8 @@
 import gpiod  # type: ignore
 import time
+import os
+import importlib
+from typing import List, Tuple, Callable, Any, Optional
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
@@ -8,12 +11,15 @@ from mower.utilities.logger_config import (
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
+# Check if we're in simulation mode
+USE_SIMULATION = os.environ.get('USE_SIMULATION', 'False').lower() == 'true'
 
 class GPIOManager:
     _instance = None
     _chip = None
     _shutdown_lines = []
     _interrupt_lines = []
+    _gpio_version = 0  # 0 = unknown, 1 = gpiod v1, 2 = gpiod v2, -1 = simulation
 
     def __new__(cls):
         if cls._instance is None:
@@ -22,194 +28,342 @@ class GPIOManager:
         return cls._instance
 
     @staticmethod
-    def init_gpio(shutdown_pins, interrupt_pins):
+    def _check_gpio_version():
+        """Determine which GPIO library version to use."""
+        if USE_SIMULATION:
+            GPIOManager._gpio_version = -1
+            logging.info("Running in simulation mode - GPIO operations will be simulated")
+            return
+            
+        try:
+            # Check if we have gpiod v1
+            if hasattr(gpiod, 'Chip') and hasattr(gpiod, 'LINE_REQ_DIR_OUT'):
+                GPIOManager._gpio_version = 1
+                logging.info("Using gpiod v1.x API")
+                return
+                
+            # Check if we have gpiod v2
+            gpiod_spec = importlib.util.find_spec("gpiod")
+            if gpiod_spec:
+                GPIOManager._gpio_version = 2
+                logging.info("Using gpiod v2.x API")
+                return
+                
+            # Try to import RPi.GPIO as fallback
+            import RPi.GPIO
+            GPIOManager._gpio_version = 3
+            logging.info("Using RPi.GPIO as fallback")
+            return
+        except ImportError:
+            logging.warning("No GPIO library available - simulating GPIO operations")
+            GPIOManager._gpio_version = -1
+
+    @staticmethod
+    def init_gpio(shutdown_pins: List[int], interrupt_pins: List[int]) -> Tuple[List[Any], List[Any]]:
         """
         Initialize GPIO pins for shutdown and interrupt.
-        :param shutdown_pins: List of GPIO pins for shutdown functionality.
-        :param interrupt_pins: List of GPIO pins for interrupt functionality.
-        :return: Tuple (shutdown_lines, interrupt_lines)
+        Args:
+            shutdown_pins: List of GPIO pins for shutdown functionality.
+            interrupt_pins: List of GPIO pins for interrupt functionality.
+        Returns:
+            Tuple of (shutdown_lines, interrupt_lines)
         """
-        try:
-            # Check gpiod version to use appropriate API
-            if hasattr(gpiod, 'Chip'):
-                # Old API (gpiod 1.x)
-                chip = gpiod.Chip('/dev/gpiochip0')
-                shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
-                interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
-
-                for line in shutdown_lines:
-                    line.request(consumer='shutdown', type=gpiod.LINE_REQ_DIR_OUT)
-                    line.set_value(0)
-
-                for line in interrupt_lines:
-                    line.request(consumer='interrupt',
-                                type=gpiod.LINE_REQ_EV_FALLING_EDGE)
-            else:
-                # New API (gpiod 2.x)
-                logging.info("Using gpiod 2.x API")
-                chip = gpiod.chip('/dev/gpiochip0')
-                
-                # Configure output lines for shutdown pins
-                shutdown_config = gpiod.line_request()
-                shutdown_config.consumer = "shutdown"
-                shutdown_config.request_type = gpiod.line_request.DIRECTION_OUTPUT
-                
-                # Configure input lines for interrupt pins with falling edge detection
-                interrupt_config = gpiod.line_request()
-                interrupt_config.consumer = "interrupt"
-                interrupt_config.request_type = gpiod.line_request.EVENT_FALLING_EDGE
-                
-                # Get lines and request them
-                shutdown_lines = []
-                for pin in shutdown_pins:
-                    line = chip.get_line(pin)
-                    line.request(shutdown_config)
-                    line.set_value(0)
-                    shutdown_lines.append(line)
-                
-                interrupt_lines = []
-                for pin in interrupt_pins:
-                    line = chip.get_line(pin)
-                    line.request(interrupt_config)
-                    interrupt_lines.append(line)
-                
-                # Store chip reference for cleanup
-                GPIOManager._chip = chip
+        # Check which GPIO version to use if we haven't already
+        if GPIOManager._gpio_version == 0:
+            GPIOManager._check_gpio_version()
             
-            # Store lines for cleanup
+        # Handle different GPIO library versions
+        if GPIOManager._gpio_version == 1:
+            # gpiod v1.x
+            return GPIOManager._init_gpiod_v1(shutdown_pins, interrupt_pins)
+        elif GPIOManager._gpio_version == 2:
+            # gpiod v2.x
+            return GPIOManager._init_gpiod_v2(shutdown_pins, interrupt_pins)
+        elif GPIOManager._gpio_version == 3:
+            # RPi.GPIO fallback
+            return GPIOManager._init_rpi_gpio(shutdown_pins, interrupt_pins)
+        else:
+            # Simulation mode or no GPIO available
+            return GPIOManager._init_simulation(shutdown_pins, interrupt_pins)
+    
+    @staticmethod
+    def _init_gpiod_v1(shutdown_pins, interrupt_pins):
+        """Initialize using gpiod v1.x API."""
+        try:
+            chip = gpiod.Chip('/dev/gpiochip0')
+            shutdown_lines = [chip.get_line(pin) for pin in shutdown_pins]
+            interrupt_lines = [chip.get_line(pin) for pin in interrupt_pins]
+
+            for line in shutdown_lines:
+                line.request(consumer='shutdown',
+                           type=gpiod.LINE_REQ_DIR_OUT)
+                line.set_value(0)
+
+            for line in interrupt_lines:
+                line.request(consumer='interrupt',
+                          type=gpiod.LINE_REQ_EV_FALLING_EDGE)
+            
+            # Store for cleanup
             GPIOManager._shutdown_lines = shutdown_lines
             GPIOManager._interrupt_lines = interrupt_lines
+            return shutdown_lines, interrupt_lines
+        except Exception as e:
+            logging.error(f"gpiod v1 initialization error: {e}")
+            return GPIOManager._init_simulation(shutdown_pins, interrupt_pins)
+    
+    @staticmethod
+    def _init_gpiod_v2(shutdown_pins, interrupt_pins):
+        """Initialize using gpiod v2.x API."""
+        try:
+            # Import enums and constants for v2
+            from gpiod.line import Direction, Edge
+            from gpiod.line import Bias
             
+            chip = gpiod.chip('/dev/gpiochip0')
+            GPIOManager._chip = chip
+            
+            # Set up shutdown lines (outputs)
+            shutdown_lines = []
+            for pin in shutdown_pins:
+                try:
+                    config = {
+                        'consumer': 'shutdown',
+                        'direction': Direction.OUTPUT,
+                        'output_value': 0
+                    }
+                    line = chip.request_lines({pin: config})
+                    shutdown_lines.append(line)
+                except Exception as e:
+                    logging.error(f"Error requesting line {pin}: {e}")
+            
+            # Set up interrupt lines (inputs with falling edge detection)
+            interrupt_lines = []
+            for pin in interrupt_pins:
+                try:
+                    config = {
+                        'consumer': 'interrupt',
+                        'edge': Edge.FALLING,
+                        'bias': Bias.PULL_UP,
+                    }
+                    line = chip.request_lines({pin: config})
+                    interrupt_lines.append(line)
+                except Exception as e:
+                    logging.error(f"Error requesting line {pin}: {e}")
+            
+            # Store for cleanup
+            GPIOManager._shutdown_lines = shutdown_lines
+            GPIOManager._interrupt_lines = interrupt_lines
             return shutdown_lines, interrupt_lines
         
         except Exception as e:
-            logging.error(f"GPIO initialization error: {e}")
-            # Fallback to RPi.GPIO if gpiod fails
-            try:
-                import RPi.GPIO as GPIO
-                logging.info("Falling back to RPi.GPIO")
-                GPIO.setmode(GPIO.BCM)
-                
-                # Set up shutdown pins as outputs
-                for pin in shutdown_pins:
-                    GPIO.setup(pin, GPIO.OUT)
-                    GPIO.output(pin, GPIO.LOW)
-                
-                # Set up interrupt pins as inputs with pull-up
-                for pin in interrupt_pins:
-                    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-                
-                # Return dummy objects with compatible interface
-                class DummyLine:
-                    def __init__(self, pin, is_output=False):
-                        self.pin = pin
-                        self.is_output = is_output
-                    
-                    def set_value(self, value):
-                        if self.is_output:
-                            GPIO.output(self.pin, value)
-                    
-                    def get_value(self):
-                        return GPIO.input(self.pin)
-                    
-                    def release(self):
-                        pass
-                
-                shutdown_lines = [DummyLine(pin, True) for pin in shutdown_pins]
-                interrupt_lines = [DummyLine(pin) for pin in interrupt_pins]
-                
-                return shutdown_lines, interrupt_lines
+            logging.error(f"gpiod v2 initialization error: {e}")
+            return GPIOManager._init_simulation(shutdown_pins, interrupt_pins)
+    
+    @staticmethod
+    def _init_rpi_gpio(shutdown_pins, interrupt_pins):
+        """Initialize using RPi.GPIO."""
+        try:
+            import RPi.GPIO as GPIO
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setwarnings(False)
             
-            except ImportError:
-                logging.error("Failed to fall back to RPi.GPIO. GPIO functionality will be unavailable.")
-                return [], []
+            # Set up shutdown pins as outputs
+            for pin in shutdown_pins:
+                GPIO.setup(pin, GPIO.OUT)
+                GPIO.output(pin, GPIO.LOW)
+            
+            # Set up interrupt pins as inputs with pull-up
+            for pin in interrupt_pins:
+                GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            
+            # Create dummy line objects for consistent interface
+            class DummyLine:
+                def __init__(self, pin, is_output=False):
+                    self.pin = pin
+                    self.is_output = is_output
+                
+                def set_value(self, value):
+                    if self.is_output:
+                        GPIO.output(self.pin, value)
+                
+                def get_value(self):
+                    return GPIO.input(self.pin)
+                
+                def release(self):
+                    pass
+                    
+                def offset(self):
+                    return self.pin
+            
+            shutdown_lines = [DummyLine(pin, True) for pin in shutdown_pins]
+            interrupt_lines = [DummyLine(pin) for pin in interrupt_pins]
+            
+            return shutdown_lines, interrupt_lines
+        
+        except ImportError:
+            logging.error("Failed to import RPi.GPIO")
+            return GPIOManager._init_simulation(shutdown_pins, interrupt_pins)
+    
+    @staticmethod
+    def _init_simulation(shutdown_pins, interrupt_pins):
+        """Initialize in simulation mode with dummy objects."""
+        logging.info("Using simulated GPIO")
+        
+        class SimulatedLine:
+            def __init__(self, pin, is_output=False):
+                self.pin = pin
+                self.is_output = is_output
+                self._value = 0
+            
+            def set_value(self, value):
+                self._value = value
+                logging.debug(f"Simulated GPIO pin {self.pin} set to {value}")
+            
+            def get_value(self):
+                return self._value
+                
+            def release(self):
+                logging.debug(f"Simulated GPIO pin {self.pin} released")
+                
+            def offset(self):
+                return self.pin
+                
+            def event_wait(self, timeout=None):
+                # Simulated line never has events
+                return None
+        
+        shutdown_lines = [SimulatedLine(pin, True) for pin in shutdown_pins]
+        interrupt_lines = [SimulatedLine(pin) for pin in interrupt_pins]
+        
+        return shutdown_lines, interrupt_lines
 
     @staticmethod
     def wait_for_interrupt(interrupt_lines, callback, timeout=10):
         """
         Waits for an interrupt event on the specified interrupt lines.
-        :param interrupt_lines: List of GPIO lines to monitor for interrupts.
-        :param callback: Callback function to invoke when an interrupt occurs.
-        :param timeout: Timeout for waiting for the interrupt event (in secs).
+        Args:
+            interrupt_lines: List of GPIO lines to monitor for interrupts.
+            callback: Callback function to invoke when an interrupt occurs.
+            timeout: Timeout for waiting for the interrupt event (in secs).
         """
-        try:
-            if hasattr(gpiod, 'Chip'):
-                # Old API (gpiod 1.x)
-                epoll = gpiod.epoll()  # Initialize epoll to monitor multiple lines
+        if not interrupt_lines:
+            logging.warning("No interrupt lines to monitor")
+            time.sleep(timeout)
+            return
+            
+        if GPIOManager._gpio_version == -1:
+            # Simulation mode - just sleep
+            logging.debug("Simulated wait_for_interrupt - sleeping")
+            time.sleep(timeout)
+            return
+            
+        if GPIOManager._gpio_version == 1:
+            # gpiod v1
+            try:
+                epoll = gpiod.epoll()
                 for line in interrupt_lines:
                     epoll.add_line_event(line, gpiod.LINE_REQ_EV_FALLING_EDGE)
 
                 while True:
-                    events = epoll.poll(timeout)  # Poll for interrupt events
+                    events = epoll.poll(timeout)
                     if not events:
-                        logging.info("Waiting for interrupt timed out.")
+                        logging.debug("Waiting for interrupt timed out")
                         continue
 
                     for event in events:
                         if event.event_type == gpiod.LineEvent.FALLING_EDGE:
-                            logging.info(f"Interrupt detected on line {event.line.offset()}")
-                            callback(event.line.offset())
-            else:
-                # New API (gpiod 2.x)
+                            pin = event.line.offset()
+                            logging.info(f"Interrupt on pin {pin}")
+                            callback(pin)
+            except Exception as e:
+                logging.error(f"Error in wait_for_interrupt (v1): {e}")
+                time.sleep(timeout)
+                
+        elif GPIOManager._gpio_version == 2:
+            # gpiod v2
+            try:
+                from gpiod.line import Edge
+                # For gpiod v2, we need to poll each line
                 while True:
                     for line in interrupt_lines:
-                        event = line.event_wait(timeout)
-                        if event:
-                            if event.event_type == gpiod.line_event.FALLING_EDGE:
-                                pin = line.offset()
-                                logging.info(f"Interrupt detected on line {pin}")
-                                callback(pin)
-                    time.sleep(0.01)  # Small delay to prevent CPU hogging
-        
-        except Exception as e:
-            logging.error(f"Error in wait_for_interrupt: {e}")
-            # Try fallback to RPi.GPIO
+                        try:
+                            if hasattr(line, 'wait_for_edge'):
+                                # Newer versions
+                                if line.wait_for_edge(timeout=timeout):
+                                    pin = line.offset
+                                    logging.info(f"Interrupt on pin {pin}")
+                                    callback(pin)
+                            elif hasattr(line, 'event_wait'):
+                                # Older v2 versions
+                                event = line.event_wait(timeout)
+                                if event and event.type == Edge.FALLING:
+                                    pin = line.offset
+                                    logging.info(f"Interrupt on pin {pin}")
+                                    callback(pin)
+                        except Exception as e:
+                            logging.error(f"Error polling line: {e}")
+                    # Small delay to prevent CPU hogging
+                    time.sleep(0.01)
+            except Exception as e:
+                logging.error(f"Error in wait_for_interrupt (v2): {e}")
+                time.sleep(timeout)
+                
+        elif GPIOManager._gpio_version == 3:
+            # RPi.GPIO
             try:
                 import RPi.GPIO as GPIO
-                
-                # Set up callbacks for the interrupt pins
+                # Set up event detection for each pin
                 for line in interrupt_lines:
-                    GPIO.add_event_detect(line.pin, GPIO.FALLING, 
-                                         callback=lambda pin: callback(pin))
+                    pin = line.pin
+                    # First remove any existing detection
+                    GPIO.remove_event_detect(pin)
+                    # Add new falling edge detection
+                    GPIO.add_event_detect(pin, GPIO.FALLING,
+                                       callback=callback)
                 
                 # Keep the thread alive
                 while True:
                     time.sleep(1)
-            
-            except ImportError:
-                logging.error("Failed to fall back to RPi.GPIO for interrupt handling.")
+            except Exception as e:
+                logging.error(f"Error in wait_for_interrupt (RPi.GPIO): {e}")
+                time.sleep(timeout)
 
     @staticmethod
     def clean():
-        """Clean up GPIO lines."""
+        """Clean up GPIO lines and resources."""
+        if GPIOManager._gpio_version == -1:
+            # Simulation mode - nothing to clean up
+            logging.debug("Simulated GPIO cleanup")
+            return
+            
         try:
-            # Release all lines we've kept track of
+            # Common cleanup for all GPIO versions
             for line in GPIOManager._shutdown_lines + GPIOManager._interrupt_lines:
                 try:
-                    line.release()
+                    if hasattr(line, 'release'):
+                        line.release()
                 except Exception as e:
-                    logging.error(f"Error releasing GPIO line: {e}")
+                    logging.error(f"Error releasing line: {e}")
             
-            # Close the chip if we're using the new API
-            if GPIOManager._chip and hasattr(GPIOManager._chip, 'close'):
-                GPIOManager._chip.close()
-            
-            # Reset our stored references
+            # Reset instance variables
             GPIOManager._shutdown_lines = []
             GPIOManager._interrupt_lines = []
-            GPIOManager._chip = None
             
-            logging.info("GPIO cleanup complete.")
-        
-        except Exception as e:
-            logging.error(f"Error during GPIO cleanup: {e}")
-            # Try fallback cleanup with RPi.GPIO
-            try:
+            # gpiod v2 chip cleanup
+            if GPIOManager._gpio_version == 2 and GPIOManager._chip:
+                if hasattr(GPIOManager._chip, 'close'):
+                    GPIOManager._chip.close()
+            
+            # RPi.GPIO cleanup
+            if GPIOManager._gpio_version == 3:
                 import RPi.GPIO as GPIO
                 GPIO.cleanup()
-                logging.info("RPi.GPIO cleanup complete.")
-            except ImportError:
-                pass
+            
+            GPIOManager._chip = None
+            logging.info("GPIO cleanup complete")
+            
+        except Exception as e:
+            logging.error(f"Error during GPIO cleanup: {e}")
 
 
 if __name__ == "__main__":

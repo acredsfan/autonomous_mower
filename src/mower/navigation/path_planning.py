@@ -9,18 +9,21 @@ import random
 import utm
 import cv2
 
-from mower.mower import (
-    get_gps_position,
-    get_gps_latest_position,
-    get_robohat_driver,
-    get_detect_drop,
-    get_detect_obstacle,
-    get_logger_config, get_navigation_controller
-)
+# Remove circular import
+# from mower.mower import (
+#     get_gps_position,
+#     get_gps_latest_position,
+#     get_robohat_driver,
+#     get_detect_drop,
+#     get_detect_obstacle,
+#     get_logger_config, get_navigation_controller
+# )
 
+# Initialize logger directly instead of importing from mower
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Initialize logger
-logger = get_logger_config()
 
 # Load environment variables
 load_dotenv()
@@ -53,39 +56,47 @@ class PathPlanner:
         self.obstacles = []
         self.goal = None  # Store the goal position
 
-        # These will be acquired from resource_manager or directly
-        # Get core components from resource_manager if available
+        # Dependencies that will be set later
+        self.controller = None
+        self.gps_position_instance = None
+        self.gps_latest_position = None
+        self.robohat_driver = None
+        self.detect_drop = None
+        self.detect_obstacle = None
+        
+        # Initialize dependencies if resource_manager is available
         if resource_manager:
-            try:
-                self.controller = resource_manager.get_navigation_controller()
-                self.gps_position_instance = resource_manager.get_gps_position()
-                self.gps_latest_position = resource_manager.get_gps_latest_position()
-                self.robohat_driver = resource_manager.get_robohat_driver()
-            except Exception as e:
-                logger.error(f"Error getting resources from manager: {e}")
-                self.controller = None
-                self.gps_position_instance = None
-                self.gps_latest_position = None
-                self.robohat_driver = None
-        else:
-            # Fallback to direct imports when resource_manager not available
-            try:
-                from mower.mower import (
-                    get_gps_position,
-                    get_gps_latest_position,
-                    get_robohat_driver,
-                    get_navigation_controller
-                )
-                self.gps_position_instance = get_gps_position()
-                self.gps_latest_position = get_gps_latest_position()
-                self.robohat_driver = get_robohat_driver()
-                self.controller = get_navigation_controller()
-            except Exception as e:
-                logger.error(f"Error importing required modules: {e}")
-                self.gps_position_instance = None
-                self.gps_latest_position = None
-                self.robohat_driver = None
-                self.controller = None
+            self.initialize_dependencies_from_manager(resource_manager)
+
+    def initialize_dependencies_from_manager(self, resource_manager):
+        """Initialize dependencies from resource manager."""
+        try:
+            self.controller = resource_manager.get_navigation_controller()
+            self.gps_position_instance = resource_manager.get_gps_position()
+            self.gps_latest_position = resource_manager.get_gps_latest_position()
+            self.robohat_driver = resource_manager.get_robohat_driver()
+            self.detect_drop = resource_manager.get_detect_drop()
+            self.detect_obstacle = resource_manager.get_detect_obstacle()
+            logger.info("Successfully initialized dependencies from resource manager")
+        except Exception as e:
+            logger.error(f"Error initializing dependencies from resource manager: {e}")
+    
+    def set_dependencies(self, controller=None, gps_position=None, 
+                         gps_latest_position=None, robohat_driver=None,
+                         detect_drop=None, detect_obstacle=None):
+        """Set dependencies manually."""
+        if controller:
+            self.controller = controller
+        if gps_position:
+            self.gps_position_instance = gps_position
+        if gps_latest_position:
+            self.gps_latest_position = gps_latest_position
+        if robohat_driver:
+            self.robohat_driver = robohat_driver
+        if detect_drop:
+            self.detect_drop = detect_drop
+        if detect_obstacle:
+            self.detect_obstacle = detect_obstacle
 
     def utm_to_gps(self, easting, northing):
         """Convert UTM coordinates to GPS coordinates."""
@@ -239,22 +250,27 @@ class PathPlanner:
 
     def navigate_to_waypoints(self, waypoints):
         for waypoint in waypoints:
-            if get_detect_obstacle() or get_detect_drop():
+            if (self.detect_obstacle and self.detect_obstacle()) or \
+               (self.detect_drop and self.detect_drop()):
                 logger.warning("Obstacle detected. Re-planning path.")
                 current_position = self.gps_latest_position.run()
-                if not current_position:
-                    logger.error("No valid GPS data.")
-                    break
-                ts, easting, northing, _, _ = current_position
-                current_utm = (easting, northing)
-                remaining_waypoints = waypoints[waypoints.index(waypoint):]
-                waypoints = self.handle_obstacle(current_utm, remaining_waypoints)
-                continue
-            lat, lon = self.utm_to_gps(waypoint[0], waypoint[1])
-            target_location = (lat, lon)
-            if not self.controller.navigate_to_location(target_location):
-                logger.error("Failed to navigate to location.")
-                break
+                self.handle_obstacle(current_position, waypoints[waypoints.index(waypoint):])
+                return False
+            
+            self.controller.navigate_to_point(waypoint)
+            while not self.controller.is_at_goal():
+                if self.controller.status == NavigationStatus.OBSTACLE_DETECTED:
+                    logger.warning("Obstacle detected during navigation.")
+                    current_position = self.gps_latest_position.run()
+                    self.handle_obstacle(current_position, waypoints[waypoints.index(waypoint):])
+                    return False
+                
+                # Check for user abort
+                if self.controller.status == NavigationStatus.ABORTED:
+                    logger.warning("Navigation aborted by user.")
+                    return False
+            
+        return True
 
     def load_mowing_pattern(self):
         """Load the mowing pattern from the mowing_schedule.json file."""
