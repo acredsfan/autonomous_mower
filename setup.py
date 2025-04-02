@@ -19,7 +19,7 @@ setup(
         "python-dotenv>=0.19.0,<1.0.0",
         "rtree>=1.0.0",
         "shapely>=1.7.1,<2.0.0",
-        "tensorflow>=2.5.0,<2.6.0",
+        "tensorflow>=2.12.0,<2.13.0",
         "numpy<2.0.0",  # Constraint to avoid conflicts
         "colorama>=0.4.4",  # For colored terminal output
         "watchdog>=2.1.0",  # For file system monitoring
