@@ -182,6 +182,46 @@ The mower supports multiple remote access methods:
    - Configure in `.env`
    - Access via NGROK URL
 
+## Accessing the User Interface
+
+1. **Web UI Access**
+   - The web interface is available at `http://<raspberry_pi_ip>:5000`
+   - Default port is 5000 (configurable in .env file)
+   - If running locally, use `http://localhost:5000`
+
+2. **Initial Setup**
+   - First-time access requires creating an admin account
+   - Default credentials (if not changed):
+     - Username: admin
+     - Password: admin
+   - Change these credentials in the .env file for security
+
+3. **Testing Mower Functionality**
+   - **Movement Testing**
+     - Use the "Manual Control" section in the UI
+     - Test forward, backward, and turning movements
+     - Adjust speed using the speed control slider
+   
+   - **Sensor Testing**
+     - View real-time sensor data in the "Sensor Dashboard"
+     - Test obstacle detection using the "Obstacle Detection" panel
+     - Monitor GPS position in the "Navigation" section
+   
+   - **Boundary Testing**
+     - Use the "Boundary Editor" to create and test mowing boundaries
+     - Test virtual fence functionality
+     - Verify return-to-home behavior
+
+4. **Safety Features**
+   - Emergency stop button available in the UI
+   - Sensor override controls for testing
+   - Battery monitoring and low-battery alerts
+
+5. **Troubleshooting**
+   - Check the "System Logs" section for detailed error messages
+   - Use the "Diagnostics" panel to verify hardware connections
+   - View sensor calibration data in the "Calibration" section
+
 ## Development
 
 ### Running Tests
