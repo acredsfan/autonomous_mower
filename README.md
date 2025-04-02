@@ -68,7 +68,30 @@ The autonomous mower is built around a modular architecture with the following c
    cd autonomous_mower
    ```
 
-2. **Set up a virtual environment**:
+2. **Install dependencies**:
+   There are two ways to install the project:
+
+   #### Option 1: Using the Installation Script (Recommended)
+   ```bash
+   # Make the installation script executable
+   chmod +x install_requirements.sh
+
+   # Run the installation script
+   ./install_requirements.sh
+   ```
+   
+   This script will:
+   - Install all system dependencies
+   - Enable I2C and UART interfaces
+   - Add user to required groups (gpio, i2c, dialout, video)
+   - Ask if you want to install Coral TPU support
+   - Create a clean virtual environment
+   - Install Python packages with proper dependency handling
+   - Configure environment variables
+   - Handle common installation issues
+
+   #### Option 2: Manual Installation
+   If you prefer to install manually:
    ```bash
    # Create a virtual environment
    python3 -m venv venv --system-site-packages
@@ -76,12 +99,12 @@ The autonomous mower is built around a modular architecture with the following c
    # Activate the virtual environment
    source venv/bin/activate
    
-   # Upgrade pip within the virtual environment
-   pip install --upgrade pip
-   ```
-
-3. **Install dependencies**:
-   ```bash
+   # Upgrade pip and install wheel
+   pip install --upgrade pip wheel setuptools
+   
+   # Install numpy first to avoid conflicts
+   pip install "numpy<2.0.0"
+   
    # Install the project and its dependencies
    pip install -e .
    
@@ -89,12 +112,12 @@ The autonomous mower is built around a modular architecture with the following c
    pip install -e ".[coral]"
    ```
 
-4. **Hardware setup**:
-   - Connect all hardware components according to the [wiring diagram](docs/wiring_diagram.pdf)
+3. **Hardware setup**:
+   - Connect all hardware components according to the [Coming Soon] 
    - Ensure correct power supply for motors and electronics
    - Mount sensors in appropriate positions on the mower chassis
 
-5. **Configuration**:
+4. **Configuration**:
    - Copy the example configuration:
      ```bash
      cp .env.example .env
@@ -102,7 +125,7 @@ The autonomous mower is built around a modular architecture with the following c
    - Edit `.env` with your specific settings (GPS port, motor pins, etc.)
    - Set up your mowing area using the web interface
 
-6. **Run the system**:
+5. **Run the system**:
    ```bash
    # Make sure the virtual environment is activated
    source venv/bin/activate  # If not already activated
@@ -111,7 +134,7 @@ The autonomous mower is built around a modular architecture with the following c
    python -m mower.main_controller
    ```
 
-7. **For easy startup, create a shell script**:
+6. **For easy startup, create a shell script**:
    ```bash
    echo '#!/bin/bash
    cd "$(dirname "$0")"
@@ -123,26 +146,44 @@ The autonomous mower is built around a modular architecture with the following c
    ```
    Now you can start the mower with `./start_mower.sh`
 
-### Alternative: Use the Installation Script
+### Troubleshooting Installation
 
-For a guided installation process with all dependencies:
+If you encounter dependency conflicts during installation:
 
-```bash
-# Make the installation script executable
-chmod +x install_requirements.sh
+1. **Clean Installation**:
+   ```bash
+   # Remove existing virtual environment
+   rm -rf venv
+   
+   # Run the installation script again
+   ./install_requirements.sh
+   ```
 
-# Run the installation script
-./install_requirements.sh
-```
+2. **Manual Dependency Resolution**:
+   If you still encounter issues, try installing dependencies manually:
+   ```bash
+   source venv/bin/activate
+   pip install --upgrade pip wheel setuptools
+   pip install "numpy<2.0.0"
+   pip install flask-socketio>=5.1.0
+   pip install flask>=2.0.0
+   pip install geopy>=2.1.0
+   pip install imutils
+   pip install networkx
+   pip install opencv-python-headless>=4.5.1
+   pip install pathfinding
+   pip install pillow>=8.2.0
+   pip install pyserial>=3.5
+   pip install python-dotenv>=0.19.0
+   pip install rtree
+   pip install shapely>=1.7.1
+   pip install tensorflow>=2.5.0
+   ```
 
-This script will:
-- Install system dependencies
-- Enable I2C and UART interfaces
-- Add user to required groups (gpio, i2c, dialout, video)
-- Ask if you want to install Coral TPU support
-- Set up a virtual environment
-- Install Python packages
-- Configure environment variables
+3. **Common Issues**:
+   - If you see numpy version conflicts, ensure you're using numpy<2.0.0
+   - If TensorFlow installation fails, try installing it last
+   - If you see permission errors, ensure you're in the required groups (gpio, i2c, dialout, video)
 
 ### Docker Installation
 
