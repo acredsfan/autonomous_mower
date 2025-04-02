@@ -6,15 +6,44 @@ set -e
 # Step 1: Install system dependencies via apt-get
 echo "Installing system dependencies..."
 sudo apt-get update
-sudo apt-get install -y libatlas-base-dev libhdf5-dev libhdf5-serial-dev \
-                        python3-dev python3-pip i2c-tools gpsd gpsd-clients \
-                        python3-gps python3-libgpiod libportaudio2 \
-                        libportaudiocpp0 portaudio19-dev gpiod \
-                        curl gnupg
+sudo apt-get install -y \
+    python3-dev \
+    python3-pip \
+    python3-venv \
+    python3-setuptools \
+    python3-wheel \
+    python3-gpiozero \
+    python3-libgpiod \
+    python3-picamera2 \
+    python3-opencv \
+    python3-serial \
+    python3-smbus \
+    python3-rpi.gpio \
+    i2c-tools \
+    gpsd \
+    gpsd-clients \
+    python3-gps \
+    gpiod \
+    libgpiod-dev \
+    libportaudio2 \
+    libportaudiocpp0 \
+    portaudio19-dev \
+    curl \
+    gnupg
 
 echo "System dependencies installed successfully."
 
-# Step 2: Check if user wants to install Coral dependencies
+# Step 2: Enable I2C and Serial interfaces if not already enabled
+echo "Enabling I2C and Serial interfaces..."
+if ! grep -q "^dtparam=i2c_arm=on" /boot/config.txt; then
+    echo "dtparam=i2c_arm=on" | sudo tee -a /boot/config.txt
+fi
+
+if ! grep -q "^enable_uart=1" /boot/config.txt; then
+    echo "enable_uart=1" | sudo tee -a /boot/config.txt
+fi
+
+# Step 3: Check if user wants to install Coral dependencies
 read -p "Do you want to install Google Coral Edge TPU support? (y/n) " install_coral
 if [[ $install_coral == "y" || $install_coral == "Y" ]]; then
     echo "Installing Coral dependencies..."
@@ -37,7 +66,7 @@ if [[ $install_coral == "y" || $install_coral == "Y" ]]; then
     coral_flag=true
 fi
 
-# Step 3: Create and activate a virtual environment
+# Step 4: Create and activate a virtual environment
 echo "Creating virtual environment..."
 python3 -m venv venv --system-site-packages
 
@@ -48,10 +77,10 @@ source venv/bin/activate
 
 echo "Virtual environment activated."
 
-# Step 4: Upgrade pip
+# Step 5: Upgrade pip
 pip install --upgrade pip
 
-# Step 5: Install Python packages using setup.py
+# Step 6: Install Python packages using setup.py
 echo "Installing Python packages..."
 pip install -e .
 
@@ -63,7 +92,7 @@ fi
 
 echo "Python packages installed successfully."
 
-# Step 6: Set up environment variables
+# Step 7: Set up environment variables
 if [ ! -f .env ]; then
     echo "Creating .env file from example..."
     cp .env.example .env
@@ -83,8 +112,17 @@ if [ ! -f .env ]; then
     fi
 fi
 
-# Step 7: Deactivate the virtual environment
+# Step 8: Create necessary directories
+mkdir -p logs
+mkdir -p config
+
+# Step 9: Add user to required groups
+echo "Adding user to required groups..."
+sudo usermod -a -G gpio,i2c,dialout,video $USER
+
+# Step 10: Deactivate the virtual environment
 deactivate
 
 echo "Setup complete."
-echo "To run the system, activate the virtual environment with 'source venv/bin/activate' and run 'python -m mower.main_controller'"
+echo "Please reboot your Raspberry Pi for all changes to take effect."
+echo "After reboot, activate the virtual environment with 'source venv/bin/activate' and run 'python -m mower.main_controller'"

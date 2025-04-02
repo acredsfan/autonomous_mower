@@ -1,3 +1,10 @@
+"""
+Camera instance module for managing camera access.
+
+This module provides a singleton pattern for camera access to ensure
+only one instance of the camera is active at a time.
+"""
+
 import os
 import socket
 import threading
@@ -6,10 +13,10 @@ import cv2
 from dotenv import load_dotenv
 import io
 import queue
-from picamera2 import Picamera2  # type: ignore
+from typing import Optional, Tuple, Union
 
 from mower.utilities.logger_config import (
-    LoggerConfigDebug as LoggerConfig
+    LoggerConfigInfo as LoggerConfig
 )
 
 # Load environment variables
@@ -23,6 +30,18 @@ FPS = int(os.getenv('STREAMING_FPS', 15))
 STREAMING_RESOLUTION = os.getenv('STREAMING_RESOLUTION', '640x480')
 WIDTH, HEIGHT = map(int, STREAMING_RESOLUTION.split('x'))
 BUFFER_SIZE = int(os.getenv('FRAME_BUFFER_SIZE', 5))  # Number of frames to keep in buffer
+
+# Try to import picamera2, but don't fail if not available
+try:
+    from picamera2 import Picamera2  # type: ignore
+    PICAMERA_AVAILABLE = True
+except ImportError:
+    PICAMERA_AVAILABLE = False
+    logging.warning("picamera2 not available. Using OpenCV camera or simulation.")
+
+# Global camera instance
+_camera_instance = None
+_camera_lock = threading.Lock()
 
 def get_device_ip():
     """
@@ -46,270 +65,137 @@ def get_device_ip():
         s.close()
     return device_ip
 
-
 class CameraInstance:
     """
-    Singleton class to manage camera access for both streaming and object detection.
+    Singleton class for managing camera access.
     
-    This class provides a central point for accessing the camera, ensuring that
-    multiple components can use the camera simultaneously without conflicts.
-    It maintains a frame buffer that can be accessed by both the streaming server
-    and the object detection module.
-    
-    The class supports:
-    - Frame capture at a configurable FPS
-    - Frame buffering for efficient access
-    - MJPEG streaming for the web UI
-    - On-demand frame access for object detection
-    
-    Thread Safety:
-        All camera access is protected by locks to ensure thread-safe operation
-        when accessed by multiple components simultaneously.
+    This class ensures that only one instance of the camera is active
+    at any time, preventing resource conflicts.
     """
-    _instance = None
-    _initialized = False
     
-    def __new__(cls):
-        """Implement singleton pattern for camera access"""
-        if cls._instance is None:
-            cls._instance = super(CameraInstance, cls).__new__(cls)
-            cls._instance._initialize()
-        return cls._instance
-    
-    def _initialize(self):
-        """Initialize the camera instance with required resources"""
-        if self._initialized:
-            return
-            
-        self.device_ip = get_device_ip()
-        self.camera = None
-        self.running = False
-        self.frame_buffer = queue.Queue(maxsize=BUFFER_SIZE)
-        self.frame_lock = threading.Lock()
-        self.latest_frame = None
-        self.capture_thread = None
+    def __init__(self):
+        """Initialize the camera instance."""
+        self._camera = None
+        self._is_picamera = False
+        self._frame_width = 640
+        self._frame_height = 480
+        self._is_initialized = False
+        self._last_frame = None
+        self._frame_lock = threading.Lock()
         
-        # Attempt to initialize the camera
-        try:
-            self.camera = Picamera2()
-            # Set the camera resolution
-            camera_config = self.camera.create_video_configuration({"size": (WIDTH, HEIGHT)})
-            self.camera.configure(camera_config)
-            logging.info(f"Camera initialized with resolution {WIDTH}x{HEIGHT}")
-        except Exception as e:
-            logging.error(f"Failed to initialize camera: {e}")
-            self.camera = None
-            
-        self._initialized = True
-    
-    def start(self):
+    def initialize(self) -> bool:
         """
-        Start the camera and frame capture thread.
-        
-        This starts both the camera and a background thread that captures
-        frames at the configured FPS rate, maintaining a buffer of recent frames
-        that can be accessed by both streaming and object detection components.
+        Initialize the camera hardware.
         
         Returns:
-            bool: True if successfully started, False otherwise
+            bool: True if initialization successful, False otherwise
         """
-        if self.running:
+        if self._is_initialized:
             return True
-            
-        if self.camera is None:
-            logging.error("Cannot start camera - not initialized")
-            return False
             
         try:
-            self.camera.start()
-            self.running = True
+            # Try picamera2 first if available
+            if PICAMERA_AVAILABLE:
+                try:
+                    self._camera = Picamera2()
+                    self._camera.configure(
+                        self._camera.create_preview_configuration(
+                            main={"size": (self._frame_width, self._frame_height)}
+                        )
+                    )
+                    self._camera.start()
+                    self._is_picamera = True
+                    self._is_initialized = True
+                    logging.info("Initialized PiCamera2")
+                    return True
+                except Exception as e:
+                    logging.warning(f"Failed to initialize PiCamera2: {e}")
             
-            # Start background thread for frame capture
-            self.capture_thread = threading.Thread(target=self._capture_loop)
-            self.capture_thread.daemon = True
-            self.capture_thread.start()
-            
-            logging.info(f"Camera started with resolution {WIDTH}x{HEIGHT} at {FPS} FPS")
+            # Fall back to OpenCV camera
+            self._camera = cv2.VideoCapture(0)
+            if not self._camera.isOpened():
+                logging.warning("Failed to open OpenCV camera")
+                return False
+                
+            self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, self._frame_width)
+            self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self._frame_height)
+            self._is_picamera = False
+            self._is_initialized = True
+            logging.info("Initialized OpenCV camera")
             return True
+            
         except Exception as e:
-            logging.error(f"Error starting camera: {e}")
+            logging.error(f"Camera initialization failed: {e}")
             return False
-    
-    def _capture_loop(self):
+            
+    def capture_frame(self) -> Optional[Union[bytes, None]]:
         """
-        Background thread loop to capture frames at the specified FPS.
-
-        In this loop:
-          1. We continuously grab a frame from the camera hardware using picamera2.
-          2. We store the latest frame under a lock to ensure thread safety.
-          3. We push older frames out of the queue if it's full, maintaining a small buffer.
-
-        If any hardware or I/O error occurs, we log it and sleep briefly to avoid flooding logs.
-
-        The capturing runs until self.running is set to False.
-        
-        Thread safety:
-          - All frame buffer access is protected by locks
-          - Frame queue manipulations use nowait methods to prevent deadlocks
-          - Error handling ensures the thread continues despite transient failures
-        """
-        interval = 1.0 / FPS
-        while self.running:
-            try:
-                # Capture frame
-                frame = self.camera.capture_array()
-                
-                # Update latest frame with lock protection
-                with self.frame_lock:
-                    self.latest_frame = frame
-                    
-                    # Add to buffer, removing oldest if full
-                    if self.frame_buffer.full():
-                        try:
-                            self.frame_buffer.get_nowait()  # Remove oldest frame
-                        except queue.Empty:
-                            pass  # Buffer was emptied by another thread
-                    
-                    try:
-                        self.frame_buffer.put_nowait(frame)
-                    except queue.Full:
-                        pass  # Someone else filled the buffer
-                
-                # Sleep to maintain desired FPS
-                time.sleep(interval)
-            except Exception as e:
-                logging.error(f"Error in camera capture loop: {e}")
-                time.sleep(1)  # Prevent tight error loops
-    
-    def capture_frame(self):
-        """
-        Capture the latest frame from the camera.
-        
-        This method returns the most recent frame captured by the camera.
-        If the camera is not available or an error occurs, it returns None.
+        Capture a frame from the camera.
         
         Returns:
-            numpy.ndarray or None: The captured frame as a numpy array, or None on failure
+            Optional[bytes]: JPEG encoded frame data or None if capture fails
         """
-        if not self.running:
-            if not self.start():
+        if not self._is_initialized:
+            if not self.initialize():
                 return None
-        
-        with self.frame_lock:
-            if self.latest_frame is not None:
-                return self.latest_frame.copy()  # Return a copy to prevent modification
-        
-        return None
-    
-    def get_jpeg_frame(self):
-        """
-        Get the latest frame as a JPEG-encoded byte array.
-        
-        This is useful for web streaming and API endpoints that need
-        JPEG format images rather than raw numpy arrays.
-        
-        Returns:
-            bytes or None: JPEG-encoded image data, or None on failure
-        """
-        frame = self.capture_frame()
-        if frame is None:
-            return None
-            
-        try:
-            _, buffer = cv2.imencode('.jpg', frame)
-            return buffer.tobytes()
-        except Exception as e:
-            logging.error(f"Error encoding frame to JPEG: {e}")
-            return None
-    
-    def stop(self):
-        """
-        Stop the camera and release resources.
-        
-        This stops the frame capture thread and camera hardware,
-        releasing all associated resources.
-        
-        Returns:
-            bool: True if successfully stopped, False otherwise
-        """
-        if not self.running:
-            return True
-            
-        try:
-            self.running = False
-            
-            # Stop the capture thread
-            if self.capture_thread and self.capture_thread.is_alive():
-                self.capture_thread.join(timeout=3.0)
-                if self.capture_thread.is_alive():
-                    logging.warning("Camera capture thread did not terminate cleanly")
-            
-            # Stop the camera
-            if self.camera:
-                self.camera.stop()
                 
-            # Clear buffer
-            with self.frame_lock:
-                self.latest_frame = None
-                while not self.frame_buffer.empty():
-                    try:
-                        self.frame_buffer.get_nowait()
-                    except queue.Empty:
-                        break
-            
-            logging.info("Camera stopped")
-            return True
+        try:
+            with self._frame_lock:
+                if self._is_picamera:
+                    frame = self._camera.capture_array()
+                else:
+                    ret, frame = self._camera.read()
+                    if not ret:
+                        return None
+                        
+                # Convert to JPEG
+                ret, jpeg = cv2.imencode('.jpg', frame)
+                if not ret:
+                    return None
+                    
+                self._last_frame = jpeg.tobytes()
+                return self._last_frame
+                
         except Exception as e:
-            logging.error(f"Error stopping camera: {e}")
-            return False
-    
-    def __del__(self):
-        """Ensure camera resources are cleaned up on object destruction"""
-        self.stop()
-
-
-# Module-level singleton instance and accessor functions
-_camera_instance = None
-
-def get_camera_instance():
+            logging.error(f"Frame capture failed: {e}")
+            return None
+            
+    def get_last_frame(self) -> Optional[bytes]:
+        """
+        Get the last captured frame without capturing a new one.
+        
+        Returns:
+            Optional[bytes]: Last captured frame data or None if no frame available
+        """
+        with self._frame_lock:
+            return self._last_frame
+            
+    def release(self):
+        """Release camera resources."""
+        if self._is_initialized:
+            try:
+                if self._is_picamera:
+                    self._camera.close()
+                else:
+                    self._camera.release()
+            except Exception as e:
+                logging.error(f"Error releasing camera: {e}")
+            finally:
+                self._is_initialized = False
+                self._camera = None
+                
+def get_camera_instance() -> CameraInstance:
     """
-    Get the camera instance singleton.
-    
-    This function provides access to the camera singleton instance,
-    ensuring that all components access the same camera resource.
+    Get the singleton camera instance.
     
     Returns:
         CameraInstance: The singleton camera instance
     """
     global _camera_instance
-    if _camera_instance is None:
-        _camera_instance = CameraInstance()
-        _camera_instance.start()
-    return _camera_instance
-
-def capture_frame():
-    """
-    Capture a frame from the camera.
-    
-    This is a convenience function for getting a single frame from the camera.
-    
-    Returns:
-        numpy.ndarray or None: The captured frame, or None if unavailable
-    """
-    camera = get_camera_instance()
-    return camera.capture_frame()
-
-def get_jpeg_frame():
-    """
-    Get a JPEG-encoded frame from the camera.
-    
-    This is a convenience function for getting a JPEG-encoded frame.
-    
-    Returns:
-        bytes or None: JPEG-encoded image data, or None if unavailable
-    """
-    camera = get_camera_instance()
-    return camera.get_jpeg_frame()
+    with _camera_lock:
+        if _camera_instance is None:
+            _camera_instance = CameraInstance()
+        return _camera_instance
 
 def start_server_thread():
     """
@@ -322,4 +208,4 @@ def start_server_thread():
         bool: True if camera started successfully, False otherwise
     """
     camera = get_camera_instance()
-    return camera.start()
+    return camera.initialize()

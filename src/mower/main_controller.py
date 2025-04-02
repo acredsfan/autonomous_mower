@@ -6,7 +6,8 @@ from the previous mower.py and robot.py files. It provides a centralized
 resource management system and coordinates the overall operation of the mower.
 
 Architecture:
-- ResourceManager: Handles initialization, access, and cleanup of all hardware and software components
+- ResourceManager: Handles initialization, access, and cleanup of all hardware and 
+  software components
 - RobotController: Manages the core mowing operation logic
 
 Usage:
@@ -29,17 +30,39 @@ from pathlib import Path
 import time
 from enum import Enum
 
-# Hardware imports
-from mower.hardware.blade_controller import BladeController
-from mower.hardware.bme280 import BME280Sensor
-from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.gpio_manager import GPIOManager
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.sensor_interface import get_sensor_interface
-from mower.hardware.serial_port import SerialPort
-from mower.hardware.tof import VL53L0XSensors
+# Initialize logger first to handle hardware import logging
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+logging = LoggerConfig.get_logger(__name__)
+
+# Hardware imports with simulation fallbacks
+try:
+    from mower.hardware.blade_controller import BladeController
+    from mower.hardware.bme280 import BME280Sensor
+    from mower.hardware.camera_instance import get_camera_instance
+    from mower.hardware.gpio_manager import GPIOManager
+    from mower.hardware.imu import BNO085Sensor
+    from mower.hardware.ina3221 import INA3221Sensor
+    from mower.hardware.robohat import RoboHATDriver
+    from mower.hardware.sensor_interface import get_sensor_interface
+    from mower.hardware.serial_port import SerialPort
+    from mower.hardware.tof import VL53L0XSensors
+    HARDWARE_AVAILABLE = True
+except ImportError:
+    logging.warning("Hardware modules not available. Running in simulation mode.")
+    HARDWARE_AVAILABLE = False
+    
+    # Create dummy classes for simulation
+    class DummyHardware:
+        def __init__(self, *args, **kwargs):
+            pass
+            
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+    
+    # Assign dummy hardware classes
+    BladeController = BME280Sensor = get_camera_instance = GPIOManager = DummyHardware
+    BNO085Sensor = INA3221Sensor = RoboHATDriver = get_sensor_interface = DummyHardware
+    SerialPort = VL53L0XSensors = DummyHardware
 
 # Navigation imports
 from mower.navigation.gps import (
@@ -56,8 +79,7 @@ from mower.obstacle_detection.local_obstacle_detection import (
 )
 
 # UI and utilities imports
-from mower.ui.web_ui.app import WebInterface
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.text_writer import TextLogger, CsvLogger
 from mower.utilities.utils import Utils
 
@@ -66,9 +88,6 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_DIR = BASE_DIR / "config"
 # Create config directory if it doesn't exist
 CONFIG_DIR.mkdir(exist_ok=True)
-
-# Initialize logger
-logging = LoggerConfig.get_logger(__name__)
 
 # Add a RobotState enum for state machine
 class RobotState(Enum):
@@ -186,6 +205,11 @@ class ResourceManager:
         # Initialize the ML inference engine if not using remote detection
         if not self._config.get('USE_REMOTE_DETECTION', False):
             self._initialize_inference_engine()
+            
+        # Set simulation mode based on hardware availability
+        self._simulation_mode = not HARDWARE_AVAILABLE
+        if self._simulation_mode:
+            logging.info("Running in simulation mode - hardware components mocked")
 
     def _load_env_config(self):
         """

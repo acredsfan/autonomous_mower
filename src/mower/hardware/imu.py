@@ -29,7 +29,7 @@ import adafruit_bno08x
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
 from mower.utilities.logger_config import (
-    LoggerConfigDebug as LoggerConfig
+    LoggerConfigInfo as LoggerConfig
 )
 from mower.hardware.serial_port import SerialPort
 

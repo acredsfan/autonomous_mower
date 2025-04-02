@@ -1,95 +1,138 @@
-import threading
-import time
+"""
+Blade controller module.
+
+This module provides control over the mower's blade motor.
+"""
+
+import logging
+from typing import List, Optional
 
 from mower.hardware.gpio_manager import GPIOManager
-from mower.utilities.logger_config import (
-    LoggerConfigDebug as LoggerConfig
-)
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
-# Initialize logging
+# Initialize logger
 logging = LoggerConfig.get_logger(__name__)
 
-# Initialize GPIO lines
-shutdown_pins = [24, 25]  # GPIO lines for IN1 and IN2
-shutdown_lines, _ = GPIOManager.init_gpio(shutdown_pins, [])
-
-
-class PWM:
-    def __init__(self, line, frequency=1000):
-        """Initialize PWM on a GPIO line with a given frequency."""
-        self.line = line
-        self.frequency = frequency
-        self.duty_cycle = 0
-        self.running = False
-        self.thread = None
-        self.lock = threading.Lock()  # Ensure thread-safe updates
-
-    def start(self, duty_cycle=0):
-        """Start the PWM signal with an initial duty cycle."""
-        self.duty_cycle = duty_cycle
-        if not self.running:
-            self.running = True
-            self.thread = threading.Thread(target=self._run, daemon=True)
-            self.thread.start()
-            logging.info(f"Started PWM with duty cycle {duty_cycle}%")
-
-    def _run(self):
-        """Send PWM signals by toggling the GPIO line."""
-        period = 1.0 / self.frequency
-        while self.running:
-            with self.lock:
-                on_time = period * (self.duty_cycle / 100.0)
-                off_time = period - on_time
-
-            if on_time > 0:
-                self.line.set_value(1)
-                time.sleep(on_time)
-            if off_time > 0:
-                self.line.set_value(0)
-                time.sleep(off_time)
-
-    def change_duty_cycle(self, duty_cycle):
-        """Thread-safe change to the PWM duty cycle."""
-        with self.lock:
-            self.duty_cycle = duty_cycle
-            logging.info(f"Changed duty cycle to {duty_cycle}%")
-
-    def stop(self):
-        """Stop the PWM signal."""
-        self.running = False
-        if self.thread is not None:
-            self.thread.join()
-        self.line.set_value(0)  # Ensure the motor is off
-        logging.info("Stopped PWM")
-
-
-# Initialize PWM objects for both motor control lines
-pwm1 = PWM(shutdown_lines[0])
-pwm2 = PWM(shutdown_lines[1])
-
+# GPIO pins for blade control
+BLADE_ENABLE_PIN = 22
+BLADE_DIRECTION_PIN = 23
 
 class BladeController:
-    blades_on = False
-
-    @staticmethod
-    def set_speed(speed):
-        """Set the blade speed via PWM."""
-        if speed > 0:
-            pwm1.start(speed)  # Start PWM1 with the given speed
-            pwm2.stop()  # Ensure PWM2 is off
-            BladeController.blades_on = True
-            logging.info(f"Blades turned on at speed: {speed}%")
-        else:
-            BladeController.stop()
-
-    @staticmethod
-    def stop():
-        """Stop the blades."""
-        pwm1.stop()
-        pwm2.stop()
-        BladeController.blades_on = False
-        logging.info("Blades turned off")
-
-
-# Initialize blade controller instance
-blade_controller = BladeController()
+    """
+    Controls the blade motor of the mower.
+    
+    This class provides methods to start, stop, and control the blade motor,
+    with safety features to prevent accidental activation.
+    """
+    
+    def __init__(self):
+        """Initialize the blade controller."""
+        self._gpio = GPIOManager()
+        self._enabled = False
+        self._direction = 0
+        
+        # Set up GPIO pins
+        self._gpio.setup_pin(BLADE_ENABLE_PIN, "out", 0)
+        self._gpio.setup_pin(BLADE_DIRECTION_PIN, "out", 0)
+        
+        logging.info("Blade controller initialized")
+        
+    def enable(self) -> bool:
+        """
+        Enable the blade motor.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self._enabled:
+                self._gpio.set_pin(BLADE_ENABLE_PIN, 1)
+                self._enabled = True
+                logging.info("Blade motor enabled")
+            return True
+        except Exception as e:
+            logging.error(f"Error enabling blade motor: {e}")
+            return False
+            
+    def disable(self) -> bool:
+        """
+        Disable the blade motor.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if self._enabled:
+                self._gpio.set_pin(BLADE_ENABLE_PIN, 0)
+                self._enabled = False
+                logging.info("Blade motor disabled")
+            return True
+        except Exception as e:
+            logging.error(f"Error disabling blade motor: {e}")
+            return False
+            
+    def set_direction(self, direction: int) -> bool:
+        """
+        Set the blade motor direction.
+        
+        Args:
+            direction: 0 for forward, 1 for reverse
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if direction not in [0, 1]:
+                logging.error(f"Invalid direction value: {direction}")
+                return False
+                
+            if self._direction != direction:
+                self._gpio.set_pin(BLADE_DIRECTION_PIN, direction)
+                self._direction = direction
+                logging.info(f"Blade motor direction set to {direction}")
+            return True
+        except Exception as e:
+            logging.error(f"Error setting blade motor direction: {e}")
+            return False
+            
+    def is_enabled(self) -> bool:
+        """
+        Check if the blade motor is enabled.
+        
+        Returns:
+            bool: True if enabled, False otherwise
+        """
+        return self._enabled
+        
+    def get_direction(self) -> int:
+        """
+        Get the current blade motor direction.
+        
+        Returns:
+            int: 0 for forward, 1 for reverse
+        """
+        return self._direction
+        
+    def cleanup(self) -> None:
+        """Clean up GPIO resources."""
+        try:
+            self.disable()
+            self._gpio.cleanup_pin(BLADE_ENABLE_PIN)
+            self._gpio.cleanup_pin(BLADE_DIRECTION_PIN)
+            logging.info("Blade controller cleaned up")
+        except Exception as e:
+            logging.error(f"Error cleaning up blade controller: {e}")
+            
+    def get_state(self) -> dict:
+        """
+        Get the current state of the blade controller.
+        
+        Returns:
+            dict: Dictionary containing state information
+        """
+        return {
+            "enabled": self._enabled,
+            "direction": self._direction,
+            "enable_pin": BLADE_ENABLE_PIN,
+            "direction_pin": BLADE_DIRECTION_PIN
+        }

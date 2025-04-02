@@ -1,12 +1,89 @@
-.env
-*.log
-*.vscode
-*.__pycache__
-**__paycache__/
-*.tflite
-*.zip
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
 venv/
-vscode/
-*.idea/
-file_server.py
-.gitpod.yml
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs and databases
+*.log
+logs/
+*.db
+*.sqlite3
+
+# Model files and data
+models/*.tflite
+models/*.pth
+models/*.h5
+models/*.onnx
+!models/imagenet_labels.txt
+
+# Project specific
+config/user_polygon.json
+config/home_location.json
+config/mowing_schedule.json
+old_main.log
+
+# Temporary files
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Documentation build
+docs/_build/
+docs/api/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg

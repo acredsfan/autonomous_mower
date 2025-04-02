@@ -1,9 +1,16 @@
+"""
+Local obstacle detection module.
+
+This module provides functions for detecting obstacles and drops using the camera.
+"""
+
 import io
 import os
 import threading
 import time
 from threading import Condition
 import logging
+from typing import Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -11,13 +18,8 @@ import requests
 from dotenv import load_dotenv
 from PIL import Image, ImageDraw, ImageFont
 
-from mower.hardware.camera_instance import (
-    capture_frame,
-    get_camera_instance
-    )
-from mower.utilities.logger_config import (
-    LoggerConfigDebug as LoggerConfig
-)
+from mower.hardware.camera_instance import get_camera_instance
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -270,118 +272,132 @@ def start_processing():
 object_detected = False
 
 
-def detect_obstacle():
+def detect_obstacle(frame: np.ndarray) -> Tuple[bool, Optional[np.ndarray]]:
     """
-    Check if remote detection or local detection is enabled
-    then check if an obstacle is detected on either detect_obstacles_remote
-    or detect_obstacles_local.
-    """
-    global object_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    if use_remote_detection:
-        object_detected = detect_obstacles_remote(image)
-    else:
-        detected_objects = detect_obstacles_local(image)
-        object_detected = len(detected_objects) > 0
-    return object_detected
-
-
-drop_detected = False
-
-
-def detect_drop():
-    """
-    Check if detect_drops_local has detected a drop in the yard.
-    Then update the global drop_detected flag.
-    """
-    global drop_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    drop_detected = detect_drops_local(image)
-    return drop_detected
-
-
-def draw_object_boxes_local():
-    """
-    Draw bounding boxes around detected objects.
-    """
-    global object_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    detected_objects = detect_obstacles_local(image)
-    draw = ImageDraw.Draw(image)
-    for obj in detected_objects:
-        # Placeholder for bounding box drawing; adjust for your model
-        label = f"{obj['name']}: {int(obj['score'] * 100)}%"
-        try:
-            font = ImageFont.truetype("arial.ttf", 15)
-        except IOError:
-            font = ImageFont.load_default()
-        draw.text((10, 10), label, fill='red', font=font)
-    return np.array(image)
-
-
-def draw_object_boxes_remote():
-    """
-    Draw bounding boxes around detected objects.
-    """
-    global object_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    object_detected = detect_obstacles_remote(image)
-    return np.array(image)
-
-
-def draw_drop_lines():
-    """
-    Draw lines around detected drops.
-    """
-    global drop_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    drop_detected = detect_drops_local(image)
-    return np.array(image)
-
-
-def overlay_text(image, text):
-    """
-    Overlay text on the image.
+    Detect obstacles in the given frame.
+    
     Args:
-        image: The image to overlay text on.
-        text: The text to overlay on the image.
+        frame: The input frame to process
+        
     Returns:
-        The image with the text overlay.
+        Tuple[bool, Optional[np.ndarray]]: (obstacle_detected, processed_frame)
     """
-    draw = ImageDraw.Draw(image)
+    if frame is None:
+        return False, None
+        
     try:
-        font = ImageFont.truetype("arial.ttf", 15)
-    except IOError:
-        font = ImageFont.load_default()
-    draw.text((10, 10), text, fill='red', font=font)
-    return image
+        # Convert to grayscale for processing
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Apply Gaussian blur to reduce noise
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # Use Canny edge detection
+        edges = cv2.Canny(blurred, 50, 150)
+        
+        # Find contours
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Filter contours by size
+        min_area = 1000  # Minimum contour area to consider
+        large_contours = [c for c in contours if cv2.contourArea(c) > min_area]
+        
+        # Draw contours on original frame
+        frame_with_contours = frame.copy()
+        cv2.drawContours(frame_with_contours, large_contours, -1, (0, 255, 0), 2)
+        
+        # Consider it an obstacle if we find any large contours
+        return bool(large_contours), frame_with_contours
+        
+    except Exception as e:
+        logging.error(f"Error in obstacle detection: {e}")
+        return False, None
 
 
-def stream_frame_with_overlays():
+def detect_drop(frame: np.ndarray) -> Tuple[bool, Optional[np.ndarray]]:
     """
-    Stream frames with overlays for objects and drops.
+    Detect potential drops (cliffs) in the given frame.
+    
+    Args:
+        frame: The input frame to process
+        
+    Returns:
+        Tuple[bool, Optional[np.ndarray]]: (drop_detected, processed_frame)
     """
-    global object_detected, drop_detected
-    with frame_lock:
-        frame = capture_frame()
-    image = Image.fromarray(frame)
-    if use_remote_detection:
-        image = draw_object_boxes_remote()
-    else:
-        image = draw_object_boxes_local()
-    if drop_detected:
-        image = overlay_text(image, "Drop detected!")
-    return image
+    if frame is None:
+        return False, None
+        
+    try:
+        # Convert to grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # Apply threshold to identify dark areas (potential drops)
+        _, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+        
+        # Find contours of dark areas
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Filter contours by size
+        min_area = 2000  # Minimum area to consider as a drop
+        large_contours = [c for c in contours if cv2.contourArea(c) > min_area]
+        
+        # Draw contours on original frame
+        frame_with_contours = frame.copy()
+        cv2.drawContours(frame_with_contours, large_contours, -1, (0, 0, 255), 2)
+        
+        # Consider it a drop if we find any large dark areas
+        return bool(large_contours), frame_with_contours
+        
+    except Exception as e:
+        logging.error(f"Error in drop detection: {e}")
+        return False, None
+
+
+def stream_frame_with_overlays() -> Optional[bytes]:
+    """
+    Get a frame with obstacle and drop detection overlays.
+    
+    Returns:
+        Optional[bytes]: JPEG encoded frame with overlays or None if not available
+    """
+    try:
+        # Get camera instance
+        camera = get_camera_instance()
+        
+        # Capture frame
+        frame_data = camera.capture_frame()
+        if frame_data is None:
+            return None
+            
+        # Convert JPEG to numpy array
+        frame = cv2.imdecode(np.frombuffer(frame_data, np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            return None
+            
+        # Run detections
+        obstacle_detected, obstacle_frame = detect_obstacle(frame)
+        drop_detected, drop_frame = detect_drop(frame if obstacle_frame is None else obstacle_frame)
+        
+        # Use the most processed frame available
+        final_frame = drop_frame if drop_frame is not None else (
+            obstacle_frame if obstacle_frame is not None else frame
+        )
+        
+        # Add text overlays
+        if obstacle_detected:
+            cv2.putText(final_frame, "OBSTACLE DETECTED", (10, 30),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        if drop_detected:
+            cv2.putText(final_frame, "DROP DETECTED", (10, 60),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                       
+        # Convert back to JPEG
+        _, jpeg_data = cv2.imencode('.jpg', final_frame)
+        return jpeg_data.tobytes()
+        
+    except Exception as e:
+        logging.error(f"Error in stream frame with overlays: {e}")
+        return None
 
 
 def capture_frames():

@@ -33,7 +33,7 @@ from mower.obstacle_detection.local_obstacle_detection import (
 )
 
 # UI and utilities imports
-from mower.ui.web_ui.app import WebInterface
+from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.utilities.text_writer import TextLogger, CsvLogger
 from mower.utilities.utils import Utils
