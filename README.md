@@ -225,13 +225,10 @@ The autonomous mower is a powerful machine with moving parts. Always:
 - Install physical safety features (bump sensors, blade guards)
 - Use the emergency stop function when necessary
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-- Thanks to all contributors who have helped develop this project
+- Thanks to all contributors who have helped develop this project, especially @TCII.
 - Special thanks to the open-source communities whose libraries made this possible
 - Inspired by various autonomous robotics projects and commercial mowing solutions
 
