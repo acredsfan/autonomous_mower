@@ -68,17 +68,33 @@ The autonomous mower is built around a modular architecture with the following c
    cd autonomous_mower
    ```
 
-2. **Install dependencies**:
+2. **Set up a virtual environment**:
    ```bash
-   pip install -e .
+   # Create a virtual environment
+   python3 -m venv venv --system-site-packages
+   
+   # Activate the virtual environment
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   
+   # Upgrade pip within the virtual environment
+   pip install --upgrade pip
    ```
 
-3. **Hardware setup**:
+3. **Install dependencies**:
+   ```bash
+   # Install the project and its dependencies
+   pip install -e .
+   
+   # For Coral TPU support (optional)
+   pip install -e ".[coral]"
+   ```
+
+4. **Hardware setup**:
    - Connect all hardware components according to the [wiring diagram](docs/wiring_diagram.pdf)
    - Ensure correct power supply for motors and electronics
    - Mount sensors in appropriate positions on the mower chassis
 
-4. **Configuration**:
+5. **Configuration**:
    - Copy the example configuration:
      ```bash
      cp .env.example .env
@@ -86,10 +102,45 @@ The autonomous mower is built around a modular architecture with the following c
    - Edit `.env` with your specific settings (GPS port, motor pins, etc.)
    - Set up your mowing area using the web interface
 
-5. **Run the system**:
+6. **Run the system**:
    ```bash
+   # Make sure the virtual environment is activated
+   source venv/bin/activate  # If not already activated
+   
+   # Run the main controller
    python -m mower.main_controller
    ```
+
+7. **For easy startup, create a shell script**:
+   ```bash
+   echo '#!/bin/bash
+   cd "$(dirname "$0")"
+   source venv/bin/activate
+   python -m mower.main_controller
+   ' > start_mower.sh
+   
+   chmod +x start_mower.sh
+   ```
+   Now you can start the mower with `./start_mower.sh`
+
+### Alternative: Use the Installation Script
+
+For a guided installation process with all dependencies:
+
+```bash
+# Make the installation script executable
+chmod +x install_requirements.sh
+
+# Run the installation script
+./install_requirements.sh
+```
+
+This script will:
+- Install system dependencies
+- Ask if you want to install Coral TPU support
+- Set up a virtual environment
+- Install Python packages
+- Configure environment variables
 
 ### Docker Installation
 
