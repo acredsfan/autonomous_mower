@@ -74,7 +74,7 @@ The autonomous mower is built around a modular architecture with the following c
    python3 -m venv venv --system-site-packages
    
    # Activate the virtual environment
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate
    
    # Upgrade pip within the virtual environment
    pip install --upgrade pip
