@@ -169,6 +169,93 @@ The mower can be controlled through a web interface available at `http://[mower-
 - **Map View**: GPS position tracking and path visualization
 - **Settings**: Configure mowing areas, schedules, and parameters
 
+### Remote Access Options
+
+The mower supports multiple methods for remote access, allowing you to monitor and control it from anywhere:
+
+#### 1. Port Forwarding (Basic)
+- Configure your router to forward port 8080 to your mower's IP address
+- Access via `http://[your-public-ip]:8080`
+- **Pros**: Free, direct access
+- **Cons**: Requires router configuration, dynamic IP changes need updating
+
+#### 2. Dynamic DNS (Recommended)
+- Use a free DDNS service (e.g., DuckDNS, No-IP)
+- Automatically updates when your IP changes
+- Access via `http://[your-domain].duckdns.org:8080`
+- **Pros**: Free, automatic IP updates, reliable
+- **Cons**: Still requires port forwarding
+
+#### 3. Cloudflare Tunnel (Secure)
+- Uses Cloudflare's free tier
+- No port forwarding required
+- Access via `https://[your-domain].cloudflare.com`
+- **Pros**: Free, secure, no port forwarding needed
+- **Cons**: Slightly more complex setup
+
+#### 4. Custom Domain with SSL (Professional)
+- Use your own domain (e.g., mower.yourdomain.com)
+- Configure with Let's Encrypt SSL
+- Access via `https://mower.yourdomain.com`
+- **Pros**: Professional, secure, customizable
+- **Cons**: Requires domain registration (if not already owned)
+
+#### 5. NGROK (Development/Testing)
+- Quick setup for testing
+- Access via `https://[ngrok-url]`
+- **Pros**: Easy setup, good for testing
+- **Cons**: Free tier has limitations, not recommended for production
+
+#### Configuration
+
+1. **Choose your preferred method** and update the `.env` file:
+   ```bash
+   # Remote Access Configuration
+   REMOTE_ACCESS_TYPE=ddns  # Options: port_forward, ddns, cloudflare, custom_domain, ngrok
+   
+   # For DDNS
+   DDNS_PROVIDER=duckdns  # Options: duckdns, noip
+   DDNS_DOMAIN=your-domain.duckdns.org
+   DDNS_TOKEN=your-token
+   
+   # For Custom Domain
+   CUSTOM_DOMAIN=mower.yourdomain.com
+   SSL_EMAIL=your-email@example.com
+   
+   # For Cloudflare
+   CLOUDFLARE_TOKEN=your-token
+   CLOUDFLARE_ZONE_ID=your-zone-id
+   
+   # For NGROK
+   USE_NGROK=False
+   NGROK_AUTH_TOKEN=your-token
+   ```
+
+2. **Install required packages**:
+   ```bash
+   # For DDNS
+   pip install -e ".[ddns]"
+   
+   # For Cloudflare
+   pip install -e ".[cloudflare]"
+   
+   # For Custom Domain
+   pip install -e ".[ssl]"
+   ```
+
+3. **Run the remote access setup script**:
+   ```bash
+   python -m mower.utilities.setup_remote_access
+   ```
+
+#### Security Considerations
+
+- Always use HTTPS when accessing from outside your network
+- Enable authentication for remote access
+- Keep your SSL certificates and tokens secure
+- Regularly update your domain and SSL certificates
+- Monitor access logs for suspicious activity
+
 ### Operation Modes
 
 The mower supports several operational modes:
