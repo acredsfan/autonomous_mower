@@ -43,7 +43,7 @@ models/*.tflite
 models/*.pth
 models/*.h5
 models/*.onnx
-!models/imagenet_labels.txt
+
 
 # Project specific
 config/user_polygon.json
