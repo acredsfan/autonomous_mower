@@ -59,6 +59,31 @@ for cmd in python3 pip3 git wget; do
     fi
 done
 
+# Install system dependencies
+print_info "Installing system dependencies..."
+sudo apt-get update
+sudo apt-get install -y \
+    gdal-bin \
+    libgdal-dev \
+    python3-gdal \
+    libatlas-base-dev \
+    libhdf5-dev \
+    libhdf5-serial-dev \
+    python3-dev \
+    python3-pip \
+    i2c-tools \
+    gpsd \
+    gpsd-clients \
+    python3-gps \
+    python3-libgpiod \
+    libportaudio2 \
+    libportaudiocpp0 \
+    portaudio19-dev \
+    python3-picamera2 \
+    wget \
+    gnupg \
+    curl
+
 # Create and activate virtual environment
 print_info "Setting up virtual environment..."
 if [ -d "venv" ]; then
@@ -79,7 +104,7 @@ pip install "numpy<2.0.0"
 
 # Install the project with all dependencies
 print_info "Installing project dependencies..."
-if ! pip install -e .; then
+if ! pip install --use-pep517 -e .; then
     print_error "Failed to install project with dependencies"
     print_info "Attempting to install dependencies one by one..."
     
@@ -96,7 +121,7 @@ if ! pip install -e .; then
     pip install "python-dotenv>=0.19.0,<1.0.0"
     pip install "rtree>=1.0.0"
     pip install "shapely>=1.7.1,<2.0.0"
-    pip install "tensorflow>=2.5.0,<2.6.0"
+    pip install "tensorflow>=2.12.0,<2.13.0"
 fi
 
 # Ask if user wants to install Coral TPU support
@@ -104,7 +129,12 @@ read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support..."
-    pip install -e ".[coral]"
+    
+    # Install GDAL Python package first
+    pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    
+    # Now install Coral dependencies
+    pip install --use-pep517 -e ".[coral]"
     
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
