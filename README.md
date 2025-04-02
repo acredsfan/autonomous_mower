@@ -32,8 +32,8 @@ The autonomous mower is built around a modular architecture with the following c
 
 ### Hardware Components
 - **Central Processing Unit**: Raspberry Pi 4 (4GB+ recommended)
-- **Motor Control**: RoboHAT motor driver
-- **Navigation**: GPS module for position tracking
+- **Motor Control**: RoboHAT MM1 motor driver
+- **Navigation**: UBLOX ZED-F9P GPS module for position tracking
 - **Orientation**: BNO085 IMU for heading and attitude
 - **Obstacle Detection**: 
   - VL53L0X Time-of-Flight distance sensors
@@ -55,7 +55,7 @@ The autonomous mower is built around a modular architecture with the following c
 ## Installation
 
 ### Prerequisites
-- Raspberry Pi 4 (or compatible single-board computer)
+- Raspberry Pi 4 (4GB+ recommended)
 - Python 3.9+ with pip
 - Required hardware components (see Hardware Components)
 - Internet connection for package installation
@@ -137,6 +137,8 @@ chmod +x install_requirements.sh
 
 This script will:
 - Install system dependencies
+- Enable I2C and UART interfaces
+- Add user to required groups (gpio, i2c, dialout, video)
 - Ask if you want to install Coral TPU support
 - Set up a virtual environment
 - Install Python packages
@@ -192,6 +194,7 @@ The mower supports several operational modes:
 - **Verify connections**: Confirm all hardware is properly connected
 - **Check logs**: Examine `logs/mower.log` for error messages
 - **GPIO conflicts**: Ensure no conflicts in GPIO pin assignments
+- **I2C/UART issues**: Verify interfaces are enabled in `/boot/config.txt`
 
 #### Navigation Problems
 - **Poor GPS signal**: Place the mower in an open area with clear sky view
@@ -199,7 +202,7 @@ The mower supports several operational modes:
 - **Compass interference**: Keep the mower away from large metal objects
 
 #### Motor Issues
-- **Motors not moving**: Check motor driver connections and power
+- **Motors not moving**: Check RoboHAT MM1 connections and power
 - **Erratic movement**: Verify motor controller configuration
 - **Wheel slippage**: Adjust speed parameters for terrain conditions
 
@@ -276,10 +279,10 @@ The autonomous mower is a powerful machine with moving parts. Always:
 - Install physical safety features (bump sensors, blade guards)
 - Use the emergency stop function when necessary
 
-
 ## Acknowledgments
 
-- Thanks to all contributors who have helped develop this project, especially @TCIII.
+- Special thanks to @TCIII for providing testing and access to the RoboHAT MM1 motor driver, which has been instrumental in the development of this project
+- Thanks to all contributors who have helped develop this project
 - Special thanks to the open-source communities whose libraries made this possible
 - Inspired by various autonomous robotics projects and commercial mowing solutions
 
