@@ -1,180 +1,154 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
-set -e
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print error messages
+print_error() {
+    echo -e "${RED}ERROR: $1${NC}"
+}
+
+# Function to print success messages
+print_success() {
+    echo -e "${GREEN}SUCCESS: $1${NC}"
+}
+
+# Function to print info messages
+print_info() {
+    echo -e "${YELLOW}INFO: $1${NC}"
+}
 
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to print error messages
-print_error() {
-    echo -e "\033[1;31mError: $1\033[0m"
+# Function to download a model file with retries
+download_model() {
+    local url=$1
+    local output=$2
+    local max_retries=3
+    local retry_count=0
+    
+    while [ $retry_count -lt $max_retries ]; do
+        if wget -q "$url" -O "$output"; then
+            print_success "Downloaded $output"
+            return 0
+        fi
+        retry_count=$((retry_count + 1))
+        print_error "Failed to download $output (attempt $retry_count/$max_retries)"
+        sleep 2
+    done
+    return 1
 }
 
-# Function to print success messages
-print_success() {
-    echo -e "\033[1;32mSuccess: $1\033[0m"
-}
-
-# Function to print info messages
-print_info() {
-    echo -e "\033[1;34mInfo: $1\033[0m"
-}
-
-# Step 1: Install system dependencies via apt-get
-print_info "Installing system dependencies..."
-sudo apt-get update
-sudo apt-get install -y \
-    python3-dev \
-    python3-pip \
-    python3-venv \
-    python3-setuptools \
-    python3-wheel \
-    python3-gpiozero \
-    python3-libgpiod \
-    python3-picamera2 \
-    python3-opencv \
-    python3-serial \
-    python3-smbus \
-    python3-rpi.gpio \
-    i2c-tools \
-    gpsd \
-    gpsd-clients \
-    python3-gps \
-    gpiod \
-    libgpiod-dev \
-    libportaudio2 \
-    libportaudiocpp0 \
-    portaudio19-dev \
-    curl \
-    gnupg
-
-print_success "System dependencies installed successfully."
-
-# Step 2: Enable I2C and Serial interfaces if not already enabled
-print_info "Enabling I2C and Serial interfaces..."
-if ! grep -q "^dtparam=i2c_arm=on" /boot/config.txt; then
-    echo "dtparam=i2c_arm=on" | sudo tee -a /boot/config.txt
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then 
+    print_error "Please do not run this script as root"
+    exit 1
 fi
 
-if ! grep -q "^enable_uart=1" /boot/config.txt; then
-    echo "enable_uart=1" | sudo tee -a /boot/config.txt
-fi
+# Check for required commands
+for cmd in python3 pip3 git wget; do
+    if ! command_exists "$cmd"; then
+        print_error "$cmd is required but not installed"
+        exit 1
+    fi
+done
 
-# Step 3: Check if user wants to install Coral dependencies
-read -p "Do you want to install Google Coral Edge TPU support? (y/n) " install_coral
-if [[ $install_coral == "y" || $install_coral == "Y" ]]; then
-    print_info "Installing Coral dependencies..."
-    echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-    sudo apt-get update
-    sudo apt-get install -y libedgetpu1-std
-    
-    print_success "Coral dependencies installed."
-    
-    # Create models directory and download sample models
-    mkdir -p models
-    wget -q https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite -O models/detect.tflite
-    wget -q https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite -O models/detect_edgetpu.tflite
-    wget -q https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt -O models/labelmap.txt
-    
-    print_success "Downloaded sample models to the 'models' directory."
-    
-    # Flag to install Coral extras
-    coral_flag=true
-fi
-
-# Step 4: Remove existing virtual environment if it exists
+# Create and activate virtual environment
+print_info "Setting up virtual environment..."
 if [ -d "venv" ]; then
     print_info "Removing existing virtual environment..."
     rm -rf venv
 fi
 
-# Step 5: Create a new virtual environment
-print_info "Creating new virtual environment..."
-python3 -m venv venv --system-site-packages
-
-# Step 6: Activate the virtual environment
+python3 -m venv venv
 source venv/bin/activate
 
-print_success "Virtual environment activated."
-
-# Step 7: Upgrade pip and install wheel
+# Upgrade pip and install wheel
 print_info "Upgrading pip and installing wheel..."
-pip install --upgrade pip
-pip install --upgrade wheel setuptools
+pip install --upgrade pip wheel setuptools
 
-# Step 8: Install numpy first to avoid conflicts
+# Install numpy first to avoid conflicts
 print_info "Installing numpy..."
 pip install "numpy<2.0.0"
 
-# Step 9: Install Python packages using setup.py with error handling
-print_info "Installing Python packages..."
+# Install the project with all dependencies
+print_info "Installing project dependencies..."
 if ! pip install -e .; then
-    print_error "Failed to install main package. Attempting to fix dependencies..."
+    print_error "Failed to install project with dependencies"
+    print_info "Attempting to install dependencies one by one..."
     
-    # Try installing with --no-deps first
-    pip install --no-deps -e .
-    
-    # Then install dependencies one by one
-    pip install flask-socketio>=5.1.0
-    pip install flask>=2.0.0
-    pip install geopy>=2.1.0
-    pip install imutils
-    pip install networkx
-    pip install opencv-python-headless>=4.5.1
-    pip install pathfinding
-    pip install pillow>=8.2.0
-    pip install pyserial>=3.5
-    pip install python-dotenv>=0.19.0
-    pip install rtree
-    pip install shapely>=1.7.1
-    
-    # Install TensorFlow last to avoid conflicts
-    pip install tensorflow>=2.5.0
+    # Install core dependencies
+    pip install "flask>=2.0.0,<3.0.0"
+    pip install "flask-socketio>=5.1.0,<6.0.0"
+    pip install "geopy>=2.1.0,<3.0.0"
+    pip install "imutils>=0.5.4"
+    pip install "networkx>=2.6.0"
+    pip install "opencv-python-headless>=4.5.1,<5.0.0"
+    pip install "pathfinding>=1.0.0"
+    pip install "pillow>=8.2.0,<9.0.0"
+    pip install "pyserial>=3.5,<4.0.0"
+    pip install "python-dotenv>=0.19.0,<1.0.0"
+    pip install "rtree>=1.0.0"
+    pip install "shapely>=1.7.1,<2.0.0"
+    pip install "tensorflow>=2.5.0,<2.6.0"
 fi
 
-# Install Coral extras if requested
-if [[ $coral_flag == true ]]; then
-    print_info "Installing Coral Python libraries..."
+# Ask if user wants to install Coral TPU support
+read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Installing Coral TPU support..."
     pip install -e ".[coral]"
-fi
-
-print_success "Python packages installed successfully."
-
-# Step 10: Set up environment variables
-if [ ! -f .env ]; then
-    print_info "Creating .env file from example..."
-    cp .env.example .env
     
-    # Update model paths in .env if Coral support was installed
-    if [[ $coral_flag == true ]]; then
-        # Get absolute path
-        models_path=$(realpath ./models)
-        
-        # Update .env with the correct paths
-        sed -i "s|ML_MODEL_PATH=.*|ML_MODEL_PATH=$models_path|g" .env
-        sed -i "s|DETECTION_MODEL=.*|DETECTION_MODEL=detect.tflite|g" .env
-        sed -i "s|TPU_DETECTION_MODEL=.*|TPU_DETECTION_MODEL=detect_edgetpu.tflite|g" .env
-        sed -i "s|LABEL_MAP_PATH=.*|LABEL_MAP_PATH=$models_path/labelmap.txt|g" .env
-        
-        print_success "Updated model paths in .env file."
+    # Create models directory with proper permissions
+    print_info "Setting up models directory..."
+    sudo mkdir -p models
+    sudo chown $USER:$USER models
+    
+    # Download model files
+    print_info "Downloading model files..."
+    if ! download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite" "models/detect.tflite"; then
+        print_error "Failed to download detect.tflite"
+    fi
+    
+    if ! download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite" "models/detect_edgetpu.tflite"; then
+        print_error "Failed to download detect_edgetpu.tflite"
+    fi
+    
+    if ! download_model "https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt" "models/labelmap.txt"; then
+        print_error "Failed to download labelmap.txt"
+    fi
+    
+    # Verify model files
+    if [ -f "models/detect.tflite" ] && [ -f "models/detect_edgetpu.tflite" ] && [ -f "models/labelmap.txt" ]; then
+        print_success "All model files downloaded successfully"
+    else
+        print_error "Some model files are missing"
     fi
 fi
 
-# Step 11: Create necessary directories
-mkdir -p logs
-mkdir -p config
-
-# Step 12: Add user to required groups
+# Add user to required groups
 print_info "Adding user to required groups..."
 sudo usermod -a -G gpio,i2c,dialout,video $USER
 
-# Step 13: Deactivate the virtual environment
-deactivate
+# Enable I2C and Serial interfaces
+print_info "Enabling I2C and Serial interfaces..."
+sudo raspi-config nonint do_i2c 0
+sudo raspi-config nonint do_serial 0
 
-print_success "Setup complete."
-print_info "Please reboot your Raspberry Pi for all changes to take effect."
-print_info "After reboot, activate the virtual environment with 'source venv/bin/activate' and run 'python -m mower.main_controller'"
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    print_info "Creating .env file..."
+    cp .env.example .env
+    print_info "Please edit .env with your specific settings"
+fi
+
+print_success "Installation complete!"
+print_info "Please log out and log back in for group changes to take effect"
+print_info "Then run: source venv/bin/activate && python -m mower.main_controller"

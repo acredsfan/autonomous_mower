@@ -1,430 +1,214 @@
-# Autonomous Mower Project
+# Autonomous Lawn Mower
 
-A sophisticated autonomous robotic mower system designed for precise lawn care with advanced navigation, obstacle avoidance, and remote management capabilities.
-
-## Overview
-
-This project implements a complete control system for an autonomous lawn mower robot, featuring:
-
-- GPS-based navigation and path planning
-- Computer vision for obstacle detection
-- Inertial measurement for orientation tracking
-- Web-based remote control interface
-- Comprehensive sensor integration
-- Safety monitoring and emergency handling
-- Autonomous operation with scheduled mowing
+A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path planning, and remote control capabilities.
 
 ## Features
 
-- Autonomous navigation using GPS and IMU
-- Path planning based on defined boundaries
-- Obstacle detection and avoidance using ultrasonic sensors
-- Visual obstacle detection via camera
-- **NEW: Hardware-accelerated machine learning with Google Coral TPU**
-- Web-based control interface
-- Real-time status monitoring
-- Diagnostic and calibration tools
-- Scheduling capabilities
+- Real-time obstacle detection using computer vision
+- GPS-based navigation and boundary mapping
+- Remote control via web interface
+- Weather-aware scheduling
+- Safety features and emergency stop
+- Support for Google Coral Edge TPU acceleration
+- Remote monitoring and control
+- Multiple remote access options (DDNS, Cloudflare, NGROK)
 
-## System Architecture
+## Prerequisites
 
-The autonomous mower is built around a modular architecture with the following core components:
-
-### Hardware Components
-- **Central Processing Unit**: Raspberry Pi 4 (4GB+ recommended)
-- **Motor Control**: RoboHAT MM1 motor driver
-- **Navigation**: UBLOX ZED-F9P GPS module for position tracking
-- **Orientation**: BNO085 IMU for heading and attitude
-- **Obstacle Detection**: 
-  - VL53L0X Time-of-Flight distance sensors
-  - Camera module for computer vision
-- **Environmental Sensing**:
-  - BME280 temperature/humidity/pressure sensor
-  - INA3221 power monitoring
-- **Connectivity**: WiFi/Ethernet for remote monitoring
-
-### Software Architecture
-- **Main Controller**: Central coordination system (`main_controller.py`)
-- **Resource Manager**: Dependency injection for hardware access
-- **Path Planning**: Efficient mowing path generation
-- **Navigation**: Position tracking and movement control
-- **Obstacle Avoidance**: Real-time detection and navigation
-- **Web Interface**: Browser-based monitoring and control
-- **Safety Systems**: Multi-layered monitoring and fail-safes
+- Raspberry Pi 4 (recommended) or newer
+- Python 3.9 or higher
+- Required hardware:
+  - Camera module
+  - GPS module (UBLOX ZED-F9P recommended)
+  - IMU sensor (BNO085 recommended)
+  - Motor controllers
+  - Optional: Google Coral USB Accelerator
 
 ## Installation
 
-### Prerequisites
-- Raspberry Pi 4 (4GB+ recommended)
-- Python 3.9+ with pip
-- Required hardware components (see Hardware Components)
-- Internet connection for package installation
+### Quick Start (Recommended)
 
-### Setup Instructions
-
-1. **Clone the repository**:
+1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/autonomous_mower.git
    cd autonomous_mower
    ```
 
-2. **Install dependencies**:
-   There are two ways to install the project:
-
-   #### Option 1: Using the Installation Script (Recommended)
+2. Run the installation script:
    ```bash
-   # Make the installation script executable
    chmod +x install_requirements.sh
-
-   # Run the installation script
    ./install_requirements.sh
    ```
-   
-   This script will:
-   - Install all system dependencies
-   - Enable I2C and UART interfaces
-   - Add user to required groups (gpio, i2c, dialout, video)
-   - Ask if you want to install Coral TPU support
-   - Create a clean virtual environment
-   - Install Python packages with proper dependency handling
-   - Configure environment variables
-   - Handle common installation issues
 
-   #### Option 2: Manual Installation
-   If you prefer to install manually:
+3. Configure your environment:
    ```bash
-   # Create a virtual environment
-   python3 -m venv venv --system-site-packages
-   
-   # Activate the virtual environment
+   cp .env.example .env
+   # Edit .env with your specific settings
+   ```
+
+4. Start the mower:
+   ```bash
    source venv/bin/activate
-   
-   # Upgrade pip and install wheel
+   python -m mower.main_controller
+   ```
+
+### Manual Installation
+
+If you prefer to install manually or encounter issues with the script:
+
+1. Create and activate a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+2. Install dependencies:
+   ```bash
    pip install --upgrade pip wheel setuptools
-   
-   # Install numpy first to avoid conflicts
-   pip install "numpy<2.0.0"
-   
-   # Install the project and its dependencies
+   pip install "numpy<2.0.0"  # Install numpy first to avoid conflicts
    pip install -e .
-   
-   # For Coral TPU support (optional)
+   ```
+
+3. Install optional features:
+   ```bash
+   # For Coral TPU support
    pip install -e ".[coral]"
-   ```
-
-3. **Hardware setup**:
-   - Connect all hardware components according to the [Coming Soon] 
-   - Ensure correct power supply for motors and electronics
-   - Mount sensors in appropriate positions on the mower chassis
-
-4. **Configuration**:
-   - Copy the example configuration:
-     ```bash
-     cp .env.example .env
-     ```
-   - Edit `.env` with your specific settings (GPS port, motor pins, etc.)
-   - Set up your mowing area using the web interface
-
-5. **Run the system**:
-   ```bash
-   # Make sure the virtual environment is activated
-   source venv/bin/activate  # If not already activated
    
-   # Run the main controller
-   python -m mower.main_controller
-   ```
-
-6. **For easy startup, create a shell script**:
-   ```bash
-   echo '#!/bin/bash
-   cd "$(dirname "$0")"
-   source venv/bin/activate
-   python -m mower.main_controller
-   ' > start_mower.sh
-   
-   chmod +x start_mower.sh
-   ```
-   Now you can start the mower with `./start_mower.sh`
-
-### Troubleshooting Installation
-
-If you encounter dependency conflicts during installation:
-
-1. **Clean Installation**:
-   ```bash
-   # Remove existing virtual environment
-   rm -rf venv
-   
-   # Run the installation script again
-   ./install_requirements.sh
-   ```
-
-2. **Manual Dependency Resolution**:
-   If you still encounter issues, try installing dependencies manually:
-   ```bash
-   source venv/bin/activate
-   pip install --upgrade pip wheel setuptools
-   pip install "numpy<2.0.0"
-   pip install flask-socketio>=5.1.0
-   pip install flask>=2.0.0
-   pip install geopy>=2.1.0
-   pip install imutils
-   pip install networkx
-   pip install opencv-python-headless>=4.5.1
-   pip install pathfinding
-   pip install pillow>=8.2.0
-   pip install pyserial>=3.5
-   pip install python-dotenv>=0.19.0
-   pip install rtree
-   pip install shapely>=1.7.1
-   pip install tensorflow>=2.5.0
-   ```
-
-3. **Common Issues**:
-   - If you see numpy version conflicts, ensure you're using numpy<2.0.0
-   - If TensorFlow installation fails, try installing it last
-   - If you see permission errors, ensure you're in the required groups (gpio, i2c, dialout, video)
-
-### Docker Installation
-
-For containerized deployment:
-
-1. **Build the Docker image**:
-   ```bash
-   docker build -t autonomous_mower .
-   ```
-
-2. **Run with hardware access**:
-   ```bash
-   docker run --privileged -p 8080:8080 -v /dev:/dev autonomous_mower
-   ```
-
-## Usage Guide
-
-### Web Interface
-
-The mower can be controlled through a web interface available at `http://[mower-ip]:8080`:
-
-- **Dashboard**: View system status, battery level, and sensor readings
-- **Control Panel**: Manual control and operation mode selection
-- **Map View**: GPS position tracking and path visualization
-- **Settings**: Configure mowing areas, schedules, and parameters
-
-### Remote Access Options
-
-The mower supports multiple methods for remote access, allowing you to monitor and control it from anywhere:
-
-#### 1. Port Forwarding (Basic)
-- Configure your router to forward port 8080 to your mower's IP address
-- Access via `http://[your-public-ip]:8080`
-- **Pros**: Free, direct access
-- **Cons**: Requires router configuration, dynamic IP changes need updating
-
-#### 2. Dynamic DNS (Recommended)
-- Use a free DDNS service (e.g., DuckDNS, No-IP)
-- Automatically updates when your IP changes
-- Access via `http://[your-domain].duckdns.org:8080`
-- **Pros**: Free, automatic IP updates, reliable
-- **Cons**: Still requires port forwarding
-
-#### 3. Cloudflare Tunnel (Secure)
-- Uses Cloudflare's free tier
-- No port forwarding required
-- Access via `https://[your-domain].cloudflare.com`
-- **Pros**: Free, secure, no port forwarding needed
-- **Cons**: Slightly more complex setup
-
-#### 4. Custom Domain with SSL (Professional)
-- Use your own domain (e.g., mower.yourdomain.com)
-- Configure with Let's Encrypt SSL
-- Access via `https://mower.yourdomain.com`
-- **Pros**: Professional, secure, customizable
-- **Cons**: Requires domain registration (if not already owned)
-
-#### 5. NGROK (Development/Testing)
-- Quick setup for testing
-- Access via `https://[ngrok-url]`
-- **Pros**: Easy setup, good for testing
-- **Cons**: Free tier has limitations, not recommended for production
-
-#### Configuration
-
-1. **Choose your preferred method** and update the `.env` file:
-   ```bash
-   # Remote Access Configuration
-   REMOTE_ACCESS_TYPE=ddns  # Options: port_forward, ddns, cloudflare, custom_domain, ngrok
-   
-   # For DDNS
-   DDNS_PROVIDER=duckdns  # Options: duckdns, noip
-   DDNS_DOMAIN=your-domain.duckdns.org
-   DDNS_TOKEN=your-token
-   
-   # For Custom Domain
-   CUSTOM_DOMAIN=mower.yourdomain.com
-   SSL_EMAIL=your-email@example.com
-   
-   # For Cloudflare
-   CLOUDFLARE_TOKEN=your-token
-   CLOUDFLARE_ZONE_ID=your-zone-id
-   
-   # For NGROK
-   USE_NGROK=False
-   NGROK_AUTH_TOKEN=your-token
-   ```
-
-2. **Install required packages**:
-   ```bash
-   # For DDNS
+   # For DDNS support
    pip install -e ".[ddns]"
    
-   # For Cloudflare
+   # For Cloudflare support
    pip install -e ".[cloudflare]"
    
-   # For Custom Domain
+   # For SSL support
    pip install -e ".[ssl]"
    ```
 
-3. **Run the remote access setup script**:
+4. Set up hardware access:
    ```bash
-   python -m mower.utilities.setup_remote_access
+   sudo usermod -a -G gpio,i2c,dialout,video $USER
+   sudo raspi-config nonint do_i2c 0
+   sudo raspi-config nonint do_serial 0
    ```
 
-#### Security Considerations
+5. Configure your environment:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your specific settings
+   ```
 
-- Always use HTTPS when accessing from outside your network
-- Enable authentication for remote access
-- Keep your SSL certificates and tokens secure
-- Regularly update your domain and SSL certificates
-- Monitor access logs for suspicious activity
+## Configuration
 
-### Operation Modes
+The `.env` file contains all configuration settings. Key sections include:
 
-The mower supports several operational modes:
+- Google Maps integration
+- GPS and IMU settings
+- Camera and obstacle detection
+- Remote access configuration
+- Hardware settings
+- Path planning parameters
+- Maintenance settings
 
-1. **Manual Control**: Direct control via the web interface
-2. **Scheduled Operation**: Automatic mowing according to configured schedule
-3. **Single Mow**: Complete one mowing cycle and return to dock
-4. **Return to Home**: Navigate back to charging station
+See `.env.example` for detailed descriptions of each setting.
 
-### Customizing Mowing Areas
+## Usage
 
-1. Access the web interface and navigate to the Map view
-2. Use the drawing tools to define the mowing boundaries
-3. Mark exclusion zones for areas to avoid (flower beds, obstacles)
-4. Save the configuration, which will be used for autonomous operation
+### Starting the Mower
+
+```bash
+source venv/bin/activate
+python -m mower.main_controller
+```
+
+### Testing Hardware
+
+```bash
+mower-test  # Run hardware diagnostics
+mower-calibrate  # Calibrate IMU sensor
+```
+
+### Remote Access
+
+The mower supports multiple remote access methods:
+
+1. **DDNS** (recommended for home use)
+   - Configure your router for port forwarding
+   - Set up DDNS in `.env`
+   - Access via your DDNS domain
+
+2. **Cloudflare Tunnel** (recommended for production)
+   - Set up Cloudflare account
+   - Configure tunnel in `.env`
+   - Access via Cloudflare domain
+
+3. **NGROK** (good for testing)
+   - Set up NGROK account
+   - Configure in `.env`
+   - Access via NGROK URL
+
+## Development
+
+### Running Tests
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+### Code Style
+
+```bash
+black .
+flake8
+mypy .
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### System Won't Start
-- **Check power supply**: Ensure adequate power to all components
-- **Verify connections**: Confirm all hardware is properly connected
-- **Check logs**: Examine `logs/mower.log` for error messages
-- **GPIO conflicts**: Ensure no conflicts in GPIO pin assignments
-- **I2C/UART issues**: Verify interfaces are enabled in `/boot/config.txt`
-
-#### Navigation Problems
-- **Poor GPS signal**: Place the mower in an open area with clear sky view
-- **IMU calibration**: Run the calibration procedure in a flat area
-- **Compass interference**: Keep the mower away from large metal objects
-
-#### Motor Issues
-- **Motors not moving**: Check RoboHAT MM1 connections and power
-- **Erratic movement**: Verify motor controller configuration
-- **Wheel slippage**: Adjust speed parameters for terrain conditions
-
-#### Web Interface Issues
-- **Can't connect**: Verify network connection and port forwarding
-- **Blank page**: Check browser compatibility (use Chrome or Firefox)
-- **No data updates**: Verify WebSocket connection is not blocked
-
-### Diagnostic Tools
-
-The system includes several diagnostic tools:
-
-- **Hardware Test**: `python -m mower.diagnostics.hardware_test`
-- **Sensor Test**: `python -m mower.diagnostics.sensor_test`
-- **Motor Test**: `python -m mower.diagnostics.motor_test`
-- **GPS Test**: `python -m mower.diagnostics.gps_test`
-
-## Development and Contribution
-
-### Project Structure
-```
-autonomous_mower/
-├── src/
-│   └── mower/
-│       ├── hardware/        # Hardware interfaces
-│       ├── navigation/      # Path planning and navigation
-│       ├── obstacle_detection/ # Obstacle avoidance
-│       ├── ui/              # User interfaces
-│       │   └── web_ui/     # Web interface
-│       └── utilities/       # Helper functions
-├── config/                  # Configuration files
-├── logs/                    # Log output
-├── docs/                    # Documentation
-└── tests/                   # Unit and integration tests
-```
-
-### Development Environment Setup
-
-1. **Set up a virtual environment**:
+1. **Permission Issues**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   sudo chown -R $USER:$USER .
+   sudo chmod -R 755 .
    ```
 
-2. **Install in development mode**:
+2. **Hardware Access**
    ```bash
-   pip install -e ".[dev]"
+   # Check I2C
+   i2cdetect -y 1
+   
+   # Check Serial
+   ls -l /dev/tty*
    ```
 
-3. **Run tests**:
+3. **Dependency Conflicts**
    ```bash
-   pytest
+   pip uninstall numpy tensorflow
+   pip install "numpy<2.0.0"
+   pip install "tensorflow>=2.5.0,<2.6.0"
    ```
 
-### Contribution Guidelines
+### Logs
+
+Logs are stored in the `logs` directory:
+- `mower.log`: Main application log
+- `mower.log.1`, `mower.log.2`, etc.: Rotated log files
+
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests to ensure functionality
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-Please follow the [coding standards](docs/coding_standards.md) and include appropriate tests.
+## License
 
-## Safety Considerations
-
-The autonomous mower is a powerful machine with moving parts. Always:
-
-- Test in a controlled environment before deployment
-- Keep children and pets away during operation
-- Monitor initial operation to ensure proper function
-- Install physical safety features (bump sensors, blade guards)
-- Use the emergency stop function when necessary
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 
-- Special thanks to @TCIII for providing testing and access to the RoboHAT MM1 motor driver, which has been instrumental in the development of this project
-- Thanks to all contributors who have helped develop this project
-- Special thanks to the open-source communities whose libraries made this possible
-- Inspired by various autonomous robotics projects and commercial mowing solutions
-
-## Contact
-
-For questions, support, or contributions, please open an issue on the GitHub repository or contact the maintainers directly.
-
-## Hardware Acceleration
-
-The mower now supports the Google Coral USB Accelerator for enhanced obstacle detection performance:
-
-- **10x faster inference** for real-time obstacle detection
-- Lower CPU usage and power consumption
-- Improved safety with faster detection of people, animals, and obstacles
-- Automatic fallback to CPU if Coral device is not available
-
-See the [Coral TPU Setup Guide](docs/coral_setup.md) for installation and configuration instructions.
+- Google Coral team for Edge TPU support
+- Raspberry Pi Foundation for hardware platform
+- OpenCV community for computer vision tools
