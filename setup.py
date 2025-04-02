@@ -26,7 +26,7 @@ setup(
     ],
     extras_require={
         "coral": [
-            "pycoral>=2.0.0",
+            "pycoral>=0.2.0,<0.3.0",
             "tflite-runtime>=2.5.0",
         ],
         "ddns": [
