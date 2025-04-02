@@ -119,7 +119,8 @@ class GPIOManager:
             from gpiod.line import Direction, Edge
             from gpiod.line import Bias
             
-            chip = gpiod.chip('/dev/gpiochip0')
+            # The correct way to open a chip in gpiod v2 - note it's a function not a class
+            chip = gpiod.Chip.open('/dev/gpiochip0')
             GPIOManager._chip = chip
             
             # Set up shutdown lines (outputs)
@@ -131,7 +132,8 @@ class GPIOManager:
                         'direction': Direction.OUTPUT,
                         'output_value': 0
                     }
-                    line = chip.request_lines({pin: config})
+                    line = chip.get_line(pin)
+                    line.request(config)
                     shutdown_lines.append(line)
                 except Exception as e:
                     logging.error(f"Error requesting line {pin}: {e}")
@@ -145,7 +147,8 @@ class GPIOManager:
                         'edge': Edge.FALLING,
                         'bias': Bias.PULL_UP,
                     }
-                    line = chip.request_lines({pin: config})
+                    line = chip.get_line(pin)
+                    line.request(config)
                     interrupt_lines.append(line)
                 except Exception as e:
                     logging.error(f"Error requesting line {pin}: {e}")

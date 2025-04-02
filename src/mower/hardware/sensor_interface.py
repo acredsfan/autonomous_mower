@@ -389,3 +389,74 @@ if __name__ == "__main__":
     while True:
         print(sensor_interface.sensor_data)
         time.sleep(1)
+
+
+class SensorInterface:
+    """
+    Legacy wrapper around EnhancedSensorInterface for backward compatibility.
+    
+    This class provides the same interface as the original SensorInterface
+    while delegating to the newer EnhancedSensorInterface implementation.
+    """
+    
+    def __init__(self, resource_manager=None):
+        """
+        Initialize the sensor interface.
+        
+        Args:
+            resource_manager: Optional ResourceManager for dependency injection
+        """
+        self._enhanced = EnhancedSensorInterface()
+        self._resource_manager = resource_manager
+        
+    def start(self):
+        """Start the sensor interface."""
+        # Delegate to the enhanced implementation
+        return self._enhanced.start()
+        
+    def stop(self):
+        """Stop the sensor interface."""
+        return self._enhanced.shutdown()
+        
+    def shutdown(self):
+        """Shutdown the sensor interface."""
+        return self._enhanced.shutdown()
+        
+    def get_sensor_data(self):
+        """Get the current sensor readings."""
+        return self._enhanced.get_sensor_data()
+        
+    def get_sensor_status(self):
+        """Get the status of all sensors."""
+        return self._enhanced.get_sensor_status()
+        
+    def is_safe_to_operate(self):
+        """Check if it's safe to operate based on sensor readings."""
+        return self._enhanced.is_safe_to_operate()
+        
+    # Additional compatibility methods to match the old interface
+    
+    def get_distance_left(self):
+        """Get the left distance sensor reading."""
+        data = self._enhanced.get_sensor_data()
+        return data.get('left_distance', float('inf'))
+        
+    def get_distance_right(self):
+        """Get the right distance sensor reading."""
+        data = self._enhanced.get_sensor_data()
+        return data.get('right_distance', float('inf'))
+        
+    def get_heading(self):
+        """Get the current heading from IMU."""
+        data = self._enhanced.get_sensor_data()
+        return data.get('heading', 0.0)
+        
+    def get_temperature(self):
+        """Get the current temperature."""
+        data = self._enhanced.get_sensor_data()
+        return data.get('temperature', 0.0)
+        
+    def get_battery_level(self):
+        """Get the current battery level."""
+        data = self._enhanced.get_sensor_data()
+        return data.get('battery_level', 0.0)
