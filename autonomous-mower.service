@@ -1,0 +1,20 @@
+[Unit]
+Description=Autonomous Lawn Mower Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_mower
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/pi/autonomous_mower/venv/bin/python -m mower.main_controller
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/autonomous-mower.log
+StandardError=append:/var/log/autonomous-mower.error.log
+
+[Install]
+WantedBy=multi-user.target 

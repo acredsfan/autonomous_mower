@@ -12,6 +12,7 @@ A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path plann
 - Support for Google Coral Edge TPU acceleration
 - Remote monitoring and control
 - Multiple remote access options (DDNS, Cloudflare, NGROK)
+- Automatic startup on boot via systemd service
 
 ## Prerequisites
 
@@ -46,10 +47,18 @@ A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path plann
    # Edit .env with your specific settings
    ```
 
-4. Start the mower:
+4. The mower service will start automatically on boot. You can manage it with:
    ```bash
-   source venv/bin/activate
-   python -m mower.main_controller
+   # Check service status
+   sudo systemctl status autonomous-mower
+   
+   # View logs
+   journalctl -u autonomous-mower
+   
+   # Manually start/stop/restart
+   sudo systemctl start autonomous-mower
+   sudo systemctl stop autonomous-mower
+   sudo systemctl restart autonomous-mower
    ```
 
 ### Manual Installation
@@ -97,6 +106,23 @@ If you prefer to install manually or encounter issues with the script:
    # Edit .env with your specific settings
    ```
 
+6. Set up systemd service:
+   ```bash
+   # Copy service file
+   sudo cp autonomous-mower.service /etc/systemd/system/
+   
+   # Create log files
+   sudo touch /var/log/autonomous-mower.log
+   sudo touch /var/log/autonomous-mower.error.log
+   sudo chown $USER:$USER /var/log/autonomous-mower.log
+   sudo chown $USER:$USER /var/log/autonomous-mower.error.log
+   
+   # Enable and start service
+   sudo systemctl daemon-reload
+   sudo systemctl enable autonomous-mower.service
+   sudo systemctl start autonomous-mower.service
+   ```
+
 ## Configuration
 
 The `.env` file contains all configuration settings. Key sections include:
@@ -113,11 +139,21 @@ See `.env.example` for detailed descriptions of each setting.
 
 ## Usage
 
-### Starting the Mower
+### Service Management
+
+The mower runs as a system service and can be managed using systemd:
 
 ```bash
-source venv/bin/activate
-python -m mower.main_controller
+# Check service status
+sudo systemctl status autonomous-mower
+
+# View logs
+journalctl -u autonomous-mower
+
+# Start/stop/restart service
+sudo systemctl start autonomous-mower
+sudo systemctl stop autonomous-mower
+sudo systemctl restart autonomous-mower
 ```
 
 ### Testing Hardware
@@ -189,11 +225,25 @@ mypy .
    pip install "tensorflow>=2.5.0,<2.6.0"
    ```
 
+4. **Service Issues**
+   ```bash
+   # Check service logs
+   journalctl -u autonomous-mower -n 100
+   
+   # Check service status
+   sudo systemctl status autonomous-mower
+   
+   # Restart service
+   sudo systemctl restart autonomous-mower
+   ```
+
 ### Logs
 
-Logs are stored in the `logs` directory:
-- `mower.log`: Main application log
-- `mower.log.1`, `mower.log.2`, etc.: Rotated log files
+Logs are stored in multiple locations:
+- System service logs: `journalctl -u autonomous-mower`
+- Application logs: `/var/log/autonomous-mower.log`
+- Error logs: `/var/log/autonomous-mower.error.log`
+- Rotated logs: `logs/mower.log`, `logs/mower.log.1`, etc.
 
 ## Contributing
 

@@ -149,6 +149,28 @@ if [ ! -f ".env" ]; then
     print_info "Please edit .env with your specific settings"
 fi
 
+# Set up systemd service
+print_info "Setting up systemd service..."
+# Get the absolute path of the project directory
+PROJECT_DIR=$(pwd)
+# Replace the placeholder in the service file
+sed -i "s|/home/pi/autonomous_mower|$PROJECT_DIR|g" autonomous-mower.service
+
+# Copy service file to systemd directory
+sudo cp autonomous-mower.service /etc/systemd/system/
+
+# Create log files with proper permissions
+sudo touch /var/log/autonomous-mower.log
+sudo touch /var/log/autonomous-mower.error.log
+sudo chown $USER:$USER /var/log/autonomous-mower.log
+sudo chown $USER:$USER /var/log/autonomous-mower.error.log
+
+# Reload systemd and enable the service
+sudo systemctl daemon-reload
+sudo systemctl enable autonomous-mower.service
+
 print_success "Installation complete!"
 print_info "Please log out and log back in for group changes to take effect"
-print_info "Then run: source venv/bin/activate && python -m mower.main_controller"
+print_info "The mower service will start automatically on boot"
+print_info "You can check the service status with: sudo systemctl status autonomous-mower"
+print_info "View logs with: journalctl -u autonomous-mower"
