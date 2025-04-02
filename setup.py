@@ -23,6 +23,9 @@ setup(
         "numpy<2.0.0",  # Constraint to avoid conflicts
         "colorama>=0.4.4",  # For colored terminal output
         "watchdog>=2.1.0",  # For file system monitoring
+        "pynmea2>=1.18.0",  # For GPS NMEA parsing
+        "gpsd-py3>=0.3.0",  # For GPS daemon integration
+        "libgpiod>=0.2.0",  # For GPIO access
     ],
     extras_require={
         "coral": [
