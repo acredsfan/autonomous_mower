@@ -19,10 +19,9 @@ Environment=DETECTION_MODEL=detect.tflite
 Environment=TPU_DETECTION_MODEL=detect_edgetpu.tflite
 Environment=LABEL_MAP_PATH=/home/pi/autonomous_mower/models/labelmap.txt
 Environment=MIN_CONF_THRESHOLD=0.5
-# Create log directory and set permissions as root
-ExecStartPre=/usr/bin/sudo /bin/mkdir -p /var/log/autonomous-mower
-ExecStartPre=/usr/bin/sudo /bin/chown -R pi:pi /var/log/autonomous-mower
-ExecStartPre=/usr/bin/sudo /bin/chmod 755 /var/log/autonomous-mower
+# Create log directory and set permissions using systemd's built-in capabilities
+RuntimeDirectory=autonomous-mower
+RuntimeDirectoryMode=0755
 ExecStart=/home/pi/autonomous_mower/venv/bin/python -m mower.main_controller
 Restart=always
 RestartSec=10
