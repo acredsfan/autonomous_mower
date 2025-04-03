@@ -22,11 +22,7 @@ Environment=MIN_CONF_THRESHOLD=0.5
 # Create log directory and set permissions using systemd's built-in capabilities
 RuntimeDirectory=autonomous-mower
 RuntimeDirectoryMode=0755
-# Create virtual environment and install dependencies
-ExecStartPre=/usr/bin/python3 -m venv /home/pi/autonomous_mower/venv
-ExecStartPre=/home/pi/autonomous_mower/venv/bin/python -m pip install --upgrade pip
-ExecStartPre=/home/pi/autonomous_mower/venv/bin/python -m pip install wheel
-ExecStartPre=/home/pi/autonomous_mower/venv/bin/python -m pip install -e .
+# Run the application using the virtual environment created by install_requirements.sh
 ExecStart=/home/pi/autonomous_mower/venv/bin/python -m mower.main_controller
 Restart=always
 RestartSec=10
