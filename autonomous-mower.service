@@ -25,8 +25,8 @@ Environment=LOG_LEVEL=INFO
 # Create log directory and set permissions using systemd's built-in capabilities
 RuntimeDirectory=autonomous-mower
 RuntimeDirectoryMode=0755
-# Run the application using the system Python with the correct module path
-ExecStart=/usr/bin/python3 -m mower.main_controller
+# Run the application using the Python interpreter from the virtual environment
+ExecStart=/home/pi/autonomous_mower/venv/bin/python3 -m mower.main_controller
 Restart=always
 RestartSec=10
 StandardOutput=journal

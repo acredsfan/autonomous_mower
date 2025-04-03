@@ -63,13 +63,18 @@ if ! command_exists pip3; then
     exit 1
 fi
 
-# Create and activate virtual environment
-print_info "Setting up virtual environment..."
-python3 -m venv venv
+# Create virtual environment if it doesn't exist
+if [ ! -d "venv" ]; then
+    print_info "Creating virtual environment..."
+    python3 -m venv venv
+fi
+
+# Activate virtual environment
+print_info "Activating virtual environment..."
 source venv/bin/activate
 
 # Upgrade pip and install wheel
-print_info "Upgrading pip and installing wheel..."
+print_info "Upgrading pip and installing wheel in venv..."
 pip install --upgrade pip
 pip install wheel
 
@@ -98,15 +103,15 @@ sudo apt-get install -y \
     libgdal-dev \
     python3-gdal
 
-# Install Python package in editable mode with all dependencies
-print_info "Installing Python package and dependencies..."
+# Install Python package in editable mode with all dependencies into venv
+print_info "Installing Python package and dependencies into venv..."
 pip install -e .
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Installing Coral TPU support..."
+    print_info "Installing Coral TPU support into venv..."
     
     # Install GDAL Python package first
     pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
@@ -161,7 +166,7 @@ print_info "Setting up systemd service..."
 # Get the absolute path of the project directory
 PROJECT_DIR=$(pwd)
 
-# Use the updated service file configuration
+# Use the updated service file configuration (using venv python)
 print_info "Using updated service file configuration..."
 sudo cp autonomous-mower.service /etc/systemd/system/
 
