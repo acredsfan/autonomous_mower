@@ -127,6 +127,14 @@ download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilen
 download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite" "models/detect_edgetpu.tflite"
 download_model "https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt" "models/labelmap.txt"
 
+# Verify model files
+if [ -f "models/detect.tflite" ] && [ -f "models/detect_edgetpu.tflite" ] && [ -f "models/labelmap.txt" ]; then
+    print_success "All model files downloaded successfully"
+else
+    print_error "Some model files are missing"
+    exit 1
+fi
+
 # Create necessary directories
 print_info "Creating necessary directories..."
 mkdir -p data
