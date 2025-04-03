@@ -9,6 +9,10 @@ Type=simple
 User=pi
 Group=pi
 WorkingDirectory=/home/pi/autonomous_mower
+# Ensure proper directory permissions
+ExecStartPre=/bin/chown -R pi:pi /home/pi/autonomous_mower
+ExecStartPre=/bin/chmod -R 755 /home/pi/autonomous_mower
+# Environment variables
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=DISPLAY=:0
