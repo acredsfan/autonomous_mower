@@ -102,6 +102,24 @@ sudo apt-get install -y \
 print_info "Installing Python package and dependencies..."
 pip install -e .
 
+# Ask if user wants to install Coral TPU support
+read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Installing Coral TPU support..."
+    
+    # Install GDAL Python package first
+    pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    
+    # Now install Coral dependencies
+    pip install -e ".[coral]"
+    
+    # Create models directory with proper permissions
+    print_info "Setting up models directory..."
+    sudo mkdir -p models
+    sudo chown $USER:$USER models
+fi
+
 # Download model files
 print_info "Downloading model files..."
 mkdir -p models
