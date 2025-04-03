@@ -9,19 +9,10 @@ Type=simple
 User=pi
 Group=pi
 WorkingDirectory=/home/pi/autonomous_mower
-# Environment variables
+# Basic Environment variables needed by systemd/python itself
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
-Environment=DISPLAY=:0
-Environment=XDG_RUNTIME_DIR=/run/user/1000
-Environment=PYTHONPATH=/home/pi/autonomous_mower/src
-Environment=ML_MODEL_PATH=/home/pi/autonomous_mower/models
-Environment=DETECTION_MODEL=detect.tflite
-Environment=TPU_DETECTION_MODEL=detect_edgetpu.tflite
-Environment=LABEL_MAP_PATH=/home/pi/autonomous_mower/models/labelmap.txt
-Environment=MIN_CONF_THRESHOLD=0.5
-Environment=USE_SIMULATION=True
-Environment=LOG_LEVEL=INFO
+# Application configuration should be loaded from .env by the Python code
 # Create log directory and set permissions using systemd's built-in capabilities
 RuntimeDirectory=autonomous-mower
 RuntimeDirectoryMode=0755

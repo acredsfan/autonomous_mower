@@ -69,14 +69,13 @@ if [ ! -d "venv" ]; then
     python3 -m venv venv
 fi
 
-# Activate virtual environment
-print_info "Activating virtual environment..."
-source venv/bin/activate
+# Define path to venv pip
+VENV_PIP="./venv/bin/pip"
 
-# Upgrade pip and install wheel
+# Upgrade pip and install wheel using venv pip
 print_info "Upgrading pip and installing wheel in venv..."
-pip install --upgrade pip
-pip install wheel
+$VENV_PIP install --upgrade pip
+$VENV_PIP install wheel
 
 # Install system dependencies
 print_info "Installing system dependencies..."
@@ -105,7 +104,7 @@ sudo apt-get install -y \
 
 # Install Python package in editable mode with all dependencies into venv
 print_info "Installing Python package and dependencies into venv..."
-pip install -e .
+$VENV_PIP install -e .
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
@@ -113,11 +112,11 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support into venv..."
     
-    # Install GDAL Python package first
-    pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    # Install GDAL Python package first using venv pip
+    $VENV_PIP install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
     
-    # Now install Coral dependencies
-    pip install -e ".[coral]"
+    # Now install Coral dependencies using venv pip
+    $VENV_PIP install -e ".[coral]"
     
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
