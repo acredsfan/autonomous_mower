@@ -160,21 +160,26 @@ sudo raspi-config nonint do_serial 0
 print_info "Setting up systemd service..."
 # Get the absolute path of the project directory
 PROJECT_DIR=$(pwd)
-# Replace the placeholder in the service file
-sed -i "s|/home/pi/autonomous_mower|$PROJECT_DIR|g" autonomous-mower.service
 
-# Copy service file to systemd directory
+# Use the updated service file configuration
+print_info "Using updated service file configuration..."
 sudo cp autonomous-mower.service /etc/systemd/system/
 
-# Create log files with proper permissions
-sudo touch /var/log/autonomous-mower.log
-sudo touch /var/log/autonomous-mower.error.log
-sudo chown $USER:$USER /var/log/autonomous-mower.log
-sudo chown $USER:$USER /var/log/autonomous-mower.error.log
+# Ensure project directory has correct permissions
+print_info "Ensuring correct project directory permissions..."
+sudo chown -R $USER:$USER "$PROJECT_DIR"
+sudo chmod -R 755 "$PROJECT_DIR"
 
 # Reload systemd and enable the service
+print_info "Reloading systemd and enabling service..."
 sudo systemctl daemon-reload
 sudo systemctl enable autonomous-mower.service
+
+# Start the service and check status
+print_info "Starting service and checking status..."
+sudo systemctl start autonomous-mower.service
+sleep 5 # Give service a few seconds to start
+sudo systemctl status autonomous-mower.service
 
 print_success "Installation complete!"
 print_info "Please log out and log back in for group changes to take effect"
