@@ -13,7 +13,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/1000
-Environment=PYTHONPATH=/home/pi/autonomous_mower
+Environment=PYTHONPATH=/home/pi/autonomous_mower/src
 Environment=ML_MODEL_PATH=/home/pi/autonomous_mower/models
 Environment=DETECTION_MODEL=detect.tflite
 Environment=TPU_DETECTION_MODEL=detect_edgetpu.tflite
@@ -22,8 +22,8 @@ Environment=MIN_CONF_THRESHOLD=0.5
 # Create log directory and set permissions using systemd's built-in capabilities
 RuntimeDirectory=autonomous-mower
 RuntimeDirectoryMode=0755
-# Run the application using the virtual environment created by install_requirements.sh
-ExecStart=/home/pi/autonomous_mower/venv/bin/python -m mower.main_controller
+# Run the application using the system Python with the correct module path
+ExecStart=/usr/bin/python3 -m mower.main_controller
 Restart=always
 RestartSec=10
 StandardOutput=append:/var/log/autonomous-mower.log
