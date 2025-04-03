@@ -31,8 +31,8 @@ import time
 from enum import Enum
 
 # Initialize logger first to handle hardware import logging
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-logging = LoggerConfig.get_logger(__name__)
+from mower.utilities.logger_config import LoggerConfig
+logger = LoggerConfig.get_logger(__name__)
 
 # Hardware imports with simulation fallbacks
 try:
@@ -48,7 +48,7 @@ try:
     from mower.hardware.tof import VL53L0XSensors
     HARDWARE_AVAILABLE = True
 except ImportError:
-    logging.warning("Hardware modules not available. Running in simulation mode.")
+    logger.warning("Hardware modules not available. Running in simulation mode.")
     HARDWARE_AVAILABLE = False
     
     # Create dummy classes for simulation
@@ -209,7 +209,7 @@ class ResourceManager:
         # Set simulation mode based on hardware availability
         self._simulation_mode = not HARDWARE_AVAILABLE
         if self._simulation_mode:
-            logging.info("Running in simulation mode - hardware components mocked")
+            logger.info("Running in simulation mode - hardware components mocked")
 
     def _load_env_config(self):
         """
@@ -231,40 +231,30 @@ class ResourceManager:
             'MIN_CONF_THRESHOLD': float(os.getenv('MIN_CONF_THRESHOLD', '0.5')),
         }
         
-        logging.info(f"Configuration loaded: USE_CORAL_ACCELERATOR={self._config['USE_CORAL_ACCELERATOR']}")
+        logger.info(f"Configuration loaded: USE_CORAL_ACCELERATOR={self._config['USE_CORAL_ACCELERATOR']}")
 
     def _initialize_inference_engine(self):
         """
-        Initialize TensorFlow Lite interpreter with Edge TPU acceleration if available.
+        Initialize ML inference engine.
         
-        This method:
-        1. Checks for Google Coral Edge TPU device
-        2. Loads appropriate TFLite model based on hardware
-        3. Sets up interpreter for object detection inference
+        This method handles setting up the TensorFlow Lite interpreter
+        with appropriate hardware acceleration if available.
         
-        Fallbacks to CPU if Edge TPU is not available.
-        
-        Troubleshooting:
-            - For permissions issues: verify user is in 'plugdev' group
-            - For installation issues: verify libedgetpu1-std is installed
-            - For model issues: ensure both TPU and CPU models exist
+        Returns:
+            tuple: (interpreter, input_details, output_details)
         """
-        import os
-        import logging
-        from pathlib import Path
+        # Logger for this component
+        resource_logger = logger.getLogger('mower.resources')
         
-        logger = logging.getLogger('mower.resources')
+        # Get paths to models and determine if hardware acceleration is used
+        model_dir = os.path.expanduser(self._config.get('ML_MODEL_PATH', './models'))
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+            resource_logger.warning(f"Model directory {model_dir} does not exist. Creating it.")
         
         # Configuration variables from environment
-        model_dir = os.environ.get('ML_MODEL_PATH', './models')
-        model_file = os.environ.get('DETECTION_MODEL', 'detect.tflite')
-        tpu_model_file = os.environ.get('TPU_DETECTION_MODEL', 'detect_edgetpu.tflite')
-        
-        # Ensure model directory exists
-        model_dir_path = Path(model_dir)
-        if not model_dir_path.exists():
-            logger.warning(f"Model directory {model_dir} does not exist. Creating it.")
-            model_dir_path.mkdir(parents=True, exist_ok=True)
+        model_file = self._config.get('DETECTION_MODEL', 'detect.tflite')
+        tpu_model_file = self._config.get('TPU_DETECTION_MODEL', 'detect_edgetpu.tflite')
         
         # Set to None initially
         self._inference_interpreter = None
@@ -280,10 +270,10 @@ class ResourceManager:
             
             if available_tpus:
                 logger.info(f"Found {len(available_tpus)} Edge TPU device(s). Using hardware acceleration.")
-                tpu_path = str(model_dir_path / tpu_model_file)
+                tpu_path = os.path.join(model_dir, tpu_model_file)
                 
                 # Verify TPU model exists
-                if not Path(tpu_path).exists():
+                if not os.path.exists(tpu_path):
                     logger.error(f"TPU model not found at {tpu_path}. Falling back to CPU model.")
                     raise FileNotFoundError(f"TPU model not found: {tpu_path}")
                 
@@ -304,8 +294,8 @@ class ResourceManager:
                 # Try to use tflite_runtime if available (recommended)
                 import tflite_runtime.interpreter as tflite
                 
-                cpu_path = str(model_dir_path / model_file)
-                if not Path(cpu_path).exists():
+                cpu_path = os.path.join(model_dir, model_file)
+                if not os.path.exists(cpu_path):
                     logger.error(f"CPU model not found at {cpu_path}")
                     raise FileNotFoundError(f"CPU model not found: {cpu_path}")
                 
@@ -318,8 +308,8 @@ class ResourceManager:
                 try:
                     import tensorflow as tf
                     
-                    cpu_path = str(model_dir_path / model_file)
-                    if not Path(cpu_path).exists():
+                    cpu_path = os.path.join(model_dir, model_file)
+                    if not os.path.exists(cpu_path):
                         logger.error(f"CPU model not found at {cpu_path}")
                         raise FileNotFoundError(f"CPU model not found: {cpu_path}")
                     
@@ -851,7 +841,7 @@ class ResourceManager:
             - For initialization sequence issues, try individual components
         """
         try:
-            logging.info("Initializing all resources...")
+            logger.info("Initializing all resources...")
             
             # Hardware initialization
             self.get_blade_controller()
@@ -889,10 +879,10 @@ class ResourceManager:
             self.get_csv_logger()
             self.get_utils()
             
-            logging.info("All resources initialized successfully.")
+            logger.info("All resources initialized successfully.")
             return True
         except Exception as e:
-            logging.error(f"Error initializing resources: {e}")
+            logger.error(f"Error initializing resources: {e}")
             return False
 
     def cleanup_all_resources(self):
@@ -908,103 +898,103 @@ class ResourceManager:
             - For hung threads, check thread management
             - For hardware shutdown issues, verify control interfaces
         """
-        logging.info("Cleaning up all resources...")
+        logger.info("Cleaning up all resources...")
         
         # Hardware cleanup - proper shutdown to prevent damage
         if self._blade_controller:
             try:
                 self._blade_controller.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up blade controller: {e}")
+                logger.error(f"Error cleaning up blade controller: {e}")
                 
         if self._bme280_sensor:
             try:
                 self._bme280_sensor.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up BME280 sensor: {e}")
+                logger.error(f"Error cleaning up BME280 sensor: {e}")
                 
         if self._camera_instance:
             try:
                 self._camera_instance.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up camera: {e}")
+                logger.error(f"Error cleaning up camera: {e}")
                 
         if self._gpio_manager:
             try:
                 self._gpio_manager.clean()
             except Exception as e:
-                logging.error(f"Error cleaning up GPIO manager: {e}")
+                logger.error(f"Error cleaning up GPIO manager: {e}")
                 
         if self._imu_sensor:
             try:
                 self._imu_sensor.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up IMU sensor: {e}")
+                logger.error(f"Error cleaning up IMU sensor: {e}")
                 
         if self._ina3221_sensor:
             try:
                 self._ina3221_sensor.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up INA3221 sensor: {e}")
+                logger.error(f"Error cleaning up INA3221 sensor: {e}")
                 
         if self._robohat_driver:
             try:
                 self._robohat_driver.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down RoboHAT driver: {e}")
+                logger.error(f"Error shutting down RoboHAT driver: {e}")
                 
         if self._sensor_interface:
             try:
                 self._sensor_interface.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down sensor interface: {e}")
+                logger.error(f"Error shutting down sensor interface: {e}")
                 
         if self._serial_port:
             try:
                 self._serial_port.stop()
             except Exception as e:
-                logging.error(f"Error stopping serial port: {e}")
+                logger.error(f"Error stopping serial port: {e}")
                 
         if self._tof_sensors:
             try:
                 self._tof_sensors.cleanup()
             except Exception as e:
-                logging.error(f"Error cleaning up ToF sensors: {e}")
+                logger.error(f"Error cleaning up ToF sensors: {e}")
         
         # Navigation cleanup
         if self._gps_nmea_positions:
             try:
                 self._gps_nmea_positions.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down GPS NMEA positions: {e}")
+                logger.error(f"Error shutting down GPS NMEA positions: {e}")
                 
         if self._gps_position:
             try:
                 self._gps_position.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down GPS position: {e}")
+                logger.error(f"Error shutting down GPS position: {e}")
                 
         if self._path_planner:
             try:
                 self._path_planner.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down path planner: {e}")
+                logger.error(f"Error shutting down path planner: {e}")
         
         # Obstacle detection cleanup
         if self._avoidance_algorithm:
             try:
                 self._avoidance_algorithm.stop()
             except Exception as e:
-                logging.error(f"Error stopping avoidance algorithm: {e}")
+                logger.error(f"Error stopping avoidance algorithm: {e}")
         
         # UI cleanup
         if self._web_interface:
             try:
                 self._web_interface.shutdown()
             except Exception as e:
-                logging.error(f"Error shutting down web interface: {e}")
+                logger.error(f"Error shutting down web interface: {e}")
         
-        logging.info("All resources cleaned up.")
+        logger.info("All resources cleaned up.")
 
     def start_web_interface(self):
         """
@@ -1024,11 +1014,11 @@ class ResourceManager:
             interface = self.get_web_interface()
             if hasattr(interface, 'start'):
                 interface.start()
-                logging.info("Web interface started.")
+                logger.info("Web interface started.")
             else:
-                logging.error("Web interface has no 'start' method.")
+                logger.error("Web interface has no 'start' method.")
         except Exception as e:
-            logging.error(f"Error starting web interface: {e}")
+            logger.error(f"Error starting web interface: {e}")
 
 
 class RobotController:
@@ -1083,11 +1073,11 @@ class RobotController:
             home_config = self._load_config('home_location.json')
             if home_config and 'location' in home_config:
                 self.home_location = home_config['location']
-                logging.info(f"Loaded home location: {self.home_location}")
+                logger.info(f"Loaded home location: {self.home_location}")
         except Exception as e:
-            logging.error(f"Failed to load home location: {e}")
+            logger.error(f"Failed to load home location: {e}")
         
-        logging.info("Robot controller initialized")
+        logger.info("Robot controller initialized")
     
     def _load_config(self, filename):
         """Load a configuration file from the standard config location."""
@@ -1097,7 +1087,7 @@ class RobotController:
                 with open(config_path, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                logging.error(f"Error loading config file {filename}: {e}")
+                logger.error(f"Error loading config file {filename}: {e}")
         return None
         
     def run_robot(self):
@@ -1110,7 +1100,7 @@ class RobotController:
         The robot remains in operation until shutdown is requested, handling
         state transitions and commands from the web interface.
         """
-        logging.info("Starting robot...")
+        logger.info("Starting robot...")
         
         try:
             # Initialize robot in INITIALIZING state
@@ -1134,18 +1124,18 @@ class RobotController:
             
             # Transition to IDLE state
             self.current_state = RobotState.IDLE
-            logging.info("Robot ready and in IDLE state")
+            logger.info("Robot ready and in IDLE state")
             
             # Start the main control loop
             self._main_control_loop()
             
         except Exception as e:
-            logging.error(f"Error in run_robot: {e}")
+            logger.error(f"Error in run_robot: {e}")
             self.current_state = RobotState.ERROR
             self.error_condition = str(e)
         finally:
             # Clean up resources when shutting down
-            logging.info("Shutting down robot...")
+            logger.info("Shutting down robot...")
             if hasattr(self, 'avoidance_algorithm'):
                 self.avoidance_algorithm.stop()
             self.resource_manager.cleanup_all_resources()
@@ -1162,7 +1152,7 @@ class RobotController:
                 # Check for emergency stop conditions (battery, temperature, etc.)
                 if self._check_emergency_conditions():
                     self.current_state = RobotState.EMERGENCY_STOP
-                    logging.warning("Emergency stop condition detected")
+                    logger.warning("Emergency stop condition detected")
                 
                 # State-specific actions
                 if self.current_state == RobotState.IDLE:
@@ -1174,7 +1164,7 @@ class RobotController:
                     avoidance_state = self.avoidance_algorithm.current_state
                     if avoidance_state != AvoidanceState.NORMAL:
                         if not self.avoidance_active:
-                            logging.info("Avoidance activated, pausing mowing")
+                            logger.info("Avoidance activated, pausing mowing")
                             self.avoidance_active = True
                             self.current_state = RobotState.AVOIDING
                     
@@ -1183,21 +1173,21 @@ class RobotController:
                     avoidance_state = self.avoidance_algorithm.current_state
                     if avoidance_state == AvoidanceState.NORMAL:
                         if self.avoidance_active:
-                            logging.info("Avoidance completed, resuming mowing")
+                            logger.info("Avoidance completed, resuming mowing")
                             self.avoidance_active = False
                             self.current_state = RobotState.MOWING
                     # Check for recovery failures
                     elif avoidance_state == AvoidanceState.RECOVERY:
                         recovery_attempts = self.avoidance_algorithm.recovery_attempts
                         if recovery_attempts >= self.avoidance_algorithm.max_recovery_attempts:
-                            logging.error("Failed to recover from obstacle after multiple attempts")
+                            logger.error("Failed to recover from obstacle after multiple attempts")
                             self.error_condition = "Failed to recover from obstacle"
                             self.current_state = RobotState.ERROR
                 
                 elif self.current_state == RobotState.RETURNING_HOME:
                     # Check if we've reached home
                     if self._check_at_home():
-                        logging.info("Reached home location")
+                        logger.info("Reached home location")
                         self.navigation_controller.stop()
                         self.current_state = RobotState.DOCKED
                 
@@ -1205,18 +1195,18 @@ class RobotController:
                     # Handle emergency stop - ensure all motors are stopped
                     self.navigation_controller.stop()
                     self.blade_controller.stop_blade()
-                    logging.critical("Emergency stop - all motors stopped")
+                    logger.critical("Emergency stop - all motors stopped")
                     
                     # Check if emergency condition is cleared
                     if not self._check_emergency_conditions():
-                        logging.info("Emergency condition cleared")
+                        logger.info("Emergency condition cleared")
                         self.current_state = RobotState.IDLE
                 
                 # Brief pause to avoid CPU spinning
                 time.sleep(0.1)
         
         except Exception as e:
-            logging.error(f"Error in main control loop: {e}")
+            logger.error(f"Error in main control loop: {e}")
             self.current_state = RobotState.ERROR
             self.error_condition = str(e)
     
@@ -1234,7 +1224,7 @@ class RobotController:
             
             # Critical battery threshold (customize based on your battery)
             if battery_voltage < 10.5:  # Critical voltage for LiFePO4 batteries
-                logging.warning(f"Emergency: Battery voltage critical at {battery_voltage}V")
+                logger.warning(f"Emergency: Battery voltage critical at {battery_voltage}V")
                 return True
             
             # Check for other emergency conditions like:
@@ -1244,7 +1234,7 @@ class RobotController:
             
             return False
         except Exception as e:
-            logging.error(f"Error checking emergency conditions: {e}")
+            logger.error(f"Error checking emergency conditions: {e}")
             # Default to emergency stop on error to be safe
             return True
     
@@ -1256,7 +1246,7 @@ class RobotController:
             bool: True if at home location, False otherwise
         """
         if not self.home_location:
-            logging.warning("Home location not set, can't determine if at home")
+            logger.warning("Home location not set, can't determine if at home")
             return False
             
         try:
@@ -1265,7 +1255,7 @@ class RobotController:
             current_position = gps.run()
             
             if not current_position:
-                logging.warning("Unable to get current position")
+                logger.warning("Unable to get current position")
                 return False
             
             # Calculate distance to home
@@ -1281,7 +1271,7 @@ class RobotController:
             
             return distance < threshold
         except Exception as e:
-            logging.error(f"Error checking home position: {e}")
+            logger.error(f"Error checking home position: {e}")
             return False
     
     def mow_yard(self):
@@ -1303,10 +1293,10 @@ class RobotController:
             bool: True if mowing completed successfully, False otherwise
         """
         if self.current_state != RobotState.IDLE:
-            logging.warning(f"Cannot start mowing from state {self.current_state}")
+            logger.warning(f"Cannot start mowing from state {self.current_state}")
             return False
         
-        logging.info("Starting mowing operation")
+        logger.info("Starting mowing operation")
         
         try:
             # Transition to MOWING state
@@ -1315,12 +1305,12 @@ class RobotController:
             # Get path from planner
             mowing_path = self.path_planner.generate_mowing_path()
             if not mowing_path or len(mowing_path) == 0:
-                logging.error("Failed to generate mowing path")
+                logger.error("Failed to generate mowing path")
                 self.error_condition = "Failed to generate mowing path"
                 self.current_state = RobotState.ERROR
                 return False
             
-            logging.info(f"Generated mowing path with {len(mowing_path)} waypoints")
+            logger.info(f"Generated mowing path with {len(mowing_path)} waypoints")
             
             # Start the blade motor
             self.blade_controller.start_blade()
@@ -1330,12 +1320,12 @@ class RobotController:
                 # Check if we're still in MOWING state (might have changed due to
                 # obstacle avoidance or user commands)
                 if self.current_state != RobotState.MOWING:
-                    logging.info(f"Mowing interrupted: state changed to {self.current_state}")
+                    logger.info(f"Mowing interrupted: state changed to {self.current_state}")
                     break
                 
                 # Extract coordinates from waypoint
                 lat, lng = waypoint['lat'], waypoint['lng']
-                logging.debug(f"Navigating to waypoint {waypoint_idx+1}/{len(mowing_path)}: {lat}, {lng}")
+                logger.debug(f"Navigating to waypoint {waypoint_idx+1}/{len(mowing_path)}: {lat}, {lng}")
                 
                 # Command navigation to waypoint
                 self.navigation_controller.navigate_to_location((lat, lng))
@@ -1347,16 +1337,16 @@ class RobotController:
                 while time.time() - start_time < timeout:
                     # Check if state has changed (e.g., to AVOIDING)
                     if self.current_state != RobotState.MOWING:
-                        logging.info(f"Navigation interrupted: state changed to {self.current_state}")
+                        logger.info(f"Navigation interrupted: state changed to {self.current_state}")
                         break
                     
                     # Check if target reached
                     nav_status = self.navigation_controller.get_status()
                     if nav_status == NavigationStatus.TARGET_REACHED:
-                        logging.debug(f"Reached waypoint {waypoint_idx+1}")
+                        logger.debug(f"Reached waypoint {waypoint_idx+1}")
                         break
                     elif nav_status == NavigationStatus.ERROR:
-                        logging.error("Navigation error occurred")
+                        logger.error("Navigation error occurred")
                         self.error_condition = "Navigation error"
                         self.current_state = RobotState.ERROR
                         return False
@@ -1366,11 +1356,11 @@ class RobotController:
                     
                 # Check for timeout
                 if time.time() - start_time >= timeout:
-                    logging.warning(f"Timeout reaching waypoint {waypoint_idx+1}")
+                    logger.warning(f"Timeout reaching waypoint {waypoint_idx+1}")
                     # Continue to next waypoint instead of failing completely
             
             # Path completed successfully
-            logging.info("Mowing path completed")
+            logger.info("Mowing path completed")
             
             # Stop the blade motor
             self.blade_controller.stop_blade()
@@ -1381,7 +1371,7 @@ class RobotController:
             return True
             
         except Exception as e:
-            logging.error(f"Error during mowing operation: {e}")
+            logger.error(f"Error during mowing operation: {e}")
             self.error_condition = f"Mowing error: {str(e)}"
             self.current_state = RobotState.ERROR
             
@@ -1401,11 +1391,11 @@ class RobotController:
             bool: True if successfully started returning home, False otherwise
         """
         if not self.home_location:
-            logging.error("Home location not set, cannot return home")
+            logger.error("Home location not set, cannot return home")
             return False
         
         try:
-            logging.info("Initiating return to home")
+            logger.info("Initiating return to home")
             self.current_state = RobotState.RETURNING_HOME
             
             # Extract home coordinates
@@ -1416,7 +1406,7 @@ class RobotController:
             
             return True
         except Exception as e:
-            logging.error(f"Error initiating return to home: {e}")
+            logger.error(f"Error initiating return to home: {e}")
             return False
             
     def start_manual_control(self):
@@ -1427,7 +1417,7 @@ class RobotController:
             bool: True if successfully switched to manual mode, False otherwise
         """
         if self.current_state in [RobotState.ERROR, RobotState.EMERGENCY_STOP]:
-            logging.warning(f"Cannot start manual control from state {self.current_state}")
+            logger.warning(f"Cannot start manual control from state {self.current_state}")
             return False
         
         try:
@@ -1436,10 +1426,10 @@ class RobotController:
                 self.navigation_controller.stop()
             
             self.current_state = RobotState.MANUAL_CONTROL
-            logging.info("Switched to manual control mode")
+            logger.info("Switched to manual control mode")
             return True
         except Exception as e:
-            logging.error(f"Error switching to manual control: {e}")
+            logger.error(f"Error switching to manual control: {e}")
             return False
     
     def stop_all_operations(self):
@@ -1458,10 +1448,10 @@ class RobotController:
             if self.current_state not in [RobotState.ERROR, RobotState.EMERGENCY_STOP]:
                 self.current_state = RobotState.IDLE
             
-            logging.info("All operations stopped")
+            logger.info("All operations stopped")
             return True
         except Exception as e:
-            logging.error(f"Error stopping operations: {e}")
+            logger.error(f"Error stopping operations: {e}")
             return False
 
 
@@ -1489,7 +1479,7 @@ def main():
     try:
         # Initialize all resources
         if not resource_manager.init_all_resources():
-            logging.error("Failed to initialize resources. Exiting.")
+            logger.error("Failed to initialize resources. Exiting.")
             return
             
         # Create the robot controller
@@ -1502,11 +1492,11 @@ def main():
             daemon=True
         )
         robot_thread.start()
-        logging.info("Robot logic thread started.")
+        logger.info("Robot logic thread started.")
         
         # Start the web interface for user control
         resource_manager.start_web_interface()
-        logging.info("Web interface started.")
+        logger.info("Web interface started.")
         
         # Keep the main thread running
         # This loop keeps the application alive and responsive to keyboard interrupts
@@ -1515,15 +1505,15 @@ def main():
                 # Sleep to avoid high CPU usage while waiting
                 threading.Event().wait(1)
             except KeyboardInterrupt:
-                logging.info("Keyboard interrupt received. Exiting.")
+                logger.info("Keyboard interrupt received. Exiting.")
                 break
                 
     except Exception as e:
-        logging.exception(f"An error occurred in the main function: {e}")
+        logger.exception(f"An error occurred in the main function: {e}")
     finally:
         # Ensure all resources are properly cleaned up
         resource_manager.cleanup_all_resources()
-        logging.info("Main controller exited.")
+        logger.info("Main controller exited.")
 
 
 if __name__ == "__main__":

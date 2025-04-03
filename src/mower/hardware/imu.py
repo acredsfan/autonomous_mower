@@ -1,22 +1,20 @@
 """
-Inertial Measurement Unit (IMU) module for orientation and motion tracking.
+IMU (Inertial Measurement Unit) module for the autonomous mower.
 
-This module provides a robust interface for the BNO085 IMU sensor, which
-delivers high-precision orientation, acceleration, and angular rate data.
-The sensor is critically important for accurate navigation and stabilization
-of the autonomous mower.
+This module provides functionality for reading and processing data from the
+BNO085 IMU sensor, which provides orientation and motion tracking capabilities.
 
-The module implements serial communication with the BNO085, featuring:
-- Automatic port discovery and reconnection
-- Quaternion-based orientation tracking
-- Calibration status monitoring
-- Thread-safe data access
+The module:
+1. Manages communication with the BNO085 sensor
+2. Provides real-time orientation data (roll, pitch, yaw)
+3. Handles sensor calibration and error recovery
+4. Implements data filtering and processing
 
-Important Notes:
-- The BNO085 uses UART serial communication
-- Default baudrate is 115200 (configurable)
-- The sensor must be properly mounted in the mower's coordinate system
-- Ensure the sensor is calibrated before relying on orientation data
+Key features:
+- Thread-safe operation with proper synchronization
+- Automatic sensor calibration
+- Error detection and recovery
+- Data filtering for smooth readings
 """
 
 import math
@@ -24,17 +22,24 @@ import os
 import time
 import threading
 import struct
+from enum import Enum
 
 import adafruit_bno08x
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-)
+from mower.utilities.logger_config import LoggerConfig
 from mower.hardware.serial_port import SerialPort
 
+# BNO085 Constants
+CHANNEL_COMMAND = 0x00
+CHANNEL_EXECUTABLE = 0x01
+CHANNEL_CONTROL = 0x02
+CHANNEL_REPORTS = 0x03
+SHTP_REPORT_PRODUCT_ID_REQUEST = 0xF9
+SENSOR_REPORTID_ROTATION_VECTOR = 0x05
+
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -42,6 +47,25 @@ load_dotenv()
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
 IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
 
+class IMUStatus(Enum):
+    """
+    Enum representing the different states of the IMU sensor.
+    
+    These states define the current operational status of the sensor
+    and help manage error recovery and calibration procedures.
+    
+    States:
+        INITIALIZING: Sensor is being initialized
+        CALIBRATING: Sensor is undergoing calibration
+        READY: Sensor is ready for operation
+        ERROR: Sensor has encountered an error
+        RECOVERING: Sensor is attempting to recover from an error
+    """
+    INITIALIZING = 0
+    CALIBRATING = 1
+    READY = 2
+    ERROR = 3
+    RECOVERING = 4
 
 class BNO085Sensor:
     """
@@ -175,12 +199,15 @@ class BNO085Sensor:
                 )
                 success = self.serial_port.start()
                 if not success:
-                    logging.error("Failed to start IMU serial port")
+                    logger.error("Failed to start IMU serial port")
                     failure_count += 1
                     time.sleep(reconnection_delay)
                     continue
                 
-                logging.info(f"IMU serial port {self.serial_port_name or IMU_SERIAL_PORT} opened at {self.baudrate or IMU_BAUDRATE} baud")
+                logger.info(
+                    f"IMU serial port {self.serial_port_name or IMU_SERIAL_PORT} "
+                    f"opened at {self.baudrate or IMU_BAUDRATE} baud"
+                )
                 
                 # Try multiple times to initialize the sensor
                 max_retries = 5
@@ -189,34 +216,44 @@ class BNO085Sensor:
                         self.sensor = BNO08X_UART(self.serial_port.ser)
                         self.enable_features(self.sensor)
                         self.connected = True
-                        logging.info(f"BNO085 sensor successfully initialized on attempt {attempt}")
+                        logger.info(
+                            f"BNO085 sensor successfully initialized "
+                            f"on attempt {attempt}"
+                        )
                         return True
                     except Exception as e:
-                        logging.warning(f"Failed to initialize BNO085 sensor on attempt {attempt}: {e}")
+                        logger.warning(
+                            f"Failed to initialize BNO085 sensor on "
+                            f"attempt {attempt}: {e}"
+                        )
                         if attempt < max_retries:
                             time.sleep(1)  # Wait before retrying
                 
-                logging.error(f"Failed to initialize BNO085 sensor after {max_retries} attempts")
+                logger.error(
+                    f"Failed to initialize BNO085 sensor after "
+                    f"{max_retries} attempts"
+                )
                 # If we couldn't initialize the sensor, close the serial port
                 if self.serial_port:
                     self.serial_port.stop()
-                    self.serial_port = None
                 
                 failure_count += 1
                 time.sleep(reconnection_delay)
                 
             except Exception as e:
-                logging.error(f"Error during BNO085 sensor initialization: {e}")
+                logger.error(f"Error during BNO085 sensor initialization: {e}")
                 # Ensure port is closed if initialization fails
                 if self.serial_port:
                     self.serial_port.stop()
-                    self.serial_port = None
                 
                 failure_count += 1
                 time.sleep(reconnection_delay)
         
         # If we reach here, repeated attempts have failed
-        raise RuntimeError(f"Repeated IMU connection failures exceeded threshold ({max_connect_attempts} attempts)")
+        raise RuntimeError(
+            f"Repeated IMU connection failures exceeded threshold "
+            f"({max_connect_attempts} attempts)"
+        )
     
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""
@@ -230,10 +267,10 @@ class BNO085Sensor:
                 self.serial_port = None
                 
             self.connected = False
-            logging.info("BNO085 sensor disconnected")
+            logger.info("BNO085 sensor disconnected")
             return True
         except Exception as e:
-            logging.error(f"Error disconnecting BNO085 sensor: {e}")
+            logger.error(f"Error disconnecting BNO085 sensor: {e}")
             return False
     
     def enable_features(self, sensor):
@@ -243,67 +280,67 @@ class BNO085Sensor:
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
-            logging.info("BNO085 features enabled.")
+            logger.info("BNO085 features enabled.")
         except Exception as e:
-            logging.error(f"Error enabling features on BNO085: {e}")
+            logger.error(f"Error enabling features on BNO085: {e}")
             raise
 
     def read_bno085_accel(self):
         """Read BNO085 accelerometer data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot read accelerometer: BNO085 not connected")
+            logger.warning("Cannot read accelerometer: BNO085 not connected")
             return {}
             
         try:
             accel_x, accel_y, accel_z = self.sensor.acceleration
             return {'x': accel_x, 'y': accel_y, 'z': accel_z}
         except Exception as e:
-            logging.error(f"Error reading BNO085 accelerometer: {e}")
+            logger.error(f"Error reading BNO085 accelerometer: {e}")
             return {}
 
     def read_bno085_gyro(self):
         """Read BNO085 gyroscope data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot read gyroscope: BNO085 not connected")
+            logger.warning("Cannot read gyroscope: BNO085 not connected")
             return {}
             
         try:
             gyro_x, gyro_y, gyro_z = self.sensor.gyro
             return {'x': gyro_x, 'y': gyro_y, 'z': gyro_z}
         except Exception as e:
-            logging.error(f"Error reading BNO085 gyroscope: {e}")
+            logger.error(f"Error reading BNO085 gyroscope: {e}")
             return {}
 
     def read_bno085_magnetometer(self):
         """Read BNO085 magnetometer data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot read magnetometer: BNO085 not connected")
+            logger.warning("Cannot read magnetometer: BNO085 not connected")
             return {}
             
         try:
             mag_x, mag_y, mag_z = self.sensor.magnetic
             return {'x': mag_x, 'y': mag_y, 'z': mag_z}
         except Exception as e:
-            logging.error(f"Error reading BNO085 magnetometer: {e}")
+            logger.error(f"Error reading BNO085 magnetometer: {e}")
             return {}
 
     def calculate_quaternion(self):
         """Calculate Quaternion based on BNO085 rotation vector data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot calculate quaternion: BNO085 not connected")
+            logger.warning("Cannot calculate quaternion: BNO085 not connected")
             return {}
             
         try:
             q0, q1, q2, q3 = self.sensor.quaternion
             return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
         except Exception as e:
-            logging.error(f"Error calculating Quaternion: {e}")
+            logger.error(f"Error calculating Quaternion: {e}")
             return {}
 
     def calculate_heading(self):
         """Calculate heading from BNO085 sensor data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot calculate heading: BNO085 not connected")
+            logger.warning("Cannot calculate heading: BNO085 not connected")
             return -1
             
         try:
@@ -313,13 +350,13 @@ class BNO085Sensor:
                 heading += 360
             return heading
         except Exception as e:
-            logging.error(f"Error calculating heading: {e}")
+            logger.error(f"Error calculating heading: {e}")
             return -1
 
     def calculate_pitch(self):
         """Calculate pitch from BNO085 sensor data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot calculate pitch: BNO085 not connected")
+            logger.warning("Cannot calculate pitch: BNO085 not connected")
             return -1
             
         try:
@@ -328,13 +365,13 @@ class BNO085Sensor:
             pitch = math.degrees(math.asin(-x))
             return pitch
         except Exception as e:
-            logging.error(f"Error calculating pitch: {e}")
+            logger.error(f"Error calculating pitch: {e}")
             return -1
 
     def calculate_roll(self):
         """Calculate roll from BNO085 sensor data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot calculate roll: BNO085 not connected")
+            logger.warning("Cannot calculate roll: BNO085 not connected")
             return -1
             
         try:
@@ -343,13 +380,13 @@ class BNO085Sensor:
             roll = math.degrees(math.asin(y))
             return roll
         except Exception as e:
-            logging.error(f"Error calculating roll: {e}")
+            logger.error(f"Error calculating roll: {e}")
             return -1
 
     def calculate_speed(self):
         """Calculate speed from BNO085 sensor data."""
         if not self.connected or not self.sensor:
-            logging.warning("Cannot calculate speed: BNO085 not connected")
+            logger.warning("Cannot calculate speed: BNO085 not connected")
             return -1
             
         try:
@@ -357,21 +394,25 @@ class BNO085Sensor:
             speed = math.sqrt(x**2 + y**2 + z**2)
             return speed
         except Exception as e:
-            logging.error(f"Error calculating speed: {e}")
+            logger.error(f"Error calculating speed: {e}")
             return -1
 
     def cleanup(self, sensor=None):
-        """Cleanup BNO085 sensor resources."""
-        sensor_to_cleanup = sensor or self.sensor
+        """
+        Reset and clean up BNO085 sensor resources.
         
+        Args:
+            sensor: Sensor instance to reset, uses self.sensor if None
+        """
+        sensor_to_cleanup = sensor or self.sensor
         if not sensor_to_cleanup:
             return
             
         try:
             sensor_to_cleanup.soft_reset()
-            logging.info("BNO085 sensor reset.")
+            logger.info("BNO085 sensor reset.")
         except Exception as e:
-            logging.error(f"Error resetting BNO085 sensor: {e}")
+            logger.error(f"Error resetting BNO085 sensor: {e}")
     
     def __del__(self):
         """Ensure resources are cleaned up when the object is destroyed."""
@@ -396,7 +437,7 @@ class BNO085Sensor:
         
         # Get list of available ports
         available_ports = list(serial.tools.list_ports.comports())
-        logging.info(f"Available ports: {[port.device for port in available_ports]}")
+        logger.info(f"Available ports: {[port.device for port in available_ports]}")
         
         for port_info in available_ports:
             port_name = port_info.device
@@ -405,7 +446,7 @@ class BNO085Sensor:
                 if "rfcomm" in port_name or "AMA0" in port_name:
                     continue
                     
-                logging.info(f"Trying IMU on port {port_name}")
+                logger.info(f"Trying IMU on port {port_name}")
                 test_port = serial.Serial(
                     port=port_name,
                     baudrate=self.baudrate,
@@ -422,14 +463,14 @@ class BNO085Sensor:
                 
                 # Check for any response (this is a simple check - can be improved)
                 if len(response) > 0:
-                    logging.info(f"Found responsive device on {port_name}")
+                    logger.info(f"Found responsive device on {port_name}")
                     self.serial_port_name = port_name
                     return test_port
                 
                 test_port.close()
                 
             except Exception as e:
-                logging.debug(f"Error testing port {port_name}: {e}")
+                logger.debug(f"Error testing port {port_name}: {e}")
                 continue
                 
         return None
@@ -472,14 +513,14 @@ class BNO085Sensor:
             # Read some data to verify communication is working
             data = self.serial_port.read(100)
             if len(data) > 0:
-                logging.info("IMU initialization successful")
+                logger.info("IMU initialization successful")
                 return True
             else:
-                logging.error("IMU initialization failed - no data received")
+                logger.error("IMU initialization failed - no data received")
                 return False
                 
         except Exception as e:
-            logging.error(f"Error initializing IMU: {e}")
+            logger.error(f"Error initializing IMU: {e}")
             return False
 
     def _enable_rotation_vector(self):
@@ -501,9 +542,9 @@ class BNO085Sensor:
                 0x05, 0x00,  # Set update rate to 20ms (50Hz)
                 0x00, 0x00   # Specific settings
             ])
-            logging.debug("Rotation vector report enabled")
+            logger.debug("Rotation vector report enabled")
         except Exception as e:
-            logging.error(f"Error enabling rotation vector: {e}")
+            logger.error(f"Error enabling rotation vector: {e}")
 
     def _send_command(self, channel, data):
         """
@@ -518,7 +559,7 @@ class BNO085Sensor:
             - Verify serial port is still open and connected
         """
         if not self.connected:
-            logging.warning("Cannot send command, IMU not connected")
+            logger.warning("Cannot send command, IMU not connected")
             return
             
         try:
@@ -536,7 +577,7 @@ class BNO085Sensor:
             # Send the packet
             self.serial_port.write(packet)
         except Exception as e:
-            logging.error(f"Error sending command to IMU: {e}")
+            logger.error(f"Error sending command to IMU: {e}")
             self.connected = False
 
     def _read_loop(self):
@@ -561,11 +602,11 @@ class BNO085Sensor:
                 if not self.connected:
                     # Try to reconnect
                     if self.connect_attempts < self.max_connect_attempts:
-                        logging.info("IMU disconnected. Attempting to reconnect...")
+                        logger.info("IMU disconnected. Attempting to reconnect...")
                         time.sleep(self.reconnection_delay)
                         self.connect()
                     else:
-                        logging.error(f"Failed to reconnect to IMU after {self.max_connect_attempts} attempts")
+                        logger.error(f"Failed to reconnect to IMU after {self.max_connect_attempts} attempts")
                         time.sleep(5)  # Wait before trying again
                         self.connect_attempts = 0  # Reset counter to try again
                     continue
@@ -593,11 +634,11 @@ class BNO085Sensor:
                         # Small delay to avoid high CPU usage
                         time.sleep(0.005)
                 else:
-                    logging.warning("Serial port not open in read loop")
+                    logger.warning("Serial port not open in read loop")
                     self.connected = False
                     
             except Exception as e:
-                logging.error(f"Error in IMU read loop: {e}")
+                logger.error(f"Error in IMU read loop: {e}")
                 self.connected = False
                 time.sleep(1)
 
@@ -793,28 +834,18 @@ class BNO085Sensor:
         return True
 
     def stop(self):
-        """
-        Stop the IMU sensor operations.
-        
-        This method stops the read thread but keeps the serial port open.
-        It can be restarted with start().
-        """
+        """Stop the read thread"""
         self.running = False
         if self.read_thread and self.read_thread.is_alive():
             self.read_thread.join(timeout=1.0)
 
-    def cleanup(self):
+    def release_resources(self):
         """
         Clean up resources used by the IMU sensor.
         
-        This method performs a complete shutdown of the sensor interface:
-        1. Stops the read thread
-        2. Closes the serial port
-        3. Resets connection flags
-        
         This should be called when the mower is shutting down.
         """
-        logging.info("Cleaning up IMU sensor resources")
+        logger.info("Cleaning up IMU sensor resources")
         
         # Stop the read thread
         self.running = False
@@ -822,15 +853,15 @@ class BNO085Sensor:
             try:
                 self.read_thread.join(timeout=2.0)
             except Exception as e:
-                logging.warning(f"Error joining IMU read thread: {e}")
+                logger.warning(f"Error joining IMU read thread: {e}")
         
         # Close the serial port
         if self.serial_port and self.serial_port.is_open:
             try:
                 self.serial_port.close()
-                logging.info("IMU serial port closed")
+                logger.info("IMU serial port closed")
             except Exception as e:
-                logging.error(f"Error closing IMU serial port: {e}")
+                logger.error(f"Error closing IMU serial port: {e}")
         
         # Reset connection status
         self.connected = False
@@ -844,7 +875,7 @@ def read_bno085_accel(sensor):
         accel_x, accel_y, accel_z = sensor.acceleration
         return {'x': accel_x, 'y': accel_y, 'z': accel_z}
     except Exception as e:
-        logging.error(f"Error reading BNO085 accelerometer: {e}")
+        logger.error(f"Error reading BNO085 accelerometer: {e}")
         return {}
 
 def read_bno085_gyro(sensor):
@@ -852,7 +883,7 @@ def read_bno085_gyro(sensor):
         gyro_x, gyro_y, gyro_z = sensor.gyro
         return {'x': gyro_x, 'y': gyro_y, 'z': gyro_z}
     except Exception as e:
-        logging.error(f"Error reading BNO085 gyroscope: {e}")
+        logger.error(f"Error reading BNO085 gyroscope: {e}")
         return {}
 
 def read_bno085_magnetometer(sensor):
@@ -860,7 +891,7 @@ def read_bno085_magnetometer(sensor):
         mag_x, mag_y, mag_z = sensor.magnetic
         return {'x': mag_x, 'y': mag_y, 'z': mag_z}
     except Exception as e:
-        logging.error(f"Error reading BNO085 magnetometer: {e}")
+        logger.error(f"Error reading BNO085 magnetometer: {e}")
         return {}
 
 def calculate_quaternion(sensor):
@@ -868,7 +899,7 @@ def calculate_quaternion(sensor):
         q0, q1, q2, q3 = sensor.quaternion
         return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
     except Exception as e:
-        logging.error(f"Error calculating Quaternion: {e}")
+        logger.error(f"Error calculating Quaternion: {e}")
         return {}
 
 def calculate_heading(sensor):
@@ -879,7 +910,7 @@ def calculate_heading(sensor):
             heading += 360
         return heading
     except Exception as e:
-        logging.error(f"Error calculating heading: {e}")
+        logger.error(f"Error calculating heading: {e}")
         return -1
 
 def calculate_pitch(sensor):
@@ -889,7 +920,7 @@ def calculate_pitch(sensor):
         pitch = math.degrees(math.asin(-x))
         return pitch
     except Exception as e:
-        logging.error(f"Error calculating pitch: {e}")
+        logger.error(f"Error calculating pitch: {e}")
         return -1
 
 def calculate_roll(sensor):
@@ -899,7 +930,7 @@ def calculate_roll(sensor):
         roll = math.degrees(math.asin(y))
         return roll
     except Exception as e:
-        logging.error(f"Error calculating roll: {e}")
+        logger.error(f"Error calculating roll: {e}")
         return -1
 
 def calculate_speed(sensor):
@@ -908,7 +939,7 @@ def calculate_speed(sensor):
         speed = math.sqrt(x**2 + y**2 + z**2)
         return speed
     except Exception as e:
-        logging.error(f"Error calculating speed: {e}")
+        logger.error(f"Error calculating speed: {e}")
         return -1
 
 def enable_features(sensor):
@@ -917,9 +948,9 @@ def enable_features(sensor):
         sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
         sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
         sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
-        logging.info("BNO085 features enabled.")
+        logger.info("BNO085 features enabled.")
     except Exception as e:
-        logging.error(f"Error enabling features on BNO085: {e}")
+        logger.error(f"Error enabling features on BNO085: {e}")
 
 
 if __name__ == '__main__':
@@ -927,7 +958,7 @@ if __name__ == '__main__':
         # Use the singleton BNO085Sensor instance
         imu = BNO085Sensor()
         if imu.connect():
-            logging.info("BNO085 sensor connected successfully.")
+            logger.info("BNO085 sensor connected successfully.")
             
             # Main loop to read and display sensor data
             while True:
@@ -950,12 +981,12 @@ if __name__ == '__main__':
                 print(f"Speed: {speed}")
                 time.sleep(1)
         else:
-            logging.error("Failed to connect to BNO085 sensor.")
+            logger.error("Failed to connect to BNO085 sensor.")
     except KeyboardInterrupt:
-        logging.info("IMU test exiting due to keyboard interrupt...")
+        logger.info("IMU test exiting due to keyboard interrupt...")
     except Exception as e:
-        logging.exception(f"Error in IMU test: {e}")
+        logger.exception(f"Error in IMU test: {e}")
     finally:
         if 'imu' in locals():
             imu.disconnect()
-        logging.info("IMU test completed.")
+        logger.info("IMU test completed.")
