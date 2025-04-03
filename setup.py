@@ -26,6 +26,7 @@ setup(
         "pynmea2>=1.18.0",  # For GPS NMEA parsing
         "gpsd-py3>=0.3.0",  # For GPS daemon integration
         "libgpiod>=0.2.0",  # For GPIO access
+        "utm>=0.7.0",  # For GPS coordinate conversion
     ],
     extras_require={
         "coral": [
