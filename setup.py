@@ -27,6 +27,7 @@ setup(
         "gpsd-py3>=0.3.0,<0.4.0",
         "libgpiod>=0.2.0,<0.3.0",
         "utm>=0.7.0,<0.8.0",
+        "adafruit-circuitpython-bme280>=2.6.4,<3.0.0",
     ],
     extras_require={
         "coral": [
