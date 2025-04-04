@@ -14,7 +14,7 @@ setup(
         "networkx>=3.2.1,<4.0.0",
         "opencv-python-headless>=4.9.0.80,<5.0.0",
         "pathfinding>=1.0.0,<2.0.0",
-        "pillow>=10.2.0,<11.0.0",
+        "pillow>=11.0.0",
         "pyserial>=3.5,<4.0.0",
         "python-dotenv>=1.0.1,<2.0.0",
         "rtree>=1.0.1,<2.0.0",
