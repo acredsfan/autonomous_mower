@@ -31,7 +31,7 @@ import time
 from enum import Enum
 
 # Initialize logger first to handle hardware import logging
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 logger = LoggerConfig.get_logger(__name__)
 
 # Hardware imports with simulation fallbacks
