@@ -22,17 +22,15 @@ Key features:
 
 import threading
 import time
-import logging
 import random
 import math
 import os
 from enum import Enum
-from typing import Optional, Tuple, List, Dict, Any
+from typing import Optional, Tuple, Dict, Any
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.constants import (
     AVOIDANCE_DELAY,
-    CAMERA_OBSTACLE_THRESHOLD,
     MIN_DISTANCE_THRESHOLD
 )
 from mower.navigation.path_planning import PathPlanner
@@ -41,6 +39,7 @@ from mower.hardware.sensor_interface import SensorInterface
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
+
 
 # Define navigation status enum for internal use
 class NavigationStatus(Enum):
