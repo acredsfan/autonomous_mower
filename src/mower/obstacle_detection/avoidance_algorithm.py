@@ -29,7 +29,7 @@ import os
 from enum import Enum
 from typing import Optional, Tuple, List, Dict, Any
 
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.constants import (
     AVOIDANCE_DELAY,
     CAMERA_OBSTACLE_THRESHOLD,
