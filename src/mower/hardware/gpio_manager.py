@@ -2,52 +2,44 @@
 GPIO Manager module.
 
 This module provides a unified interface for GPIO access, with support for
-both hardware GPIO and simulation mode.
+both hardware GPIO and simulation mode. It now uses RPi.GPIO for hardware access.
 """
 
 import logging
 from typing import Optional, Dict, Any
 
-# Try to import gpiod, but don't fail if not available
+# Try to import RPi.GPIO, but don't fail if not available
 try:
-    import gpiod  # type: ignore
-    GPIOD_AVAILABLE = True
+    import RPi.GPIO as GPIO
+    RPI_GPIO_AVAILABLE = True
+    GPIO.setmode(GPIO.BCM) # Use Broadcom pin numbering
+    GPIO.setwarnings(False) # Disable warnings
 except ImportError:
-    GPIOD_AVAILABLE = False
-    logging.warning("gpiod not available. Running in simulation mode.")
+    RPI_GPIO_AVAILABLE = False
+    logging.warning("RPi.GPIO not available. Running in simulation mode.")
+except RuntimeError as e:
+    # Catches errors like 'This module can only be run on a Raspberry Pi!'
+    RPI_GPIO_AVAILABLE = False
+    logging.warning(f"RPi.GPIO cannot be used (not a Pi?): {e}")
 
 class GPIOManager:
     """
-    GPIO Manager class that provides a unified interface for GPIO access.
+    GPIO Manager class using RPi.GPIO library.
     
-    This class supports both hardware GPIO access through gpiod and
+    This class supports both hardware GPIO access through RPi.GPIO and
     simulation mode when hardware is not available.
     """
     
-    def __init__(self, chip_name: str = "gpiochip0"):
+    def __init__(self):
         """
         Initialize the GPIO manager.
-        
-        Args:
-            chip_name: The name of the GPIO chip to use
         """
-        self._chip_name = chip_name
-        self._chip = None
-        self._lines = {}
-        self._line_configs = {}
-        self._simulation_mode = not GPIOD_AVAILABLE
+        self._pins_setup: Dict[int, str] = {}
+        self._simulation_mode = not RPI_GPIO_AVAILABLE
         
-        if not self._simulation_mode:
-            try:
-                self._chip = gpiod.Chip(self._chip_name)
-                logging.info(f"Initialized GPIO chip {self._chip_name}")
-            except Exception as e:
-                logging.warning(f"Failed to initialize GPIO chip: {e}")
-                self._simulation_mode = True
-                
         if self._simulation_mode:
             logging.info("Running GPIO in simulation mode")
-            self._simulated_values = {}
+            self._simulated_values: Dict[int, int] = {}
             
     def setup_pin(self, pin: int, direction: str = "out", 
                   initial: Optional[int] = None) -> bool:
@@ -55,33 +47,30 @@ class GPIOManager:
         Set up a GPIO pin for use.
         
         Args:
-            pin: The GPIO pin number
+            pin: The GPIO pin number (BCM mode)
             direction: "in" for input, "out" for output
-            initial: Initial value for output pins (0 or 1)
+            initial: Initial value for output pins (GPIO.LOW or GPIO.HIGH)
             
         Returns:
             bool: True if setup successful, False otherwise
         """
         if self._simulation_mode:
-            self._simulated_values[pin] = initial if initial is not None else 0
+            # Map GPIO.HIGH/LOW to 1/0 if necessary for simulation state
+            sim_initial = initial if initial is not None else 0
+            if sim_initial == GPIO.HIGH: sim_initial = 1
+            if sim_initial == GPIO.LOW: sim_initial = 0
+            self._simulated_values[pin] = sim_initial
+            self._pins_setup[pin] = direction
             return True
             
         try:
-            config = {
-                "direction": gpiod.LINE_REQ_DIR_OUT if direction == "out" 
-                            else gpiod.LINE_REQ_DIR_IN,
-                "consumer": "mower"
-            }
-            
-            if initial is not None and direction == "out":
-                config["default_val"] = initial
+            dir_const = GPIO.OUT if direction == "out" else GPIO.IN
+            initial_val = GPIO.LOW # Default initial for RPi.GPIO
+            if initial is not None:
+                initial_val = initial
                 
-            line = self._chip.get_line(pin)
-            line.request(**config)
-            
-            self._lines[pin] = line
-            self._line_configs[pin] = config
-            
+            GPIO.setup(pin, dir_const, initial=initial_val)
+            self._pins_setup[pin] = direction
             return True
             
         except Exception as e:
@@ -90,35 +79,37 @@ class GPIOManager:
             
     def cleanup_pin(self, pin: int) -> None:
         """
-        Clean up a GPIO pin.
+        Clean up a single GPIO pin (resets it).
         
         Args:
             pin: The GPIO pin number to clean up
         """
         if self._simulation_mode:
             self._simulated_values.pop(pin, None)
+            self._pins_setup.pop(pin, None)
             return
             
         try:
-            if pin in self._lines:
-                self._lines[pin].release()
-                del self._lines[pin]
-                del self._line_configs[pin]
+            if pin in self._pins_setup:
+                GPIO.cleanup(pin)
+                self._pins_setup.pop(pin, None)
         except Exception as e:
             logging.error(f"Error cleaning up GPIO pin {pin}: {e}")
             
     def cleanup_all(self) -> None:
-        """Clean up all GPIO pins."""
+        """Clean up all GPIO pins used by this manager."""
         if self._simulation_mode:
             self._simulated_values.clear()
+            self._pins_setup.clear()
             return
             
         try:
-            for pin in list(self._lines.keys()):
-                self.cleanup_pin(pin)
-            if self._chip:
-                self._chip.close()
-                self._chip = None
+            # RPi.GPIO cleanup can take a channel list or clean all if no arg
+            # Cleaning only the pins we set up is safer
+            pins_to_clean = list(self._pins_setup.keys())
+            if pins_to_clean:
+                GPIO.cleanup(pins_to_clean)
+            self._pins_setup.clear()
         except Exception as e:
             logging.error(f"Error cleaning up GPIO: {e}")
             
@@ -128,20 +119,30 @@ class GPIOManager:
         
         Args:
             pin: The GPIO pin number
-            value: The value to set (0 or 1)
+            value: The value to set (GPIO.LOW or GPIO.HIGH, or 0/1)
             
         Returns:
             bool: True if successful, False otherwise
         """
+        # Ensure value is 0 or 1 for consistency
+        gpio_value = GPIO.HIGH if value else GPIO.LOW
+        sim_value = 1 if value else 0
+
         if self._simulation_mode:
-            self._simulated_values[pin] = value
-            return True
+            if pin in self._pins_setup and self._pins_setup[pin] == "out":
+                self._simulated_values[pin] = sim_value
+                return True
+            else:
+                logging.warning(f"Cannot set simulated pin {pin}, not set up as output.")
+                return False
             
         try:
-            if pin in self._lines:
-                self._lines[pin].set_value(value)
+            if pin in self._pins_setup and self._pins_setup[pin] == "out":
+                GPIO.output(pin, gpio_value)
                 return True
-            return False
+            else:
+                logging.warning(f"Cannot set pin {pin}, not set up as output.")
+                return False
         except Exception as e:
             logging.error(f"Error setting GPIO pin {pin}: {e}")
             return False
@@ -157,19 +158,25 @@ class GPIOManager:
             Optional[int]: The pin value (0 or 1) or None on error
         """
         if self._simulation_mode:
-            return self._simulated_values.get(pin, 0)
+            if pin in self._pins_setup:
+                return self._simulated_values.get(pin, 0)
+            else:
+                 logging.warning(f"Cannot get simulated pin {pin}, not set up.")
+                 return None
             
         try:
-            if pin in self._lines:
-                return self._lines[pin].get_value()
-            return None
+            if pin in self._pins_setup:
+                return GPIO.input(pin) # Returns 0 or 1
+            else:
+                logging.warning(f"Cannot get pin {pin}, not set up.")
+                return None
         except Exception as e:
             logging.error(f"Error reading GPIO pin {pin}: {e}")
             return None
             
     def get_state(self) -> Dict[str, Any]:
         """
-        Get the current state of all GPIO pins.
+        Get the current state of all set up GPIO pins.
         
         Returns:
             Dict[str, Any]: Dictionary containing GPIO state information
@@ -182,11 +189,11 @@ class GPIOManager:
         if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
         else:
-            for pin, line in self._lines.items():
+            for pin in self._pins_setup.keys():
                 try:
                     state["pins"][pin] = {
-                        "value": line.get_value(),
-                        "config": self._line_configs[pin]
+                        "value": self.get_pin(pin),
+                        "direction": self._pins_setup.get(pin)
                     }
                 except Exception as e:
                     logging.error(f"Error getting state for pin {pin}: {e}")

@@ -86,14 +86,12 @@ sudo apt-get update
 sudo apt-get install -y \
     libatlas-base-dev \
     libhdf5-dev \
-    libhdf5-serial-dev \
     python3-dev \
     python3-pip \
     i2c-tools \
     gpsd \
     gpsd-clients \
     python3-gps \
-    libgpiod-dev \
     python3-libgpiod \
     libportaudio2 \
     libportaudiocpp0 \
@@ -118,7 +116,7 @@ $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bme280"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bno08x"
 $VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-vl53l0x"
-$VENV_PIP install --no-cache-dir "gpiod"
+$VENV_PIP install --no-cache-dir "RPi.GPIO"
 $VENV_PIP install --no-cache-dir "picamera2"
 
 # Ask if user wants to install Coral TPU support

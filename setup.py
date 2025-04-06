@@ -30,7 +30,7 @@ setup(
         "adafruit-circuitpython-bno08x",
         "barbudor-circuitpython-ina3221",
         "adafruit-circuitpython-vl53l0x",
-        "gpiod",
+        "RPi.GPIO",
         "picamera2",
     ],
     extras_require={
