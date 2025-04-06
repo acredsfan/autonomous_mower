@@ -56,6 +56,7 @@ except ImportError:
         """A dummy class to replace hardware components in simulation mode."""
         def __init__(self, *args, **kwargs):
             # Allow initialization with any arguments
+            self._initialized = True # Assume dummy hardware is always 'initialized'
             pass
             
         def __getattr__(self, name):
@@ -66,10 +67,12 @@ except ImportError:
         # Add specific methods expected during init/cleanup
         def _initialize(self, *args, **kwargs):
             """Dummy initialize method."""
+            self._initialized = True
             pass
 
         def cleanup(self, *args, **kwargs):
             """Dummy cleanup method."""
+            self._initialized = False
             pass
             
         def clean(self, *args, **kwargs):

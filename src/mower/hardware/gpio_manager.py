@@ -12,8 +12,8 @@ from typing import Optional, Dict, Any
 try:
     import RPi.GPIO as GPIO
     RPI_GPIO_AVAILABLE = True
-    GPIO.setmode(GPIO.BCM) # Use Broadcom pin numbering
-    GPIO.setwarnings(False) # Disable warnings
+    GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
+    GPIO.setwarnings(False)  # Disable warnings
 except ImportError:
     RPI_GPIO_AVAILABLE = False
     logging.warning("RPi.GPIO not available. Running in simulation mode.")
@@ -21,6 +21,7 @@ except RuntimeError as e:
     # Catches errors like 'This module can only be run on a Raspberry Pi!'
     RPI_GPIO_AVAILABLE = False
     logging.warning(f"RPi.GPIO cannot be used (not a Pi?): {e}")
+
 
 class GPIOManager:
     """
@@ -57,17 +58,18 @@ class GPIOManager:
         if self._simulation_mode:
             # Map GPIO.HIGH/LOW to 1/0 if necessary for simulation state
             sim_initial = initial if initial is not None else 0
-            if sim_initial == GPIO.HIGH: sim_initial = 1
-            if sim_initial == GPIO.LOW: sim_initial = 0
+            if sim_initial == GPIO.HIGH:
+                sim_initial = 1
+            if sim_initial == GPIO.LOW:
+                sim_initial = 0
             self._simulated_values[pin] = sim_initial
             self._pins_setup[pin] = direction
             return True
             
         try:
             dir_const = GPIO.OUT if direction == "out" else GPIO.IN
-            initial_val = GPIO.LOW # Default initial for RPi.GPIO
-            if initial is not None:
-                initial_val = initial
+            # Default initial for RPi.GPIO is LOW if not specified
+            initial_val = initial if initial is not None else GPIO.LOW
                 
             GPIO.setup(pin, dir_const, initial=initial_val)
             self._pins_setup[pin] = direction
@@ -133,6 +135,7 @@ class GPIOManager:
                 self._simulated_values[pin] = sim_value
                 return True
             else:
+                # Use f-string correctly
                 logging.warning(f"Cannot set simulated pin {pin}, not set up as output.")
                 return False
             
@@ -161,12 +164,13 @@ class GPIOManager:
             if pin in self._pins_setup:
                 return self._simulated_values.get(pin, 0)
             else:
-                 logging.warning(f"Cannot get simulated pin {pin}, not set up.")
-                 return None
+                # Correct indentation and formatting
+                logging.warning(f"Cannot get simulated pin {pin}, not set up.")
+                return None
             
         try:
             if pin in self._pins_setup:
-                return GPIO.input(pin) # Returns 0 or 1
+                return GPIO.input(pin)  # Returns 0 or 1
             else:
                 logging.warning(f"Cannot get pin {pin}, not set up.")
                 return None
