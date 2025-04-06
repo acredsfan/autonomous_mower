@@ -111,7 +111,7 @@ print_info "Explicitly installing potentially missed packages..."
 $VENV_PIP install --no-cache-dir "utm>=0.7.0,<0.8.0"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bme280>=2.6.4,<3.0.0"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bno08x>=1.2.8,<2.0.0"
-$VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221x>=1.0.0"
+$VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221>=1.0."
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
