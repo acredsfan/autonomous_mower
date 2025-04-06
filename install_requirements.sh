@@ -104,7 +104,8 @@ sudo apt-get install -y \
 
 # Install Python package in editable mode with all dependencies into venv
 print_info "Installing Python package and dependencies into venv..."
-$VENV_PIP install --no-cache-dir -e .
+# Use --upgrade flag to force checking/installing dependencies
+$VENV_PIP install --no-cache-dir --upgrade -e .
 
 # Explicitly install packages that might be missed by editable install
 print_info "Explicitly installing potentially missed packages..."
@@ -112,6 +113,7 @@ $VENV_PIP install --no-cache-dir "utm>=0.7.0,<0.8.0"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bme280>=2.6.4,<3.0.0"
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bno08x>=1.2.8,<2.0.0"
 $VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221>=2.0.0"
+$VENV_PIP install --no-cache-dir "adafruit-circuitpython-vl53l0x>=1.2.6,<2.0.0"
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
