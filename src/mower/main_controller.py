@@ -53,16 +53,52 @@ except ImportError:
     
     # Create dummy classes for simulation
     class DummyHardware:
+        """A dummy class to replace hardware components in simulation mode."""
         def __init__(self, *args, **kwargs):
+            # Allow initialization with any arguments
             pass
             
         def __getattr__(self, name):
+            """Return a dummy function for any method call."""
+            # Return a lambda that accepts any args and does nothing
             return lambda *args, **kwargs: None
-    
+            
+        # Add specific methods expected during init/cleanup
+        def _initialize(self, *args, **kwargs):
+            """Dummy initialize method."""
+            pass
+
+        def cleanup(self, *args, **kwargs):
+            """Dummy cleanup method."""
+            pass
+            
+        def clean(self, *args, **kwargs):
+            """Dummy clean method (for GPIO)."""
+            # Alias to cleanup for simplicity in dummy class
+            self.cleanup(*args, **kwargs)
+            
+        def shutdown(self, *args, **kwargs):
+            """Dummy shutdown method."""
+            # Alias to cleanup for simplicity in dummy class
+            self.cleanup(*args, **kwargs)
+
+        def start(self, *args, **kwargs):
+            """Dummy start method."""
+            pass
+
+        def stop(self, *args, **kwargs):
+            """Dummy stop method."""
+            pass
+
     # Assign dummy hardware classes
-    BladeController = BME280Sensor = get_camera_instance = GPIOManager = DummyHardware
-    BNO085Sensor = INA3221Sensor = RoboHATDriver = get_sensor_interface = DummyHardware
+    BladeController = BME280Sensor = GPIOManager = DummyHardware
+    BNO085Sensor = INA3221Sensor = RoboHATDriver = DummyHardware
     SerialPort = VL53L0XSensors = DummyHardware
+    # Special handling for functions returning instances
+    def get_camera_instance(*args, **kwargs):
+        return DummyHardware()
+    def get_sensor_interface(*args, **kwargs):
+        return DummyHardware()
 
 # Navigation imports
 from mower.navigation.gps import (
