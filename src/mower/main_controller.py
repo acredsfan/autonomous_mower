@@ -243,8 +243,8 @@ class ResourceManager:
         Returns:
             tuple: (interpreter, input_details, output_details)
         """
-        # Logger for this component
-        resource_logger = logger.getLogger('mower.resources')
+        # Logger for this component - use the class method to get logger
+        resource_logger = LoggerConfig.get_logger('mower.resources')
         
         # Get paths to models and determine if hardware acceleration is used
         model_dir = os.path.expanduser(self._config.get('ML_MODEL_PATH', './models'))
