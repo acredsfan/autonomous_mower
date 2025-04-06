@@ -29,7 +29,7 @@ setup(
         "utm>=0.7.0,<0.8.0",
         "adafruit-circuitpython-bme280>=2.6.4,<3.0.0",
         "adafruit-circuitpython-bno08x>=1.2.8,<2.0.0",
-        "barbudor-circuitpython-ina3221>=1.0.0",
+        "barbudor-circuitpython-ina3221>=2.0.0",
     ],
     extras_require={
         "coral": [
