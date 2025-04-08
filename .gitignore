@@ -92,3 +92,4 @@ wheels/
 .installed.cfg
 *.egg
 .cursor/
+mcp_server/
