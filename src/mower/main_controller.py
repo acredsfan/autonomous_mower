@@ -6,8 +6,8 @@ from the previous mower.py and robot.py files. It provides a centralized
 resource management system and coordinates the overall operation of the mower.
 
 Architecture:
-- ResourceManager: Handles initialization, access, and cleanup of all hardware and
-  software components
+- ResourceManager: Handles initialization, access, and cleanup of all
+  hardware and software components
 - RobotController: Manages the core mowing operation logic
 
 Usage:
@@ -20,7 +20,7 @@ Dependencies:
     UI modules for user interfaces
     Utility modules for logging and helpers
 
-Configuration files are stored in the 'config' directory within the mower module.
+Config files are stored in the 'config' directory within the mower module.
 """
 
 from mower.utilities.utils import Utils
@@ -71,7 +71,8 @@ except ImportError:
 
         def __init__(self, *args, **kwargs):
             # Allow initialization with any arguments
-            self._initialized = True  # Assume dummy hardware is always 'initialized'
+            # Assume dummy hardware is always 'initialized'
+            self._initialized = True
             pass
 
         def __getattr__(self, name):
@@ -190,14 +191,15 @@ class ResourceManager:
     - For serial port issues, verify port names in .env configuration
     - For hardware errors, check power supply and connection status
     - For software errors, check log files for specific error messages
-    - For Coral TPU issues, check USB connections and Edge TPU runtime installation
+    - For Coral issues, check USB connections and Edge TPU runtime installation
     """
 
     def __init__(self):
         """
-        Initialize the resource manager with empty references to all components.
+        Initialize the resource mgr with empty references to all components.
 
-        All resources start as None and are initialized on first access via getter methods.
+        All resources start as None and are initialized on first access via
+        getter methods.
         File paths for configuration are set up with standardized locations.
         """
         # Hardware resources
@@ -302,7 +304,8 @@ class ResourceManager:
         # Logger for this component - use the class method to get logger
         resource_logger = LoggerConfig.get_logger('mower.resources')
 
-        # Get paths to models and determine if hardware acceleration is used
+        # Get paths to models and determine if hardware acceleration is
+        # used
         model_dir = os.path.expanduser(
             self._config.get(
                 'ML_MODEL_PATH',
@@ -339,7 +342,8 @@ class ResourceManager:
                 if not os.path.exists(tpu_path):
                     logger.error(
                         f"TPU model not found at {tpu_path}. Falling back to CPU model.")
-                    raise FileNotFoundError(f"TPU model not found: {tpu_path}")
+                    raise FileNotFoundError(
+                        f"TPU model not found: {tpu_path}")
 
                 from pycoral.utils.edgetpu import make_interpreter
 
@@ -364,7 +368,8 @@ class ResourceManager:
                 cpu_path = os.path.join(model_dir, model_file)
                 if not os.path.exists(cpu_path):
                     logger.error(f"CPU model not found at {cpu_path}")
-                    raise FileNotFoundError(f"CPU model not found: {cpu_path}")
+                    raise FileNotFoundError(
+                        f"CPU model not found: {cpu_path}")
 
                 self._inference_interpreter = tflite.Interpreter(
                     model_path=cpu_path)
@@ -372,7 +377,8 @@ class ResourceManager:
                     f"Successfully initialized TFLite CPU interpreter with model: {cpu_path}")
 
             except (ImportError, ModuleNotFoundError):
-                # Fall back to TensorFlow if tflite_runtime is not available
+                # Fall back to TensorFlow if tflite_runtime is not
+                # available
                 logger.warning(
                     "tflite_runtime not available. Trying to use TensorFlow.")
                 try:
@@ -1042,7 +1048,8 @@ class ResourceManager:
             try:
                 self._gps_nmea_positions.shutdown()
             except Exception as e:
-                logger.error(f"Error shutting down GPS NMEA positions: {e}")
+                logger.error(
+                    f"Error shutting down GPS NMEA positions: {e}")
 
         if self._gps_position:
             try:
@@ -1241,7 +1248,8 @@ class RobotController:
                     avoidance_state = self.avoidance_algorithm.current_state
                     if avoidance_state != AvoidanceState.NORMAL:
                         if not self.avoidance_active:
-                            logger.info("Avoidance activated, pausing mowing")
+                            logger.info(
+                                "Avoidance activated, pausing mowing")
                             self.avoidance_active = True
                             self.current_state = RobotState.AVOIDING
 
@@ -1250,7 +1258,8 @@ class RobotController:
                     avoidance_state = self.avoidance_algorithm.current_state
                     if avoidance_state == AvoidanceState.NORMAL:
                         if self.avoidance_active:
-                            logger.info("Avoidance completed, resuming mowing")
+                            logger.info(
+                                "Avoidance completed, resuming mowing")
                             self.avoidance_active = False
                             self.current_state = RobotState.MOWING
                     # Check for recovery failures
@@ -1325,7 +1334,8 @@ class RobotController:
             bool: True if at home location, False otherwise
         """
         if not self.home_location:
-            logger.warning("Home location not set, can't determine if at home")
+            logger.warning(
+                "Home location not set, can't determine if at home")
             return False
 
         try:
@@ -1433,7 +1443,9 @@ class RobotController:
                     # Check if target reached
                     nav_status = self.navigation_controller.get_status()
                     if nav_status == NavigationStatus.TARGET_REACHED:
-                        logger.debug(f"Reached waypoint {waypoint_idx + 1}")
+                        logger.debug(
+                            f"Reached waypoint {
+                                waypoint_idx + 1}")
                         break
                     elif nav_status == NavigationStatus.ERROR:
                         logger.error("Navigation error occurred")
@@ -1449,7 +1461,8 @@ class RobotController:
                     logger.warning(
                         f"Timeout reaching waypoint {
                             waypoint_idx + 1}")
-                    # Continue to next waypoint instead of failing completely
+                    # Continue to next waypoint instead of failing
+                    # completely
 
             # Path completed successfully
             logger.info("Mowing path completed")
@@ -1509,7 +1522,9 @@ class RobotController:
         Returns:
             bool: True if successfully switched to manual mode, False otherwise
         """
-        if self.current_state in [RobotState.ERROR, RobotState.EMERGENCY_STOP]:
+        if self.current_state in [
+                RobotState.ERROR,
+                RobotState.EMERGENCY_STOP]:
             logger.warning(
                 f"Cannot start manual control from state {
                     self.current_state}")
@@ -1585,7 +1600,8 @@ def main():
         robot_controller = RobotController(resource_manager)
 
         # Start the robot logic in a separate thread
-        # Using daemon=True ensures thread terminates when main thread exits
+        # Using daemon=True ensures thread terminates when main thread
+        # exits
         robot_thread = threading.Thread(
             target=robot_controller.run_robot,
             daemon=True
