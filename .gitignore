@@ -50,6 +50,7 @@ config/user_polygon.json
 config/home_location.json
 config/mowing_schedule.json
 old_main.log
+issues.json
 
 # Temporary files
 *.tmp
