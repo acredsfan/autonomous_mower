@@ -123,33 +123,47 @@ $VENV_PIP install --no-cache-dir "picamera2"
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Installing Coral TPU support into venv..."
+    print_info "Installing Coral TPU support..."
+    
+    # Add Coral repository and install Edge TPU runtime
+    print_info "Installing Edge TPU runtime..."
+    echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    sudo apt-get update
+    
+    # Install standard version for thermal stability
+    sudo apt-get install -y libedgetpu1-std
+    
+    # Set up udev rules for USB access
+    print_info "Setting up USB access rules..."
+    echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a6e",ATTRS{idProduct}=="089a",MODE="0666"' | sudo tee /etc/udev/rules.d/99-coral-tpu.rules
+    sudo udevadm control --reload-rules && sudo udevadm trigger
     
     # Install GDAL Python package first using venv pip
     $VENV_PIP install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
     
     # Now install Coral dependencies using venv pip
+    print_info "Installing Coral Python packages..."
     $VENV_PIP install -e ".[coral]"
     
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
-    sudo mkdir -p models
-    sudo chown $USER:$USER models
-fi
-
-# Download model files
-print_info "Downloading model files..."
-mkdir -p models
-download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite" "models/detect.tflite"
-download_model "https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite" "models/detect_edgetpu.tflite"
-download_model "https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt" "models/labelmap.txt"
-
-# Verify model files
-if [ -f "models/detect.tflite" ] && [ -f "models/detect_edgetpu.tflite" ] && [ -f "models/labelmap.txt" ]; then
-    print_success "All model files downloaded successfully"
-else
-    print_error "Some model files are missing"
-    exit 1
+    mkdir -p src/mower/obstacle_detection/models
+    
+    # Download model files
+    print_info "Downloading model files..."
+    wget -O src/mower/obstacle_detection/models/detect_edgetpu.tflite \
+        https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
+    wget -O src/mower/obstacle_detection/models/detect.tflite \
+        https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite
+    wget -O src/mower/obstacle_detection/models/labelmap.txt \
+        https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt
+    
+    print_info "Coral TPU setup complete!"
+    print_info "Notes:"
+    print_info "1. Using standard performance mode for thermal stability"
+    print_info "2. To switch to max performance mode: sudo apt-get install libedgetpu1-max"
+    print_info "3. After connecting USB Accelerator, run: sudo udevadm trigger"
 fi
 
 # Create necessary directories
