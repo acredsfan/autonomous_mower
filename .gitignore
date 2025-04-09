@@ -93,3 +93,4 @@ wheels/
 *.egg
 .cursor/
 mcp_server/
+mcp.json
