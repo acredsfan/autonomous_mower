@@ -25,8 +25,8 @@ Dependencies:
     - Configuration management
 
 Configuration:
-    - Stored in config.json
-    - Loaded at initialization
+    - Environment variables (.env)
+    - User configuration files in config directory
     - Supports runtime updates
 """
 
@@ -86,12 +86,7 @@ class ResourceManager:
     def __init__(self, config_path=None):
         """
         Initialize the resource manager.
-
-        Args:
-            config_path (str, optional): Path to configuration file.
-                Defaults to None.
         """
-        self.config_path = config_path or str(CONFIG_DIR / "config.json")
         self._initialized = False
         self._resources = {}
         self._lock = threading.Lock()

@@ -15,16 +15,7 @@ load_dotenv()
 
 # Set up base directory for consistent file referencing
 BASE_DIR = Path(__file__).resolve().parents[0]
-config_path = BASE_DIR / "config.json"
 polygon_path = BASE_DIR / "user_polygon.json"
-
-# Open config file
-try:
-    with open(config_path) as f:
-        config = json.load(f)
-except FileNotFoundError:
-    logging.error("Config file not found.")
-    config = {}
 
 # Open user polygon config file
 try:
@@ -40,7 +31,9 @@ EARTH_RADIUS = 6371e3  # Earth's radius in meters
 
 # For navigation_system/path_planning.py
 SECTION_SIZE = (10, 10)
-GRID_SIZE = (config['GRID_L'], config['GRID_W'])
+GRID_L = 100  # Grid length
+GRID_W = 100  # Grid width
+GRID_SIZE = (GRID_L, GRID_W)
 
 # For obstacle_detection/avoidance_algorithm.py
 OBSTACLE_MARGIN = 10  # Margin to avoid obstacles in CM

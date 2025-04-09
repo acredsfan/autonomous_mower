@@ -1,9 +1,0 @@
-{
-    "openweathermap_api_key": "YOUR_OPENWEATHERMAP_API_KEY",
-    "google_maps_api_key": "YOUR_GOOGLE_MAPS_API_KEY",
-    "GRID_L" : 100,
-    "GRID_W" : 100,
-    "Obstacle_avoidance_margin" : 2,
-    "CAMERA_OBSTACLE_THRESHOLD": 1000
-  }
-  
