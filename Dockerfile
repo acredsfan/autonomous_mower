@@ -1,36 +1,24 @@
 # Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.9-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libatlas-base-dev \
-    libhdf5-dev \
-    libhdf5-serial-dev \
-    python3-dev \
-    python3-pip \
-    i2c-tools \
-    gpsd \
-    gpsd-clients \
-    python3-gps \
-    python3-libgpiod \
-    libportaudio2 \
-    libportaudiocpp0 \
-    portaudio19-dev \
-    python3-picamera2 \
-    wget \
-    gnupg \
+RUN apt-get update && apt-get install -y \
     curl \
+    gnupg \
+    udev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Coral packages (Edge TPU runtime)
-RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | tee /etc/apt/sources.list.d/coral-edgetpu.list
-RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-RUN apt-get update && apt-get install -y libedgetpu1-std
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# Set up Coral repository and install Edge TPU runtime
+RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | \
+    tee /etc/apt/sources.list.d/coral-edgetpu.list && \
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
+    apt-get update && \
+    apt-get install -y libedgetpu1-std && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set work directory
 WORKDIR /app
