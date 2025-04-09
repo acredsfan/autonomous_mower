@@ -144,6 +144,57 @@
                         </div>
                     </div>
                     
+                    <!-- Add Safety Monitoring Section -->
+                    <div class="calibration-item">
+                        <div class="calibration-header">
+                            <h4>Safety Monitoring</h4>
+                        </div>
+                        <div class="calibration-content">
+                            <p>Real-time safety status from IMU sensor.</p>
+                            <div class="safety-status">
+                                <div class="status-row">
+                                    <span class="status-label">Overall Safety:</span>
+                                    <span class="status-value" id="overallSafetyStatus">
+                                        <i class="fas fa-check-circle text-success"></i> Safe
+                                    </span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="status-label">Tilt Status:</span>
+                                    <span class="status-value" id="tiltStatus">
+                                        <i class="fas fa-check-circle text-success"></i> Normal
+                                    </span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="status-label">Impact Detection:</span>
+                                    <span class="status-value" id="impactStatus">
+                                        <i class="fas fa-check-circle text-success"></i> No Impact
+                                    </span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="status-label">Acceleration:</span>
+                                    <span class="status-value" id="accelerationStatus">
+                                        <i class="fas fa-check-circle text-success"></i> Normal
+                                    </span>
+                                </div>
+                                <div class="status-row">
+                                    <span class="status-label">Last Event:</span>
+                                    <span class="status-value" id="lastSafetyEvent">None</span>
+                                </div>
+                            </div>
+                            <div class="safety-thresholds mt-3">
+                                <h5>Safety Thresholds</h5>
+                                <div class="threshold-row">
+                                    <span class="threshold-label">Max Tilt:</span>
+                                    <span class="threshold-value" id="maxTiltThreshold">45°</span>
+                                </div>
+                                <div class="threshold-row">
+                                    <span class="threshold-label">Impact Threshold:</span>
+                                    <span class="threshold-value" id="impactThreshold">2.0 G</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="calibration-item">
                         <div class="calibration-header">
                             <h4>Blade Motor Calibration</h4>

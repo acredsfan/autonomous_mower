@@ -114,12 +114,16 @@ class EnhancedSensorInterface:
             compass = BNO085Sensor.read_bno085_magnetometer(
                 self._sensors['bno085']
             )
+            # Get safety status
+            safety_status = self._sensors['bno085'].get_safety_status()
+            
             return {
                 'acceleration': accel,
                 'heading': heading,
                 'roll': roll,
                 'speed': speed,
-                'compass': compass
+                'compass': compass,
+                'safety_status': safety_status
             }
         except Exception as e:
             self._handle_sensor_error('bno085', e)

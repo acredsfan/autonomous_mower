@@ -458,6 +458,11 @@ function updateSensorData(data) {
         if (pitchElement) {
             pitchElement.textContent = `${systemState.imu.pitch.toFixed(1)}°`;
         }
+        
+        // Update safety status if available
+        if (data.imu.safety_status) {
+            updateSafetyStatus(data.imu.safety_status);
+        }
     }
     
     // Update motor data if available
@@ -479,6 +484,85 @@ function updateSensorData(data) {
             bladeSpeedElement.textContent = `${Math.round(systemState.motors.bladeSpeed * 100)}%`;
         }
     }
+}
+
+function updateSafetyStatus(status) {
+    // Update overall safety status
+    const overallStatus = document.getElementById('overallSafetyStatus');
+    if (overallStatus) {
+        if (status.is_safe) {
+            overallStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Safe';
+        } else {
+            overallStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Warning';
+        }
+    }
+    
+    // Update tilt status
+    const tiltStatus = document.getElementById('tiltStatus');
+    if (tiltStatus) {
+        if (status.tilt_ok) {
+            tiltStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Normal';
+        } else {
+            tiltStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Excessive Tilt';
+        }
+    }
+    
+    // Update impact status
+    const impactStatus = document.getElementById('impactStatus');
+    if (impactStatus) {
+        if (!status.impact_detected) {
+            impactStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> No Impact';
+        } else {
+            impactStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Impact Detected';
+        }
+    }
+    
+    // Update acceleration status
+    const accelStatus = document.getElementById('accelerationStatus');
+    if (accelStatus) {
+        if (status.acceleration_ok) {
+            accelStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Normal';
+        } else {
+            accelStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Abnormal';
+        }
+    }
+    
+    // Update last event message
+    const lastEvent = document.getElementById('lastSafetyEvent');
+    if (lastEvent && status.messages && status.messages.length > 0) {
+        lastEvent.textContent = status.messages[status.messages.length - 1];
+        // Add timestamp to the message
+        const timestamp = new Date().toLocaleTimeString();
+        lastEvent.textContent += ` (${timestamp})`;
+    }
+    
+    // If any safety condition is violated, show alert
+    if (!status.is_safe) {
+        showSafetyAlert(status.messages);
+    }
+}
+
+function showSafetyAlert(messages) {
+    const alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) return;
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+    alertDiv.role = 'alert';
+    
+    const messageHtml = messages.map(msg => `<div>${msg}</div>`).join('');
+    alertDiv.innerHTML = `
+        <strong>Safety Alert!</strong>
+        ${messageHtml}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    alertContainer.appendChild(alertDiv);
+    
+    // Remove alert after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
 }
 
 /**

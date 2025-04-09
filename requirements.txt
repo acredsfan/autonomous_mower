@@ -1,3 +1,4 @@
+# Core dependencies
 numpy==1.19.5
 opencv-python==4.5.3.56
 pillow==8.3.2
@@ -18,13 +19,41 @@ shapely==2.0.0
 tensorflow==2.13.0
 colorama==0.4.4
 watchdog==5.0.0
-barbudor-circuitpython-ina3221
-adafruit-circuitpython-vl53l0x
-picamera2
+
+# System monitoring and safety
+psutil==5.9.0
+py3nvml==0.2.7
+pyudev==0.24.0
+systemd-python==234
+python-daemon==3.0.1
+supervisor==4.2.5
+prometheus_client==0.17.0
+
+# GPS and navigation
+pynmea2==1.18.0
+gpsd-py3==0.3.0
+utm==0.7.0
+
+# Sensors and hardware
+adafruit-circuitpython-bme280==3.0.0
+adafruit-circuitpython-bno08x==1.0.0
+barbudor-circuitpython-ina3221==1.0.0
+adafruit-circuitpython-vl53l0x==3.0.0
+picamera2==0.3.12
 
 # Coral TPU dependencies
 tflite-runtime==2.5.0
 pycoral==2.0.0
+
+# Security
+safety==2.3.0
+bandit==1.7.5
+pyOpenSSL==23.0.0
+certifi==2023.7.22
+
+# Monitoring
+grafana-api-client==2.3.0
+statsd==4.0.1
 
 # Development dependencies
 pytest==6.2.5
@@ -32,4 +61,12 @@ black==21.9b0
 flake8==3.9.2
 mypy==0.910
 pytest-cov==4.1.0
-pytest-mock==3.12.0 
+pytest-mock==3.12.0
+pytest-asyncio==0.23.5
+pytest-timeout==2.2.0
+pytest-xdist==3.5.0
+coverage==7.4.1
+tox==4.15.0
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+pre-commit==3.6.0 

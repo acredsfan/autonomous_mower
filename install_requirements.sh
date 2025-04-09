@@ -16,6 +16,11 @@ print_success() {
     echo -e "${GREEN}SUCCESS: $1${NC}"
 }
 
+# Function to print warning messages
+print_warning() {
+    echo -e "${YELLOW}WARNING: $1${NC}"
+}
+
 # Function to print info messages
 print_info() {
     echo -e "${YELLOW}INFO: $1${NC}"
@@ -26,24 +31,99 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to download a model file with retries
-download_model() {
-    local url=$1
-    local output=$2
-    local max_retries=3
-    local retry_count=0
-    
-    while [ $retry_count -lt $max_retries ]; do
-        if wget -q "$url" -O "$output"; then
-            print_success "Downloaded $output"
-            return 0
+# Function to validate Raspberry Pi hardware
+validate_hardware() {
+    # Check if running on Raspberry Pi
+    if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
+        print_error "This script must be run on a Raspberry Pi"
+        exit 1
+    }
+
+    # Check Pi model and memory
+    PI_MODEL=$(tr -d '\0' < /proc/device-tree/model)
+    if [[ ! "$PI_MODEL" =~ "Raspberry Pi 4" ]]; then
+        print_warning "This software is optimized for Raspberry Pi 4B 4GB or better"
+        print_warning "Current model: $PI_MODEL"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
         fi
-        retry_count=$((retry_count + 1))
-        print_error "Failed to download $output (attempt $retry_count/$max_retries)"
-        sleep 2
-    done
-    return 1
+    fi
+
+    # Check available memory
+    TOTAL_MEM=$(free -m | awk '/^Mem:/{print $2}')
+    if [ "$TOTAL_MEM" -lt 3500 ]; then
+        print_warning "Recommended minimum RAM is 4GB, current: ${TOTAL_MEM}MB"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+
+    # Check for required interfaces
+    if ! ls /dev/i2c* >/dev/null 2>&1; then
+        print_error "I2C interface not enabled. Please enable it using raspi-config"
+        exit 1
+    fi
+
+    if ! ls /dev/ttyAMA* >/dev/null 2>&1; then
+        print_error "Serial interface not enabled. Please enable it using raspi-config"
+        exit 1
+    fi
+
+    # Check for camera module
+    if ! vcgencmd get_camera | grep -q "supported=1"; then
+        print_warning "Camera module not detected"
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 }
+
+# Function to setup watchdog
+setup_watchdog() {
+    print_info "Setting up hardware watchdog..."
+    sudo modprobe bcm2835_wdt
+    echo "bcm2835_wdt" | sudo tee -a /etc/modules
+    sudo apt-get install -y watchdog
+    # Configure watchdog
+    sudo sed -i 's/#max-load-1/max-load-1/' /etc/watchdog.conf
+    sudo sed -i 's/#watchdog-device/watchdog-device/' /etc/watchdog.conf
+    echo "watchdog-timeout = 15" | sudo tee -a /etc/watchdog.conf
+    sudo systemctl enable watchdog
+    sudo systemctl start watchdog
+}
+
+# Function to setup emergency stop
+setup_emergency_stop() {
+    print_info "Setting up emergency stop button..."
+    # Add udev rule for GPIO access
+    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
+    echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
+    
+    # Configure GPIO7 for emergency stop
+    echo "7" | sudo tee /sys/class/gpio/export
+    echo "in" | sudo tee /sys/class/gpio/gpio7/direction
+    echo "both" | sudo tee /sys/class/gpio/gpio7/edge
+    sudo chown -R root:gpio /sys/class/gpio/gpio7
+    sudo chmod -R 770 /sys/class/gpio/gpio7
+    
+    sudo udevadm control --reload-rules && sudo udevadm trigger
+    
+    print_info "Emergency stop button configured on GPIO7"
+    print_info "Please connect emergency stop button between GPIO7 and GND"
+    print_info "Button should be normally closed (NC) for fail-safe operation"
+}
+
+# Main installation starts here
+print_info "Starting installation with safety checks..."
+
+# Validate hardware first
+validate_hardware
 
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then 
@@ -212,8 +292,36 @@ sudo systemctl start autonomous-mower.service
 sleep 5 # Give service a few seconds to start
 sudo systemctl status autonomous-mower.service
 
-print_success "Installation complete!"
-print_info "Please log out and log back in for group changes to take effect"
-print_info "The mower service will start automatically on boot"
-print_info "You can check the service status with: sudo systemctl status autonomous-mower"
-print_info "View logs with: journalctl -u autonomous-mower"
+# Add safety features
+setup_watchdog
+setup_emergency_stop
+
+# Create data directories with proper permissions
+print_info "Creating data directories..."
+mkdir -p data/logs
+mkdir -p data/backups
+chmod 755 data
+chmod 755 data/logs
+chmod 755 data/backups
+
+# Setup log rotation
+print_info "Setting up log rotation..."
+sudo tee /etc/logrotate.d/autonomous-mower << EOF
+/var/log/autonomous-mower.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 $USER $USER
+}
+EOF
+
+print_success "Installation complete with safety features!"
+print_info "Please review the following:"
+print_info "1. Test emergency stop button functionality"
+print_info "2. Verify watchdog is working: systemctl status watchdog"
+print_info "3. Check all sensor connections"
+print_info "4. Review logs in /var/log/autonomous-mower.log"
+print_info "5. Test the mower in a safe, enclosed area first"

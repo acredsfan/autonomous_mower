@@ -1,10 +1,96 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Error</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}Error - Autonomous Mower{% endblock %}
+
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <h1 class="error-title">
+            {% if error_code %}
+                Error {{ error_code }}
+            {% else %}
+                Oops! Something went wrong
+            {% endif %}
+        </h1>
+        
+        <div class="error-message">
+            {% if error_message %}
+                {{ error_message }}
+            {% else %}
+                An unexpected error occurred. Please try again later.
+            {% endif %}
+        </div>
+        
+        <div class="error-details">
+            {% if error_details %}
+                <pre>{{ error_details }}</pre>
+            {% endif %}
+        </div>
+        
+        <div class="error-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                <i class="fas fa-home"></i> Return to Dashboard
+            </a>
+            <button onclick="window.history.back()" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Go Back
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .error-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 2rem;
+    }
+    
+    .error-content {
+        text-align: center;
+        max-width: 600px;
+        padding: 2rem;
+        background-color: var(--light);
+        border-radius: var(--border-radius);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .error-title {
+        color: var(--danger);
+        margin-bottom: 1.5rem;
+    }
+    
+    .error-message {
+        font-size: 1.2rem;
+        color: var(--dark);
+        margin-bottom: 1.5rem;
+    }
+    
+    .error-details {
+        margin: 1.5rem 0;
+        text-align: left;
+    }
+    
+    .error-details pre {
+        background-color: var(--dirt-pale);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        overflow-x: auto;
+        font-size: 0.9rem;
+    }
+    
+    .error-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .error-actions .btn {
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
