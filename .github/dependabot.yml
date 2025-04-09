@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Enable version updates for pip
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Aaron"
+    assignees:
+      - "Aaron"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
