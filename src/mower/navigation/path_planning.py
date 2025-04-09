@@ -1,4 +1,9 @@
-# path_planning.py
+"""
+Path planning module for autonomous mower.
+
+This module handles the generation and execution of mowing paths,
+including obstacle avoidance and navigation control.
+"""
 
 import json
 import math
@@ -8,6 +13,8 @@ import numpy as np
 import random
 import utm
 import cv2
+import logging
+from mower.navigation.navigation import NavigationStatus
 
 # Remove circular import
 # from mower.mower import (
@@ -20,30 +27,33 @@ import cv2
 # )
 
 # Initialize logger directly instead of importing from mower
-import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 # Load environment variables
 load_dotenv()
+
 
 class PathPlanner:
     def __init__(self, localization=None, resource_manager=None):
         self.pattern_type = None
         self.localization = localization
         self.resource_manager = resource_manager
-        
-        # Use paths from resource_manager if available, otherwise define defaults
+
+        # Use paths from resource_manager if available, otherwise define
+        # defaults
         if resource_manager:
             self.USER_POLYGON_PATH = resource_manager.user_polygon_path
             self.MOWING_SCHEDULE_PATH = resource_manager.mowing_schedule_path
         else:
             # Fallback to default paths
-            PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-            self.USER_POLYGON_PATH = os.path.join(PROJECT_ROOT, 'config', 'user_polygon.json')
-            self.MOWING_SCHEDULE_PATH = os.path.join(PROJECT_ROOT, 'config', 'mowing_schedule.json')
-            
+            PROJECT_ROOT = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), '..'))
+            self.USER_POLYGON_PATH = os.path.join(
+                PROJECT_ROOT, 'config', 'user_polygon.json')
+            self.MOWING_SCHEDULE_PATH = os.path.join(
+                PROJECT_ROOT, 'config', 'mowing_schedule.json')
+
             # Create config directory if it doesn't exist
             os.makedirs(os.path.dirname(self.USER_POLYGON_PATH), exist_ok=True)
 
@@ -63,7 +73,7 @@ class PathPlanner:
         self.robohat_driver = None
         self.detect_drop = None
         self.detect_obstacle = None
-        
+
         # Initialize dependencies if resource_manager is available
         if resource_manager:
             self.initialize_dependencies_from_manager(resource_manager)
@@ -73,15 +83,18 @@ class PathPlanner:
         try:
             self.controller = resource_manager.get_navigation_controller()
             self.gps_position_instance = resource_manager.get_gps_position()
-            self.gps_latest_position = resource_manager.get_gps_latest_position()
+            self.gps_latest_position = (
+                resource_manager.get_gps_latest_position())
             self.robohat_driver = resource_manager.get_robohat_driver()
             self.detect_drop = resource_manager.get_detect_drop()
             self.detect_obstacle = resource_manager.get_detect_obstacle()
-            logger.info("Successfully initialized dependencies from resource manager")
+            logger.info(
+                "Successfully initialized dependencies from resource manager")
         except Exception as e:
-            logger.error(f"Error initializing dependencies from resource manager: {e}")
-    
-    def set_dependencies(self, controller=None, gps_position=None, 
+            logger.error(
+                f"Error initializing dependencies from resource manager: {e}")
+
+    def set_dependencies(self, controller=None, gps_position=None,
                          gps_latest_position=None, robohat_driver=None,
                          detect_drop=None, detect_obstacle=None):
         """Set dependencies manually."""
@@ -101,11 +114,13 @@ class PathPlanner:
     def utm_to_gps(self, easting, northing):
         """Convert UTM coordinates to GPS coordinates."""
         if not self.utm_zone_number or not self.utm_zone_letter:
-            logger.error("UTM zone not initialized. Cannot convert coordinates.")
+            logger.error(
+                "UTM zone not initialized. Cannot convert coordinates.")
             return None, None
-            
+
         try:
-            lat, lon = utm.to_latlon(easting, northing, self.utm_zone_number, self.utm_zone_letter)
+            lat, lon = utm.to_latlon(
+                easting, northing, self.utm_zone_number, self.utm_zone_letter)
             return lat, lon
         except Exception as e:
             logger.error(f"Error converting UTM to GPS: {e}")
@@ -121,18 +136,23 @@ class PathPlanner:
     def load_mowing_area_polygon(self):
         """Load the mowing area polygon from the user_polygon.json file."""
         if not os.path.exists(self.USER_POLYGON_PATH):
-            logger.error(f"Mowing area polygon file '{self.USER_POLYGON_PATH}' not found.")
+            logger.error(
+                f"Mowing area polygon file '{self.USER_POLYGON_PATH}' "
+                f"not found.")
             return False
-            
+
         try:
             with open(self.USER_POLYGON_PATH, 'r') as f:
                 polygon_data = json.load(f)
-                self.mowing_area_polygon_gps = [(point['lat'], point['lng']) for point in polygon_data]
-                
+                self.mowing_area_polygon_gps = [
+                    (point['lat'], point['lng']) for point in polygon_data]
+
             if not self.mowing_area_polygon_gps:
-                logger.error(f"'{self.USER_POLYGON_PATH}' does not contain valid polygon data.")
+                logger.error(
+                    f"'{self.USER_POLYGON_PATH}' does not contain valid "
+                    f"polygon data.")
                 return False
-                
+
             return True
         except Exception as e:
             logger.error(f"Error loading mowing area polygon: {e}")
@@ -141,7 +161,8 @@ class PathPlanner:
     def gps_polygon_to_utm_polygon(self):
         self.mowing_area_polygon_utm = []
         for idx, (lat, lon) in enumerate(self.mowing_area_polygon_gps):
-            easting, northing, zone_number, zone_letter = utm.from_latlon(lat, lon)
+            easting, northing, zone_number, zone_letter = utm.from_latlon(
+                lat, lon)
             self.mowing_area_polygon_utm.append((easting, northing))
             if idx == 0:
                 self.utm_zone_number = zone_number
@@ -158,7 +179,7 @@ class PathPlanner:
         self.grid_points = [
             (x, y) for x in grid_x for y in grid_y
             if self.point_in_polygon(x, y, self.mowing_area_polygon_utm)
-        ]
+            ]
 
     def point_in_polygon(self, x, y, polygon):
         num_points = len(polygon)
@@ -167,7 +188,9 @@ class PathPlanner:
         for i in range(num_points):
             xi, yi = polygon[i]
             xj, yj = polygon[j]
-            intersect = ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi)
+            intersect = (
+                (yi > y) != (yj > y)) and (
+                x < (xj - xi) * (y - yi) / (yj - yi) + xi)
             if intersect:
                 inside = not inside
             j = i
@@ -182,8 +205,15 @@ class PathPlanner:
 
         def neighbors(node):
             x, y = node
-            potential_neighbors = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-            return [n for n in potential_neighbors if n in self.grid_points and n not in self.obstacles]
+            potential_neighbors = [
+                (x + 1, y),
+                (x - 1, y),
+                (x, y + 1),
+                (x, y - 1)]
+            return [
+                n for n in potential_neighbors
+                if n in self.grid_points and n not in self.obstacles
+                ]
 
         while open_list:
             current = min(open_list, key=lambda n: f[n])
@@ -210,13 +240,21 @@ class PathPlanner:
         return []
 
     def heuristic(self, node1, node2):
-        return math.sqrt((node1[0] - node2[0]) ** 2 + (node1[1] - node2[1]) ** 2)
+        return math.sqrt((node1[0] - node2[0]) **
+                         2 + (node1[1] - node2[1]) ** 2)
 
-    def rrt_planner(self, start, goal, obstacles, step_size=1.0, max_iter=1000):
+    def rrt_planner(
+            self,
+            start,
+            goal,
+            obstacles,
+            step_size=1.0,
+            max_iter=1000):
         min_x = min(point[0] for point in self.mowing_area_polygon_utm)
         max_x = max(point[0] for point in self.mowing_area_polygon_utm)
         min_y = min(point[1] for point in self.mowing_area_polygon_utm)
         max_y = max(point[1] for point in self.mowing_area_polygon_utm)
+
         def distance(p1, p2):
             return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
@@ -225,11 +263,24 @@ class PathPlanner:
 
         tree = {start: None}
         for _ in range(max_iter):
-            rand_point = (random.uniform(min_x, max_x), random.uniform(min_y, max_y))
+            rand_point = (
+                random.uniform(
+                    min_x, max_x), random.uniform(
+                    min_y, max_y))
             nearest = min(tree.keys(), key=lambda p: distance(p, rand_point))
-            direction = ((rand_point[0] - nearest[0]), (rand_point[1] - nearest[1]))
+            direction = (
+                (rand_point[0] - nearest[0]),
+                (rand_point[1] - nearest[1]))
             length = distance(nearest, rand_point)
-            step = (nearest[0] + step_size * direction[0] / length, nearest[1] + step_size * direction[1] / length)
+            step = (
+                nearest[0] +
+                step_size *
+                direction[0] /
+                length,
+                nearest[1] +
+                step_size *
+                direction[1] /
+                length)
             if is_collision_free(step, obstacles):
                 tree[step] = nearest
                 if distance(step, goal) < step_size:
@@ -242,7 +293,8 @@ class PathPlanner:
 
     def handle_obstacle(self, current_position, remaining_waypoints):
         next_waypoint = remaining_waypoints[0]
-        rrt_path = self.rrt_planner(current_position, next_waypoint, self.obstacles)
+        rrt_path = self.rrt_planner(
+            current_position, next_waypoint, self.obstacles)
         if not rrt_path:
             logger.error("Unable to find a path around the obstacle.")
             return remaining_waypoints
@@ -254,70 +306,78 @@ class PathPlanner:
                (self.detect_drop and self.detect_drop()):
                 logger.warning("Obstacle detected. Re-planning path.")
                 current_position = self.gps_latest_position.run()
-                self.handle_obstacle(current_position, waypoints[waypoints.index(waypoint):])
+                self.handle_obstacle(
+                    current_position,
+                    waypoints[waypoints.index(waypoint):])
                 return False
-            
+
             self.controller.navigate_to_point(waypoint)
             while not self.controller.is_at_goal():
-                if self.controller.status == NavigationStatus.OBSTACLE_DETECTED:
+                if (self.controller.status ==
+                        NavigationStatus.OBSTACLE_DETECTED):
                     logger.warning("Obstacle detected during navigation.")
                     current_position = self.gps_latest_position.run()
-                    self.handle_obstacle(current_position, waypoints[waypoints.index(waypoint):])
+                    self.handle_obstacle(
+                        current_position,
+                        waypoints[waypoints.index(waypoint):])
                     return False
-                
+
                 # Check for user abort
                 if self.controller.status == NavigationStatus.ABORTED:
                     logger.warning("Navigation aborted by user.")
                     return False
-            
+
         return True
 
     def load_mowing_pattern(self):
         """Load the mowing pattern from the mowing_schedule.json file."""
         if not os.path.exists(self.MOWING_SCHEDULE_PATH):
             logger.error(
-                f"Mowing schedule file '{self.MOWING_SCHEDULE_PATH}' not found. "
-                "Please set the schedule via the user interface."
-            )
+                f"Mowing schedule file '{self.MOWING_SCHEDULE_PATH}' "
+                "not found. Please set the schedule via the user interface."
+                )
             # Default to "stripes" pattern if schedule file not found
             self.pattern_type = "stripes"
             return
-            
+
         try:
             with open(self.MOWING_SCHEDULE_PATH, 'r') as f:
                 pattern_data = json.load(f)
-                self.pattern_type = pattern_data.get(
-                    'patternType', 'stripes'
-                )
+                self.pattern_type = pattern_data.get('patternType', 'stripes')
         except json.JSONDecodeError:
             logger.error(
                 f"Error decoding '{self.MOWING_SCHEDULE_PATH}'. "
                 "Please ensure it contains valid JSON."
-            )
+                )
             # Default to "stripes" pattern if error occurs
             self.pattern_type = "stripes"
         except Exception as e:
             logger.error(f"Error loading mowing pattern: {e}")
             self.pattern_type = "stripes"
-            
+
     def save_mowing_pattern(self, pattern_type="stripes"):
         """Save the mowing pattern to the mowing_schedule.json file."""
         try:
             self.pattern_type = pattern_type
             pattern_data = {"patternType": pattern_type}
-            
+
             # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(self.MOWING_SCHEDULE_PATH), exist_ok=True)
-            
+            os.makedirs(
+                os.path.dirname(
+                    self.MOWING_SCHEDULE_PATH),
+                exist_ok=True)
+
             with open(self.MOWING_SCHEDULE_PATH, 'w') as f:
                 json.dump(pattern_data, f)
-                
-            logger.info(f"Mowing pattern '{pattern_type}' saved to {self.MOWING_SCHEDULE_PATH}")
+
+            logger.info(
+                f"Mowing pattern '{pattern_type}' saved to {
+                    self.MOWING_SCHEDULE_PATH}")
             return True
         except Exception as e:
             logger.error(f"Error saving mowing pattern: {e}")
             return False
-            
+
     def generate_path(self, polygon_data):
         """
         Generate a mowing path from a polygon.
@@ -325,45 +385,49 @@ class PathPlanner:
         """
         try:
             # Convert the polygon data to the expected format
-            self.mowing_area_polygon_gps = [(point['lat'], point['lng']) for point in polygon_data]
-            
+            self.mowing_area_polygon_gps = [
+                (point['lat'], point['lng']) for point in polygon_data]
+
             # Convert GPS coordinates to UTM
             self.gps_polygon_to_utm_polygon()
-            
+
             # Generate grid points within the polygon
             self.generate_grid_from_polygon(grid_size=1.0)
-            
+
             # Create the mowing pattern
             self.create_pattern()
-            
+
             # Create and return the waypoint map
             return self.create_waypoint_map()
         except Exception as e:
             logger.error(f"Error generating path: {e}")
             return []
-            
+
     def start(self):
         """Start the path planner."""
         try:
             # Load saved data
             self.load_mowing_area_polygon()
             self.load_mowing_pattern()
-            
+
             # Generate the path
             if self.mowing_area_polygon_gps:
                 self.gps_polygon_to_utm_polygon()
                 self.generate_grid_from_polygon(grid_size=1.0)
                 self.create_pattern()
-                
+
             logger.info("Path planner started successfully.")
             return True
         except Exception as e:
             logger.error(f"Error starting path planner: {e}")
             return False
-            
+
     def shutdown(self):
-        """Shutdown the path planner."""
-        logger.info("Path planner shutting down.")
+        """Shutdown the path planner and its dependencies."""
+        if hasattr(self, 'gps_position_instance'):
+            self.gps_position_instance.shutdown()
+        if hasattr(self, 'robohat_driver'):
+            self.robohat_driver.shutdown()
 
     # Create mowing pattern
 
@@ -373,8 +437,8 @@ class PathPlanner:
         min_x = min(x for x, y in self.grid_points)
         min_y = min(y for x, y in self.grid_points)
         grid_size = 1.0
-        width, height = self.compute_grid_dimensions(self.grid_points, grid_size, min_x, min_y)
-
+        width, height = self.compute_grid_dimensions(
+            self.grid_points, grid_size, min_x, min_y)
 
         waypoints = []
         if not self.grid_points:
@@ -436,13 +500,13 @@ class PathPlanner:
             min_y = min(point[1] for point in grid_points)
             width, height = self.compute_grid_dimensions(
                 grid_points, grid_size, min_x, min_y
-            )
+                )
             center_x = min_x + (width * grid_size) / 2
             center_y = min_y + (height * grid_size) / 2
             for y in np.arange(min_y, min_y + height * grid_size, grid_size):
                 for x in np.arange(
-                        min_x, min_x + width * grid_size, grid_size
-                ):
+                    min_x, min_x + width * grid_size, grid_size
+                        ):
                     if (x, y) in grid_points:
                         waypoints.append((x, y))
 
@@ -450,8 +514,8 @@ class PathPlanner:
             # Generate a wave pattern
             for y in np.arange(min_y, min_y + height * grid_size, grid_size):
                 for x in np.arange(
-                        min_x, min_x + width * grid_size, grid_size
-                ):
+                    min_x, min_x + width * grid_size, grid_size
+                        ):
                     offset = (np.sin((y - min_y) / 5) * grid_size)
                     x_offset = x + offset
                     if (x_offset, y) in self.grid_points:
@@ -465,7 +529,7 @@ class PathPlanner:
             for r in np.arange(grid_size, max_radius, grid_size):
                 circle_pts = self.circle_waypoints(
                     center_x, center_y, r, self.grid_points
-                )
+                    )
                 waypoints.extend(circle_pts)
 
         elif self.pattern_type == "stars":
@@ -475,7 +539,7 @@ class PathPlanner:
             radius = min(width, height) * grid_size / 2
             waypoints.extend(self.star_waypoints(
                 center_x, center_y, radius, self.grid_points)
-            )
+                )
 
         elif self.pattern_type == "custom_image":
             img_path = os.getenv("USER_IMAGE_PATH", "image.png")
@@ -483,7 +547,7 @@ class PathPlanner:
             y_offset = int(os.getenv("IMAGE_Y_OFFSET", 0))
             waypoints = self.image_to_waypoints(
                 img_path, x_offset, y_offset, self.grid_points, grid_size
-            )
+                )
 
         else:
             logger.error(f"Unsupported pattern type: {self.pattern_type}")
@@ -491,11 +555,16 @@ class PathPlanner:
 
         return waypoints
 
-  
-    def circle_waypoints(self, center_x, center_y, radius, grid_points, step=15):
+    def circle_waypoints(
+            self,
+            center_x,
+            center_y,
+            radius,
+            grid_points,
+            step=15):
         """Generate waypoints for a circle with a given radius."""
         all_points = []  # List to store all generated points
-                
+
         for i in range(0, 360, step):
             angle = np.radians(i)
             x = center_x + radius * np.cos(angle)
@@ -503,7 +572,9 @@ class PathPlanner:
             all_points.append((x, y))
 
         # Filter points based on the polygon check
-        waypoints = [point for point in all_points if self.point_in_polygon(point[0], point[1], grid_points)]
+        waypoints = [
+            point for point in all_points if self.point_in_polygon(
+                point[0], point[1], grid_points)]
         return waypoints
 
     def star_waypoints(self, center_x, center_y, radius, grid_points):
@@ -523,7 +594,7 @@ class PathPlanner:
         if not os.path.exists(img_path):
             logger.error(
                 f"Image file '{img_path}' not found for custom image pattern."
-            )
+                )
             exit(1)
 
         # Load and process the image
@@ -564,17 +635,12 @@ class PathPlanner:
         """Convert a list of waypoints to a JSON string."""
         return json.dumps(waypoint_map)
 
-
     def main(self):
         self.load_mowing_area_polygon()
         self.gps_polygon_to_utm_polygon()
         self.generate_grid_from_polygon(grid_size=1.0)
         waypoints = self.create_pattern()
         self.navigate_to_waypoints(waypoints)
-
-    def shutdown(self):
-        self.gps_position_instance.shutdown()
-        self.robohat_driver.shutdown()
 
 
 if __name__ == "__main__":

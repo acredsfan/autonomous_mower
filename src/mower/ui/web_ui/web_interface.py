@@ -31,7 +31,7 @@ class WebInterface:
 
     def start(self) -> None:
         """Start the web interface.
-        
+
         This method:
         1. Creates the Flask application
         2. Starts the web server in a separate thread
@@ -44,14 +44,14 @@ class WebInterface:
         try:
             # Create Flask app and SocketIO instance
             self.app, self.socketio = create_app(self.mower)
-            
+
             # Start the web server in a separate thread
             self._thread = threading.Thread(
                 target=self._run_server,
                 daemon=True
-            )
+                )
             self._thread.start()
-            
+
             self._is_running = True
             self.logger.info("Web interface started successfully")
         except Exception as e:
@@ -60,7 +60,7 @@ class WebInterface:
 
     def stop(self) -> None:
         """Stop the web interface.
-        
+
         This method:
         1. Signals the server to shut down
         2. Waits for the server thread to complete
@@ -73,15 +73,15 @@ class WebInterface:
         try:
             # Signal the server to stop
             self._stop_event.set()
-            
+
             # Wait for the server thread to complete
             if self._thread and self._thread.is_alive():
                 self._thread.join(timeout=5.0)
-            
+
             # Clean up resources
             if self.socketio:
                 self.socketio.stop()
-            
+
             self._is_running = False
             self.logger.info("Web interface stopped successfully")
         except Exception as e:
@@ -90,7 +90,7 @@ class WebInterface:
 
     def _run_server(self) -> None:
         """Run the web server.
-        
+
         This method runs in a separate thread and handles the actual
         web server operation.
         """
@@ -102,7 +102,7 @@ class WebInterface:
                     port=5000,
                     debug=False,
                     use_reloader=False
-                )
+                    )
         except Exception as e:
             self.logger.error(f"Error in web server thread: {e}")
             self._is_running = False
@@ -111,8 +111,8 @@ class WebInterface:
     @property
     def is_running(self) -> bool:
         """Check if the web interface is running.
-        
+
         Returns:
             bool: True if the web interface is running, False otherwise.
         """
-        return self._is_running 
+        return self._is_running

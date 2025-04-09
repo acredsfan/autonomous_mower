@@ -32,7 +32,7 @@ from mower.utilities.logger_config import LoggerConfigInfo
 from mower.constants import (
     AVOIDANCE_DELAY,
     MIN_DISTANCE_THRESHOLD
-)
+    )
 
 
 # Initialize logger
@@ -129,7 +129,7 @@ class AvoidanceAlgorithm:
         # Camera-related settings
         self.use_camera = bool(
             os.environ.get('USE_CAMERA', 'True').lower() == 'true'
-        )
+            )
         self.camera = None
         self.obstacle_detector = None
 
@@ -138,7 +138,7 @@ class AvoidanceAlgorithm:
                 self.camera = self._resource_manager.get_camera()
                 self.obstacle_detector = (
                     self._resource_manager.get_obstacle_detector()
-                )
+                    )
                 self.logger.info("Camera and obstacle detector initialized")
             except Exception as e:
                 self.logger.error(
@@ -175,7 +175,7 @@ class AvoidanceAlgorithm:
             self._turn_left_strategy,
             self._backup_strategy,
             self._alternative_route_strategy
-        ]
+            ]
 
         logger.info("Avoidance algorithm initialized")
 
@@ -212,7 +212,7 @@ class AvoidanceAlgorithm:
                             msg = (
                                 f"Camera detected obstacle: {class_name} "
                                 f"(conf: {score:.2f})"
-                            )
+                                )
                             self.logger.info(msg)
                             break
 
@@ -228,7 +228,7 @@ class AvoidanceAlgorithm:
         return [
             'person', 'animal', 'vehicle', 'obstacle', 'fence',
             'wall', 'tree', 'bush'
-        ]
+            ]
 
     def start(self) -> None:
         """Start the avoidance algorithm background monitoring."""
@@ -244,7 +244,7 @@ class AvoidanceAlgorithm:
         self.avoidance_thread = threading.Thread(
             target=self._avoidance_loop,
             daemon=True
-        )
+            )
         self.avoidance_thread.start()
         logger.info("Avoidance algorithm started")
 
@@ -265,7 +265,7 @@ class AvoidanceAlgorithm:
                 if self.avoidance_thread.is_alive():
                     logger.warning(
                         "Avoidance thread did not terminate within timeout"
-                    )
+                        )
             except Exception as e:
                 logger.error(f"Error stopping avoidance thread: {e}")
 
@@ -282,10 +282,10 @@ class AvoidanceAlgorithm:
         try:
             left_distance = self.sensor_interface._read_vl53l0x(
                 'left_distance', float('inf')
-            )
+                )
             right_distance = self.sensor_interface._read_vl53l0x(
                 'right_distance', float('inf')
-            )
+                )
 
             with self.thread_lock:
                 self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
@@ -338,7 +338,7 @@ class AvoidanceAlgorithm:
                     if avoidance_complete:
                         logger.info(
                             "Avoidance complete, returning to normal operation"
-                        )
+                            )
                         with self.thread_lock:
                             self.current_state = AvoidanceState.NORMAL
                             self.obstacle_data = None
@@ -347,7 +347,7 @@ class AvoidanceAlgorithm:
                     if still_detected:
                         logger.warning(
                             "Obstacle still detected after avoidance maneuver"
-                        )
+                            )
                         with self.thread_lock:
                             self.current_state = AvoidanceState.RECOVERY
                             self.recovery_attempts = 0
@@ -362,21 +362,21 @@ class AvoidanceAlgorithm:
                                 logger.info(
                                     "Recovery successful, returning to normal "
                                     "operation"
-                                )
+                                    )
                                 self.current_state = AvoidanceState.NORMAL
                                 self.obstacle_data = None
                             else:
                                 logger.warning(
                                     "Obstacle still present after recovery, "
                                     "trying again"
-                                )
+                                    )
                                 self.recovery_attempts += 1
                                 if (self.recovery_attempts >=
                                         self.max_recovery_attempts):
                                     logger.error(
                                         "Max recovery attempts reached, "
                                         "cannot avoid obstacle"
-                                    )
+                                        )
                         else:
                             logger.error("Recovery strategy failed")
                             self.recovery_attempts += 1
@@ -413,7 +413,7 @@ class AvoidanceAlgorithm:
             obstacle_detected = (
                 obstacle_left or obstacle_right or
                 camera_obstacle or dropoff
-            )
+                )
 
             if not obstacle_detected:
                 return False, None
@@ -424,7 +424,7 @@ class AvoidanceAlgorithm:
                 "camera_detected": camera_obstacle,
                 "dropoff_detected": dropoff,
                 "timestamp": time.time()
-            }
+                }
 
             obstacle_position = self._estimate_obstacle_position()
             if obstacle_position:
@@ -530,7 +530,7 @@ class AvoidanceAlgorithm:
             if current_time - start_time > 30.0:
                 logger.warning(
                     "Avoidance timeout, considering maneuver complete"
-                )
+                    )
                 return True
 
             return False
@@ -553,7 +553,7 @@ class AvoidanceAlgorithm:
         """
         logger.info(
             f"Executing recovery (attempt {self.recovery_attempts + 1})"
-        )
+            )
 
         try:
             attempt = 0
@@ -571,12 +571,12 @@ class AvoidanceAlgorithm:
                     logger.info(
                         f"Recovery attempt {attempt + 1}: "
                         "aggressive right turn"
-                    )
+                        )
                     return self._turn_right_strategy(angle=turn_angle)
                 else:
                     logger.info(
                         f"Recovery attempt {attempt + 1}: aggressive left turn"
-                    )
+                        )
                     return self._turn_left_strategy(angle=turn_angle)
 
             elif attempt == 1:
@@ -586,7 +586,7 @@ class AvoidanceAlgorithm:
             else:
                 logger.info(
                     f"Recovery attempt {attempt + 1}: alternative route"
-                )
+                    )
                 return self._alternative_route_strategy()
 
         except Exception as e:
@@ -609,7 +609,7 @@ class AvoidanceAlgorithm:
                 self._turn_right_strategy,
                 self._turn_left_strategy,
                 self._backup_strategy
-            ]
+                ]
 
             strategy = random.choice(strategies)
             strategy_name = strategy.__name__
@@ -617,9 +617,9 @@ class AvoidanceAlgorithm:
             logger.info(f"Selected random strategy: {strategy_name}")
             # Check if strategy is a turn strategy
             if strategy in (
-                self._turn_right_strategy,
-                self._turn_left_strategy
-            ):
+                    self._turn_right_strategy,
+                    self._turn_left_strategy
+                    ):
                 angle = random.uniform(30.0, 60.0)
                 return strategy(angle=angle)
             elif strategy == self._backup_strategy:
@@ -731,7 +731,7 @@ class AvoidanceAlgorithm:
             if not current_position:
                 logger.error(
                     "Unable to get current position for alternative route"
-                )
+                    )
                 return False
 
             obstacle_position = self._estimate_obstacle_position()
@@ -752,7 +752,7 @@ class AvoidanceAlgorithm:
             logger.info("Requesting new path to avoid obstacle")
             start_point = self.path_planner.coord_to_grid(
                 current_position[0], current_position[1]
-            )
+                )
             goal_point = self.path_planner.coord_to_grid(goal[0], goal[1])
 
             new_path = self.path_planner.get_path(start_point, goal_point)
@@ -762,12 +762,12 @@ class AvoidanceAlgorithm:
 
             logger.info(
                 f"Found alternative route with {len(new_path)} waypoints"
-            )
+                )
 
             first_waypoint = new_path[0]
             self.motor_controller.navigate_to_location(
                 (first_waypoint['lat'], first_waypoint['lng'])
-            )
+                )
 
             return True
 
@@ -797,7 +797,7 @@ class AvoidanceAlgorithm:
             if not current_position:
                 logger.warning(
                     "Couldn't get current position for obstacle estimation"
-                )
+                    )
                 return {}
 
             current_lat, current_lng = current_position[0], current_position[1]
@@ -806,7 +806,7 @@ class AvoidanceAlgorithm:
             if heading is None:
                 logger.warning(
                     "Couldn't get current heading for obstacle estimation"
-                )
+                    )
                 return {}
 
             heading_rad = math.radians(heading)
@@ -818,7 +818,7 @@ class AvoidanceAlgorithm:
             if not obstacle_data:
                 logger.warning(
                     "No obstacle data available for position estimation"
-                )
+                    )
                 return {}
 
             result = {
@@ -826,7 +826,7 @@ class AvoidanceAlgorithm:
                 'type': 'static',
                 'confidence': 0.8,
                 'sensor': 'unknown'
-            }
+                }
 
             distance = 0.0
             obstacle_angle = 0.0
@@ -856,7 +856,7 @@ class AvoidanceAlgorithm:
             else:
                 logger.warning(
                     "Cannot determine obstacle direction from sensor data"
-                )
+                    )
                 return {}
 
             obstacle_heading = (heading_rad + obstacle_angle) % (2 * math.pi)
@@ -864,14 +864,14 @@ class AvoidanceAlgorithm:
             meters_to_lat = 0.0000089
             meters_to_lng = (
                 0.0000089 / math.cos(math.radians(current_lat))
-            )
+                )
 
             obstacle_lat = current_lat + (
                 distance * math.cos(obstacle_heading) * meters_to_lat
-            )
+                )
             obstacle_lng = current_lng + (
                 distance * math.sin(obstacle_heading) * meters_to_lng
-            )
+                )
 
             result['position'] = (obstacle_lat, obstacle_lng)
 
@@ -917,7 +917,7 @@ class AvoidanceAlgorithm:
             msg = (
                 "Max recovery attempts reached. "
                 "Stopping and waiting for manual intervention."
-            )
+                )
             self.logger.error(msg)
             self.stop()
             return
@@ -931,5 +931,5 @@ class AvoidanceAlgorithm:
         msg = (
             f"Recovery attempt {self.recovery_attempts}: "
             f"Backup {backup_dist}cm, turn {turn_angle} degrees"
-        )
+            )
         self.logger.info(msg)

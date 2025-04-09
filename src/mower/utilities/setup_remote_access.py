@@ -15,7 +15,7 @@ from pathlib import Path
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+    )
 logger = logging.getLogger(__name__)
 
 
@@ -44,7 +44,7 @@ class RemoteAccessSetup:
             'cloudflare': self._setup_cloudflare,
             'custom_domain': self._setup_custom_domain,
             'ngrok': self._setup_ngrok
-        }
+            }
 
         if self.access_type not in setup_methods:
             logger.error(f"Unsupported remote access type: {self.access_type}")
@@ -66,7 +66,7 @@ class RemoteAccessSetup:
         logger.info(
             f"Please configure your router to forward port {self.web_port} "
             "to your mower's IP address"
-        )
+            )
         return True
 
     def _setup_ddns(self) -> bool:
@@ -113,10 +113,10 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
             # Add to crontab
             subprocess.run([
                 'crontab', '-l'
-            ], capture_output=True, text=True)
+                ], capture_output=True, text=True)
             subprocess.run([
                 'crontab', '-l'
-            ], capture_output=True, text=True)
+                ], capture_output=True, text=True)
 
             logger.info("DuckDNS setup completed successfully")
             return True
@@ -137,10 +137,10 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         try:
             # Install No-IP client
             subprocess.run(['sudo', 'apt-get', 'install', 'noip2'])
-            
+
             # Configure No-IP client
             subprocess.run(['sudo', 'noip2', '-C'])
-            
+
             logger.info("No-IP setup completed successfully")
             return True
         except Exception as e:
@@ -192,13 +192,13 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
             subprocess.run([
                 'sudo', 'apt-get', 'install',
                 'certbot', 'python3-certbot-nginx'
-            ])
+                ])
 
             # Obtain SSL certificate
             subprocess.run([
                 'sudo', 'certbot', 'certonly', '--standalone',
                 '-d', domain, '--email', email, '--agree-tos'
-            ])
+                ])
 
             logger.info(f"Custom domain setup completed for {domain}")
             return True
@@ -241,7 +241,7 @@ def main():
 
         config = dict(os.environ)
         setup = RemoteAccessSetup(config)
-        
+
         if setup.setup():
             logger.info("Remote access setup completed successfully")
         else:
@@ -254,4 +254,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main() 
+    main()

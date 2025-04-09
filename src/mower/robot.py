@@ -6,7 +6,7 @@ from mower.mower import (
     get_avoidance_algorithm,
     get_gps_nmea_positions,
     get_path_planner,
-)
+    )
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger

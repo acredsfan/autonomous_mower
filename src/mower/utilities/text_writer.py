@@ -2,7 +2,7 @@ import os
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 logger = LoggerConfig.get_logger(__name__)
 
@@ -15,6 +15,7 @@ class TextLogger:
     an overwrite row_to_line() and line_to_row() to save structured data,
     like tuples or arrays as CSV.
     """
+
     def __init__(self, file_path: str, append: bool = False,
                  allow_empty_file: bool = False,
                  allow_empty_line: bool = True):
@@ -96,6 +97,7 @@ class CsvLogger(TextLogger):
     Log iterable to a comma-separated text file.
     The separator can be customized.
     """
+
     def __init__(self, file_path: str, append: bool = False,
                  allow_empty_file: bool = False,
                  allow_empty_line: bool = True, separator: str = ",",
@@ -130,7 +132,7 @@ class CsvLogger(TextLogger):
                 row = None
                 logger.debug(
                     f"CsvLogger: dropping row with field count = {field_count}"
-                )
+                    )
         else:
             logger.error("CsvLogger: line_to_row expected string")
         return row

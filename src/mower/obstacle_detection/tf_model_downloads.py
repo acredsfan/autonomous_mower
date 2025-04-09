@@ -14,7 +14,7 @@ def download_model():
     # Download the model using kagglehub
     model_path = kagglehub.model_download(
         "google/mobilenet-v2/tensorFlow2/100-224-classification"
-    )
+        )
     logging.info(f"Model downloaded to {model_path}")
     return model_path
 

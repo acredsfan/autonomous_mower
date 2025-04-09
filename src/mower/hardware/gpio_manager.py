@@ -190,7 +190,7 @@ class GPIOManager:
         state = {
             "simulation_mode": self._simulation_mode,
             "pins": {}
-        }
+            }
 
         if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
@@ -200,7 +200,7 @@ class GPIOManager:
                     state["pins"][pin] = {
                         "value": self.get_pin(pin),
                         "direction": self._pins_setup.get(pin)
-                    }
+                        }
                 except Exception as e:
                     logging.error(f"Error getting state for pin {pin}: {e}")
 

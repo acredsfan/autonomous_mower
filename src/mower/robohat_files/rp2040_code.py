@@ -1,4 +1,5 @@
-# Donkey Car Driver for 2040-based boards such as the Raspberry Pi Pico and KB2040
+# Donkey Car Driver for 2040-based boards such as the
+# Raspberry Pi Pico and KB2040
 #
 # Notes:
 #   This is to be run using CircuitPython 9.x
@@ -149,11 +150,11 @@ def main():
             current_state2 = encoder2.value
 
             if current_state1 != last_state1:  # encoder1 state changed
-                if current_state1 == False:  # Detect falling edge
+                if current_state1 is False:  # Detect falling edge
                     position1 += 1
 
             if current_state2 != last_state2:  # encoder2 state changed
-                if current_state2 == False:  # Detect falling edge
+                if current_state2 is False:  # Detect falling edge
                     position2 += 1
 
             last_state1 = current_state1
@@ -161,7 +162,10 @@ def main():
 
         time.sleep(0.01)  # Debounce delay
 
-        if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
+        if continuous_mode and (
+                current_time -
+                last_toggle_time >= continuous_delay /
+                1000.0):
             uart.write(b"%i, %i, %i, %i; %i, %i\r\n" % (
                 int(steering.value), int(throttle.value),
                 position1, int(current_time * 1000),
@@ -195,7 +199,11 @@ def main():
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
-            uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
+            uart.write(
+                b"%i, %i\r\n" %
+                (int(
+                    steering.value), int(
+                    throttle.value)))
             # print(int(steering.value), int(throttle.value))
 
         while True:
@@ -230,14 +238,18 @@ def main():
                 data = bytearray()
                 datastr = ''
                 got_data = True
-                print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+                print(
+                    "Set: steering=%i, throttle=%i" %
+                    (steering_val, throttle_val))
         if got_data:
             print("Serial control")
             # Set the servo for serial data (received)
             steering.servo.duty_cycle = servo_duty_cycle(steering_val)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
-            last_input = time.monotonic()  # Only update here when serial data is received
-        elif time.monotonic() > (last_input + 0.1):  # Timeout to switch back to RC control
+            # Only update here when serial data is received
+            last_input = time.monotonic()
+            # Timeout to switch back to RC control
+        elif time.monotonic() > (last_input + 0.1):
             print("RC control")
             # Set the servo for RC control
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
@@ -245,7 +257,8 @@ def main():
 
 
 def handle_command(command):
-    global position1, position2, continuous_mode, continuous_delay, control_mode
+    global position1, position2, continuous_mode, \
+           continuous_delay, control_mode
     if command == 'r':
         position1 = 0
         position2 = 0

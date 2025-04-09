@@ -1,7 +1,7 @@
 """
 Diagnostics package for the autonomous mower.
 
-This package provides diagnostic tools for testing and troubleshooting the hardware 
+This package provides diagnostic tools for testing and troubleshooting the hardware
 and software components of the autonomous mower system.
 
 Modules:
@@ -20,4 +20,4 @@ Modules:
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__) 
+logging = LoggerConfig.get_logger(__name__)

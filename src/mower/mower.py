@@ -21,16 +21,16 @@ from mower.hardware.tof import VL53L0XSensors
 # Navigation imports
 from mower.navigation.gps import (
     GpsNmeaPositions, GpsLatestPosition, GpsPosition
-)
+    )
 from mower.navigation.localization import Localization
 from mower.navigation.path_planning import PathPlanner
-from mower.navigation.navigation import NavigationController, NavigationStatus
+from mower.navigation.navigation import NavigationController
 
 # Obstacle Detection imports
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from mower.obstacle_detection.local_obstacle_detection import (
     detect_obstacle, detect_drop, stream_frame_with_overlays
-)
+    )
 
 # UI and utilities imports
 from mower.ui.web_ui.web_interface import WebInterface

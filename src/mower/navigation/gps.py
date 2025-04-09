@@ -10,7 +10,7 @@ import utm
 from mower.utilities.text_writer import CsvLogger
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
@@ -39,6 +39,7 @@ class GpsNmeaPositions(metaclass=SingletonMeta):
     Converts array of NMEA sentences into array
     of (easting, northing) positions.
     """
+
     def __init__(self, debug=False):
         self.debug = debug
 
@@ -56,6 +57,7 @@ class GpsPosition(metaclass=SingletonMeta):
     """
     Reads NMEA lines from serial port and converts them into positions.
     """
+
     def __init__(self, serial_port, debug=False):
         from hardware.serial_port import SerialLineReader
         self.line_reader = SerialLineReader(serial_port)
@@ -108,6 +110,7 @@ class GpsLatestPosition(metaclass=SingletonMeta):
     """
     Provides the most recent valid GPS position and status.
     """
+
     def __init__(self, gps_position_instance, debug=False):
         self.debug = debug
         self.gps_position = gps_position_instance
@@ -133,6 +136,7 @@ class GpsPlayer(metaclass=SingletonMeta):
     """
     Plays back recorded NMEA sentences.
     """
+
     def __init__(self, nmea_logger: CsvLogger):
         self.nmea = nmea_logger
         self.index = -1
@@ -184,7 +188,7 @@ class GpsPlayer(metaclass=SingletonMeta):
                         if within_time:
                             nmea_sentences.append(
                                 (next_nmea_time, next_nmea[1])
-                            )
+                                )
                             self.index += 1
         return nmea_sentences
 
@@ -220,7 +224,7 @@ def parseGpsPosition(line, debug=False):
             logger.info(
                 f"NMEA checksum does not match: {nmea_checksum} != "
                 f"{calculated_checksum}"
-            )
+                )
             return None
 
         if debug:
@@ -234,7 +238,7 @@ def parseGpsPosition(line, debug=False):
             logger.info(
                 "GPS receiver warning; position not valid. "
                 "Ignoring invalid position."
-            )
+                )
             return None
 
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
@@ -262,7 +266,7 @@ def parseGpsPosition(line, debug=False):
             float(utm_position[1]),
             utm_position[2],
             utm_position[3]
-        )
+            )
 
     else:
         pass
@@ -336,6 +340,7 @@ if __name__ == "__main__":
         """
         Statistics for a set of data
         """
+
         def __init__(self, count, sum, min, max, mean, std_deviation):
             self.count = count
             self.sum = sum
@@ -352,6 +357,7 @@ if __name__ == "__main__":
         like GPS, where x and y values may not be completely
         independent values.
         """
+
         def __init__(self, samples, nstd=1.0):
             """
             Fit an ellipsoid to the given samples at the
@@ -604,7 +610,7 @@ if __name__ == "__main__":
             if readings:
                 print("")
                 if state == "prompt":
-                    print(f"Move to waypoint #{len(waypoints)+1} and"
+                    print(f"Move to waypoint #{len(waypoints) + 1} and"
                           f"press the space barand enter to start sampling"
                           f"or any other key to just start logging.")
                     state = "move"
@@ -622,7 +628,7 @@ if __name__ == "__main__":
                     print(f"Collected {count} so far...")
                     if count > samples_per_waypoint:
                         print(f"...done.  Collected {count} samples"
-                              f"for waypoint #{len(waypoints)+1}")
+                              f"for waypoint #{len(waypoints) + 1}")
                         #
                         # model a waypoint as a rotated ellipsoid
                         # that represents a 95% confidence interval

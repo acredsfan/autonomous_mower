@@ -2,7 +2,7 @@ import barbudor_ina3221.full as INA3221
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

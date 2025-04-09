@@ -76,7 +76,7 @@ def create_app(mower):
                 'safety': safety_status,
                 'battery_level': mower.get_battery_level(),
                 'position': mower.get_position()
-            })
+                })
         except Exception as e:
             logger.error(f"Failed to get status: {e}")
             return jsonify({'error': str(e)}), 500
@@ -144,14 +144,14 @@ def create_app(mower):
         try:
             command = data.get('command')
             params = data.get('params', {})
-            
+
             if command == 'emergency_stop':
                 mower.emergency_stop()
                 emit('command_response', {
                     'command': command,
                     'success': True,
                     'message': 'Emergency stop activated'
-                })
+                    })
             else:
                 # Handle other commands...
                 result = mower.execute_command(command, params)
@@ -159,14 +159,14 @@ def create_app(mower):
                     'command': command,
                     'success': True,
                     'result': result
-                })
+                    })
         except Exception as e:
             logger.error(f"Error executing command {data.get('command')}: {e}")
             emit('command_response', {
                 'command': data.get('command'),
                 'success': False,
                 'message': str(e)
-            })
+                })
 
     # Background task for sending updates
     def send_updates():
@@ -177,7 +177,7 @@ def create_app(mower):
                 status = mower.get_status()
                 safety_status = mower.get_safety_status()
                 sensor_data = mower.get_sensor_data()
-                
+
                 socketio.emit('status_update', status)
                 socketio.emit('safety_status', safety_status)
                 socketio.emit('sensor_data', sensor_data)

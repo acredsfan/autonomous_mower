@@ -5,15 +5,15 @@ from dataclasses import dataclass
 from datetime import datetime
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import (
     INA3221Sensor
-)
+    )
 from mower.hardware.tof import (
     VL53L0XSensors
-)
+    )
 
 logging = LoggerConfig.get_logger(__name__)
 
@@ -96,7 +96,7 @@ class EnhancedSensorInterface:
                 'temperature': data.get('temperature_f'),
                 'humidity': data.get('humidity'),
                 'pressure': data.get('pressure')
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('bme280', e)
             return {}
@@ -113,10 +113,10 @@ class EnhancedSensorInterface:
             speed = BNO085Sensor.calculate_speed(self._sensors['bno085'])
             compass = BNO085Sensor.read_bno085_magnetometer(
                 self._sensors['bno085']
-            )
+                )
             # Get safety status
             safety_status = self._sensors['bno085'].get_safety_status()
-            
+
             return {
                 'acceleration': accel,
                 'heading': heading,
@@ -124,7 +124,7 @@ class EnhancedSensorInterface:
                 'speed': speed,
                 'compass': compass,
                 'safety_status': safety_status
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('bno085', e)
             return {}
@@ -137,17 +137,17 @@ class EnhancedSensorInterface:
         try:
             solar_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 1
-            )
+                )
             battery_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 3
-            )
+                )
             return {
                 'solar_voltage': solar_data.get('bus_voltage'),
                 'solar_current': solar_data.get('current'),
                 'battery_voltage': battery_data.get('bus_voltage'),
                 'battery_current': battery_data.get('current'),
                 'battery_level': battery_data.get('charge_level')
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('ina3221', e)
             return {}
@@ -162,7 +162,7 @@ class EnhancedSensorInterface:
             return {
                 'left_distance': VL53L0XSensors.read_vl53l0x(left),
                 'right_distance': VL53L0XSensors.read_vl53l0x(right)
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('vl53l0x', e)
             return {}
@@ -172,13 +172,13 @@ class EnhancedSensorInterface:
         self._monitoring_thread = threading.Thread(
             target=self._monitor_sensors,
             daemon=True
-        )
+            )
         self._monitoring_thread.start()
 
         self._update_thread = threading.Thread(
             target=self._update_sensor_data,
             daemon=True
-        )
+            )
         self._update_thread.start()
 
     def _monitor_sensors(self):
@@ -290,7 +290,7 @@ class EnhancedSensorInterface:
             return all(
                 self._sensor_status[sensor].working
                 for sensor in critical_sensors
-            )
+                )
 
     def _init_sensor_with_retry(self, sensor_name, initializer):
         pass
@@ -302,9 +302,9 @@ def _check_proximity_violation(sensor_data: Dict) -> bool:
     return any(
         sensor_data.get(
             f'{direction}_distance', float('inf')
-        ) < min_safe_distance
+            ) < min_safe_distance
         for direction in ['left', 'right', 'front']
-    )
+        )
 
 
 def _check_tilt_violation(sensor_data: Dict) -> bool:
@@ -326,7 +326,7 @@ class SafetyMonitor:
         self.monitoring_thread = threading.Thread(
             target=self._monitor_safety,
             daemon=True
-        )
+            )
         self.monitoring_thread.start()
 
     def _monitor_safety(self):
@@ -368,7 +368,7 @@ class SafetyMonitor:
             'violations': self.safety_violations.copy(),
             'is_safe': len(self.safety_violations) == 0,
             'sensors_ok': self.sensor_interface.is_safe_to_operate()
-        }
+            }
 
     def clear_violations(self):
         """Clear safety violations after they've been addressed."""
@@ -398,68 +398,68 @@ if __name__ == "__main__":
 class SensorInterface:
     """
     Legacy wrapper around EnhancedSensorInterface for backward compatibility.
-    
+
     This class provides the same interface as the original SensorInterface
     while delegating to the newer EnhancedSensorInterface implementation.
     """
-    
+
     def __init__(self, resource_manager=None):
         """
         Initialize the sensor interface.
-        
+
         Args:
             resource_manager: Optional ResourceManager for dependency injection
         """
         self._enhanced = EnhancedSensorInterface()
         self._resource_manager = resource_manager
-        
+
     def start(self):
         """Start the sensor interface."""
         # Delegate to the enhanced implementation
         return self._enhanced.start()
-        
+
     def stop(self):
         """Stop the sensor interface."""
         return self._enhanced.shutdown()
-        
+
     def shutdown(self):
         """Shutdown the sensor interface."""
         return self._enhanced.shutdown()
-        
+
     def get_sensor_data(self):
         """Get the current sensor readings."""
         return self._enhanced.get_sensor_data()
-        
+
     def get_sensor_status(self):
         """Get the status of all sensors."""
         return self._enhanced.get_sensor_status()
-        
+
     def is_safe_to_operate(self):
         """Check if it's safe to operate based on sensor readings."""
         return self._enhanced.is_safe_to_operate()
-        
+
     # Additional compatibility methods to match the old interface
-    
+
     def get_distance_left(self):
         """Get the left distance sensor reading."""
         data = self._enhanced.get_sensor_data()
         return data.get('left_distance', float('inf'))
-        
+
     def get_distance_right(self):
         """Get the right distance sensor reading."""
         data = self._enhanced.get_sensor_data()
         return data.get('right_distance', float('inf'))
-        
+
     def get_heading(self):
         """Get the current heading from IMU."""
         data = self._enhanced.get_sensor_data()
         return data.get('heading', 0.0)
-        
+
     def get_temperature(self):
         """Get the current temperature."""
         data = self._enhanced.get_sensor_data()
         return data.get('temperature', 0.0)
-        
+
     def get_battery_level(self):
         """Get the current battery level."""
         data = self._enhanced.get_sensor_data()
