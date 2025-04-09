@@ -7,9 +7,9 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        "numpy>=1.19.5,<2.0.0",
-        "opencv-python>=4.5.3.56",
-        "pillow>=8.3.2",
+        "numpy>=1.22.0",
+        "opencv-python>=4.8.1.78",
+        "pillow>=10.3.0",
         "pyyaml>=5.4.1",
         "python-dotenv>=0.19.0",
         "smbus2>=0.4.1",
@@ -42,6 +42,7 @@ setup(
         "barbudor-circuitpython-ina3221>=1.0.0",
         "adafruit-circuitpython-vl53l0x>=3.0.0",
         "picamera2>=0.3.12",
+        "certifi>=2024.7.4",
     ],
     extras_require={
         "coral": [
@@ -73,7 +74,7 @@ setup(
         ],
         "dev": [
             "pytest>=6.2.5",
-            "black>=21.9b0",
+            "black>=24.3.0",
             "flake8>=3.9.2",
             "mypy>=0.910",
             "pytest-cov>=4.1.0",

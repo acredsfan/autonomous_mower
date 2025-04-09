@@ -30,15 +30,15 @@ dependencies = [
     "geopy>=2.1.0,
     "imutils>=0.5.4",
     "networkx>=2.6.0",
-    "opencv-python-headless>=4.5.1",
+    "opencv-python-headless>=4.8.1.78",
     "pathfinding>=1.0.0",
-    "pillow>=11.0.0",
+    "pillow>=10.3.0",
     "pyserial>=3.5",
     "python-dotenv>=1.0.0",
     "rtree>=1.0.0",
     "shapely>=2.0.0",
     "tensorflow>=2.13.0",
-    "numpy>=2.0.0",
+    "numpy>=1.22.0",
     "colorama>=0.4.4",
     "watchdog>=5.0.0",
 ]
@@ -62,7 +62,7 @@ ssl = [
 ]
 dev = [
     "pytest>=6.2.0",
-    "black>=21.5b2",
+    "black>=24.3.0",
     "flake8>=3.9.0",
     "mypy>=0.910",
     "pytest-cov>=2.12.0",
