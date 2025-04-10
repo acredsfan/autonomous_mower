@@ -43,9 +43,6 @@ check_command() {
 # Function to cleanup on script failure
 cleanup() {
     print_info "Cleaning up..."
-    if [ -n "$VIRTUAL_ENV" ]; then
-        deactivate
-    fi
     exit 1
 }
 
@@ -167,12 +164,6 @@ print_info "Starting installation with safety checks..."
 # Validate hardware first
 validate_hardware
 
-# Check if running as root
-if [ "$EUID" -eq 0 ]; then 
-    print_error "Please do not run this script as root"
-    exit 1
-fi
-
 # Check Python version
 if ! command_exists python3; then
     print_error "Python 3 is not installed"
@@ -184,30 +175,6 @@ if ! command_exists pip3; then
     print_error "pip3 is not installed"
     exit 1
 fi
-
-# Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-    print_info "Creating virtual environment..."
-    python3 -m venv venv
-    check_command "Creating virtual environment" || exit 1
-fi
-
-# Activate virtual environment
-source venv/bin/activate
-if [ $? -ne 0 ]; then
-    print_error "Failed to activate virtual environment"
-    exit 1
-fi
-
-# Define path to venv pip
-VENV_PIP="./venv/bin/pip"
-
-# Upgrade pip and install wheel using venv pip
-print_info "Upgrading pip and installing wheel in venv..."
-$VENV_PIP install --upgrade pip
-check_command "Upgrading pip" || exit 1
-$VENV_PIP install wheel
-check_command "Installing wheel" || exit 1
 
 # Install system dependencies
 print_info "Installing system dependencies..."
@@ -236,26 +203,32 @@ sudo apt-get install -y \
     python3-gdal
 check_command "Installing system packages" || exit 1
 
-# Install Python package in editable mode with all dependencies
+# Set PYTHONPATH to include our src directory
+export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
+
+# Install Python package and dependencies
 print_info "Installing Python package and dependencies..."
-python3 -m pip install --user --no-cache-dir --upgrade -e .
+python3 -m pip install --upgrade pip
+check_command "Upgrading pip" || exit 1
+
+python3 -m pip install --user --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
-# Explicitly install packages that might be missed
+# Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --user --no-cache-dir "utm"
+python3 -m pip install --user --no-cache-dir utm
 check_command "Installing utm" || exit 1
-python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-bme280"
+python3 -m pip install --user --no-cache-dir adafruit-circuitpython-bme280
 check_command "Installing adafruit-circuitpython-bme280" || exit 1
-python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-bno08x"
+python3 -m pip install --user --no-cache-dir adafruit-circuitpython-bno08x
 check_command "Installing adafruit-circuitpython-bno08x" || exit 1
-python3 -m pip install --user --no-cache-dir "barbudor-circuitpython-ina3221"
+python3 -m pip install --user --no-cache-dir barbudor-circuitpython-ina3221
 check_command "Installing barbudor-circuitpython-ina3221" || exit 1
-python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-vl53l0x"
+python3 -m pip install --user --no-cache-dir adafruit-circuitpython-vl53l0x
 check_command "Installing adafruit-circuitpython-vl53l0x" || exit 1
-python3 -m pip install --user --no-cache-dir "RPi.GPIO"
+python3 -m pip install --user --no-cache-dir RPi.GPIO
 check_command "Installing RPi.GPIO" || exit 1
-python3 -m pip install --user --no-cache-dir "picamera2"
+python3 -m pip install --user --no-cache-dir picamera2
 check_command "Installing picamera2" || exit 1
 
 # Ask if user wants to install Coral TPU support
