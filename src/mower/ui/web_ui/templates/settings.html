@@ -75,14 +75,14 @@
                     <div class="form-group">
                         <label for="patternType" class="form-label">Mowing Pattern:</label>
                         <select id="patternType" name="patternType" class="form-select">
-                            <option value="stripes">Stripes</option>
-                            <option value="criss_cross">Criss Cross</option>
-                            <option value="checkerboard">Checkerboard</option>
-                            <option value="diamond">Diamond</option>
-                            <option value="waves">Waves</option>
-                            <option value="concentric_circles">Concentric Circles</option>
-                            <option value="stars">Stars</option>
-                            <option value="random">Random</option>
+                            <option value="PARALLEL">Parallel Lines</option>
+                            <option value="SPIRAL">Spiral</option>
+                            <option value="ZIGZAG">Zigzag</option>
+                            <option value="CHECKERBOARD">Checkerboard</option>
+                            <option value="DIAMOND">Diamond</option>
+                            <option value="WAVES">Waves</option>
+                            <option value="CONCENTRIC">Concentric Circles</option>
+                            <option value="CUSTOM">Custom</option>
                         </select>
                     </div>
                     
@@ -356,7 +356,7 @@
             document.getElementById('bladeHeight').value = settings.mowing.bladeHeight || 40;
             document.getElementById('bladeHeightValue').textContent = settings.mowing.bladeHeight || 40;
             
-            document.getElementById('patternType').value = settings.mowing.pattern || 'stripes';
+            document.getElementById('patternType').value = settings.mowing.pattern || 'PARALLEL';
             
             document.getElementById('coveragePercent').value = settings.mowing.coverage || 95;
             document.getElementById('coveragePercentValue').textContent = (settings.mowing.coverage || 95) + '%';

@@ -46,7 +46,9 @@ from mower.hardware.blade_controller import BladeController
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.serial_port import SerialPort
 from mower.navigation.localization import Localization
-from mower.navigation.path_planning import PathPlanner
+from mower.navigation.path_planner import (
+    PathPlanner, PatternConfig, LearningConfig, PatternType
+)
 from mower.navigation.navigation import NavigationController, NavigationStatus
 from mower.obstacle_detection.avoidance_algorithm import (
     AvoidanceAlgorithm, AvoidanceState
@@ -91,6 +93,9 @@ class ResourceManager:
         self._resources = {}
         self._lock = threading.Lock()
 
+        if config_path:
+            self._load_config(config_path)
+
     def _initialize_hardware(self):
         """Initialize all hardware components."""
         try:
@@ -134,21 +139,46 @@ class ResourceManager:
     def _initialize_software(self):
         """Initialize all software components."""
         try:
-            # Initialize navigation components
+            # Initialize localization
             self._resources["localization"] = Localization()
-            self._resources["path_planner"] = PathPlanner()
+            
+            # Initialize pattern planner with learning capabilities
+            pattern_config = PatternConfig(
+                pattern_type=PatternType.PARALLEL,
+                spacing=0.3,  # 30cm spacing between passes
+                angle=0.0,  # Start with parallel to x-axis
+                overlap=0.1,  # 10% overlap between passes
+                start_point=(0.0, 0.0),  # Will be updated with actual position
+                boundary_points=[]  # Will be loaded from config
+            )
+            
+            learning_config = LearningConfig(
+                learning_rate=0.1,
+                discount_factor=0.9,
+                exploration_rate=0.2,
+                memory_size=1000,
+                batch_size=32,
+                update_frequency=100,
+                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json")
+            )
+            
+            self._resources["path_planner"] = PathPlanner(
+                pattern_config, learning_config
+            )
+            
+            # Initialize navigation controller
             self._resources["navigation"] = NavigationController(
+                self._resources["localization"]
+            )
+            
+            # Initialize obstacle detection
+            self._resources["obstacle_detection"] = AvoidanceAlgorithm(
                 self._resources["path_planner"]
             )
-
-            # Initialize obstacle detection
-            self._resources["obstacle_detection"] = AvoidanceAlgorithm()
-            self._resources["obstacle_detection"]._initialize()
-
-            # Initialize UI
-            self._resources["web_ui"] = WebInterface()
-            self._resources["web_ui"]._initialize()
-
+            
+            # Initialize web interface
+            self._resources["web_interface"] = WebInterface()
+            
             logger.info("All software components initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing software: {e}")
@@ -209,6 +239,22 @@ class ResourceManager:
                 raise RuntimeError("Resources not initialized")
             return self._resources[name]
 
+    def get_path_planner(self):
+        """Get the path planner instance."""
+        return self._resources.get("path_planner")
+    
+    def get_navigation(self):
+        """Get the navigation controller instance."""
+        return self._resources.get("navigation")
+    
+    def get_obstacle_detection(self):
+        """Get the obstacle detection instance."""
+        return self._resources.get("obstacle_detection")
+    
+    def get_web_interface(self):
+        """Get the web interface instance."""
+        return self._resources.get("web_interface")
+
 
 class RobotController:
     """
@@ -229,8 +275,6 @@ class RobotController:
         resource_manager: Reference to the ResourceManager for accessing
             components
         current_state: Current state of the robot (from RobotState enum)
-        avoidance_active: Flag indicating if obstacle avoidance is currently
-            active
         error_condition: Description of current error (if in ERROR state)
         mowing_paused: Flag indicating if mowing is temporarily paused
         home_location: Coordinates of the home/charging location
@@ -258,7 +302,6 @@ class RobotController:
         """
         self.resource_manager = resource_manager
         self.current_state = SystemState.IDLE
-        self.avoidance_active = False
         self.error_condition = None
         self.mowing_paused = False
         self.home_location = None
@@ -529,8 +572,15 @@ class RobotController:
             # Transition to MOWING state
             self.current_state = SystemState.MOWING
 
-            # Get path from planner
-            mowing_path = self.path_planner.generate_mowing_path()
+            # Get path planner
+            path_planner = self.resource_manager.get_path_planner()
+            
+            # Update path planner with current position
+            current_pos = self.resource_manager.get_navigation().get_position()
+            path_planner.pattern_config.start_point = current_pos
+            
+            # Generate mowing path
+            mowing_path = path_planner.generate_path()
             if not mowing_path or len(mowing_path) == 0:
                 logger.error("Failed to generate mowing path")
                 self.error_condition = "Failed to generate mowing path"
@@ -555,52 +605,14 @@ class RobotController:
                     )
                     break
 
-                # Extract coordinates from waypoint
-                lat, lng = waypoint['lat'], waypoint['lng']
-                logger.debug(
-                    f"Navigating to waypoint {waypoint_idx + 1}/"
-                    f"{len(mowing_path)}: {lat}, {lng}"
-                )
-
-                # Command navigation to waypoint
-                self.navigation_controller.navigate_to_location((lat, lng))
-
-                # Monitor progress to waypoint
-                start_time = time.time()
-                timeout = 300  # 5 minutes timeout per waypoint
-
-                while time.time() - start_time < timeout:
-                    # Check if state has changed (e.g., to AVOIDING)
-                    if self.current_state != SystemState.MOWING:
-                        logger.info(
-                            f"Navigation interrupted: state changed to "
-                            f"{self.current_state}"
-                        )
-                        break
-
-                    # Check if target reached
-                    nav_status = self.navigation_controller.get_status()
-                    if nav_status == NavigationStatus.TARGET_REACHED:
-                        logger.debug(
-                            f"Reached waypoint {waypoint_idx + 1}"
-                        )
-                        break
-                    elif nav_status == NavigationStatus.ERROR:
-                        logger.error("Navigation error occurred")
-                        self.error_condition = "Navigation error"
-                        self.current_state = SystemState.ERROR
-                        return False
-
-                    # Brief pause before checking again
-                    time.sleep(0.5)
-
-                # Check for timeout
-                if time.time() - start_time >= timeout:
+                # Navigate to waypoint
+                success = self._navigate_to_waypoint(waypoint)
+                if not success:
                     logger.warning(
-                        f"Timeout reaching waypoint {waypoint_idx + 1}"
+                        f"Failed to reach waypoint {waypoint_idx + 1}/"
+                        f"{len(mowing_path)}"
                     )
-                    # Continue to next waypoint instead of failing
-                    # completely
+                    break
 
             # Path completed successfully
             logger.info("Mowing path completed")
@@ -624,6 +636,41 @@ class RobotController:
             except BaseException:
                 pass
 
+            return False
+
+    def _navigate_to_waypoint(self, waypoint):
+        """Navigate to a specific waypoint."""
+        try:
+            navigation = self.resource_manager.get_navigation()
+            obstacle_detection = self.resource_manager.get_obstacle_detection()
+            
+            # Set target waypoint
+            navigation.set_target(waypoint)
+            
+            # Navigate until reached or interrupted
+            while True:
+                # Check for obstacles
+                if obstacle_detection.check_obstacles():
+                    logger.info("Obstacle detected, avoiding...")
+                    if not obstacle_detection.avoid_obstacle():
+                        return False
+                
+                # Update navigation
+                status = navigation.update()
+                
+                # Check if waypoint reached
+                if status == NavigationStatus.REACHED:
+                    return True
+                
+                # Check for navigation errors
+                if status == NavigationStatus.ERROR:
+                    return False
+                
+                # Small delay to prevent CPU overload
+                time.sleep(0.1)
+                
+        except Exception as e:
+            logger.error(f"Error navigating to waypoint: {e}")
             return False
 
     def _return_home(self):

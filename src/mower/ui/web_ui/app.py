@@ -9,6 +9,7 @@ from flask import (
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
+from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfig
 
 
@@ -60,11 +61,59 @@ def create_app(mower):
         """Render the settings page."""
         return render_template('settings.html')
 
+    @app.route('/api/get-settings', methods=['GET'])
+    def get_settings():
+        """Get current mower settings."""
+        try:
+            path_planner = mower.resource_manager.get_path_planner()
+            settings = {
+                'mowing': {
+                    'pattern': path_planner.pattern_config.pattern_type.name,
+                    'spacing': path_planner.pattern_config.spacing,
+                    'angle': path_planner.pattern_config.angle,
+                    'overlap': path_planner.pattern_config.overlap
+                }
+            }
+            return jsonify({'success': True, 'data': settings})
+        except Exception as e:
+            logger.error(f"Failed to get settings: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/save-settings', methods=['POST'])
+    def save_settings():
+        """Save mower settings."""
+        try:
+            data = request.get_json()
+            settings = data.get('settings', {})
+            mowing = settings.get('mowing', {})
+            
+            path_planner = mower.resource_manager.get_path_planner()
+            
+            # Update pattern planner settings
+            if 'pattern' in mowing:
+                path_planner.pattern_config.pattern_type = (
+                    PatternType[mowing['pattern']]
+                )
+            if 'spacing' in mowing:
+                path_planner.pattern_config.spacing = float(mowing['spacing'])
+            if 'angle' in mowing:
+                path_planner.pattern_config.angle = float(mowing['angle'])
+            if 'overlap' in mowing:
+                path_planner.pattern_config.overlap = float(mowing['overlap'])
+            
+            return jsonify({'success': True})
+        except Exception as e:
+            logger.error(f"Failed to save settings: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
     @app.route('/api/get-area', methods=['GET'])
     def get_area():
         """Get the current mowing area configuration."""
         try:
-            area_data = mower.get_mowing_area()
+            path_planner = mower.resource_manager.get_path_planner()
+            area_data = {
+                'boundary_points': path_planner.pattern_config.boundary_points
+            }
             return jsonify({'success': True, 'data': area_data})
         except Exception as e:
             logger.error(f"Failed to get mowing area: {e}")
@@ -80,10 +129,22 @@ def create_app(mower):
                 return jsonify({'success': False,
                                'error': 'No coordinates provided'}), 400
 
-            mower.save_mowing_area(coordinates)
+            path_planner = mower.resource_manager.get_path_planner()
+            path_planner.pattern_config.boundary_points = coordinates
             return jsonify({'success': True})
         except Exception as e:
             logger.error(f"Failed to save mowing area: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500
+
+    @app.route('/api/get-path', methods=['GET'])
+    def get_current_path():
+        """Get the current planned path."""
+        try:
+            path_planner = mower.resource_manager.get_path_planner()
+            path = path_planner.current_path
+            return jsonify({'success': True, 'path': path})
+        except Exception as e:
+            logger.error(f"Failed to get path: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @app.route('/api/home', methods=['GET'])
@@ -201,17 +262,6 @@ def create_app(mower):
             logger.error(f"Failed to save no-go zones: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
-    # Path Planning
-    @app.route('/api/path', methods=['GET'])
-    def get_current_path():
-        """Get the current planned path."""
-        try:
-            path = mower.get_current_path()
-            return jsonify({'success': True, 'path': path})
-        except Exception as e:
-            logger.error(f"Failed to get path: {e}")
-            return jsonify({'success': False, 'error': str(e)}), 500
-
     # Schedule Management
     @app.route('/api/schedule', methods=['GET'])
     def get_schedule():
@@ -295,7 +345,6 @@ def create_app(mower):
                 cmd,
                 str(e)
             ]
-            # Join error parts
             error_msg = " - ".join(error_parts)
             logger.error(error_msg)
             emit(
@@ -311,7 +360,8 @@ def create_app(mower):
     def handle_path_update():
         """Send current path to client."""
         try:
-            path = mower.get_current_path()
+            path_planner = mower.resource_manager.get_path_planner()
+            path = path_planner.current_path
             emit('path_update', path)
         except Exception as e:
             logger.error(f"Error sending path update: {e}")
