@@ -373,12 +373,27 @@ class HardwareTestSuite:
                 # Basic plausibility check - most ToF sensors have a range of
                 # 50mm to 4000mm
                 if distance < 0 or distance > 5000:
-                    logging.warning(
-                        f"ToF sensor {
-                            i + 1} reading out of range: {distance} mm")
-                    print(f"Sensor {i + 1}: {distance} mm (OUT OF RANGE)")
+                    sensor_num = i + 1
+                    msg = (
+                        f"ToF{sensor_num} "
+                        f"err: "
+                        f"{distance}mm"
+                    )
+                    logging.warning(msg)
+                    msg = (
+                        f"S{sensor_num}: "
+                        f"{distance}mm "
+                        "(ERR)"
+                    )
+                    print(msg)
                 else:
-                    print(f"Sensor {i + 1}: {distance} mm")
+                    sensor_num = i + 1
+                    msg = (
+                        f"S{sensor_num}: "
+                        f"{distance}mm "
+                        "(OK)"
+                    )
+                    print(msg)
 
             return True
         except Exception as e:
