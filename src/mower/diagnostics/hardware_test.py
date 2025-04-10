@@ -678,6 +678,7 @@ def main():
     Command-line options:
         --non-interactive: Run all tests without prompting between tests.
         --test <test_name>: Run only the specified test (e.g., 'imu', 'gps').
+        --verbose: Enable verbose output
 
     Usage examples:
         python -m mower.diagnostics.hardware_test  # Run tests interactively
@@ -694,9 +695,24 @@ def main():
         '--non-interactive',
         action='store_true',
         help='Run tests without prompting')
-    parser.add_argument('--test', type=str, help='Run only the specified test')
+    parser.add_argument(
+        '--test',
+        type=str,
+        help='Run only the specified test')
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose output')
 
     args = parser.parse_args()
+
+    # Configure logging based on verbosity
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        # Force immediate output
+        logging.getLogger().handlers[0].flush = lambda: None
+    else:
+        logging.getLogger().setLevel(logging.INFO)
 
     print("=" * 50)
     print("AUTONOMOUS MOWER HARDWARE TEST SUITE")

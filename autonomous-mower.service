@@ -17,6 +17,7 @@ Environment=RECOVERY_MODE=0
 Environment=EMERGENCY_STOP_PIN=7
 Environment=PYTHONPATH=/home/pi/autonomous_mower/src
 Environment=PATH=/home/pi/autonomous_mower/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=LOG_LEVEL=DEBUG
 
 # Watchdog configuration
 WatchdogSec=15
@@ -34,7 +35,8 @@ Nice=0
 
 # Run the application
 ExecStartPre=/bin/bash -c 'test -f /var/run/autonomous-mower.pid && exit 1 || true'
-ExecStartPre=/home/pi/autonomous_mower/venv/bin/python3 -m mower.diagnostics.hardware_test --non-interactive
+ExecStartPre=/bin/bash -c 'mkdir -p /var/log && touch /var/log/autonomous-mower.log /var/log/autonomous-mower.error.log && chown -R pi:pi /var/log/autonomous-mower*'
+ExecStartPre=/home/pi/autonomous_mower/venv/bin/python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ExecStart=/home/pi/autonomous_mower/venv/bin/python3 -m mower.main_controller
 ExecStop=/bin/kill -SIGTERM $MAINPID
 ExecStopPost=/bin/rm -f /var/run/autonomous-mower.pid
