@@ -95,12 +95,33 @@ validate_hardware() {
     fi
 
     # Check for camera module
-    if ! vcgencmd get_camera | grep -q "supported=1"; then
-        print_warning "Camera module not detected"
+    if ! ls /dev/video* >/dev/null 2>&1; then
+        print_warning "No camera devices found in /dev/video*"
+        print_warning "This could mean:"
+        print_warning "1. Camera module is not connected"
+        print_warning "2. Camera module is not enabled"
+        print_warning "3. Using a newer Pi OS where camera appears differently"
         read -p "Continue anyway? (y/n) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             exit 1
+        fi
+    else
+        print_info "Camera device(s) found: $(ls /dev/video*)"
+    fi
+
+    # Additional camera check using libcamera-still
+    if command_exists libcamera-still; then
+        print_info "Testing camera with libcamera-still..."
+        if ! timeout 2 libcamera-still --immediate --timeout 1 -o /dev/null 2>/dev/null; then
+            print_warning "libcamera-still test failed. Camera might not be working."
+            read -p "Continue anyway? (y/n) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
+        else
+            print_success "Camera test with libcamera-still succeeded"
         fi
     fi
 }
@@ -354,7 +375,23 @@ if [ -f "$SERVICE_FILE" ]; then
     sudo systemctl enable "$SERVICE_FILE"
     check_command "Enabling service" || exit 1
 
+
     print_success "Systemd service '$SERVICE_FILE' installed and enabled."
+
+    # start the service
+    print_info "Starting the service..."
+    sudo systemctl start "$SERVICE_FILE"
+    check_command "Starting service" || exit 1
+
+    # verify the service is running with no errors, if an error occurs, print the error and stop the service
+    print_info "Verifying the service is running with no errors..."
+    sudo systemctl status "$SERVICE_FILE"
+    if [ $? -ne 0 ]; then
+        print_error "Service failed to start. Please check the logs."
+        sudo systemctl stop "$SERVICE_FILE"
+        exit 1
+    fi
+
     print_info "You can manage the service using:"
     print_info "  sudo systemctl start $SERVICE_FILE"
     print_info "  sudo systemctl stop $SERVICE_FILE"
