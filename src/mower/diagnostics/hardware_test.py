@@ -34,10 +34,38 @@ try:
     # Try to import the resource manager
     from mower.main_controller import ResourceManager
 except ImportError:
-    # If we can't import it, define a placeholder
-    ResourceManager = None
+    # If we can't import it, create a placeholder class
+    class ResourceManager:
+        """Placeholder ResourceManager that returns None for all resources."""
+        def __init__(self):
+            logging.warning("Using placeholder ResourceManager")
+            
+        def get_imu_sensor(self):
+            return None
+            
+        def get_bme280_sensor(self):
+            return None
+            
+        def get_tof_sensors(self):
+            return None
+            
+        def get_ina3221_sensor(self):
+            return None
+            
+        def get_gps_position(self):
+            return None
+            
+        def get_robohat_driver(self):
+            return None
+            
+        def get_blade_controller(self):
+            return None
+            
+        def get_camera(self):
+            return None
+            
     logging.warning(
-        "Could not import ResourceManager. Will create one dynamically.")
+        "Could not import ResourceManager. Using placeholder implementation.")
 
 
 class HardwareTestSuite:
