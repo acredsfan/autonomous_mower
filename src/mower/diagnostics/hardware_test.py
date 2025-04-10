@@ -15,12 +15,13 @@ Key features:
 - Command-line interface for running full or targeted tests
 
 Example usage:
-    python -m mower.diagnostics.hardware_test         # Run all tests
-    python -m mower.diagnostics.hardware_test --test imu  # Test only the IMU
-    python -m mower.diagnostics.hardware_test --non-interactive  # No prompts
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test  # Run all tests
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu  # Test IMU
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --non-interactive
 """
 
 import argparse
+import os
 import sys
 import time
 from typing import Dict, Optional, Any
@@ -33,39 +34,9 @@ logging = LoggerConfig.get_logger(__name__)
 try:
     # Try to import the resource manager
     from mower.main_controller import ResourceManager
-except ImportError:
-    # If we can't import it, create a placeholder class
-    class ResourceManager:
-        """Placeholder ResourceManager that returns None for all resources."""
-        def __init__(self):
-            logging.warning("Using placeholder ResourceManager")
-            
-        def get_imu_sensor(self):
-            return None
-            
-        def get_bme280_sensor(self):
-            return None
-            
-        def get_tof_sensors(self):
-            return None
-            
-        def get_ina3221_sensor(self):
-            return None
-            
-        def get_gps_position(self):
-            return None
-            
-        def get_robohat_driver(self):
-            return None
-            
-        def get_blade_controller(self):
-            return None
-            
-        def get_camera(self):
-            return None
-            
-    logging.warning(
-        "Could not import ResourceManager. Using placeholder implementation.")
+except ImportError as e:
+    logging.error(f"Failed to import ResourceManager: {e}")
+    sys.exit(1)
 
 
 class HardwareTestSuite:
@@ -93,7 +64,24 @@ class HardwareTestSuite:
             resource_manager: An instance of ResourceManager. If None,
                 a new one will be created.
         """
-        self.resource_manager = resource_manager or ResourceManager()
+        if not os.geteuid() == 0:
+            msg = (
+                "Hardware tests require root privileges. "
+                "Please run with: sudo -E env PATH=$PATH python3 -m "
+                "mower.diagnostics.hardware_test"
+            )
+            logging.error(msg)
+            raise RuntimeError(msg)
+
+        self.resource_manager = resource_manager
+        if self.resource_manager is None:
+            self.resource_manager = ResourceManager()
+            try:
+                self.resource_manager.initialize()
+            except Exception as e:
+                logging.error(f"Failed to initialize ResourceManager: {e}")
+                raise
+
         self.test_results = {}
         self.test_in_progress = False
 
@@ -731,14 +719,23 @@ def main():
         --verbose: Enable verbose output
 
     Usage examples:
-        python -m mower.diagnostics.hardware_test  # Run tests interactively
-        python -m mower.diagnostics.hardware_test --test imu  # Test IMU only
-        python -m mower.diagnostics.hardware_test \
-            --non-interactive  # No prompts
+        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test
+        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu
+        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --non-interactive
 
     Returns:
         System exit code: 0 if all tests pass, non-zero otherwise
     """
+    # Check for root privileges first
+    if not os.geteuid() == 0:
+        msg = (
+            "Hardware tests require root privileges. "
+            "Please run with: sudo -E env PATH=$PATH python3 -m "
+            "mower.diagnostics.hardware_test"
+        )
+        print(msg)
+        return 1
+
     parser = argparse.ArgumentParser(
         description='Run hardware tests for the autonomous mower')
     parser.add_argument(
@@ -772,33 +769,50 @@ def main():
     print("For each sensor, readings are validated against plausible ranges.")
     print("=" * 50)
 
-    # Create test suite
-    test_suite = HardwareTestSuite()
+    try:
+        # Create and initialize ResourceManager
+        resource_manager = ResourceManager()
+        resource_manager.initialize()
 
-    if args.test:
-        # Run specific test
-        test_func_name = f"test_{args.test.lower().replace('-', '_')}"
-        if hasattr(test_suite, test_func_name):
-            test_func = getattr(test_suite, test_func_name)
-            print(f"Running {args.test} test...")
-            result = test_func()
-            print(f"Test {'PASSED' if result else 'FAILED'}")
-            return 0 if result else 1
+        # Create test suite with initialized ResourceManager
+        test_suite = HardwareTestSuite(resource_manager)
+
+        if args.test:
+            # Run specific test
+            test_func_name = f"test_{args.test.lower().replace('-', '_')}"
+            if hasattr(test_suite, test_func_name):
+                test_func = getattr(test_suite, test_func_name)
+                print(f"Running {args.test} test...")
+                result = test_func()
+                print(f"Test {'PASSED' if result else 'FAILED'}")
+                return 0 if result else 1
+            else:
+                print(f"Error: Test '{args.test}' not found")
+                print("Available tests:")
+                for attr in dir(test_suite):
+                    if attr.startswith('test_') and callable(
+                            getattr(test_suite, attr)):
+                        test_name = attr[5:].replace('_', '-')
+                        print(f"  - {test_name}")
+                return 1
         else:
-            print(f"Error: Test '{args.test}' not found")
-            print("Available tests:")
-            for attr in dir(test_suite):
-                if attr.startswith('test_') and callable(
-                        getattr(test_suite, attr)):
-                    test_name = attr[5:].replace('_', '-')
-                    print(f"  - {test_name}")
-            return 1
-    else:
-        # Run all tests
-        test_results = test_suite.run_all_tests(
-            interactive=not args.non_interactive)
-        # Return exit code based on test results
-        return 0 if all(test_results.values()) else 1
+            # Run all tests
+            test_results = test_suite.run_all_tests(
+                interactive=not args.non_interactive)
+            # Return exit code based on test results
+            return 0 if all(test_results.values()) else 1
+
+    except Exception as e:
+        logging.error(f"Error running hardware tests: {e}")
+        return 1
+
+    finally:
+        # Cleanup
+        if 'resource_manager' in locals():
+            try:
+                resource_manager.cleanup()
+            except Exception as e:
+                logging.error(f"Error during cleanup: {e}")
 
 
 if __name__ == "__main__":
