@@ -75,10 +75,24 @@ These steps are required only once during initial setup. The service will use th
 
 The installation script will:
 - Install required system packages
-- Install required Python packages
+- Install required Python packages system-wide
 - Set up the systemd service
 - Configure hardware interfaces
 - Set up the watchdog timer
+
+#### Note on Python Package Installation
+This project uses system-wide Python package installation instead of a virtual environment. This is because:
+1. The mower requires direct access to hardware interfaces (GPIO, I2C, etc.)
+2. It's a dedicated device running only the mower software
+3. System-wide installation ensures proper permissions and access to hardware resources
+4. It simplifies service integration and maintenance
+
+The installation uses the `--break-system-packages` flag to bypass PEP 668 restrictions, which is appropriate for this dedicated device. This approach has been tested and documented in our issues tracking system.
+
+You may see the message "Defaulting to user installation because normal site-packages is not writeable" during installation. This is normal and expected on modern Linux systems due to PEP 668. Our installation script handles this by:
+1. Using `--break-system-packages` to ensure system-wide installation
+2. Installing packages in the correct location for hardware access
+3. Setting proper permissions for the installed packages
 
 ## Running the Mower
 
@@ -215,7 +229,6 @@ sudo journalctl -u autonomous-mower -n 50 --no-pager
 
 3. Verify Python environment:
 ```bash
-source venv/bin/activate
 python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ```
 
