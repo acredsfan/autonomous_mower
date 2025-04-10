@@ -710,11 +710,12 @@ def main():
 
     # Configure logging based on verbosity
     if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.setLevel(logging.DEBUG)
         # Force immediate output
-        logging.getLogger().handlers[0].flush = lambda: None
+        for handler in logging.handlers:
+            handler.flush = lambda: None
     else:
-        logging.getLogger().setLevel(logging.INFO)
+        logging.setLevel(logging.INFO)
 
     print("=" * 50)
     print("AUTONOMOUS MOWER HARDWARE TEST SUITE")
