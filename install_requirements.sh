@@ -236,26 +236,26 @@ sudo apt-get install -y \
     python3-gdal
 check_command "Installing system packages" || exit 1
 
-# Install Python package in editable mode with all dependencies into venv
-print_info "Installing Python package and dependencies into venv..."
-$VENV_PIP install --no-cache-dir --upgrade -e .
+# Install Python package in editable mode with all dependencies
+print_info "Installing Python package and dependencies..."
+python3 -m pip install --user --no-cache-dir --upgrade -e .
 check_command "Installing main package" || exit 1
 
-# Explicitly install packages that might be missed by editable install
-print_info "Explicitly installing potentially missed packages..."
-$VENV_PIP install --no-cache-dir "utm"
+# Explicitly install packages that might be missed
+print_info "Installing additional packages..."
+python3 -m pip install --user --no-cache-dir "utm"
 check_command "Installing utm" || exit 1
-$VENV_PIP install --no-cache-dir "adafruit-circuitpython-bme280"
+python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-bme280"
 check_command "Installing adafruit-circuitpython-bme280" || exit 1
-$VENV_PIP install --no-cache-dir "adafruit-circuitpython-bno08x"
+python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-bno08x"
 check_command "Installing adafruit-circuitpython-bno08x" || exit 1
-$VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221"
+python3 -m pip install --user --no-cache-dir "barbudor-circuitpython-ina3221"
 check_command "Installing barbudor-circuitpython-ina3221" || exit 1
-$VENV_PIP install --no-cache-dir "adafruit-circuitpython-vl53l0x"
+python3 -m pip install --user --no-cache-dir "adafruit-circuitpython-vl53l0x"
 check_command "Installing adafruit-circuitpython-vl53l0x" || exit 1
-$VENV_PIP install --no-cache-dir "RPi.GPIO"
+python3 -m pip install --user --no-cache-dir "RPi.GPIO"
 check_command "Installing RPi.GPIO" || exit 1
-$VENV_PIP install --no-cache-dir "picamera2"
+python3 -m pip install --user --no-cache-dir "picamera2"
 check_command "Installing picamera2" || exit 1
 
 # Ask if user wants to install Coral TPU support
@@ -297,13 +297,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     sudo udevadm control --reload-rules && sudo udevadm trigger
     check_command "Reloading udev rules" || exit 1
     
-    # Install GDAL Python package first using venv pip
-    $VENV_PIP install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    # Install GDAL Python package first
+    sudo pip3 install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
     check_command "Installing GDAL" || exit 1
     
-    # Now install Coral dependencies using venv pip
+    # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
-    $VENV_PIP install -e ".[coral]"
+    sudo pip3 install -e ".[coral]"
     check_command "Installing Coral dependencies" || exit 1
     
     # Create models directory with proper permissions
@@ -375,7 +375,6 @@ if [ -f "$SERVICE_FILE" ]; then
     sudo systemctl enable "$SERVICE_FILE"
     check_command "Enabling service" || exit 1
 
-
     print_success "Systemd service '$SERVICE_FILE' installed and enabled."
 
     # Start the service
@@ -383,7 +382,7 @@ if [ -f "$SERVICE_FILE" ]; then
     sudo systemctl start "$SERVICE_FILE"
     check_command "Starting service" || exit 1
 
-    # VVerify the service is running with no errors, if an error occurs, print the error and stop the service
+    # Verify the service is running with no errors
     print_info "Verifying the service is running with no errors..."
     sudo systemctl status "$SERVICE_FILE"
     if [ $? -ne 0 ]; then
@@ -403,7 +402,6 @@ fi
 
 # Success message
 print_success "Installation completed successfully!"
-print_info "To activate the virtual environment, run: source venv/bin/activate"
 
 # Remove trap and exit successfully
 trap - EXIT

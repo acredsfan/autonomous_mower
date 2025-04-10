@@ -1,0 +1,25 @@
+[Unit]
+Description=Autonomous Lawn Mower Installation Service
+After=network.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_mower
+Environment=PYTHONUNBUFFERED=1
+
+# Allow privilege escalation for installation
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+
+# Run the installation
+ExecStart=/home/pi/autonomous_mower/install_requirements.sh
+
+# Output handling
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 

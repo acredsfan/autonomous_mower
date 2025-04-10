@@ -271,6 +271,19 @@ class HardwareTestSuite:
         try:
             # Basic test to check if GPIO is accessible
             logging.info("Testing GPIO accessibility")
+            
+            # First check if we're running as root
+            import os
+            if os.geteuid() != 0:
+                msg = (
+                    "GPIO test requires root privileges. "
+                    "Please run with: sudo -E env PATH=$PATH python3 -m "
+                    "mower.diagnostics.hardware_test"
+                )
+                logging.warning(msg)
+                print(msg)
+                return False
+                
             # This just checks if we can access the GPIO library without errors
             import RPi.GPIO as GPIO
             # Check if GPIO is accessible
@@ -285,7 +298,16 @@ class HardwareTestSuite:
             # If we got here without an exception, consider it a basic success
             return True
         except Exception as e:
-            logging.error(f"Error testing GPIO: {e}")
+            if "no access to /dev/mem" in str(e):
+                msg = (
+                    "No access to GPIO. Root privileges required. "
+                    "Please run with: sudo -E env PATH=$PATH python3 -m "
+                    "mower.diagnostics.hardware_test"
+                )
+                logging.error(msg)
+                print(msg)
+            else:
+                logging.error(f"Error testing GPIO: {e}")
             return False
 
     def test_imu(self) -> bool:
@@ -404,21 +426,18 @@ class HardwareTestSuite:
                     sensor_num = i + 1
                     msg = (
                         f"ToF{sensor_num} "
-                        f"err: "
-                        f"{distance}mm"
+                        f"err: {distance}mm"
                     )
                     logging.warning(msg)
                     msg = (
-                        f"S{sensor_num}: "
-                        f"{distance}mm "
+                        f"S{sensor_num}: {distance}mm "
                         "(ERR)"
                     )
                     print(msg)
                 else:
                     sensor_num = i + 1
                     msg = (
-                        f"S{sensor_num}: "
-                        f"{distance}mm "
+                        f"S{sensor_num}: {distance}mm "
                         "(OK)"
                     )
                     print(msg)

@@ -37,7 +37,6 @@ sudo apt-get upgrade
 
 # Install required system packages
 sudo apt-get install -y \
-    python3-venv \
     python3-pip \
     i2c-tools \
     git
@@ -75,7 +74,7 @@ These steps are required only once during initial setup. The service will use th
 ```
 
 The installation script will:
-- Create a Python virtual environment
+- Install required system packages
 - Install required Python packages
 - Set up the systemd service
 - Configure hardware interfaces
