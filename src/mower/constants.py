@@ -14,8 +14,9 @@ logging = LoggerConfig.get_logger(__name__)
 load_dotenv()
 
 # Set up base directory for consistent file referencing
-BASE_DIR = Path(__file__).resolve().parents[0]
-polygon_path = BASE_DIR / "user_polygon.json"
+BASE_DIR = Path(__file__).resolve().parents[2]  # Go up to project root
+CONFIG_DIR = BASE_DIR / "config"  # Use config directory
+polygon_path = CONFIG_DIR / "user_polygon.json"
 
 # Open user polygon config file
 try:
