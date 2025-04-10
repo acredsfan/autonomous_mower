@@ -378,12 +378,12 @@ if [ -f "$SERVICE_FILE" ]; then
 
     print_success "Systemd service '$SERVICE_FILE' installed and enabled."
 
-    # start the service
+    # Start the service
     print_info "Starting the service..."
     sudo systemctl start "$SERVICE_FILE"
     check_command "Starting service" || exit 1
 
-    # verify the service is running with no errors, if an error occurs, print the error and stop the service
+    # VVerify the service is running with no errors, if an error occurs, print the error and stop the service
     print_info "Verifying the service is running with no errors..."
     sudo systemctl status "$SERVICE_FILE"
     if [ $? -ne 0 ]; then
