@@ -181,57 +181,46 @@ class HardwareTestSuite:
             if 'heading' in reading:
                 if reading['heading'] < 0 or reading['heading'] > 360:
                     logging.warning(
-                        f"IMU heading out of range: {
-                            reading['heading']}")
+                        f"IMU heading out of range: {reading['heading']}")
                     return False
             if 'pitch' in reading:
                 if reading['pitch'] < -90 or reading['pitch'] > 90:
                     logging.warning(
-                        f"IMU pitch out of range: {
-                            reading['pitch']}")
+                        f"IMU pitch out of range: {reading['pitch']}")
                     return False
             if 'roll' in reading:
                 if reading['roll'] < -180 or reading['roll'] > 180:
                     logging.warning(
-                        f"IMU roll out of range: {
-                            reading['roll']}")
+                        f"IMU roll out of range: {reading['roll']}")
                     return False
         elif sensor_name.lower() == 'bme280':
             # Check for typical atmosphere
             if 'temperature' in reading and (
-                    reading['temperature'] < -
-                    40 or reading['temperature'] > 85):
+                    reading['temperature'] < -40 or reading['temperature'] > 85):
                 logging.warning(
-                    f"BME280 temperature out of range: {
-                        reading['temperature']}")
+                    f"BME280 temperature out of range: {reading['temperature']}")
                 return False
             if 'humidity' in reading and (
                     reading['humidity'] < 0 or reading['humidity'] > 100):
                 logging.warning(
-                    f"BME280 humidity out of range: {
-                        reading['humidity']}")
+                    f"BME280 humidity out of range: {reading['humidity']}")
                 return False
             if 'pressure' in reading and (
                     reading['pressure'] < 300 or reading['pressure'] > 1100):
                 logging.warning(
-                    f"BME280 pressure out of range: {
-                        reading['pressure']}")
+                    f"BME280 pressure out of range: {reading['pressure']}")
                 return False
         elif sensor_name.lower() == 'gps':
             # Basic checks for latitude/longitude
             if 'latitude' in reading and (
-                    reading['latitude'] < -
-                    90 or reading['latitude'] > 90):
+                    reading['latitude'] < -90 or reading['latitude'] > 90):
                 logging.warning(
-                    f"GPS latitude out of range: {
-                        reading['latitude']}")
+                    f"GPS latitude out of range: {reading['latitude']}")
                 return False
             if 'longitude' in reading and (
-                    reading['longitude'] < -
-                    180 or reading['longitude'] > 180):
+                    reading['longitude'] < -180 or reading['longitude'] > 180):
                 logging.warning(
-                    f"GPS longitude out of range: {
-                        reading['longitude']}")
+                    f"GPS longitude out of range: {reading['longitude']}")
                 return False
         elif sensor_name.lower() == 'power_monitor':
             # Check for reasonable voltage/current ranges
@@ -239,8 +228,7 @@ class HardwareTestSuite:
                     (reading['battery_voltage'] < 0 or
                      reading['battery_voltage'] > 30)):
                 logging.warning(
-                    f"Battery voltage out of range: "
-                    f"{reading['battery_voltage']}")
+                    f"Battery voltage out of range: {reading['battery_voltage']}")
                 return False
         # Add more checks as needed for additional sensors
         return True

@@ -36,6 +36,7 @@ Nice=0
 
 # Run the application
 ExecStartPre=/bin/bash -c 'test -f /var/run/autonomous-mower.pid && exit 1 || true'
+ExecStartPre=/bin/bash -c 'test -d ${MOWER_LOG_DIR} || exit 1'
 ExecStartPre=/home/pi/autonomous_mower/venv/bin/python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ExecStart=/home/pi/autonomous_mower/venv/bin/python3 -m mower.main_controller
 ExecStop=/bin/kill -SIGTERM $MAINPID

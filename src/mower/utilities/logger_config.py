@@ -24,9 +24,6 @@ class LoggerConfigInfo:
         if cls._initialized:
             return
 
-        # Create log directory if it doesn't exist
-        os.makedirs(cls._log_dir, exist_ok=True)
-
         # Set up root logger
         root_logger = logging.getLogger()
         root_logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
@@ -36,15 +33,26 @@ class LoggerConfigInfo:
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
-        # Set up rotating file handler for main log
-        main_log = os.path.join(cls._log_dir, 'mower.log')
-        file_handler = logging.handlers.RotatingFileHandler(
-            main_log,
-            maxBytes=1024 * 1024,  # 1MB
-            backupCount=5
-        )
-        file_handler.setFormatter(detailed_formatter)
-        root_logger.addHandler(file_handler)
+        try:
+            # Set up rotating file handler for main log if directory exists
+            if os.path.isdir(cls._log_dir):
+                main_log = os.path.join(cls._log_dir, 'mower.log')
+                file_handler = logging.handlers.RotatingFileHandler(
+                    main_log,
+                    maxBytes=1024 * 1024,  # 1MB
+                    backupCount=5
+                )
+                file_handler.setFormatter(detailed_formatter)
+                root_logger.addHandler(file_handler)
+            else:
+                root_logger.warning(
+                    f"Log directory {cls._log_dir} does not exist. "
+                    "Logging to console only."
+                )
+        except Exception as e:
+            root_logger.warning(
+                f"Failed to set up file logging: {e}. Logging to console only."
+            )
 
         # Set up console handler
         console_handler = logging.StreamHandler()
