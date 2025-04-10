@@ -208,27 +208,27 @@ export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
 # Install Python package and dependencies
 print_info "Installing Python package and dependencies..."
-python3 -m pip install --upgrade pip
+python3 -m pip install --break-system-packages --upgrade pip
 check_command "Upgrading pip" || exit 1
 
-python3 -m pip install --user --no-cache-dir -e .
+python3 -m pip install --break-system-packages --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --user --no-cache-dir utm
+python3 -m pip install --break-system-packages --no-cache-dir utm
 check_command "Installing utm" || exit 1
-python3 -m pip install --user --no-cache-dir adafruit-circuitpython-bme280
+python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-bme280
 check_command "Installing adafruit-circuitpython-bme280" || exit 1
-python3 -m pip install --user --no-cache-dir adafruit-circuitpython-bno08x
+python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-bno08x
 check_command "Installing adafruit-circuitpython-bno08x" || exit 1
-python3 -m pip install --user --no-cache-dir barbudor-circuitpython-ina3221
+python3 -m pip install --break-system-packages --no-cache-dir barbudor-circuitpython-ina3221
 check_command "Installing barbudor-circuitpython-ina3221" || exit 1
-python3 -m pip install --user --no-cache-dir adafruit-circuitpython-vl53l0x
+python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-vl53l0x
 check_command "Installing adafruit-circuitpython-vl53l0x" || exit 1
-python3 -m pip install --user --no-cache-dir RPi.GPIO
+python3 -m pip install --break-system-packages --no-cache-dir RPi.GPIO
 check_command "Installing RPi.GPIO" || exit 1
-python3 -m pip install --user --no-cache-dir picamera2
+python3 -m pip install --break-system-packages --no-cache-dir picamera2
 check_command "Installing picamera2" || exit 1
 
 # Ask if user wants to install Coral TPU support
