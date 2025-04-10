@@ -181,7 +181,7 @@ fi
 
 # Install system dependencies
 print_info "Installing system dependencies..."
-sudo apt-get update
+sudo apt-get update && sudo apt-get upgrade -y
 check_command "Updating package list" || exit 1
 
 sudo apt-get install -y \
