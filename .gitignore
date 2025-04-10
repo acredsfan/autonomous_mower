@@ -95,3 +95,4 @@ wheels/
 .cursor/
 mcp_server/
 mcp.json
+tools/

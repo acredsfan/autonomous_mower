@@ -31,13 +31,34 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Function to check if a command succeeded
+check_command() {
+    if [ $? -ne 0 ]; then
+        print_error "Command failed: $1"
+        return 1
+    fi
+    return 0
+}
+
+# Function to cleanup on script failure
+cleanup() {
+    print_info "Cleaning up..."
+    if [ -n "$VIRTUAL_ENV" ]; then
+        deactivate
+    fi
+    exit 1
+}
+
+# Set trap for cleanup
+trap cleanup EXIT
+
 # Function to validate Raspberry Pi hardware
 validate_hardware() {
     # Check if running on Raspberry Pi
     if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
         print_error "This script must be run on a Raspberry Pi"
         exit 1
-    }
+    fi
 
     # Check Pi model and memory
     PI_MODEL=$(tr -d '\0' < /proc/device-tree/model)
@@ -147,10 +168,15 @@ fi
 if [ ! -d "venv" ]; then
     print_info "Creating virtual environment..."
     python3 -m venv venv
+    check_command "Creating virtual environment" || exit 1
 fi
 
 # Activate virtual environment
 source venv/bin/activate
+if [ $? -ne 0 ]; then
+    print_error "Failed to activate virtual environment"
+    exit 1
+fi
 
 # Define path to venv pip
 VENV_PIP="./venv/bin/pip"
@@ -158,11 +184,15 @@ VENV_PIP="./venv/bin/pip"
 # Upgrade pip and install wheel using venv pip
 print_info "Upgrading pip and installing wheel in venv..."
 $VENV_PIP install --upgrade pip
+check_command "Upgrading pip" || exit 1
 $VENV_PIP install wheel
+check_command "Installing wheel" || exit 1
 
 # Install system dependencies
 print_info "Installing system dependencies..."
 sudo apt-get update
+check_command "Updating package list" || exit 1
+
 sudo apt-get install -y \
     libatlas-base-dev \
     libhdf5-dev \
@@ -183,21 +213,29 @@ sudo apt-get install -y \
     gdal-bin \
     libgdal-dev \
     python3-gdal
+check_command "Installing system packages" || exit 1
 
 # Install Python package in editable mode with all dependencies into venv
 print_info "Installing Python package and dependencies into venv..."
-# Use --upgrade flag to force checking/installing dependencies
 $VENV_PIP install --no-cache-dir --upgrade -e .
+check_command "Installing main package" || exit 1
 
 # Explicitly install packages that might be missed by editable install
 print_info "Explicitly installing potentially missed packages..."
 $VENV_PIP install --no-cache-dir "utm"
+check_command "Installing utm" || exit 1
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bme280"
+check_command "Installing adafruit-circuitpython-bme280" || exit 1
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-bno08x"
+check_command "Installing adafruit-circuitpython-bno08x" || exit 1
 $VENV_PIP install --no-cache-dir "barbudor-circuitpython-ina3221"
+check_command "Installing barbudor-circuitpython-ina3221" || exit 1
 $VENV_PIP install --no-cache-dir "adafruit-circuitpython-vl53l0x"
+check_command "Installing adafruit-circuitpython-vl53l0x" || exit 1
 $VENV_PIP install --no-cache-dir "RPi.GPIO"
+check_command "Installing RPi.GPIO" || exit 1
 $VENV_PIP install --no-cache-dir "picamera2"
+check_command "Installing picamera2" || exit 1
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
@@ -205,39 +243,66 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support..."
     
+    # Check if Coral TPU is connected
+    if ! lsusb | grep -q "1a6e:089a"; then
+        print_warning "Coral TPU not detected. Please connect the device and try again."
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    
     # Add Coral repository and install Edge TPU runtime
     print_info "Installing Edge TPU runtime..."
     echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+    check_command "Adding Coral repository" || exit 1
+    
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+    check_command "Adding Coral GPG key" || exit 1
+    
     sudo apt-get update
+    check_command "Updating package list for Coral" || exit 1
     
     # Install standard version for thermal stability
     sudo apt-get install -y libedgetpu1-std
+    check_command "Installing Edge TPU runtime" || exit 1
     
     # Set up udev rules for USB access
     print_info "Setting up USB access rules..."
     echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a6e",ATTRS{idProduct}=="089a",MODE="0666"' | sudo tee /etc/udev/rules.d/99-coral-tpu.rules
+    check_command "Setting up udev rules" || exit 1
+    
     sudo udevadm control --reload-rules && sudo udevadm trigger
+    check_command "Reloading udev rules" || exit 1
     
     # Install GDAL Python package first using venv pip
     $VENV_PIP install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    check_command "Installing GDAL" || exit 1
     
     # Now install Coral dependencies using venv pip
     print_info "Installing Coral Python packages..."
     $VENV_PIP install -e ".[coral]"
+    check_command "Installing Coral dependencies" || exit 1
     
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
     mkdir -p src/mower/obstacle_detection/models
+    check_command "Creating models directory" || exit 1
     
     # Download model files
     print_info "Downloading model files..."
     wget -O src/mower/obstacle_detection/models/detect_edgetpu.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
+    check_command "Downloading Edge TPU model" || exit 1
+    
     wget -O src/mower/obstacle_detection/models/detect.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite
+    check_command "Downloading standard model" || exit 1
+    
     wget -O src/mower/obstacle_detection/models/labelmap.txt \
         https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt
+    check_command "Downloading label map" || exit 1
     
     print_info "Coral TPU setup complete!"
     print_info "Notes:"
@@ -248,80 +313,22 @@ fi
 
 # Create necessary directories
 print_info "Creating necessary directories..."
-mkdir -p data
 mkdir -p logs
+check_command "Creating logs directory" || exit 1
+mkdir -p data
+check_command "Creating data directory" || exit 1
+mkdir -p config
+check_command "Creating config directory" || exit 1
 
-# Set up environment file if it doesn't exist
-if [ ! -f .env ]; then
-    print_info "Creating .env file from template..."
-    cp .env.example .env
-    print_info "Please update .env with your configuration"
-fi
+# Set proper permissions
+print_info "Setting directory permissions..."
+chmod 755 logs data config
+check_command "Setting directory permissions" || exit 1
 
-# Add user to required groups
-print_info "Adding user to required groups..."
-sudo usermod -a -G gpio,i2c,dialout,video $USER
+# Success message
+print_success "Installation completed successfully!"
+print_info "To activate the virtual environment, run: source venv/bin/activate"
 
-# Enable I2C and Serial interfaces
-print_info "Enabling I2C and Serial interfaces..."
-sudo raspi-config nonint do_i2c 0
-sudo raspi-config nonint do_serial 0
-
-# Set up systemd service
-print_info "Setting up systemd service..."
-# Get the absolute path of the project directory
-PROJECT_DIR=$(pwd)
-
-# Use the updated service file configuration (using venv python)
-print_info "Using updated service file configuration..."
-sudo cp autonomous-mower.service /etc/systemd/system/
-
-# Ensure project directory has correct permissions
-print_info "Ensuring correct project directory permissions..."
-sudo chown -R $USER:$USER "$PROJECT_DIR"
-sudo chmod -R 755 "$PROJECT_DIR"
-
-# Reload systemd and enable the service
-print_info "Reloading systemd and enabling service..."
-sudo systemctl daemon-reload
-sudo systemctl enable autonomous-mower.service
-
-# Start the service and check status
-print_info "Starting service and checking status..."
-sudo systemctl start autonomous-mower.service
-sleep 5 # Give service a few seconds to start
-sudo systemctl status autonomous-mower.service
-
-# Add safety features
-setup_watchdog
-setup_emergency_stop
-
-# Create data directories with proper permissions
-print_info "Creating data directories..."
-mkdir -p data/logs
-mkdir -p data/backups
-chmod 755 data
-chmod 755 data/logs
-chmod 755 data/backups
-
-# Setup log rotation
-print_info "Setting up log rotation..."
-sudo tee /etc/logrotate.d/autonomous-mower << EOF
-/var/log/autonomous-mower.log {
-    daily
-    rotate 7
-    compress
-    delaycompress
-    missingok
-    notifempty
-    create 644 $USER $USER
-}
-EOF
-
-print_success "Installation complete with safety features!"
-print_info "Please review the following:"
-print_info "1. Test emergency stop button functionality"
-print_info "2. Verify watchdog is working: systemctl status watchdog"
-print_info "3. Check all sensor connections"
-print_info "4. Review logs in /var/log/autonomous-mower.log"
-print_info "5. Test the mower in a safe, enclosed area first"
+# Remove trap and exit successfully
+trap - EXIT
+exit 0
