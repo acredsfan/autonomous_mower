@@ -1,6 +1,6 @@
 # Autonomous Lawn Mower
 
-A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path planning, and remote control capabilities.
+An autonomous lawn mower system built for Raspberry Pi, featuring advanced navigation, obstacle detection, and safety features.
 
 ## Features
 
@@ -18,121 +18,99 @@ A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path plann
 
 ## Prerequisites
 
-- Raspberry Pi 4B 4GB or better (recommended)
-- Python 3.9 or higher
-- Required hardware:
-  - Camera module (Raspberry Pi Camera V2 or better)
-  - GPS module (UBLOX ZED-F9P recommended)
-  - IMU sensor (BNO085 recommended)
-  - Motor controllers
-  - Emergency stop button (normally closed)
-  - Optional: Google Coral USB Accelerator
+- Raspberry Pi 4B (4GB RAM or better recommended)
+- Python 3.9 or newer
+- Raspberry Pi OS (Bookworm or newer)
+- Camera module (v2 or v3 recommended)
+- Various sensors (see Hardware Setup)
+- Emergency stop button (normally closed)
+- Optional: Google Coral USB Accelerator
 
-## Installation
+## Initial Setup
 
-### Quick Start (Recommended)
+### 1. System Dependencies
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/autonomous_mower.git
-   cd autonomous_mower
-   ```
+```bash
+# Update system packages
+sudo apt-get update
+sudo apt-get upgrade
 
-2. Run the installation script:
-   ```bash
-   chmod +x install_requirements.sh
-   ./install_requirements.sh
-   ```
-   The script will:
-   - Validate hardware requirements
-   - Create and configure virtual environment
-   - Install system dependencies
-   - Install Python packages
-   - Set up Coral TPU support (if selected)
-   - Create necessary directories
-   - Set up proper permissions
+# Install required system packages
+sudo apt-get install -y \
+    python3-venv \
+    python3-pip \
+    i2c-tools \
+    git
+```
 
-3. Configure your environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your specific settings
-   ```
+### 2. Clone Repository
 
-4. The mower service will start automatically on boot. You can manage it with:
-   ```bash
-   # Check service status
-   sudo systemctl status autonomous-mower
-   
-   # View logs
-   journalctl -u autonomous-mower
-   
-   # Manually start/stop/restart
-   sudo systemctl start autonomous-mower
-   sudo systemctl stop autonomous-mower
-   sudo systemctl restart autonomous-mower
-   ```
+```bash
+git clone https://github.com/yourusername/autonomous_mower.git
+cd autonomous_mower
+```
 
-### Manual Installation
+### 3. Create Log Directory and Set Permissions
 
-If you prefer to install manually or encounter issues with the script:
+Before running the installation script or service, you must create the log directory and set the correct permissions:
 
-1. Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
+```bash
+# Create log directory
+sudo mkdir -p /var/log/autonomous-mower
 
-2. Install dependencies:
-   ```bash
-   pip install --upgrade pip wheel setuptools
-   pip install "numpy<2.0.0"  # Install numpy first to avoid conflicts
-   pip install -e .
-   ```
+# Set ownership to pi user
+sudo chown -R pi:pi /var/log/autonomous-mower
 
-3. Install optional features:
-   ```bash
-   # For Coral TPU support
-   pip install -e ".[coral]"
-   
-   # For DDNS support
-   pip install -e ".[ddns]"
-   
-   # For Cloudflare support
-   pip install -e ".[cloudflare]"
-   
-   # For SSL support
-   pip install -e ".[ssl]"
-   ```
+# Set correct permissions
+sudo chmod 755 /var/log/autonomous-mower
+```
 
-4. Set up hardware access:
-   ```bash
-   sudo usermod -a -G gpio,i2c,dialout,video $USER
-   sudo raspi-config nonint do_i2c 0
-   sudo raspi-config nonint do_serial 0
-   ```
+These steps are required only once during initial setup. The service will use this directory for all logging operations.
 
-5. Configure your environment:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your specific settings
-   ```
+### 4. Installation
 
-6. Set up systemd service:
-   ```bash
-   # Copy service file
-   sudo cp autonomous-mower.service /etc/systemd/system/
-   
-   # Create log files
-   sudo touch /var/log/autonomous-mower.log
-   sudo touch /var/log/autonomous-mower.error.log
-   sudo chown $USER:$USER /var/log/autonomous-mower.log
-   sudo chown $USER:$USER /var/log/autonomous-mower.error.log
-   
-   # Enable and start service
-   sudo systemctl daemon-reload
-   sudo systemctl enable autonomous-mower.service
-   sudo systemctl start autonomous-mower.service
-   ```
+```bash
+# Run the installation script
+./install_requirements.sh
+```
+
+The installation script will:
+- Create a Python virtual environment
+- Install required Python packages
+- Set up the systemd service
+- Configure hardware interfaces
+- Set up the watchdog timer
+
+## Running the Mower
+
+### Starting the Service
+
+```bash
+# Start the service
+sudo systemctl start autonomous-mower
+
+# Enable service to start on boot
+sudo systemctl enable autonomous-mower
+
+# Check service status
+sudo systemctl status autonomous-mower
+```
+
+### Monitoring Logs
+
+The mower logs are stored in `/var/log/autonomous-mower/`:
+```bash
+# View service log
+tail -f /var/log/autonomous-mower/service.log
+
+# View error log
+tail -f /var/log/autonomous-mower/error.log
+
+# View application log
+tail -f /var/log/autonomous-mower/mower.log
+```
+
+Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 
 ## Hardware Setup
 
@@ -190,159 +168,76 @@ The `.env` file contains all configuration settings. Key sections include:
 
 See `.env.example` for detailed descriptions of each setting.
 
-## Usage
+## Safety Features
 
-### Service Management
-
-The mower runs as a system service and can be managed using systemd:
-
-```bash
-# Check service status
-sudo systemctl status autonomous-mower
-
-# View logs
-journalctl -u autonomous-mower
-
-# Start/stop/restart service
-sudo systemctl start autonomous-mower
-sudo systemctl stop autonomous-mower
-sudo systemctl restart autonomous-mower
-```
-
-### Testing Hardware
-
-```bash
-mower-test  # Run hardware diagnostics
-mower-calibrate  # Calibrate IMU sensor
-```
-
-### Remote Access
-
-The mower supports multiple remote access methods:
-
-1. **DDNS** (recommended for home use)
-   - Configure your router for port forwarding
-   - Set up DDNS in `.env`
-   - Access via your DDNS domain
-
-2. **Cloudflare Tunnel** (recommended for production)
-   - Set up Cloudflare account
-   - Configure tunnel in `.env`
-   - Access via Cloudflare domain
-
-3. **NGROK** (good for testing)
-   - Set up NGROK account
-   - Configure in `.env`
-   - Access via NGROK URL
-
-## Accessing the User Interface
-
-1. **Web UI Access**
-   - The web interface is available at `http://<raspberry_pi_ip>:5000`
-   - Default port is 5000 (configurable in .env file)
-   - If running locally, use `http://localhost:5000`
-
-2. **Initial Setup**
-   - First-time access requires creating an admin account
-   - Default credentials (if not changed):
-     - Username: admin
-     - Password: admin
-   - Change these credentials in the .env file for security
-
-3. **Testing Mower Functionality**
-   - **Movement Testing**
-     - Use the "Manual Control" section in the UI
-     - Test forward, backward, and turning movements
-     - Adjust speed using the speed control slider
-   
-   - **Sensor Testing**
-     - View real-time sensor data in the "Sensor Dashboard"
-     - Test obstacle detection using the "Obstacle Detection" panel
-     - Monitor GPS position in the "Navigation" section
-   
-   - **Boundary Testing**
-     - Use the "Boundary Editor" to create and test mowing boundaries
-     - Test virtual fence functionality
-     - Verify return-to-home behavior
-
-4. **Safety Features**
-   - Emergency stop button available in the UI
+1. **Emergency Stop Button**
+   - Available in the UI
    - Sensor override controls for testing
    - Battery monitoring and low-battery alerts
    - Hardware watchdog for system reliability
 
-5. **Troubleshooting**
-   - Check the "System Logs" section for detailed error messages
-   - Use the "Diagnostics" panel to verify hardware connections
-   - View sensor calibration data in the "Calibration" section
-   - Check watchdog status: `systemctl status watchdog`
-
-## Development
-
-### Running Tests
-
-```bash
-pip install -e ".[dev]"
-pytest
-```
-
-### Code Style
-
-```bash
-black .
-flake8
-mypy .
-```
+2. **Safety Guidelines**
+   - Pre-Operation Checks
+     - Verify emergency stop functionality
+     - Check battery level
+     - Ensure all sensors are working
+     - Verify boundary settings
+   - During Operation
+     - Monitor system status
+     - Keep emergency stop accessible
+     - Watch for obstacle detection
+     - Monitor battery levels
+   - Maintenance
+     - Regular blade inspection
+     - Battery maintenance
+     - Sensor cleaning
+     - Software updates
 
 ## Troubleshooting
 
-### Common Issues
+Common issues and their solutions:
 
-1. **Permission Issues**
-   ```bash
-   sudo chown -R $USER:$USER .
-   sudo chmod -R 755 .
-   ```
+### Service Won't Start
 
-2. **Hardware Detection Issues**
-   - Check connections and wiring
-   - Verify interfaces are enabled in raspi-config
-   - Check group memberships: `groups $USER`
+1. Check log directory permissions:
+```bash
+ls -l /var/log/autonomous-mower
+```
+If permissions are wrong, run:
+```bash
+sudo chown -R pi:pi /var/log/autonomous-mower
+sudo chmod 755 /var/log/autonomous-mower
+```
 
-3. **Service Issues**
-   - Check logs: `journalctl -u autonomous-mower`
-   - Verify virtual environment activation
-   - Check .env configuration
+2. Check service logs:
+```bash
+sudo journalctl -u autonomous-mower -n 50 --no-pager
+```
 
-4. **Coral TPU Issues**
-   - Verify USB connection
-   - Check udev rules: `ls -l /dev/bus/usb/*/*`
-   - Test with example script
+3. Verify Python environment:
+```bash
+source venv/bin/activate
+python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
+```
 
-5. **Emergency Stop Issues**
-   - Check GPIO7 connection
-   - Verify button is normally closed
-   - Check permissions on GPIO device
+### Camera Issues
 
-## Safety Guidelines
+1. Check camera connection and enable:
+```bash
+vcgencmd get_camera
+libcamera-hello -t 5000
+```
 
-1. **Pre-Operation Checks**
-   - Verify emergency stop functionality
-   - Check battery level
-   - Ensure all sensors are working
-   - Verify boundary settings
+2. Verify camera devices:
+```bash
+ls /dev/video*
+```
 
-2. **During Operation**
-   - Monitor system status
-   - Keep emergency stop accessible
-   - Watch for obstacle detection
-   - Monitor battery levels
-
-3. **Maintenance**
-   - Regular blade inspection
-   - Battery maintenance
-   - Sensor cleaning
-   - Software updates
+3. Check camera permissions:
+```bash
+groups | grep video
+sudo usermod -aG video pi  # If 'video' group missing
+```
 
 ## Contributing
 
