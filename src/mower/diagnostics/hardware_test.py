@@ -24,6 +24,7 @@ import argparse
 import sys
 import time
 from typing import Dict, Optional, Any
+import logging as logging_levels  # Import standard logging for level constants
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
@@ -710,12 +711,12 @@ def main():
 
     # Configure logging based on verbosity
     if args.verbose:
-        logging.setLevel(logging.DEBUG)
+        logging.setLevel(logging_levels.DEBUG)
         # Force immediate output
         for handler in logging.handlers:
             handler.flush = lambda: None
     else:
-        logging.setLevel(logging.INFO)
+        logging.setLevel(logging_levels.INFO)
 
     print("=" * 50)
     print("AUTONOMOUS MOWER HARDWARE TEST SUITE")
