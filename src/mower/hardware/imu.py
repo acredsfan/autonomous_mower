@@ -638,8 +638,8 @@ class BNO085Sensor:
                         self.connect()
                     else:
                         logger.error(
-                            f"Failed to reconnect to IMU after {
-                                self.max_connect_attempts} attempts")
+                            "Failed to reconnect to IMU after "
+                            f"{self.max_connect_attempts} attempts")
                         time.sleep(5)  # Wait before trying again
                         self.connect_attempts = 0  # Reset counter to try again
                     continue
@@ -750,9 +750,8 @@ class BNO085Sensor:
         safety_status = self.check_safety_conditions()
         if not safety_status['is_safe']:
             logger.warning(
-                f"Unsafe condition detected: {
-                    ', '.join(
-                        safety_status['messages'])}")
+                "Unsafe condition detected: "
+                f"{', '.join(safety_status['messages'])}")
 
     def _update_euler_angles(self):
         """
@@ -952,9 +951,8 @@ class BNO085Sensor:
                 status['is_safe'] = False
                 status['tilt_ok'] = False
                 status['messages'].append(
-                    f"Dangerous tilt angle detected: Roll={
-                        self.roll:.1f}°, " f"Pitch={
-                        self.pitch:.1f}°")
+                    "Dangerous tilt angle detected: "
+                    f"Roll={self.roll:.1f}°, Pitch={self.pitch:.1f}°")
 
             # Check for impacts/collisions
             accel_magnitude = math.sqrt(
@@ -967,8 +965,8 @@ class BNO085Sensor:
                     status['is_safe'] = False
                     status['impact_detected'] = True
                     status['messages'].append(
-                        f"Impact detected! Acceleration: {
-                            accel_magnitude:.1f} m/s²")
+                        "Impact detected! Acceleration: "
+                        f"{accel_magnitude:.1f} m/s²")
                     self.last_impact_time = current_time
 
             # Check for abnormal acceleration
