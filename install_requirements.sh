@@ -325,6 +325,34 @@ print_info "Setting directory permissions..."
 chmod 755 logs data config
 check_command "Setting directory permissions" || exit 1
 
+# --- Add Systemd Service Setup ---
+print_info "Setting up systemd service..."
+SERVICE_FILE="autonomous-mower.service"
+SYSTEMD_DIR="/etc/systemd/system"
+
+if [ -f "$SERVICE_FILE" ]; then
+    print_info "Copying $SERVICE_FILE to $SYSTEMD_DIR..."
+    sudo cp "$SERVICE_FILE" "$SYSTEMD_DIR/"
+    check_command "Copying service file" || exit 1
+
+    print_info "Reloading systemd daemon..."
+    sudo systemctl daemon-reload
+    check_command "Reloading systemd daemon" || exit 1
+
+    print_info "Enabling $SERVICE_FILE to start on boot..."
+    sudo systemctl enable "$SERVICE_FILE"
+    check_command "Enabling service" || exit 1
+
+    print_success "Systemd service '$SERVICE_FILE' installed and enabled."
+    print_info "You can manage the service using:"
+    print_info "  sudo systemctl start $SERVICE_FILE"
+    print_info "  sudo systemctl stop $SERVICE_FILE"
+    print_info "  sudo systemctl status $SERVICE_FILE"
+else
+    print_warning "$SERVICE_FILE not found. Skipping systemd setup."
+fi
+# --- End Systemd Service Setup ---
+
 # Success message
 print_success "Installation completed successfully!"
 print_info "To activate the virtual environment, run: source venv/bin/activate"
