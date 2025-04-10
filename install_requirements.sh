@@ -325,6 +325,17 @@ print_info "Setting directory permissions..."
 chmod 755 logs data config
 check_command "Setting directory permissions" || exit 1
 
+# Setup watchdog before systemd service
+print_info "Setting up watchdog service (required for autonomous-mower.service)..."
+setup_watchdog
+check_command "Setting up watchdog" || exit 1
+
+# Verify watchdog is running
+if ! systemctl is-active --quiet watchdog.service; then
+    print_error "Watchdog service failed to start. Please check system logs."
+    exit 1
+fi
+
 # --- Add Systemd Service Setup ---
 print_info "Setting up systemd service..."
 SERVICE_FILE="autonomous-mower.service"
