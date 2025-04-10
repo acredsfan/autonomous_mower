@@ -13,16 +13,19 @@ A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path plann
 - Remote monitoring and control
 - Multiple remote access options (DDNS, Cloudflare, NGROK)
 - Automatic startup on boot via systemd service
+- Hardware watchdog for system reliability
+- Emergency stop button support
 
 ## Prerequisites
 
-- Raspberry Pi 4 (recommended) or newer
+- Raspberry Pi 4B 4GB or better (recommended)
 - Python 3.9 or higher
 - Required hardware:
-  - Camera module
+  - Camera module (Raspberry Pi Camera V2 or better)
   - GPS module (UBLOX ZED-F9P recommended)
   - IMU sensor (BNO085 recommended)
   - Motor controllers
+  - Emergency stop button (normally closed)
   - Optional: Google Coral USB Accelerator
 
 ## Installation
@@ -40,6 +43,14 @@ A Raspberry Pi-powered autonomous lawn mower with obstacle detection, path plann
    chmod +x install_requirements.sh
    ./install_requirements.sh
    ```
+   The script will:
+   - Validate hardware requirements
+   - Create and configure virtual environment
+   - Install system dependencies
+   - Install Python packages
+   - Set up Coral TPU support (if selected)
+   - Create necessary directories
+   - Set up proper permissions
 
 3. Configure your environment:
    ```bash
@@ -121,6 +132,48 @@ If you prefer to install manually or encounter issues with the script:
    sudo systemctl daemon-reload
    sudo systemctl enable autonomous-mower.service
    sudo systemctl start autonomous-mower.service
+   ```
+
+## Hardware Setup
+
+### Required Hardware Connections
+
+1. **Camera Module**
+   - Connect to CSI port
+   - Enable camera in raspi-config
+   - Test with: `raspistill -v -o test.jpg`
+
+2. **GPS Module**
+   - Connect to UART pins (GPIO 14/15)
+   - Enable serial in raspi-config
+   - Test with: `gpsmon /dev/ttyAMA0`
+
+3. **IMU Sensor**
+   - Connect to I2C pins (GPIO 2/3)
+   - Enable I2C in raspi-config
+   - Test with: `i2cdetect -y 1`
+
+4. **Emergency Stop Button**
+   - Connect between GPIO7 and GND
+   - Button should be normally closed (NC)
+   - Test with: `gpio read 7`
+
+5. **Motor Controllers**
+   - Connect to appropriate GPIO pins
+   - Configure in .env file
+   - Test with manual control in UI
+
+### Coral TPU Setup (Optional)
+
+1. Connect Coral USB Accelerator
+2. Install Coral runtime during installation
+3. Verify detection:
+   ```bash
+   lsusb | grep "1a6e:089a"
+   ```
+4. Test with:
+   ```bash
+   python3 -c "import tflite_runtime.interpreter as tflite; print('Coral TPU detected')"
    ```
 
 ## Configuration
@@ -216,11 +269,13 @@ The mower supports multiple remote access methods:
    - Emergency stop button available in the UI
    - Sensor override controls for testing
    - Battery monitoring and low-battery alerts
+   - Hardware watchdog for system reliability
 
 5. **Troubleshooting**
    - Check the "System Logs" section for detailed error messages
    - Use the "Diagnostics" panel to verify hardware connections
    - View sensor calibration data in the "Calibration" section
+   - Check watchdog status: `systemctl status watchdog`
 
 ## Development
 
@@ -249,49 +304,53 @@ mypy .
    sudo chmod -R 755 .
    ```
 
-2. **Hardware Access**
-   ```bash
-   # Check I2C
-   i2cdetect -y 1
-   
-   # Check Serial
-   ls -l /dev/tty*
-   ```
+2. **Hardware Detection Issues**
+   - Check connections and wiring
+   - Verify interfaces are enabled in raspi-config
+   - Check group memberships: `groups $USER`
 
-3. **Dependency Conflicts**
-   ```bash
-   pip uninstall numpy tensorflow
-   pip install "numpy<2.0.0"
-   pip install "tensorflow>=2.5.0,<2.6.0"
-   ```
+3. **Service Issues**
+   - Check logs: `journalctl -u autonomous-mower`
+   - Verify virtual environment activation
+   - Check .env configuration
 
-4. **Service Issues**
-   ```bash
-   # Check service logs
-   journalctl -u autonomous-mower -n 100
-   
-   # Check service status
-   sudo systemctl status autonomous-mower
-   
-   # Restart service
-   sudo systemctl restart autonomous-mower
-   ```
+4. **Coral TPU Issues**
+   - Verify USB connection
+   - Check udev rules: `ls -l /dev/bus/usb/*/*`
+   - Test with example script
 
-### Logs
+5. **Emergency Stop Issues**
+   - Check GPIO7 connection
+   - Verify button is normally closed
+   - Check permissions on GPIO device
 
-Logs are stored in multiple locations:
-- System service logs: `journalctl -u autonomous-mower`
-- Application logs: `/var/log/autonomous-mower.log`
-- Error logs: `/var/log/autonomous-mower.error.log`
-- Rotated logs: `logs/mower.log`, `logs/mower.log.1`, etc.
+## Safety Guidelines
+
+1. **Pre-Operation Checks**
+   - Verify emergency stop functionality
+   - Check battery level
+   - Ensure all sensors are working
+   - Verify boundary settings
+
+2. **During Operation**
+   - Monitor system status
+   - Keep emergency stop accessible
+   - Watch for obstacle detection
+   - Monitor battery levels
+
+3. **Maintenance**
+   - Regular blade inspection
+   - Battery maintenance
+   - Sensor cleaning
+   - Software updates
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+3. Make your changes
+4. Run tests and style checks
+5. Submit a pull request
 
 ## License
 
