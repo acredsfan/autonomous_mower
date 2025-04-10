@@ -28,10 +28,6 @@ from typing import Dict, Optional, Any
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 logging = LoggerConfig.get_logger(__name__)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
 
 try:
     # Try to import the resource manager
@@ -196,9 +192,11 @@ class HardwareTestSuite:
         elif sensor_name.lower() == 'bme280':
             # Check for typical atmosphere
             if 'temperature' in reading and (
-                    reading['temperature'] < -40 or reading['temperature'] > 85):
+                    reading['temperature'] < -40 or 
+                    reading['temperature'] > 85):
                 logging.warning(
-                    f"BME280 temperature out of range: {reading['temperature']}")
+                    "BME280 temperature out of range: "
+                    f"{reading['temperature']}")
                 return False
             if 'humidity' in reading and (
                     reading['humidity'] < 0 or reading['humidity'] > 100):
@@ -228,7 +226,8 @@ class HardwareTestSuite:
                     (reading['battery_voltage'] < 0 or
                      reading['battery_voltage'] > 30)):
                 logging.warning(
-                    f"Battery voltage out of range: {reading['battery_voltage']}")
+                    f"Battery voltage out of range: "
+                    f"{reading['battery_voltage']}")
                 return False
         # Add more checks as needed for additional sensors
         return True
