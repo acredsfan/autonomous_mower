@@ -185,11 +185,14 @@ sudo apt-get update
 check_command "Updating package list" || exit 1
 
 sudo apt-get install -y \
+    python3-pip \
+    python3-dev \
+    python3-setuptools \
+    python3-wheel \
+    i2c-tools \
+    git \
     libatlas-base-dev \
     libhdf5-dev \
-    python3-dev \
-    python3-pip \
-    i2c-tools \
     gpsd \
     gpsd-clients \
     python3-gps \
@@ -209,30 +212,27 @@ check_command "Installing system packages" || exit 1
 # Set PYTHONPATH to include our src directory
 export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
-# Install Python package and dependencies
-print_info "Installing Python package and dependencies..."
+# Upgrade pip
+print_info "Upgrading pip..."
 python3 -m pip install --break-system-packages --upgrade pip
 check_command "Upgrading pip" || exit 1
 
+# Install main package and dependencies
+print_info "Installing Python package and dependencies..."
 python3 -m pip install --break-system-packages --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --break-system-packages --no-cache-dir utm
-check_command "Installing utm" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-bme280
-check_command "Installing adafruit-circuitpython-bme280" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-bno08x
-check_command "Installing adafruit-circuitpython-bno08x" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir barbudor-circuitpython-ina3221
-check_command "Installing barbudor-circuitpython-ina3221" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir adafruit-circuitpython-vl53l0x
-check_command "Installing adafruit-circuitpython-vl53l0x" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir RPi.GPIO
-check_command "Installing RPi.GPIO" || exit 1
-python3 -m pip install --break-system-packages --no-cache-dir picamera2
-check_command "Installing picamera2" || exit 1
+python3 -m pip install --break-system-packages --no-cache-dir \
+    utm \
+    adafruit-circuitpython-bme280 \
+    adafruit-circuitpython-bno08x \
+    barbudor-circuitpython-ina3221 \
+    adafruit-circuitpython-vl53l0x \
+    RPi.GPIO \
+    picamera2
+check_command "Installing additional packages" || exit 1
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
@@ -274,12 +274,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     check_command "Reloading udev rules" || exit 1
     
     # Install GDAL Python package first
-    sudo pip3 install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --global-option=build_ext --global-option="-I/usr/include/gdal"
     check_command "Installing GDAL" || exit 1
     
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
-    sudo pip3 install -e ".[coral]"
+    sudo pip3 install -e ".[coral]" --break-system-packages
     check_command "Installing Coral dependencies" || exit 1
     
     # Create models directory with proper permissions
@@ -375,6 +375,35 @@ else
     print_warning "$SERVICE_FILE not found. Skipping systemd setup."
 fi
 # --- End Systemd Service Setup ---
+
+# Configure hardware interfaces
+print_info "Configuring hardware interfaces..."
+# Enable I2C
+if ! grep -q "i2c-dev" /etc/modules; then
+    echo "i2c-dev" >> /etc/modules
+fi
+
+# Enable serial port
+if ! grep -q "enable_uart=1" /boot/config.txt; then
+    echo "enable_uart=1" >> /boot/config.txt
+fi
+
+# Enable camera
+if ! grep -q "start_x=1" /boot/config.txt; then
+    echo "start_x=1" >> /boot/config.txt
+fi
+
+# Set up watchdog
+print_info "Setting up watchdog..."
+if ! grep -q "bcm2835_wdt" /etc/modules; then
+    echo "bcm2835_wdt" >> /etc/modules
+fi
+
+# Create log directory
+print_info "Creating log directory..."
+mkdir -p /var/log/autonomous-mower
+chown -R pi:pi /var/log/autonomous-mower
+chmod 755 /var/log/autonomous-mower
 
 # Success message
 print_success "Installation completed successfully!"

@@ -38,6 +38,9 @@ sudo apt-get upgrade
 # Install required system packages
 sudo apt-get install -y \
     python3-pip \
+    python3-dev \
+    python3-setuptools \
+    python3-wheel \
     i2c-tools \
     git
 ```
@@ -69,8 +72,11 @@ These steps are required only once during initial setup. The service will use th
 ### 4. Installation
 
 ```bash
-# Run the installation script
-./install_requirements.sh
+# Make the script executable
+chmod +x install_requirements.sh
+
+# Run the installation script with sudo
+sudo ./install_requirements.sh
 ```
 
 The installation script will:
@@ -81,7 +87,7 @@ The installation script will:
 - Set up the watchdog timer
 
 #### Note on Python Package Installation
-This project uses system-wide Python package installation instead of a virtual environment. This is because:
+This project uses system-wide Python package installation with the `--break-system-packages` flag to bypass PEP 668 restrictions. This is because:
 1. The mower requires direct access to hardware interfaces (GPIO, I2C, etc.)
 2. It's a dedicated device running only the mower software
 3. System-wide installation ensures proper permissions and access to hardware resources
