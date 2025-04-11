@@ -49,15 +49,19 @@ class RoboHATController:
         self.STOPPED_PWM = cfg.MM1_STOPPED_PWM
         self.MAX_REVERSE = cfg.MM1_MAX_REVERSE
         self.SHOW_STEERING_VALUE = cfg.MM1_SHOW_STEERING_VALUE
+        self.SERIAL_PORT = cfg.MM1_SERIAL_PORT
+        self.SERIAL_BAUD_RATE = cfg.MM1_BAUD_RATE
         self.DEAD_ZONE = cfg.JOYSTICK_DEADZONE
         self.debug = debug
         self.control_mode = 'serial'  # Set default control mode to 'serial'
 
         # Initialize serial port for reading RC inputs
         try:
-            self.serial = serial.Serial(cfg.MM1_SERIAL_PORT, 115200, timeout=1)
+            self.serial = serial.Serial(
+                self.SERIAL_PORT, self.SERIAL_BAUD_RATE, timeout=1
+            )
             logger.info(
-                f"Serial port {cfg.MM1_SERIAL_PORT} opened for controller "
+                f"Serial port {self.SERIAL_PORT} opened for controller "
                 "input."
                 )
         except serial.SerialException:
