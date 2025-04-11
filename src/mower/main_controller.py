@@ -180,8 +180,7 @@ class ResourceManager:
 
             # Initialize navigation controller
             self._resources["navigation"] = NavigationController(
-                self._resources["motor_driver"],  # Pass RoboHATDriver instance
-                # Pass SensorInterface instance
+                self._resources["motor_driver"],
                 self._resources["sensor_interface"]
             )
 
