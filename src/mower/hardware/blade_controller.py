@@ -125,3 +125,32 @@ class BladeController:
             "in1_pin": BLADE_IN1_PIN,
             "in2_pin": BLADE_IN2_PIN
         }
+
+
+if __name__ == "__main__":
+    import time
+
+    logging.info("Starting BladeController test...")
+
+    blade_controller = BladeController()
+
+    try:
+        logging.info("Enabling blade motor...")
+        blade_controller.enable()
+        time.sleep(2)
+
+        logging.info("Setting blade motor speed to 50%...")
+        blade_controller.set_speed(0.5)
+        time.sleep(2)
+
+        logging.info("Disabling blade motor...")
+        blade_controller.disable()
+
+    except Exception as e:
+        logging.error(f"Error during BladeController test: {e}")
+
+    finally:
+        logging.info("Cleaning up BladeController...")
+        blade_controller.cleanup()
+
+    logging.info("BladeController test completed.")
