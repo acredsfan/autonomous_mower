@@ -97,6 +97,30 @@ class BladeController:
             logging.error(f"Error setting blade motor direction: {e}")
             return False
 
+    def set_speed(self, speed: float) -> bool:
+        """
+        Set the blade motor speed.
+
+        Args:
+            speed: Speed value between 0.0 (stopped) and 1.0 (full speed).
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        try:
+            if not (0.0 <= speed <= 1.0):
+                logging.error(f"Invalid speed value: {speed}")
+                return False
+
+            # Map speed to PWM value (example mapping, adjust as needed)
+            pwm_value = int(speed * 255)
+            self._gpio.set_pwm(BLADE_ENABLE_PIN, pwm_value)
+            logging.info(f"Blade motor speed set to {speed}")
+            return True
+        except Exception as e:
+            logging.error(f"Error setting blade motor speed: {e}")
+            return False
+
     def is_enabled(self) -> bool:
         """
         Check if the blade motor is enabled.

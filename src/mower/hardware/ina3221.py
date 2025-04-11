@@ -60,6 +60,14 @@ class INA3221Sensor:
         """Initialize the INA3221 sensor."""
         logging.info("INA3221 sensor initialized successfully.")
 
+    def read(self, channel: int):
+        """Read data from the INA3221 sensor for a specific channel."""
+        try:
+            return self.read_ina3221(self.init_ina3221(), channel)
+        except Exception as e:
+            logging.error(f"Error reading INA3221 sensor: {e}")
+            return {}
+
 
 if __name__ == "__main__":
     # Initialize the INA3221 sensor

@@ -319,6 +319,20 @@ class RoboHATDriver:
     def run(self, steering, throttle):
         self.set_pulse(steering, throttle)
 
+    def set_motors(self, left_speed: float, right_speed: float):
+        """
+        Set the speed of the left and right motors.
+
+        Args:
+            left_speed: Speed for the left motor (-1.0 to 1.0).
+            right_speed: Speed for the right motor (-1.0 to 1.0).
+        """
+        try:
+            self.set_pulse(left_speed, right_speed)
+            logger.info(f"Motors set: left={left_speed}, right={right_speed}")
+        except Exception as e:
+            logger.error(f"Error setting motor speeds: {e}")
+
     def shutdown(self):
         if self.pwm and self.pwm.is_open:
             try:

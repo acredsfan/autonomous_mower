@@ -46,6 +46,14 @@ class BME280Sensor:
             logging.error(f"Error during BME280 read: {e}")
             return {}
 
+    def read(self):
+        """Read data from the BME280 sensor."""
+        try:
+            return self.read_bme280(self._initialize())
+        except Exception as e:
+            logging.error(f"Error reading BME280 sensor: {e}")
+            return {}
+
 
 if __name__ == "__main__":
     # Initialize the BME280 sensor

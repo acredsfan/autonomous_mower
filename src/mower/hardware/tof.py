@@ -76,6 +76,14 @@ class VL53L0XSensors:
         """Initialize the ToF sensors."""
         logging.info("ToF sensors initialized successfully.")
 
+    def read_all(self, sensors):
+        """Read data from all VL53L0X sensors."""
+        try:
+            return [self.read_vl53l0x(sensor) for sensor in sensors]
+        except Exception as e:
+            logging.error(f"Error reading VL53L0X sensors: {e}")
+            return []
+
 
 if __name__ == "__main__":
     # Initialize the VL53L0X sensors

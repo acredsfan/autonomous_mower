@@ -187,6 +187,20 @@ class SerialPort:
     def writeln(self, value: str):
         self.write(value + '\n')
 
+    def get_position(self):
+        """Get the current GPS position from the serial port."""
+        try:
+            success, data = self.readln()
+            if success:
+                # Parse GPS data (example format, adjust as needed)
+                return data.strip()
+            else:
+                logger.warning("No GPS data available.")
+                return None
+        except Exception as e:
+            logger.error(f"Error reading GPS position: {e}")
+            return None
+
 
 class SerialLineReader:
     """

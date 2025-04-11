@@ -1013,6 +1013,19 @@ class BNO085Sensor:
         """
         return self.check_safety_conditions()
 
+    def read(self):
+        """Read data from the BNO085 sensor."""
+        try:
+            return {
+                'quaternion': self.quaternion,
+                'roll': self.roll,
+                'pitch': self.pitch,
+                'yaw': self.yaw
+            }
+        except Exception as e:
+            logger.error(f"Error reading BNO085 sensor: {e}")
+            return {}
+
 
 # For backwards compatibility with static methods
 def read_bno085_accel(sensor):
