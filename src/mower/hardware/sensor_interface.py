@@ -72,7 +72,7 @@ class EnhancedSensorInterface:
         """Initialize BME280 sensor."""
         try:
             with self._locks['i2c']:
-                return BME280Sensor._initialize(self._i2c)
+                self._sensors['bme280'] = BME280Sensor._initialize(self._i2c)
         except Exception as e:
             _log_error("BME280 initialization failed", e)
             return None

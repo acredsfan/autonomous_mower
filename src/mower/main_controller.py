@@ -103,12 +103,17 @@ class ResourceManager:
             self._resources["gpio"] = GPIOManager()
             self._resources["gpio"]._initialize()
 
+            # Initialize I2C bus
+            from busio import I2C
+            import board
+            i2c = I2C(board.SCL, board.SDA)
+
             # Initialize sensors
             self._resources["imu"] = BNO085Sensor()
             self._resources["imu"]._initialize()
 
             self._resources["bme280"] = BME280Sensor()
-            self._resources["bme280"]._initialize()
+            self._resources["bme280"]._initialize(i2c)
 
             self._resources["ina3221"] = INA3221Sensor()
             self._resources["ina3221"]._initialize()

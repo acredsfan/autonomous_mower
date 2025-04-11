@@ -81,7 +81,11 @@ def get_blade_controller():
 def get_bme280_sensor():
     global _bme280_sensor
     if _bme280_sensor is None:
+        from busio import I2C
+        import board
+        i2c = I2C(board.SCL, board.SDA)
         _bme280_sensor = BME280Sensor()
+        _bme280_sensor._initialize(i2c)
     return _bme280_sensor
 
 
@@ -108,7 +112,7 @@ def get_imu_sensor():
 
 def get_ina3221_sensor():
     global _ina3221_sensor
-    if _ina3221_sensor is None:
+    if (_ina3221_sensor is None):
         _ina3221_sensor = INA3221Sensor()
     return _ina3221_sensor
 
