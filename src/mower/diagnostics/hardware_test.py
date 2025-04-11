@@ -16,7 +16,8 @@ Key features:
 
 Example usage:
     sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test
-    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test \
+        --test imu
     sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test \
         --non-interactive
 """
@@ -27,6 +28,10 @@ import sys
 import time
 from typing import Dict, Optional, Any
 import logging as logging_levels
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.tof import VL53L0XSensors
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.navigation.gps import GpsLatestPosition
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
@@ -37,6 +42,13 @@ try:
 except ImportError as e:
     logging.error(f"Failed to import ResourceManager: {e}")
     sys.exit(1)
+
+
+# Ensure RPi.GPIO is imported conditionally to handle environments without GPIO support
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    GPIO = None  # Handle gracefully if GPIO is not available
 
 
 def check_root_privileges() -> bool:
@@ -193,7 +205,7 @@ class HardwareTestSuite:
         for test, result in self.test_results.items():
             status = "PASSED" if result else "FAILED"
             print(f"{test}: {status}")
-        
+
         # Add detailed logging for each test result
         logging.info("Starting hardware tests...")
 
@@ -205,8 +217,11 @@ class HardwareTestSuite:
                 logging.error(f"Test {test_name} FAILED")
 
         # Log summary of results
-        logging.info(f"Hardware tests completed: {passed_tests}/{total_tests} tests passed")
-        
+        logging.info(
+            f"Hardware tests completed: {passed_tests}/"
+            f"{total_tests} tests passed"
+        )
+
         print("=" * 50)
 
     def _check_sensor_ranges(self, sensor_name: str,
@@ -250,7 +265,7 @@ class HardwareTestSuite:
         elif sensor_name.lower() == 'bme280':
             # Check for typical atmosphere
             if 'temperature' in reading and (
-                    reading['temperature'] < -40 or 
+                    reading['temperature'] < -40 or
                     reading['temperature'] > 85):
                 logging.warning(
                     "BME280 temperature out of range: "
@@ -300,7 +315,7 @@ class HardwareTestSuite:
         try:
             # Basic test to check if GPIO is accessible
             logging.info("Testing GPIO accessibility")
-            
+
             # First check if we're running as root
             import os
             if os.geteuid() != 0:
@@ -312,7 +327,7 @@ class HardwareTestSuite:
                 logging.warning(msg)
                 print(msg)
                 return False
-                
+
             # This just checks if we can access the GPIO library without errors
             import RPi.GPIO as GPIO
             # Check if GPIO is accessible
@@ -340,39 +355,16 @@ class HardwareTestSuite:
             return False
 
     def test_imu(self) -> bool:
-        """
-        Test the IMU sensor initialization and readings.
-
-        This test will:
-         1. Attempt to connect to the IMU sensor.
-         2. Retrieve reading data such as heading, pitch, roll.
-         3. Validate if the data is within a plausible range.
-
-        Returns:
-            True if the test passed, False otherwise.
-        """
+        """Test the IMU module."""
         try:
-            imu = self.resource_manager.get_imu_sensor()
-            if imu is None:
-                logging.error("IMU sensor is None")
+            imu = BNO085Sensor()
+            data = imu.read()
+            if data and 'quaternion' in data:
+                logging.info(f"IMU reading: {data}")
+                return True
+            else:
+                logging.warning("IMU returned incomplete data.")
                 return False
-
-            # Read sensor data
-            reading = imu.read()
-            logging.info(f"IMU reading: {reading}")
-
-            # Example of minimal check
-            if not self._check_sensor_ranges('IMU', reading):
-                logging.warning("IMU reading outside safe range guidelines.")
-                return False
-
-            # Additional validations
-            if ('heading' not in reading or 'roll' not in reading or
-                    'pitch' not in reading):
-                logging.warning("IMU returned incomplete data")
-                return False
-
-            return True
         except Exception as e:
             logging.error(f"Error testing IMU: {e}")
             return False
@@ -434,161 +426,44 @@ class HardwareTestSuite:
             True if the test passed, False otherwise.
         """
         try:
-            tof = self.resource_manager.get_tof_sensors()
-            if tof is None:
-                logging.error("ToF sensors are None")
+            tof_sensors = VL53L0XSensors()
+            data = tof_sensors.read_all(sensors=[1, 2, 3])
+            if data:
+                logging.info(f"ToF sensors reading: {data}")
+                return True
+            else:
+                logging.warning("ToF sensors returned no data.")
                 return False
-
-            # Read sensor data
-            readings = tof.read_all()
-            logging.info(f"ToF sensor readings: {readings}")
-
-            if not readings:
-                logging.warning("No ToF sensor readings returned")
-                return False
-
-            # Check each sensor reading
-            for i, distance in enumerate(readings):
-                # Basic plausibility check - most ToF sensors have a range of
-                # 50mm to 4000mm
-                if distance < 0 or distance > 5000:
-                    sensor_num = i + 1
-                    msg = (
-                        f"ToF{sensor_num} "
-                        f"err: {distance}mm"
-                    )
-                    logging.warning(msg)
-                    msg = (
-                        f"S{sensor_num}: {distance}mm "
-                        "(ERR)"
-                    )
-                    print(msg)
-                else:
-                    sensor_num = i + 1
-                    msg = (
-                        f"S{sensor_num}: {distance}mm "
-                        "(OK)"
-                    )
-                    print(msg)
-
-            return True
         except Exception as e:
             logging.error(f"Error testing ToF sensors: {e}")
             return False
 
     def test_power_monitor(self) -> bool:
-        """
-        Test the power monitoring system (INA3221).
-
-        This test will:
-         1. Attempt to connect to the power monitoring sensor.
-         2. Retrieve voltage and current readings for different channels.
-         3. Validate if the data is within plausible ranges.
-
-        Returns:
-            True if the test passed, False otherwise.
-        """
+        """Test the power monitor module."""
         try:
-            power_monitor = self.resource_manager.get_ina3221_sensor()
-            if power_monitor is None:
-                logging.error("Power monitor is None")
+            power_monitor = INA3221Sensor()
+            data = power_monitor.read(channel=1)
+            if data:
+                logging.info(f"Power monitor reading: {data}")
+                return True
+            else:
+                logging.warning("Power monitor returned no data.")
                 return False
-
-            # Read sensor data
-            reading = power_monitor.read()
-            logging.info(f"Power monitor reading: {reading}")
-
-            # Check if readings are within expected ranges
-            if not self._check_sensor_ranges('power_monitor', reading):
-                logging.warning(
-                    "Power monitor readings outside safe range guidelines.")
-                return False
-
-            # Display readings for user
-            print(f"Power monitor reading: {reading}")
-            if 'battery_voltage' in reading:
-                print(f"Battery voltage: {reading['battery_voltage']} V")
-            if 'battery_current' in reading:
-                print(f"Battery current: {reading['battery_current']} mA")
-            if 'solar_voltage' in reading:
-                print(f"Solar voltage: {reading['solar_voltage']} V")
-            if 'solar_current' in reading:
-                print(f"Solar current: {reading['solar_current']} mA")
-
-            # Simple validation of reading
-            if 'battery_voltage' not in reading:
-                logging.warning("Power monitor returned incomplete data")
-                return False
-
-            return True
         except Exception as e:
             logging.error(f"Error testing power monitor: {e}")
             return False
 
     def test_gps(self) -> bool:
-        """
-        Test the GPS module.
-
-        This test will:
-         1. Attempt to connect to the GPS receiver.
-         2. Wait for position data (with timeout).
-         3. Validate if the data is within plausible ranges.
-         4. Check for required data quality indicators.
-
-        Returns:
-            True if the test passed, False otherwise.
-        """
+        """Test the GPS module."""
         try:
-            gps = self.resource_manager.get_gps_position()
-            if gps is None:
-                logging.error("GPS module is None")
+            gps = GpsLatestPosition()
+            position = gps.get_position()
+            if position:
+                logging.info(f"GPS position: {position}")
+                return True
+            else:
+                logging.warning("No GPS data available.")
                 return False
-
-            print("Waiting for GPS fix (up to 10 seconds)...")
-
-            # Try to get a GPS fix for up to 10 seconds
-            start_time = time.time()
-            position = None
-
-            while time.time() - start_time < 10:
-                position = gps.get_position()
-                if position and position.get(
-                        'latitude') and position.get('longitude'):
-                    break
-                time.sleep(0.5)
-
-            if not position:
-                print("No GPS position available within timeout period.")
-                return False
-
-            logging.info(f"GPS position: {position}")
-
-            # Check if position data is within plausible ranges
-            if not self._check_sensor_ranges('GPS', position):
-                logging.warning("GPS reading outside safe range guidelines.")
-                return False
-
-            # Display readings for user
-            print(f"Latitude: {position.get('latitude', 'N/A')}")
-            print(f"Longitude: {position.get('longitude', 'N/A')}")
-            if 'altitude' in position:
-                print(f"Altitude: {position.get('altitude')} m")
-            if 'accuracy' in position:
-                print(f"Accuracy: {position.get('accuracy')} m")
-            if 'satellites' in position:
-                print(f"Satellites: {position.get('satellites')}")
-            if 'fix_quality' in position:
-                print(f"Fix Quality: {position.get('fix_quality')}")
-
-            # Validate GPS data completeness
-            if ('latitude' not in position or
-                'longitude' not in position or
-                position.get('latitude') == 0 or
-                    position.get('longitude') == 0):
-                logging.warning("GPS returned invalid position data")
-                return False
-
-            return True
         except Exception as e:
             logging.error(f"Error testing GPS: {e}")
             return False

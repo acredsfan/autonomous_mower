@@ -46,10 +46,11 @@ class BME280Sensor:
             logging.error(f"Error during BME280 read: {e}")
             return {}
 
-    def read(self):
+    def read(self, i2c):
         """Read data from the BME280 sensor."""
         try:
-            return self.read_bme280(self._initialize())
+            sensor = self._initialize(i2c)
+            return self.read_bme280(sensor)
         except Exception as e:
             logging.error(f"Error reading BME280 sensor: {e}")
             return {}

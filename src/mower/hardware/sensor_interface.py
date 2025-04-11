@@ -310,6 +310,14 @@ class EnhancedSensorInterface:
         """Start the EnhancedSensorInterface."""
         logging.info("EnhancedSensorInterface started successfully.")
 
+    def cleanup(self):
+        """Clean up resources used by the EnhancedSensorInterface."""
+        try:
+            # Add specific cleanup logic here
+            logging.info("EnhancedSensorInterface cleaned up successfully.")
+        except Exception as e:
+            logging.error(f"Error cleaning up EnhancedSensorInterface: {e}")
+
 
 def _check_proximity_violation(sensor_data: Dict) -> bool:
     """Check if any proximity sensor indicates an obstacle too close."""

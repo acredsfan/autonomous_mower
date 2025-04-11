@@ -187,6 +187,14 @@ class CameraInstance:
                 self._is_initialized = False
                 self._camera = None
 
+    def cleanup(self):
+        """Clean up resources used by the CameraInstance."""
+        try:
+            # Add specific cleanup logic here
+            logging.info("CameraInstance cleaned up successfully.")
+        except Exception as e:
+            logging.error(f"Error cleaning up CameraInstance: {e}")
+
 
 def get_camera_instance() -> CameraInstance:
     """

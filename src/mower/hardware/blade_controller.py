@@ -112,9 +112,9 @@ class BladeController:
                 logging.error(f"Invalid speed value: {speed}")
                 return False
 
-            # Map speed to PWM value (example mapping, adjust as needed)
-            pwm_value = int(speed * 255)
-            self._gpio.set_pwm(BLADE_ENABLE_PIN, pwm_value)
+            # Map speed to duty cycle percentage (0 to 100)
+            duty_cycle = speed * 100
+            self._gpio.set_pwm(BLADE_ENABLE_PIN, duty_cycle)
             logging.info(f"Blade motor speed set to {speed}")
             return True
         except Exception as e:

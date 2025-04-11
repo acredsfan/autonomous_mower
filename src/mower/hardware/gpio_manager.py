@@ -204,3 +204,37 @@ class GPIOManager:
                     logging.error(f"Error getting state for pin {pin}: {e}")
 
         return state
+
+    def set_pwm(self, pin: int, duty_cycle: float) -> bool:
+        """
+        Set a PWM signal on a GPIO pin.
+
+        Args:
+            pin: The GPIO pin number
+            duty_cycle: Duty cycle as a percentage (0.0 to 100.0)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if not (0.0 <= duty_cycle <= 100.0):
+            logging.error(f"Invalid duty cycle value: {duty_cycle}")
+            return False
+
+        if self._simulation_mode:
+            logging.info(
+                f"Simulating PWM on pin {pin} with duty cycle {duty_cycle}%"
+            )
+            return True
+
+        try:
+            if pin not in self._pins_setup or self._pins_setup[pin] != "out":
+                logging.error(f"Pin {pin} is not set up as output for PWM.")
+                return False
+
+            pwm = GPIO.PWM(pin, 1000)  # Set frequency to 1kHz
+            pwm.start(duty_cycle)
+            logging.info(f"PWM set on pin {pin} with duty cycle {duty_cycle}%")
+            return True
+        except Exception as e:
+            logging.error(f"Error setting PWM on pin {pin}: {e}")
+            return False
