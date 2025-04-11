@@ -27,7 +27,7 @@ from enum import Enum
 import adafruit_bno08x
 from adafruit_bno08x.uart import BNO08X_UART
 from dotenv import load_dotenv
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.hardware.serial_port import SerialPort
 
 # BNO085 Constants

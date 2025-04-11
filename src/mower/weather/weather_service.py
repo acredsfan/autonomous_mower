@@ -21,6 +21,7 @@ logger = LoggerConfig.get_logger(__name__)
 # Load environment variables
 load_dotenv()
 
+
 @dataclass
 class WeatherConditions:
     """Data class for weather conditions."""
@@ -32,9 +33,10 @@ class WeatherConditions:
     timestamp: datetime
     source: str  # 'api' or 'sensor'
 
+
 class WeatherService:
     """Service for weather monitoring and prediction."""
-    
+
     def __init__(self):
         self.api_key = os.getenv('OPENWEATHERMAP_API_KEY')
         self.latitude = float(os.getenv('LATITUDE', 0))
@@ -57,13 +59,13 @@ class WeatherService:
             # Get API data if cache is expired
             if time.time() - self.last_api_update > self.cache_duration:
                 self._update_forecast()
-            
+
             # Get sensor data
             sensor_data = self._get_sensor_data()
-            
+
             # Combine API and sensor data
             conditions = self._combine_weather_data(sensor_data)
-            
+
             return conditions
         except Exception as e:
             logger.error(f"Error getting weather conditions: {e}")
@@ -73,32 +75,35 @@ class WeatherService:
         """Check if current weather is suitable for mowing."""
         conditions = self.get_current_conditions()
         reasons = []
-        
         # Check temperature
-        if conditions.temperature < self.ideal_mowing_conditions['min_temperature']:
+        if conditions.temperature < self.ideal_mowing_conditions[
+                'min_temperature']:
             reasons.append("too cold")
-        elif conditions.temperature > self.ideal_mowing_conditions['max_temperature']:
+        elif conditions.temperature > self.ideal_mowing_conditions[
+                'max_temperature']:
             reasons.append("too hot")
-            
+
         # Check humidity
         if conditions.humidity > self.ideal_mowing_conditions['max_humidity']:
             reasons.append("too humid")
-            
+
         # Check rain probability
-        if conditions.rain_probability > self.ideal_mowing_conditions['max_rain_probability']:
+        if (conditions.rain_probability >
+                self.ideal_mowing_conditions['max_rain_probability']):
             reasons.append("high chance of rain")
-            
         # Check wind speed
-        if conditions.wind_speed > self.ideal_mowing_conditions['max_wind_speed']:
+        if conditions.wind_speed > self.ideal_mowing_conditions[
+                'max_wind_speed']:
             reasons.append("too windy")
-            
+
         # Check cloud cover
-        if conditions.cloud_cover > self.ideal_mowing_conditions['max_cloud_cover']:
+        if conditions.cloud_cover > self.ideal_mowing_conditions[
+                'max_cloud_cover']:
             reasons.append("too cloudy")
-            
+
         is_suitable = len(reasons) == 0
         reason = " and ".join(reasons) if reasons else "suitable for mowing"
-        
+
         return is_suitable, reason
 
     def get_forecast(self, hours: int = 24) -> Dict:
@@ -106,10 +111,10 @@ class WeatherService:
         try:
             if time.time() - self.last_api_update > self.cache_duration:
                 self._update_forecast()
-            
+
             if not self.cached_forecast:
                 return {}
-                
+
             forecast = []
             for hour in range(hours):
                 timestamp = datetime.now() + timedelta(hours=hour)
@@ -123,7 +128,7 @@ class WeatherService:
                         'wind_speed': conditions.wind_speed,
                         'cloud_cover': conditions.cloud_cover
                     })
-            
+
             return {'forecast': forecast}
         except Exception as e:
             logger.error(f"Error getting forecast: {e}")
@@ -134,8 +139,8 @@ class WeatherService:
         try:
             url = (
                 f"https://api.openweathermap.org/data/2.5/forecast?"
-                f"lat={self.latitude}&lon={self.longitude}&appid={self.api_key}"
-                f"&units=metric"
+                f"lat={self.latitude}&lon={self.longitude}&"
+                f"appid={self.api_key}&units=metric"
             )
             response = requests.get(url)
             response.raise_for_status()
@@ -163,10 +168,10 @@ class WeatherService:
         try:
             # Get API data for current time
             api_data = self._get_forecast_for_time(datetime.now())
-            
+
             if not api_data:
                 return self._get_fallback_conditions()
-            
+
             # Use sensor data if available, otherwise use API data
             temperature = (
                 sensor_data.get('temperature', api_data.temperature)
@@ -176,7 +181,7 @@ class WeatherService:
                 sensor_data.get('humidity', api_data.humidity)
                 if sensor_data else api_data.humidity
             )
-            
+
             return WeatherConditions(
                 temperature=temperature,
                 humidity=humidity,
@@ -190,24 +195,26 @@ class WeatherService:
             logger.error(f"Error combining weather data: {e}")
             return self._get_fallback_conditions()
 
-    def _get_forecast_for_time(self, timestamp: datetime) -> Optional[WeatherConditions]:
+    def _get_forecast_for_time(
+            self,
+            timestamp: datetime) -> Optional[WeatherConditions]:
         """Get forecast data for specific timestamp."""
         if not self.cached_forecast:
             return None
-            
+
         try:
             # Find closest forecast time
             closest_forecast = None
             min_time_diff = float('inf')
-            
+
             for forecast in self.cached_forecast['list']:
                 forecast_time = datetime.fromtimestamp(forecast['dt'])
                 time_diff = abs((timestamp - forecast_time).total_seconds())
-                
+
                 if time_diff < min_time_diff:
                     min_time_diff = time_diff
                     closest_forecast = forecast
-            
+
             if closest_forecast:
                 return WeatherConditions(
                     temperature=closest_forecast['main']['temp'],
@@ -220,7 +227,7 @@ class WeatherService:
                 )
         except Exception as e:
             logger.error(f"Error getting forecast for time: {e}")
-        
+
         return None
 
     def _get_fallback_conditions(self) -> WeatherConditions:
@@ -233,4 +240,4 @@ class WeatherService:
             cloud_cover=0.0,
             timestamp=datetime.now(),
             source='fallback'
-        ) 
+        )
