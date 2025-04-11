@@ -35,16 +35,17 @@ from mower.navigation.gps import GpsLatestPosition
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-logging = LoggerConfig.get_logger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 try:
     from mower.main_controller import ResourceManager
 except ImportError as e:
-    logging.error(f"Failed to import ResourceManager: {e}")
+    logger.error(f"Failed to import ResourceManager: {e}")
     sys.exit(1)
 
 
-# Ensure RPi.GPIO is imported conditionally to handle environments without GPIO support
+# Ensure RPi.GPIO is imported conditionally to handle environments
+# without GPIO support
 try:
     import RPi.GPIO as GPIO
 except ImportError:
@@ -64,7 +65,7 @@ def check_root_privileges() -> bool:
             "Please run with: sudo -E env PATH=$PATH python3 -m "
             "mower.diagnostics.hardware_test"
         )
-        logging.error(msg)
+        logger.error(msg)
         print(msg)
         return False
     return True
@@ -83,7 +84,7 @@ def initialize_resource_manager() -> Optional[ResourceManager]:
         resource_manager.initialize()
         return resource_manager
     except Exception as e:
-        logging.error(f"Failed to initialize ResourceManager: {e}")
+        logger.error(f"Failed to initialize ResourceManager: {e}")
         return None
 
 
@@ -177,7 +178,7 @@ class HardwareTestSuite:
                         input("Press Enter to continue to the next test...")
             except Exception as e:
                 # Handle any exceptions that weren't caught by the test method
-                logging.error(f"Exception running test {test_name}: {e}")
+                logger.error(f"Exception running test {test_name}: {e}")
                 self.test_results[test_name] = False
                 print(f"Test FAILED with exception: {e}")
                 if interactive:
@@ -207,17 +208,17 @@ class HardwareTestSuite:
             print(f"{test}: {status}")
 
         # Add detailed logging for each test result
-        logging.info("Starting hardware tests...")
+        logger.info("Starting hardware tests...")
 
         # Log the result of each test
         for test_name, result in self.test_results.items():
             if result:
-                logging.info(f"Test {test_name} PASSED")
+                logger.info(f"Test {test_name} PASSED")
             else:
-                logging.error(f"Test {test_name} FAILED")
+                logger.error(f"Test {test_name} FAILED")
 
         # Log summary of results
-        logging.info(
+        logger.info(
             f"Hardware tests completed: {passed_tests}/"
             f"{total_tests} tests passed"
         )
@@ -249,17 +250,17 @@ class HardwareTestSuite:
             # If IMU reading includes heading, pitch, roll
             if 'heading' in reading:
                 if reading['heading'] < 0 or reading['heading'] > 360:
-                    logging.warning(
+                    logger.warning(
                         f"IMU heading out of range: {reading['heading']}")
                     return False
             if 'pitch' in reading:
                 if reading['pitch'] < -90 or reading['pitch'] > 90:
-                    logging.warning(
+                    logger.warning(
                         f"IMU pitch out of range: {reading['pitch']}")
                     return False
             if 'roll' in reading:
                 if reading['roll'] < -180 or reading['roll'] > 180:
-                    logging.warning(
+                    logger.warning(
                         f"IMU roll out of range: {reading['roll']}")
                     return False
         elif sensor_name.lower() == 'bme280':
@@ -267,30 +268,30 @@ class HardwareTestSuite:
             if 'temperature' in reading and (
                     reading['temperature'] < -40 or
                     reading['temperature'] > 85):
-                logging.warning(
+                logger.warning(
                     "BME280 temperature out of range: "
                     f"{reading['temperature']}")
                 return False
             if 'humidity' in reading and (
                     reading['humidity'] < 0 or reading['humidity'] > 100):
-                logging.warning(
+                logger.warning(
                     f"BME280 humidity out of range: {reading['humidity']}")
                 return False
             if 'pressure' in reading and (
                     reading['pressure'] < 300 or reading['pressure'] > 1100):
-                logging.warning(
+                logger.warning(
                     f"BME280 pressure out of range: {reading['pressure']}")
                 return False
         elif sensor_name.lower() == 'gps':
             # Basic checks for latitude/longitude
             if 'latitude' in reading and (
                     reading['latitude'] < -90 or reading['latitude'] > 90):
-                logging.warning(
+                logger.warning(
                     f"GPS latitude out of range: {reading['latitude']}")
                 return False
             if 'longitude' in reading and (
                     reading['longitude'] < -180 or reading['longitude'] > 180):
-                logging.warning(
+                logger.warning(
                     f"GPS longitude out of range: {reading['longitude']}")
                 return False
         elif sensor_name.lower() == 'power_monitor':
@@ -298,7 +299,7 @@ class HardwareTestSuite:
             if ('battery_voltage' in reading and
                     (reading['battery_voltage'] < 0 or
                      reading['battery_voltage'] > 30)):
-                logging.warning(
+                logger.warning(
                     f"Battery voltage out of range: "
                     f"{reading['battery_voltage']}")
                 return False
@@ -314,7 +315,7 @@ class HardwareTestSuite:
         """
         try:
             # Basic test to check if GPIO is accessible
-            logging.info("Testing GPIO accessibility")
+            logger.info("Testing GPIO accessibility")
 
             # First check if we're running as root
             import os
@@ -324,7 +325,7 @@ class HardwareTestSuite:
                     "Please run with: sudo -E env PATH=$PATH python3 -m "
                     "mower.diagnostics.hardware_test"
                 )
-                logging.warning(msg)
+                logger.warning(msg)
                 print(msg)
                 return False
 
@@ -337,7 +338,7 @@ class HardwareTestSuite:
             time.sleep(0.5)
             GPIO.output(18, GPIO.LOW)
             GPIO.cleanup()
-            logging.info("GPIO test passed")
+            logger.info("GPIO test passed")
 
             # If we got here without an exception, consider it a basic success
             return True
@@ -348,10 +349,10 @@ class HardwareTestSuite:
                     "Please run with: sudo -E env PATH=$PATH python3 -m "
                     "mower.diagnostics.hardware_test"
                 )
-                logging.error(msg)
+                logger.error(msg)
                 print(msg)
             else:
-                logging.error(f"Error testing GPIO: {e}")
+                logger.error(f"Error testing GPIO: {e}")
             return False
 
     def test_imu(self) -> bool:
@@ -360,13 +361,13 @@ class HardwareTestSuite:
             imu = BNO085Sensor()
             data = imu.read()
             if data and 'quaternion' in data:
-                logging.info(f"IMU reading: {data}")
+                logger.info(f"IMU reading: {data}")
                 return True
             else:
-                logging.warning("IMU returned incomplete data.")
+                logger.warning("IMU returned incomplete data.")
                 return False
         except Exception as e:
-            logging.error(f"Error testing IMU: {e}")
+            logger.error(f"Error testing IMU: {e}")
             return False
 
     def test_bme280(self) -> bool:
@@ -384,23 +385,23 @@ class HardwareTestSuite:
         try:
             bme280 = self.resource_manager.get_bme280_sensor()
             if bme280 is None:
-                logging.error("BME280 sensor is None")
+                logger.error("BME280 sensor is None")
                 return False
 
             # Read sensor data
             reading = bme280.read()
-            logging.info(f"BME280 reading: {reading}")
+            logger.info(f"BME280 reading: {reading}")
 
             # Validate reading with range checks
             if not self._check_sensor_ranges('BME280', reading):
-                logging.warning(
+                logger.warning(
                     "BME280 reading outside safe range guidelines.")
                 return False
 
             # Additional validations for required fields
             if ('temperature' not in reading or 'humidity' not in reading or
                     'pressure' not in reading):
-                logging.warning("BME280 returned incomplete data")
+                logger.warning("BME280 returned incomplete data")
                 return False
 
             # Display readings for user
@@ -410,7 +411,7 @@ class HardwareTestSuite:
 
             return True
         except Exception as e:
-            logging.error(f"Error testing BME280: {e}")
+            logger.error(f"Error testing BME280: {e}")
             return False
 
     def test_tof_sensors(self) -> bool:
@@ -429,13 +430,13 @@ class HardwareTestSuite:
             tof_sensors = VL53L0XSensors()
             data = tof_sensors.read_all(sensors=[1, 2, 3])
             if data:
-                logging.info(f"ToF sensors reading: {data}")
+                logger.info(f"ToF sensors reading: {data}")
                 return True
             else:
-                logging.warning("ToF sensors returned no data.")
+                logger.warning("ToF sensors returned no data.")
                 return False
         except Exception as e:
-            logging.error(f"Error testing ToF sensors: {e}")
+            logger.error(f"Error testing ToF sensors: {e}")
             return False
 
     def test_power_monitor(self) -> bool:
@@ -444,13 +445,13 @@ class HardwareTestSuite:
             power_monitor = INA3221Sensor()
             data = power_monitor.read(channel=1)
             if data:
-                logging.info(f"Power monitor reading: {data}")
+                logger.info(f"Power monitor reading: {data}")
                 return True
             else:
-                logging.warning("Power monitor returned no data.")
+                logger.warning("Power monitor returned no data.")
                 return False
         except Exception as e:
-            logging.error(f"Error testing power monitor: {e}")
+            logger.error(f"Error testing power monitor: {e}")
             return False
 
     def test_gps(self) -> bool:
@@ -459,13 +460,13 @@ class HardwareTestSuite:
             gps = GpsLatestPosition()
             position = gps.get_position()
             if position:
-                logging.info(f"GPS position: {position}")
+                logger.info(f"GPS position: {position}")
                 return True
             else:
-                logging.warning("No GPS data available.")
+                logger.warning("No GPS data available.")
                 return False
         except Exception as e:
-            logging.error(f"Error testing GPS: {e}")
+            logger.error(f"Error testing GPS: {e}")
             return False
 
     def test_drive_motors(self) -> bool:
@@ -480,7 +481,7 @@ class HardwareTestSuite:
         try:
             robohat = self.resource_manager.get_robohat_driver()
             if robohat is None:
-                logging.error("RoboHAT driver is None")
+                logger.error("RoboHAT driver is None")
                 return False
 
             print("Testing drive motors...")
@@ -513,7 +514,7 @@ class HardwareTestSuite:
             feedback = input("Did all motor movements work correctly? (y/n): ")
             return feedback.lower().startswith('y')
         except Exception as e:
-            logging.error(f"Error testing drive motors: {e}")
+            logger.error(f"Error testing drive motors: {e}")
             # Ensure motors are stopped after exception
             try:
                 self.resource_manager.get_robohat_driver().set_motors(0, 0)
@@ -533,7 +534,7 @@ class HardwareTestSuite:
         try:
             blade_controller = self.resource_manager.get_blade_controller()
             if blade_controller is None:
-                logging.error("Blade controller is None")
+                logger.error("Blade controller is None")
                 return False
 
             print("Testing blade motor...")
@@ -563,7 +564,7 @@ class HardwareTestSuite:
                 "Did the blade motor work correctly at all speeds? (y/n): ")
             return feedback.lower().startswith('y')
         except Exception as e:
-            logging.error(f"Error testing blade motor: {e}")
+            logger.error(f"Error testing blade motor: {e}")
             # Ensure blade is stopped after exception
             try:
                 self.resource_manager.get_blade_controller().set_speed(0)
@@ -610,7 +611,7 @@ class HardwareTestSuite:
                 return True  # Still pass since camera is optional
 
         except Exception as e:
-            logging.warning(f"Camera test error (non-critical): {e}")
+            logger.warning(f"Camera test error (non-critical): {e}")
             return True  # Consider camera errors non-critical
 
 
@@ -667,12 +668,12 @@ def main():
 
     # Configure logging based on verbosity
     if args.verbose:
-        logging.setLevel(logging_levels.DEBUG)
+        logger.setLevel(logging_levels.DEBUG)
         # Force immediate output
-        for handler in logging.handlers:
+        for handler in logger.handlers:
             handler.flush = lambda: None
     else:
-        logging.setLevel(logging_levels.INFO)
+        logger.setLevel(logging_levels.INFO)
 
     print("=" * 50)
     print("AUTONOMOUS MOWER HARDWARE TEST SUITE")
@@ -716,7 +717,7 @@ def main():
             return 0 if all(test_results.values()) else 1
 
     except Exception as e:
-        logging.error(f"Error running hardware tests: {e}")
+        logger.error(f"Error running hardware tests: {e}")
         return 1
 
     finally:
@@ -725,7 +726,7 @@ def main():
             try:
                 resource_manager.cleanup()
             except Exception as e:
-                logging.error(f"Error during cleanup: {e}")
+                logger.error(f"Error during cleanup: {e}")
 
 
 if __name__ == "__main__":

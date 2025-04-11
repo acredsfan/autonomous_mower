@@ -205,9 +205,9 @@ class SerialPort:
         """Clean up resources used by the SerialPort."""
         try:
             # Add specific cleanup logic here
-            logging.info("SerialPort cleaned up successfully.")
+            logger.info("SerialPort cleaned up successfully.")
         except Exception as e:
-            logging.error(f"Error cleaning up SerialPort: {e}")
+            logger.error(f"Error cleaning up SerialPort: {e}")
 
 
 class SerialLineReader:
