@@ -91,9 +91,13 @@ class RoboHATController:
             return
 
         line = self.serial.readline().decode().strip('\n').strip('\r')
+        logger.debug(f"Raw data received: {line}")
 
         output = line.split(", ")
         if len(output) == 2:
+            logger.debug(
+                f"Parsed steering: {output[0]}, throttle: {output[1]}"
+            )
             if self.SHOW_STEERING_VALUE:
                 logger.debug(f"MM1: steering={output[0]}")
 

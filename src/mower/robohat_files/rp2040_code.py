@@ -204,6 +204,8 @@ def main():
                 (int(
                     steering.value), int(
                     throttle.value)))
+            print(f"Sent data: steering={steering.value}, "
+                  f"throttle={throttle.value}")
             # print(int(steering.value), int(throttle.value))
 
         while True:
