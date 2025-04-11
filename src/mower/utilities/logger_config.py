@@ -24,16 +24,25 @@ class LoggerConfigInfo:
         if cls._initialized:
             return
 
-        # Set up root logger
-        root_logger = logging.getLogger()
-        root_logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
-
-        # Create formatters
-        detailed_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-
         try:
+            # Set up root logger
+            root_logger = logging.getLogger()
+            root_logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
+
+            # Remove any existing handlers to avoid duplicates
+            for handler in root_logger.handlers[:]:
+                root_logger.removeHandler(handler)
+
+            # Create formatters
+            detailed_formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+
+            # Set up console handler first
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(detailed_formatter)
+            root_logger.addHandler(console_handler)
+
             # Set up rotating file handler for main log if directory exists
             if os.path.isdir(cls._log_dir):
                 main_log = os.path.join(cls._log_dir, 'mower.log')
@@ -49,17 +58,14 @@ class LoggerConfigInfo:
                     f"Log directory {cls._log_dir} does not exist. "
                     "Logging to console only."
                 )
+
+            cls._initialized = True
+            root_logger.info("Logging system initialized successfully")
+
         except Exception as e:
-            root_logger.warning(
-                f"Failed to set up file logging: {e}. Logging to console only."
-            )
-
-        # Set up console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(detailed_formatter)
-        root_logger.addHandler(console_handler)
-
-        cls._initialized = True
+            # Use print as a fallback since logging might not be working
+            print(f"Failed to configure logging: {e}")
+            raise
 
     @classmethod
     def get_logger(cls, name: str) -> logging.Logger:
@@ -72,7 +78,8 @@ class LoggerConfigInfo:
         Returns:
             logging.Logger: Configured logger instance
         """
-        cls.configure_logging()
+        if not cls._initialized:
+            cls.configure_logging()
         return logging.getLogger(name)
 
     @classmethod
