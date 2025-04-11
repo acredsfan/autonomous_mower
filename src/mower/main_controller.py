@@ -191,7 +191,7 @@ class ResourceManager:
             )
 
             # Initialize web interface
-            self._resources["web_interface"] = WebInterface()
+            self._resources["web_interface"] = WebInterface(mower=self)
 
             logger.info("All software components initialized successfully")
         except Exception as e:
