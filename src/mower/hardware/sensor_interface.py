@@ -3,6 +3,8 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+import board
+import busio
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
@@ -56,6 +58,15 @@ class EnhancedSensorInterface:
         self.shutdown_lines = None
         self._i2c = None
         self._locks = None
+
+        # Initialize I2C bus
+        try:
+            self._i2c = busio.I2C(board.SCL, board.SDA)
+            self._locks = {'i2c': threading.Lock()}
+            logging.info("I2C bus initialized successfully")
+        except Exception as e:
+            _log_error("I2C bus initialization failed", e)
+            raise
 
     def _init_bme280(self):
         """Initialize BME280 sensor."""

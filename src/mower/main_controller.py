@@ -54,10 +54,10 @@ from mower.obstacle_detection.avoidance_algorithm import (
     AvoidanceAlgorithm, AvoidanceState
 )
 from mower.ui.web_ui import WebInterface
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Base directory for consistent file referencing
 BASE_DIR = Path(__file__).parent.parent.parent
@@ -141,7 +141,7 @@ class ResourceManager:
         try:
             # Initialize localization
             self._resources["localization"] = Localization()
-            
+
             # Initialize pattern planner with learning capabilities
             pattern_config = PatternConfig(
                 pattern_type=PatternType.PARALLEL,
@@ -151,7 +151,7 @@ class ResourceManager:
                 start_point=(0.0, 0.0),  # Will be updated with actual position
                 boundary_points=[]  # Will be loaded from config
             )
-            
+
             learning_config = LearningConfig(
                 learning_rate=0.1,
                 discount_factor=0.9,
@@ -161,24 +161,24 @@ class ResourceManager:
                 update_frequency=100,
                 model_path=str(CONFIG_DIR / "models" / "pattern_planner.json")
             )
-            
+
             self._resources["path_planner"] = PathPlanner(
                 pattern_config, learning_config
             )
-            
+
             # Initialize navigation controller
             self._resources["navigation"] = NavigationController(
                 self._resources["localization"]
             )
-            
+
             # Initialize obstacle detection
             self._resources["obstacle_detection"] = AvoidanceAlgorithm(
                 self._resources["path_planner"]
             )
-            
+
             # Initialize web interface
             self._resources["web_interface"] = WebInterface()
-            
+
             logger.info("All software components initialized successfully")
         except Exception as e:
             logger.error(f"Error initializing software: {e}")
@@ -242,15 +242,15 @@ class ResourceManager:
     def get_path_planner(self):
         """Get the path planner instance."""
         return self._resources.get("path_planner")
-    
+
     def get_navigation(self):
         """Get the navigation controller instance."""
         return self._resources.get("navigation")
-    
+
     def get_obstacle_detection(self):
         """Get the obstacle detection instance."""
         return self._resources.get("obstacle_detection")
-    
+
     def get_web_interface(self):
         """Get the web interface instance."""
         return self._resources.get("web_interface")
@@ -435,7 +435,7 @@ class RobotController:
                         if (
                             recovery_attempts >=
                                 self.avoidance_algorithm.max_recovery_attempts
-                                ):
+                        ):
                             logger.error(
                                 "Failed to recover from obstacle after "
                                 "multiple attempts"
@@ -574,11 +574,11 @@ class RobotController:
 
             # Get path planner
             path_planner = self.resource_manager.get_path_planner()
-            
+
             # Update path planner with current position
             current_pos = self.resource_manager.get_navigation().get_position()
             path_planner.pattern_config.start_point = current_pos
-            
+
             # Generate mowing path
             mowing_path = path_planner.generate_path()
             if not mowing_path or len(mowing_path) == 0:
@@ -643,10 +643,10 @@ class RobotController:
         try:
             navigation = self.resource_manager.get_navigation()
             obstacle_detection = self.resource_manager.get_obstacle_detection()
-            
+
             # Set target waypoint
             navigation.set_target(waypoint)
-            
+
             # Navigate until reached or interrupted
             while True:
                 # Check for obstacles
@@ -654,21 +654,21 @@ class RobotController:
                     logger.info("Obstacle detected, avoiding...")
                     if not obstacle_detection.avoid_obstacle():
                         return False
-                
+
                 # Update navigation
                 status = navigation.update()
-                
+
                 # Check if waypoint reached
                 if status == NavigationStatus.REACHED:
                     return True
-                
+
                 # Check for navigation errors
                 if status == NavigationStatus.ERROR:
                     return False
-                
+
                 # Small delay to prevent CPU overload
                 time.sleep(0.1)
-                
+
         except Exception as e:
             logger.error(f"Error navigating to waypoint: {e}")
             return False

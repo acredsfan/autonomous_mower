@@ -25,7 +25,6 @@ import argparse
 import os
 import sys
 import time
-from pathlib import Path
 from typing import Dict, Optional, Any
 import logging as logging_levels
 
@@ -64,7 +63,8 @@ def initialize_resource_manager() -> Optional[ResourceManager]:
     Initialize the ResourceManager with proper error handling.
 
     Returns:
-        Optional[ResourceManager]: Initialized ResourceManager or None on failure
+        Optional[ResourceManager]: Initialized ResourceManager or
+            None on failure
     """
     try:
         resource_manager = ResourceManager()
