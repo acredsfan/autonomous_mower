@@ -346,3 +346,39 @@ class RoboHATDriver:
                 logger.info("PWM serial connection closed.")
             except serial.SerialException:
                 logger.error("Failed to close the PWM serial connection.")
+
+
+if __name__ == "__main__":
+
+    # Initialize the configuration (replace with actual configuration object)
+    class MockConfig:
+        AUTO_RECORD_ON_THROTTLE = True
+        MM1_STEERING_MID = 1500
+        MM1_MAX_FORWARD = 2000
+        MM1_STOPPED_PWM = 1500
+        MM1_MAX_REVERSE = 1000
+        MM1_SHOW_STEERING_VALUE = True
+        JOYSTICK_DEADZONE = 0.1
+        MM1_SERIAL_PORT = "/dev/ttyS0"
+
+    cfg = MockConfig()
+
+    # Initialize the RoboHATController
+    controller = RoboHATController(cfg, debug=True)
+
+    # Test the movement by simulating serial input
+    try:
+        print("Testing RoboHATController...")
+        for i in range(5):
+            print(f"Test iteration {i + 1}")
+            controller.read_serial()
+            print(
+                f"Angle: {controller.angle}, "
+                f"Throttle: {controller.throttle}"
+            )
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Test interrupted.")
+    finally:
+        controller.shutdown()
+        print("Test completed.")
