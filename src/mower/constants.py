@@ -23,7 +23,10 @@ try:
     with open(polygon_path) as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    logging.error("User polygon config file not found.")
+    logging.warning(
+        "User polygon config file not found. "
+        "Initializing with an empty list."
+    )
     polygon_coordinates = []
 
 # Constants for the project
