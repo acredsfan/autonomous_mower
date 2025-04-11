@@ -170,9 +170,17 @@ class AvoidanceAlgorithm:
         self.reset_state()
         if pattern_planner is None:
             from mower.navigation.path_planner import (
-                PathPlanner
+                PathPlanner, PatternConfig, PatternType
             )
-            pattern_planner = PathPlanner()
+            pattern_config = PatternConfig(
+                pattern_type=PatternType.PARALLEL,
+                spacing=0.3,  # Default spacing in meters
+                angle=0.0,  # Default angle in degrees
+                overlap=0.1,  # Default overlap (10%)
+                start_point=(0.0, 0.0),  # Default start point
+                boundary_points=[]  # Default empty boundary
+            )
+            pattern_planner = PathPlanner(pattern_config)
 
         self.pattern_planner = pattern_planner
         self.obstacles = []
