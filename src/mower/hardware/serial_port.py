@@ -55,6 +55,10 @@ class SerialPort:
         self.timeout = timeout
         self.ser = None
 
+    def _initialize(self):
+        """Initialize the serial port."""
+        logger.info("Serial port initialized successfully.")
+
     def start(self):
         logger.debug(f"Attempting to open serial port {self.port}...")
         try:

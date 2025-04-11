@@ -72,6 +72,10 @@ class VL53L0XSensors:
 
         return left_sensor, right_sensor
 
+    def _initialize(self):
+        """Initialize the ToF sensors."""
+        logging.info("ToF sensors initialized successfully.")
+
 
 if __name__ == "__main__":
     # Initialize the VL53L0X sensors

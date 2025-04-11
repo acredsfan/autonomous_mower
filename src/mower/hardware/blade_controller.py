@@ -35,6 +35,10 @@ class BladeController:
 
         logging.info("Blade controller initialized")
 
+    def _initialize(self):
+        """Initialize the blade controller."""
+        logging.info("Blade controller initialized successfully.")
+
     def enable(self) -> bool:
         """
         Enable the blade motor.

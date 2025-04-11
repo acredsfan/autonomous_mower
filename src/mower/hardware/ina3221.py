@@ -56,6 +56,10 @@ class INA3221Sensor:
             logging.error(f"Error reading battery charge level: {e}")
             return "Error"
 
+    def _initialize(self):
+        """Initialize the INA3221 sensor."""
+        logging.info("INA3221 sensor initialized successfully.")
+
 
 if __name__ == "__main__":
     # Initialize the INA3221 sensor

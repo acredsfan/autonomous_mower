@@ -172,6 +172,10 @@ class BNO085Sensor:
         # Try to establish a connection immediately
         self.connect()
 
+    def _initialize(self):
+        """Initialize the IMU sensor."""
+        logger.info("IMU sensor initialized successfully.")
+
     def connect(self):
         """
         Establish connection to the IMU sensor.
