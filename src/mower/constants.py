@@ -4,8 +4,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+    LoggerConfigInfo as LoggerConfig,
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
