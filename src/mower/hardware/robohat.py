@@ -12,6 +12,7 @@ Updated version based on recommendations.
 
 import os
 import time
+from dotenv import load_dotenv
 
 import serial
 from mower.utilities.utils import Utils
@@ -24,6 +25,7 @@ from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
 
 
 logger = LoggerConfig.get_logger(__name__)
+load_dotenv()
 
 
 class RoboHATController:
@@ -220,7 +222,7 @@ class RoboHATDriver:
         self.STEERING_MID = MM1_STEERING_MID
 
         # Read the serial port from environment variables or use default
-        MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyS0")
+        MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
 
         # Initialize serial port for sending PWM signals
         try:

@@ -23,6 +23,8 @@ GPS_PORT = os.getenv('GPS_SERIAL_PORT')
 GPS_BAUDRATE = int(os.getenv('GPS_BAUD_RATE', '9600'))
 IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT')
 IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
+MM1_SERIAL_PORT = os.getenv('MM1_SERIAL_PORT')
+MM1_BAUDRATE = int(os.getenv('MM1_BAUD_RATE', '115200'))
 
 
 class SerialPort:
