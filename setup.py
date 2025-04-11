@@ -7,7 +7,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        "numpy>=1.22.0",
+        "numpy>=1.26.0,<1.27.0",
         "opencv-python>=4.8.1.78",
         "pillow>=10.3.0",
         "pyyaml>=5.4.1",

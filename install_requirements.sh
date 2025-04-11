@@ -181,8 +181,8 @@ fi
 
 # Install system dependencies
 print_info "Installing system dependencies..."
-sudo apt-get update && sudo apt-get upgrade -y && sudo apt autoremove -y
-check_command "Updating package list" || exit 1
+sudo apt-get update && sudo apt-get full-upgrade -y && sudo apt autoremove -y
+check_command "Updating package list and performing full upgrade" || exit 1
 
 sudo apt-get install -y \
     python3-pip \
