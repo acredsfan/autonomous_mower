@@ -212,6 +212,11 @@ check_command "Installing system packages" || exit 1
 # Set PYTHONPATH to include our src directory
 export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
+# Ensure PYTHONPATH includes the src directory
+export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+
+echo "PYTHONPATH set to include src directory."
+
 # Upgrade pip
 print_info "Upgrading pip..."
 sudo python3 -m pip install --break-system-packages --upgrade pip

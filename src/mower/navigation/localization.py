@@ -62,7 +62,8 @@ class Localization:
 
         # Initialize GPS components
         self.position_reader = GpsNmeaPositions(debug=False)
-        self.latest_position = GpsLatestPosition(debug=False)
+        self.latest_position = GpsLatestPosition(
+            self.position_reader, debug=False)
 
         # Initialize position tracking
         self.position = Position(
