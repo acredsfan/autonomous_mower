@@ -1,12 +1,12 @@
 # constants.py
 import json
 from pathlib import Path
+import os
 
 from dotenv import load_dotenv
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig,
 )
-from src.mower.hardware.serial_port import MM1_SERIAL_PORT, MM1_BAUD_RATE
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
@@ -59,8 +59,8 @@ MM1_STEERING_MID = 1500
 AUTO_RECORD_ON_THROTTLE = True
 JOYSTICK_DEADZONE = 0.1
 SHOW_STEERING_VALUE = True  # Update this based on your use case
-MM1_SERIAL_PORT = MM1_SERIAL_PORT
-MM1_BAUD_RATE = MM1_BAUD_RATE
+MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
+MM1_BAUD_RATE = os.getenv("MM1_BAUD_RATE", 115200)
 
 # Derived constants for UI limits
 latitudes = [coord['lat'] for coord in polygon_coordinates]
