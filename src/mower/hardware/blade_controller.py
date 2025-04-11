@@ -11,8 +11,8 @@ from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 logging = LoggerConfig.get_logger(__name__)
 
 # GPIO pins for blade control
-BLADE_IN1_PIN = 22
-BLADE_IN2_PIN = 23
+BLADE_IN1_PIN = 24
+BLADE_IN2_PIN = 25
 
 
 class BladeController:
