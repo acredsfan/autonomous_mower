@@ -119,14 +119,14 @@ class BNO085Sensor:
             cls._instance._initialize()
         return cls._instance
 
-    def __init__(self, serial_port_name=None, baudrate=115200):
+    def __init__(self, serial_port_name=None, baudrate=IMU_BAUDRATE):
         """
         Initialize the BNO085 sensor interface.
         Args:
             serial_port_name (str, optional): Serial port name. If None,
                 auto-discovery is attempted. Defaults to None.
             baudrate (int, optional): Baudrate for serial communication.
-                Defaults to 115200.
+                Defaults to 3000000.
 
         The initialization process:
         1. Sets up initial values and threading locks
