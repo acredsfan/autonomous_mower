@@ -379,6 +379,14 @@ class NavigationController:
             'last_error': self.status.last_error
             }
 
+    def cleanup(self):
+        """Clean up resources used by the navigation controller."""
+        try:
+            # Add any specific cleanup logic here
+            logger.info("Navigation controller cleaned up successfully.")
+        except Exception as e:
+            logger.error(f"Error cleaning up navigation controller: {e}")
+
 
 def initialize_navigation():
     """Initialize navigation system components."""

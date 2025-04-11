@@ -1159,3 +1159,11 @@ class AvoidanceAlgorithm:
         except Exception as e:
             logger.error(f"Error smoothing path: {e}")
             return path
+
+    def cleanup(self):
+        """Clean up resources used by the avoidance algorithm."""
+        try:
+            # Add any specific cleanup logic here
+            logger.info("Avoidance algorithm cleaned up successfully.")
+        except Exception as e:
+            logger.error(f"Error cleaning up avoidance algorithm: {e}")

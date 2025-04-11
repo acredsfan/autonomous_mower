@@ -269,6 +269,38 @@ class ResourceManager:
         """Get the web interface instance."""
         return self._resources.get("web_interface")
 
+    def get_blade_controller(self):
+        """Get the blade controller instance."""
+        return self._resources.get("blade")
+
+    def get_bme280_sensor(self):
+        """Get the BME280 sensor instance."""
+        return self._resources.get("bme280")
+
+    def get_camera(self):
+        """Get the camera instance."""
+        return self._resources.get("camera")
+
+    def get_robohat_driver(self):
+        """Get the RoboHAT driver instance."""
+        return self._resources.get("motor_driver")
+
+    def get_gps_position(self):
+        """Get the GPS position instance."""
+        return self._resources.get("gps_serial")
+
+    def get_imu_sensor(self):
+        """Get the IMU sensor instance."""
+        return self._resources.get("imu")
+
+    def get_ina3221_sensor(self):
+        """Get the INA3221 sensor instance."""
+        return self._resources.get("ina3221")
+
+    def get_tof_sensors(self):
+        """Get the ToF sensors instance."""
+        return self._resources.get("tof")
+
 
 class RobotController:
     """

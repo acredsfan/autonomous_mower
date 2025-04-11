@@ -385,6 +385,14 @@ class Localization:
         """
         return time.time() - self.position.last_update
 
+    def cleanup(self):
+        """Clean up resources used by the localization module."""
+        try:
+            # Add any specific cleanup logic here
+            logging.info("Localization module cleaned up successfully.")
+        except Exception as e:
+            logging.error(f"Error cleaning up localization module: {e}")
+
 
 def main():
     """Test the localization system."""

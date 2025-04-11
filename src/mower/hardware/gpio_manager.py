@@ -106,21 +106,14 @@ class GPIOManager:
             logging.error(f"Error cleaning up GPIO pin {pin}: {e}")
 
     def cleanup_all(self) -> None:
-        """Clean up all GPIO pins used by this manager."""
-        if self._simulation_mode:
-            self._simulated_values.clear()
-            self._pins_setup.clear()
-            return
-
+        """Clean up all GPIO resources."""
         try:
-            # RPi.GPIO cleanup can take a channel list or clean all if no arg
-            # Cleaning only the pins we set up is safer
-            pins_to_clean = list(self._pins_setup.keys())
-            if pins_to_clean:
-                GPIO.cleanup(pins_to_clean)
-            self._pins_setup.clear()
+            # Ensure pin numbering mode is set before cleanup
+            GPIO.setmode(GPIO.BCM)  # or GPIO.BOARD depending on your setup
+            GPIO.cleanup()
+            logging.info("All GPIO resources cleaned up successfully.")
         except Exception as e:
-            logging.error(f"Error cleaning up GPIO: {e}")
+            logging.error(f"Error cleaning up GPIO resources: {e}")
 
     def set_pin(self, pin: int, value: int) -> bool:
         """

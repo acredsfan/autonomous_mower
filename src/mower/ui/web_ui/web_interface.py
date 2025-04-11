@@ -116,3 +116,11 @@ class WebInterface:
             bool: True if the web interface is running, False otherwise.
         """
         return self._is_running
+
+    def cleanup(self):
+        """Clean up resources used by the web interface."""
+        try:
+            # Add any specific cleanup logic here
+            self.logger.info("Web interface cleaned up successfully.")
+        except Exception as e:
+            self.logger.error(f"Error cleaning up web interface: {e}")

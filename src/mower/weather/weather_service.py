@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
-# Initialize logger
+# Ensure logger initialization uses LoggerConfigInfo for consistency.
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables

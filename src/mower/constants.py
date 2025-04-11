@@ -8,7 +8,7 @@ from mower.utilities.logger_config import (
 )
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 # Load .env variables
 load_dotenv()
@@ -23,7 +23,7 @@ try:
     with open(polygon_path) as f:
         polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    logging.warning(
+    logger.warning(
         "User polygon config file not found. "
         "Initializing with an empty list."
     )

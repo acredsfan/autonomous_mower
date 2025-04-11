@@ -6,6 +6,9 @@ from pathlib import Path
 def setup_logging(log_level=logging.INFO, log_dir="logs"):
     """Configure logging for the application.
 
+    Note: Use LoggerConfigInfo for centralized logging
+        setup in the application.
+
     Args:
         log_level: The logging level to use (default: INFO)
         log_dir: Directory to store log files (default: logs)

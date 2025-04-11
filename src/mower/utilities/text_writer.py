@@ -132,7 +132,7 @@ class CsvLogger(TextLogger):
                 row = None
                 logger.debug(
                     f"CsvLogger: dropping row with field count = {field_count}"
-                    )
+                )
         else:
             logger.error("CsvLogger: line_to_row expected string")
         return row

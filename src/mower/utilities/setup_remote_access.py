@@ -6,17 +6,13 @@ for the mower's web interface.
 
 import os
 import sys
-import logging
 import subprocess
 from typing import Dict, Any
 from pathlib import Path
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-logger = logging.getLogger(__name__)
+# Initialize logger
+logger = LoggerConfig.get_logger(__name__)
 
 
 class RemoteAccessSetup:

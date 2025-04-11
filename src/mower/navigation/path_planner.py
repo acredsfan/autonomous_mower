@@ -749,3 +749,11 @@ class PathPlanner:
             logger.error(f"Error loading model: {e}")
             self.q_table = {}
             self.step_count = 0
+
+    def cleanup(self):
+        """Clean up resources used by the path planner."""
+        try:
+            # Add any specific cleanup logic here
+            logger.info("Path planner cleaned up successfully.")
+        except Exception as e:
+            logger.error(f"Error cleaning up path planner: {e}")
