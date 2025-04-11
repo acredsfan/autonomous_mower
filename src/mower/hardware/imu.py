@@ -227,6 +227,18 @@ class BNO085Sensor:
                     )
                 logger.info(port_info)
 
+                # Enable debugging for the IMU sensor
+                self.debug = True
+
+                # Set a timeout for serial communication
+                self.serial_port.timeout = 2.0  # 2 seconds timeout
+
+                logger.info(
+                    f"IMU serial port {self.serial_port_name} opened at "
+                    f"{self.baudrate} baud with timeout "
+                    f"{self.serial_port.timeout}s"
+                )
+
                 # Try multiple times to initialize the sensor
                 max_retries = 5
                 for attempt in range(1, max_retries + 1):
