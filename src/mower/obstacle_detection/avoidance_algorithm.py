@@ -35,8 +35,8 @@ from mower.constants import (
     AVOIDANCE_DELAY,
     MIN_DISTANCE_THRESHOLD
 )
-from mower.navigation.learning_pattern_planner import (
-    LearningPatternPlanner
+from mower.navigation.path_planner import (
+    PathPlanner
 )
 
 
@@ -129,14 +129,14 @@ class AvoidanceAlgorithm:
 
     def __init__(
             self, resource_manager=None,
-            pattern_planner: LearningPatternPlanner = None):
+            pattern_planner: PathPlanner = None):
         """
         Initialize the avoidance algorithm.
 
         Args:
             resource_manager: Optional ResourceManager instance for system
                 resources
-            pattern_planner: Optional LearningPatternPlanner instance for
+            pattern_planner: Optional PathPlanner instance for
                 path planning
         """
         self.logger = logger
@@ -169,10 +169,10 @@ class AvoidanceAlgorithm:
 
         self.reset_state()
         if pattern_planner is None:
-            from mower.navigation.learning_pattern_planner import (
-                LearningPatternPlanner
+            from mower.navigation.path_planner import (
+                PathPlanner
             )
-            pattern_planner = LearningPatternPlanner()
+            pattern_planner = PathPlanner()
 
         self.pattern_planner = pattern_planner
         self.obstacles = []
