@@ -214,17 +214,17 @@ export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
 # Upgrade pip
 print_info "Upgrading pip..."
-python3 -m pip install --break-system-packages --upgrade pip
+sudo python3 -m pip install --break-system-packages --upgrade pip
 check_command "Upgrading pip" || exit 1
 
 # Install main package and dependencies
 print_info "Installing Python package and dependencies..."
-python3 -m pip install --break-system-packages --no-cache-dir -e .
+sudo python3 -m pip install --break-system-packages --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --break-system-packages --no-cache-dir \
+sudo python3 -m pip install --break-system-packages --no-cache-dir \
     utm \
     adafruit-circuitpython-bme280 \
     adafruit-circuitpython-bno08x \
