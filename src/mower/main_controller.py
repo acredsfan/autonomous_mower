@@ -142,7 +142,6 @@ class ResourceManager:
             # Initialize sensor interface
             from mower.hardware.sensor_interface import EnhancedSensorInterface
             self._resources["sensor_interface"] = EnhancedSensorInterface()
-            self._resources["sensor_interface"].start()
 
             logger.info("All hardware components initialized successfully")
         except Exception as e:
