@@ -306,6 +306,10 @@ class EnhancedSensorInterface:
     def _init_sensor_with_retry(self, sensor_name, initializer):
         pass
 
+    def start(self):
+        """Start the EnhancedSensorInterface."""
+        logging.info("EnhancedSensorInterface started successfully.")
+
 
 def _check_proximity_violation(sensor_data: Dict) -> bool:
     """Check if any proximity sensor indicates an obstacle too close."""
