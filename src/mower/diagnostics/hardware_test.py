@@ -193,6 +193,20 @@ class HardwareTestSuite:
         for test, result in self.test_results.items():
             status = "PASSED" if result else "FAILED"
             print(f"{test}: {status}")
+        
+        # Add detailed logging for each test result
+        logging.info("Starting hardware tests...")
+
+        # Log the result of each test
+        for test_name, result in self.test_results.items():
+            if result:
+                logging.info(f"Test {test_name} PASSED")
+            else:
+                logging.error(f"Test {test_name} FAILED")
+
+        # Log summary of results
+        logging.info(f"Hardware tests completed: {passed_tests}/{total_tests} tests passed")
+        
         print("=" * 50)
 
     def _check_sensor_ranges(self, sensor_name: str,

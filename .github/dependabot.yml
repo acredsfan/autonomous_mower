@@ -10,9 +10,9 @@ updates:
       timezone: "UTC"
     open-pull-requests-limit: 10
     reviewers:
-      - "Aaron"
+      - "acredsfan"
     assignees:
-      - "Aaron"
+      - "acredsfan"
     labels:
       - "dependencies"
       - "python"
