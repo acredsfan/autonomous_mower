@@ -43,6 +43,12 @@ class GPIOManager:
             logging.info("Running GPIO in simulation mode")
             self._simulated_values: Dict[int, int] = {}
 
+        self._initialize()
+
+    def _initialize(self):
+        """Initialize the GPIOManager (placeholder for future logic)."""
+        logging.info("GPIOManager initialized successfully.")
+
     def setup_pin(self, pin: int, direction: str = "out",
                   initial: Optional[int] = None) -> bool:
         """
