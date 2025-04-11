@@ -15,28 +15,64 @@ Key features:
 - Command-line interface for running full or targeted tests
 
 Example usage:
-    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test  # Run all tests
-    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu  # Test IMU
-    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --non-interactive
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu
+    sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test \
+        --non-interactive
 """
 
 import argparse
 import os
 import sys
 import time
+from pathlib import Path
 from typing import Dict, Optional, Any
-import logging as logging_levels  # Import standard logging for level constants
+import logging as logging_levels
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 logging = LoggerConfig.get_logger(__name__)
 
 try:
-    # Try to import the resource manager
     from mower.main_controller import ResourceManager
 except ImportError as e:
     logging.error(f"Failed to import ResourceManager: {e}")
     sys.exit(1)
+
+
+def check_root_privileges() -> bool:
+    """
+    Check if the script is running with root privileges.
+
+    Returns:
+        bool: True if running as root, False otherwise
+    """
+    if os.geteuid() != 0:
+        msg = (
+            "Hardware tests require root privileges. "
+            "Please run with: sudo -E env PATH=$PATH python3 -m "
+            "mower.diagnostics.hardware_test"
+        )
+        logging.error(msg)
+        print(msg)
+        return False
+    return True
+
+
+def initialize_resource_manager() -> Optional[ResourceManager]:
+    """
+    Initialize the ResourceManager with proper error handling.
+
+    Returns:
+        Optional[ResourceManager]: Initialized ResourceManager or None on failure
+    """
+    try:
+        resource_manager = ResourceManager()
+        resource_manager.initialize()
+        return resource_manager
+    except Exception as e:
+        logging.error(f"Failed to initialize ResourceManager: {e}")
+        return None
 
 
 class HardwareTestSuite:
@@ -64,23 +100,14 @@ class HardwareTestSuite:
             resource_manager: An instance of ResourceManager. If None,
                 a new one will be created.
         """
-        if not os.geteuid() == 0:
-            msg = (
-                "Hardware tests require root privileges. "
-                "Please run with: sudo -E env PATH=$PATH python3 -m "
-                "mower.diagnostics.hardware_test"
-            )
-            logging.error(msg)
-            raise RuntimeError(msg)
+        if not check_root_privileges():
+            raise RuntimeError("Root privileges required")
 
         self.resource_manager = resource_manager
         if self.resource_manager is None:
-            self.resource_manager = ResourceManager()
-            try:
-                self.resource_manager.initialize()
-            except Exception as e:
-                logging.error(f"Failed to initialize ResourceManager: {e}")
-                raise
+            self.resource_manager = initialize_resource_manager()
+            if self.resource_manager is None:
+                raise RuntimeError("Failed to initialize ResourceManager")
 
         self.test_results = {}
         self.test_in_progress = False
@@ -720,20 +747,16 @@ def main():
 
     Usage examples:
         sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test
-        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --test imu
-        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test --non-interactive
+        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test \
+            --test imu
+        sudo -E env PATH=$PATH python3 -m mower.diagnostics.hardware_test \
+            --non-interactive
 
     Returns:
         System exit code: 0 if all tests pass, non-zero otherwise
     """
     # Check for root privileges first
-    if not os.geteuid() == 0:
-        msg = (
-            "Hardware tests require root privileges. "
-            "Please run with: sudo -E env PATH=$PATH python3 -m "
-            "mower.diagnostics.hardware_test"
-        )
-        print(msg)
+    if not check_root_privileges():
         return 1
 
     parser = argparse.ArgumentParser(
@@ -769,12 +792,14 @@ def main():
     print("For each sensor, readings are validated against plausible ranges.")
     print("=" * 50)
 
+    resource_manager = None
     try:
-        # Create and initialize ResourceManager
-        resource_manager = ResourceManager()
-        resource_manager.initialize()
+        # Initialize ResourceManager
+        resource_manager = initialize_resource_manager()
+        if resource_manager is None:
+            return 1
 
-        # Create test suite with initialized ResourceManager
+        # Create test suite
         test_suite = HardwareTestSuite(resource_manager)
 
         if args.test:
@@ -799,7 +824,6 @@ def main():
             # Run all tests
             test_results = test_suite.run_all_tests(
                 interactive=not args.non_interactive)
-            # Return exit code based on test results
             return 0 if all(test_results.values()) else 1
 
     except Exception as e:
@@ -808,7 +832,7 @@ def main():
 
     finally:
         # Cleanup
-        if 'resource_manager' in locals():
+        if resource_manager is not None:
             try:
                 resource_manager.cleanup()
             except Exception as e:
