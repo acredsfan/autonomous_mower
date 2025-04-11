@@ -12,7 +12,7 @@ class BME280Sensor:
     """Class to handle BME280 sensor"""
 
     @staticmethod
-    def init_bme280(i2c):
+    def _initialize(i2c):
         """
         Initialize the BME280 sensor with the I2C bus.
         Returns the sensor object if successful, otherwise None.
@@ -50,7 +50,7 @@ class BME280Sensor:
 if __name__ == "__main__":
     # Initialize the BME280 sensor
     bme280_sensor = BME280Sensor()
-    bme280 = bme280_sensor.init_bme280()
+    bme280 = bme280_sensor._initialize()
 
     if bme280 is not None:
         # Read BME280 sensor data

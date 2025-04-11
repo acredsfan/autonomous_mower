@@ -68,11 +68,11 @@ class EnhancedSensorInterface:
             _log_error("I2C bus initialization failed", e)
             raise
 
-    def _init_bme280(self):
+    def __initialize(self):
         """Initialize BME280 sensor."""
         try:
             with self._locks['i2c']:
-                return BME280Sensor.init_bme280(self._i2c)
+                return BME280Sensor._initialize(self._i2c)
         except Exception as e:
             _log_error("BME280 initialization failed", e)
             return None
