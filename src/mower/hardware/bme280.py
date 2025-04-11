@@ -50,6 +50,11 @@ class BME280Sensor:
         """Read data from the BME280 sensor."""
         try:
             sensor = self._initialize(i2c)
+            if sensor is None:
+                logging.error(
+                    "Failed to initialize BME280 sensor during read."
+                )
+                return {}
             return self.read_bme280(sensor)
         except Exception as e:
             logging.error(f"Error reading BME280 sensor: {e}")

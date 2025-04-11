@@ -331,9 +331,9 @@ class RoboHATDriver:
             left_pwm = self.trim_out_of_bound_value(left_speed)
             right_pwm = self.trim_out_of_bound_value(right_speed)
             self.write_pwm(left_pwm, right_pwm)
-            logging.info(f"Motors set: left={left_speed}, right={right_speed}")
+            logger.info(f"Motors set: left={left_speed}, right={right_speed}")
         except Exception as e:
-            logging.error(f"Error setting motor speeds: {e}")
+            logger.error(f"Error setting motor speeds: {e}")
 
     def shutdown(self):
         if self.pwm and self.pwm.is_open:
