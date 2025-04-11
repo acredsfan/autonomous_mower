@@ -123,14 +123,14 @@ class ResourceManager:
 
             # Initialize motors and blade
             self._resources["motor_driver"] = RoboHATDriver()
-            self._resources["motor_driver"]._initialize()
+            self._resources["motor_driver"].__init__()
 
             self._resources["blade"] = BladeController()
-            self._resources["blade"]._initialize()
+            self._resources["blade"].__init__()
 
             # Initialize camera
             self._resources["camera"] = get_camera_instance()
-            self._resources["camera"]._initialize()
+            self._resources["camera"].__init__()
 
             # Initialize serial ports
             self._resources["gps_serial"] = SerialPort("/dev/ttyAMA0")
