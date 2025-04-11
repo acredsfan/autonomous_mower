@@ -46,7 +46,7 @@ tflite-runtime==2.5.0
 pycoral==2.0.0
 
 # Security
-safety==2.3.0
+safety==3.2.14
 bandit==1.7.5
 pyOpenSSL==23.0.0
 certifi>=2024.7.4
