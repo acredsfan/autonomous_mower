@@ -71,5 +71,5 @@ sphinx==7.2.6
 sphinx-rtd-theme==2.0.0
 pre-commit==3.6.0
 
-flask-cors==3.0.10
+flask-cors==5.0.1
 scipy==1.10.1
