@@ -69,4 +69,7 @@ coverage==7.4.1
 tox==4.15.0
 sphinx==7.2.6
 sphinx-rtd-theme==2.0.0
-pre-commit==3.6.0 
+pre-commit==3.6.0
+
+flask-cors==3.0.10
+scipy==1.10.1

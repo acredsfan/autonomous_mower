@@ -14,10 +14,10 @@ import sys
 from typing import Optional
 
 from mower.ui.web_ui.app import WebInterface
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 # Add project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -76,7 +76,7 @@ def stop_web_interface() -> None:
     global _web_interface
 
     try:
-        if _web_interface and _web_interface.is_running:
+        if (_web_interface and _web_interface.is_running):
             _web_interface.stop()
             logging.info("Web interface stopped successfully")
     except Exception as e:

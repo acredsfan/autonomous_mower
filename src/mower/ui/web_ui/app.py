@@ -10,11 +10,11 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
 from mower.navigation.path_planner import PatternType
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 def create_app(mower):

@@ -7,10 +7,10 @@ from mower.mower import (
     get_gps_nmea_positions,
     get_path_planner,
     )
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
 def run_robot():
