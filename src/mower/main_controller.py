@@ -56,6 +56,7 @@ from mower.obstacle_detection.avoidance_algorithm import (
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 from src.mower.hardware.serial_port import GPS_BAUDRATE
+from mower.hardware.sensor_interface import get_sensor_interface
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -177,8 +178,7 @@ class ResourceManager:
             # Initialize navigation controller
             self._resources["navigation"] = NavigationController(
                 self._resources["motor_driver"],  # Pass RoboHATDriver instance
-                # Pass SensorInterface instance
-                self._resources["sensor_interface"]
+                get_sensor_interface()  # Pass SensorInterface instance
             )
 
             # Initialize obstacle detection
