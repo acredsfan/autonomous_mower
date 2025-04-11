@@ -361,7 +361,7 @@ if __name__ == "__main__":
         MM1_MAX_REVERSE = 1000
         MM1_SHOW_STEERING_VALUE = True
         JOYSTICK_DEADZONE = 0.1
-        MM1_SERIAL_PORT = "/dev/ttyS0"
+        MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
 
     cfg = MockConfig()
 
