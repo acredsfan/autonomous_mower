@@ -55,6 +55,7 @@ from mower.obstacle_detection.avoidance_algorithm import (
 )
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
+from src.mower.hardware.serial_port import GPS_BAUDRATE
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -133,7 +134,9 @@ class ResourceManager:
             self._resources["camera"].__init__()
 
             # Initialize serial ports
-            self._resources["gps_serial"] = SerialPort("/dev/ttyAMA0")
+            self._resources["gps_serial"] = SerialPort(
+                "/dev/ttyAMA0", GPS_BAUDRATE
+            )
             self._resources["gps_serial"]._initialize()
 
             logger.info("All hardware components initialized successfully")
