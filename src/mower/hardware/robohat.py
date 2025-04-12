@@ -26,6 +26,10 @@ from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
 
 logger = LoggerConfig.get_logger(__name__)
 load_dotenv()
+MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
+MM1_BAUD_RATE = os.getenv("MM1_BAUD_RATE", 115200)
+print("MM1 Serial Port:", MM1_SERIAL_PORT)
+print("MM1 Baud Rate:", MM1_BAUD_RATE)
 
 
 class RoboHATController:
