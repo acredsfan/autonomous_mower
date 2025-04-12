@@ -375,30 +375,35 @@ if __name__ == "__main__":
     cfg = MockConfig()
 
     # Initialize the RoboHATController
-    controller = RoboHATController(cfg, debug=True)
+    driver = RoboHATDriver(debug=True)
 
     # Test the movement by simulating serial input
     try:
         print("Testing RoboHATController...")
         for i in range(5):
-            print(f"Test iteration {i + 1}")
-            controller.angle = 0.5  # Simulate a steering input
-            controller.throttle = 0.7  # Simulate a throttle input
-            # Send PWM command
-            controller.set_pulse(controller.angle, controller.throttle)
-            print(
-                f"Angle: {controller.angle}, "
-                f"Throttle: {controller.throttle}"
-            )
-            time.sleep(1)
-            # Simulate a stop command
-            controller.angle = 0.0
-            controller.throttle = 0.0
-            controller.set_pulse(controller.angle, controller.throttle)
-            print("Stopping motors.")
-            time.sleep(1)
+            try:
+                print(f"Test iteration {i + 1}")
+                driver.set_motors(0.5, 0.5)  # Move forward
+                time.sleep(1)
+                driver.set_motors(-0.5, -0.5)  # Move backward
+                time.sleep(1)
+                driver.set_motors(0.0, 0.0)  # Stop
+                time.sleep(1)
+                print("Stopping motors.")
+                driver.set_motors(0.5, -0.5)  # Turn left
+                time.sleep(1)
+                driver.set_motors(-0.5, 0.5)  # Turn right
+                time.sleep(1)
+                driver.set_motors(0.0, 0.0)  # Stop
+                time.sleep(1)
+                print("Stopping motors.")
+            except Exception as e:
+                print(f"Error during test iteration {i + 1}: {e}")
+                driver.set_motors(0.0, 0.0)  # Ensure motors are stopped
+                print(f"Error during test iteration {i + 1}: {e}")
+                driver.set_motors(0.0, 0.0)
     except KeyboardInterrupt:
         print("Test interrupted.")
     finally:
-        controller.shutdown()
+        driver.shutdown()
         print("Test completed.")
