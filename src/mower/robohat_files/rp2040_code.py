@@ -1,25 +1,22 @@
-# Donkey Car Driver for 2040-based boards such as the
-# Raspberry Pi Pico and KB2040
+# Donkey Car Driver for 2040-based boards such as the Raspberry Pi Pico and KB2040
 #
 # Notes:
 #   This is to be run using CircuitPython 9.x
-#   Last Updated: 10/07/2024
-# To be copied to teh RP2040-zero on roboHAT
+#   Last Updated: 7/07/2024
 
 import time
-
 import board
 import busio
-import digitalio
 import neopixel
-import rotaryio
 from pulseio import PulseIn
 from pwmio import PWMOut
+import digitalio
+import rotaryio
 
 # Customisation variables
 DEBUG = False
 USB_SERIAL = False
-SMOOTHING_INTERVAL_IN_S = 0.01
+SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
 
@@ -50,12 +47,12 @@ else:
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 
-# cannot have DEBUG and USB_SERIAL
+## cannot have DEBUG and USB_SERIAL
 if USB_SERIAL:
     DEBUG = False
 
+## functions
 
-# functions
 def servo_duty_cycle(pulse_ms, frequency=60):
     """
     Formula for working out the servo duty_cycle at 16 bit input
@@ -63,7 +60,6 @@ def servo_duty_cycle(pulse_ms, frequency=60):
     period_ms = 1.0 / frequency * 1000.0
     duty_cycle = int(pulse_ms / 1000 / (period_ms / 65535.0))
     return duty_cycle
-
 
 def state_changed(control):
     """
@@ -83,7 +79,6 @@ def state_changed(control):
     control.channel.clear()
     control.channel.resume()
 
-
 class Control:
     """
     Class for a RC Control Channel
@@ -95,7 +90,6 @@ class Control:
         self.channel = channel
         self.value = value
         self.servo.duty_cycle = servo_duty_cycle(value)
-
 
 # set up serial UART to Raspberry Pi
 uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.001)
@@ -120,7 +114,6 @@ continuous_delay = 0
 position1 = 0
 position2 = 0
 
-
 def main():
     global last_update, continuous_mode, continuous_delay, position1, position2
     last_toggle_time = time.monotonic()
@@ -132,7 +125,6 @@ def main():
     throttle_val = throttle.value
     led_state = False
     color = (0, 0, 255)
-    control_mode = 'serial'
     if not USE_QUADRATURE:
         last_state1 = encoder1.value
         last_state2 = encoder2.value
@@ -150,11 +142,11 @@ def main():
             current_state2 = encoder2.value
 
             if current_state1 != last_state1:  # encoder1 state changed
-                if current_state1 is False:  # Detect falling edge
+                if current_state1 == False:  # Detect falling edge
                     position1 += 1
 
             if current_state2 != last_state2:  # encoder2 state changed
-                if current_state2 is False:  # Detect falling edge
+                if current_state2 == False:  # Detect falling edge
                     position2 += 1
 
             last_state1 = current_state1
@@ -162,10 +154,7 @@ def main():
 
         time.sleep(0.01)  # Debounce delay
 
-        if continuous_mode and (
-                current_time -
-                last_toggle_time >= continuous_delay /
-                1000.0):
+        if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
             uart.write(b"%i, %i, %i, %i; %i, %i\r\n" % (
                 int(steering.value), int(throttle.value),
                 position1, int(current_time * 1000),
@@ -187,25 +176,18 @@ def main():
         last_update = time.monotonic()
 
         # check for new RC values (channel will contain data)
-        if control_mode == 'rc':
-            if len(throttle.channel) != 0:
-                state_changed(throttle)
+        if len(throttle.channel) != 0:
+            state_changed(throttle)
 
-            if len(steering.channel) != 0:
-                state_changed(steering)
+        if len(steering.channel) != 0:
+            state_changed(steering)
 
         if USB_SERIAL:
             # simulator USB
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
-            uart.write(
-                b"%i, %i\r\n" %
-                (int(
-                    steering.value), int(
-                    throttle.value)))
-            print(f"Sent data: steering={steering.value}, "
-                  f"throttle={throttle.value}")
+            uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
             # print(int(steering.value), int(throttle.value))
 
         while True:
@@ -215,6 +197,8 @@ def main():
             # if no data, break and continue with RC control
             if byte is None:
                 break
+
+
 
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
@@ -240,18 +224,14 @@ def main():
                 data = bytearray()
                 datastr = ''
                 got_data = True
-                print(
-                    "Set: steering=%i, throttle=%i" %
-                    (steering_val, throttle_val))
+ #               print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
         if got_data:
             print("Serial control")
             # Set the servo for serial data (received)
             steering.servo.duty_cycle = servo_duty_cycle(steering_val)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
-            # Only update here when serial data is received
-            last_input = time.monotonic()
-            # Timeout to switch back to RC control
-        elif time.monotonic() > (last_input + 0.1):
+            last_input = time.monotonic()  # Only update here when serial data is received
+        elif time.monotonic() > (last_input + 0.1):  # Timeout to switch back to RC control
             print("RC control")
             # Set the servo for RC control
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
@@ -259,8 +239,7 @@ def main():
 
 
 def handle_command(command):
-    global position1, position2, continuous_mode, \
-           continuous_delay, control_mode
+    global position1, position2, continuous_mode, continuous_delay
     if command == 'r':
         position1 = 0
         position2 = 0
@@ -286,17 +265,6 @@ def handle_command(command):
                 print("Continuous mode started with default delay")
             else:
                 print("Continuous mode stopped")
-    elif command.startswith('rc='):
-        mode = command.split('=')[1]
-        if mode == 'enable':
-            control_mode = 'rc'
-            print("RC control enabled.")
-        elif mode == 'disable':
-            control_mode = 'serial'
-            print("RC control disabled, serial control enabled.")
-        else:
-            print("Invalid RC control mode command.")
-
 
 # Run
 print("Run!")
