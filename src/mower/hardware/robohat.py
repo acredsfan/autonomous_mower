@@ -352,6 +352,16 @@ class RoboHATDriver:
             )
             left_pwm = self.trim_out_of_bound_value(left_speed)
             right_pwm = self.trim_out_of_bound_value(right_speed)
+            # Pass the mapped values to write_pwm
+            left_pwm = Utils.map_range(
+                left_pwm, -1.0, 1.0, self.MAX_REVERSE, self.MAX_FORWARD
+            )
+            right_pwm = Utils.map_range(
+                right_pwm, -1.0, 1.0, self.MAX_REVERSE, self.MAX_FORWARD
+            )
+            # Ensure PWM values are integers
+            left_pwm = int(left_pwm)
+            right_pwm = int(right_pwm)
             self.write_pwm(left_pwm, right_pwm)
             logger.info(f"Motors set: left={left_speed}, right={right_speed}")
         except Exception as e:
