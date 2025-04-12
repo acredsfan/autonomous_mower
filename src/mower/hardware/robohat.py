@@ -386,6 +386,11 @@ if __name__ == "__main__":
         JOYSTICK_DEADZONE = 0.1
         MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
         MM1_BAUD_RATE = 115200
+        MM1_MAX_FORWARD = 2000
+        MM1_MAX_REVERSE = 1000
+        MM1_STOPPED_PWM = 1500
+        MM1_STEERING_MID = 1500
+        MM1_SERIAL_TIMEOUT = 1
 
     cfg = MockConfig()
 
