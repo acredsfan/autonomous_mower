@@ -351,20 +351,40 @@ class RoboHATDriver:
                 f"Calling write_pwm with left_speed={left_speed}, "
                 f"right_speed={right_speed}"
             )
-            left_pwm = self.trim_out_of_bound_value(left_speed)
-            right_pwm = self.trim_out_of_bound_value(right_speed)
-            # Pass the mapped values to write_pwm
-            left_pwm = Utils.map_range(
-                left_pwm, -1.0, 1.0, self.MAX_REVERSE, self.MAX_FORWARD
-            )
-            right_pwm = Utils.map_range(
-                right_pwm, -1.0, 1.0, self.MAX_REVERSE, self.MAX_FORWARD
-            )
+
+            # Trim values to ensure they are within bounds
+            left_speed = self.trim_out_of_bound_value(left_speed)
+            right_speed = self.trim_out_of_bound_value(right_speed)
+
+            # Map speeds to PWM range
+            if left_speed > 0:
+                left_pwm = Utils.map_range(
+                    left_speed, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD
+                )
+            else:
+                left_pwm = Utils.map_range(
+                    left_speed, -1.0, 0, self.MAX_REVERSE, self.STOPPED_PWM
+                )
+
+            if right_speed > 0:
+                right_pwm = Utils.map_range(
+                    right_speed, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD
+                )
+            else:
+                right_pwm = Utils.map_range(
+                    right_speed, -1.0, 0, self.MAX_REVERSE, self.STOPPED_PWM
+                )
+
             # Ensure PWM values are integers
             left_pwm = int(left_pwm)
             right_pwm = int(right_pwm)
+
+            # Pass mapped PWM values to write_pwm
             self.write_pwm(left_pwm, right_pwm)
-            logger.info(f"Motors set: left={left_speed}, right={right_speed}")
+            logger.info(
+                f"Motors set: left={left_speed}, right={right_speed} "
+                f"(PWM: left={left_pwm}, right={right_pwm})"
+            )
         except Exception as e:
             logger.error(f"Error setting motor speeds: {e}")
 
