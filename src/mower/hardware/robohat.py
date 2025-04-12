@@ -382,11 +382,20 @@ if __name__ == "__main__":
         print("Testing RoboHATController...")
         for i in range(5):
             print(f"Test iteration {i + 1}")
-            controller.read_serial()
+            controller.angle = 0.5  # Simulate a steering input
+            controller.throttle = 0.7  # Simulate a throttle input
+            # Send PWM command
+            controller.set_pulse(controller.angle, controller.throttle)
             print(
                 f"Angle: {controller.angle}, "
                 f"Throttle: {controller.throttle}"
             )
+            time.sleep(1)
+            # Simulate a stop command
+            controller.angle = 0.0
+            controller.throttle = 0.0
+            controller.set_pulse(controller.angle, controller.throttle)
+            print("Stopping motors.")
             time.sleep(1)
     except KeyboardInterrupt:
         print("Test interrupted.")
