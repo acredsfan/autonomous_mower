@@ -321,6 +321,10 @@ class RoboHATDriver:
         if self.pwm and self.pwm.is_open:
             try:
                 pwm_command = b"%d, %d\r" % (steering, throttle)
+                logger.debug(
+                    f"write_pwm called with steering={steering}, "
+                    f"throttle={throttle}"
+                )
                 self.pwm.write(pwm_command)
                 logger.debug(f"Sent PWM command: {pwm_command}")
             except Exception as e:
@@ -328,7 +332,7 @@ class RoboHATDriver:
         else:
             logger.error(
                 "Cannot write PWM command. PWM serial port is not open."
-                )
+            )
 
     def run(self, steering, throttle):
         self.set_pulse(steering, throttle)
@@ -342,6 +346,10 @@ class RoboHATDriver:
             right_speed: Speed for the right motor (-1.0 to 1.0).
         """
         try:
+            logger.debug(
+                f"Calling write_pwm with left_speed={left_speed}, "
+                f"right_speed={right_speed}"
+            )
             left_pwm = self.trim_out_of_bound_value(left_speed)
             right_pwm = self.trim_out_of_bound_value(right_speed)
             self.write_pwm(left_pwm, right_pwm)
