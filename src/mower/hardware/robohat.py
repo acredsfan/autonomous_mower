@@ -20,9 +20,6 @@ from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
 
-from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
-                             MM1_STEERING_MID, MM1_STOPPED_PWM)
-
 
 logger = LoggerConfig.get_logger(__name__)
 load_dotenv()
@@ -224,10 +221,10 @@ class RoboHATDriver:
     def __init__(self, debug=False):
         # Initialize the Robo HAT using the serial port
         self.debug = debug
-        self.MAX_FORWARD = MM1_MAX_FORWARD
-        self.MAX_REVERSE = MM1_MAX_REVERSE
-        self.STOPPED_PWM = MM1_STOPPED_PWM
-        self.STEERING_MID = MM1_STEERING_MID
+        self.MAX_FORWARD = cfg.MM1_MAX_FORWARD
+        self.MAX_REVERSE = cfg.MM1_MAX_REVERSE
+        self.STOPPED_PWM = cfg.MM1_STOPPED_PWM
+        self.STEERING_MID = cfg.MM1_STEERING_MID
 
         # Read the serial port from environment variables or use default
         MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
@@ -269,49 +266,53 @@ class RoboHATDriver:
             throttle = self.trim_out_of_bound_value(throttle)
 
             if throttle > 0:
-                output_throttle = Utils.map_range(
-                    throttle, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD
-                    )
+                output_throttle = Utils.map_range(throttle,
+                                                  0, 1.0,
+                                                  self.STOPPED_PWM,
+                                                  self.MAX_FORWARD)
             else:
-                output_throttle = Utils.map_range(
-                    throttle, -1, 0, self.MAX_REVERSE, self.STOPPED_PWM
-                    )
+                output_throttle = Utils.map_range(throttle,
+                                                  -1, 0,
+                                                  self.MAX_REVERSE,
+                                                  self.STOPPED_PWM)
 
             if steering > 0:
-                output_steering = Utils.map_range(
-                    steering, 0, 1.0, self.STEERING_MID, 1000
-                    )
+                output_steering = Utils.map_range(steering,
+                                                  0, 1.0,
+                                                  self.STEERING_MID,
+                                                  1000)
             else:
                 output_steering = Utils.map_range(steering,
                                                   -1, 0,
-                                                  2000, self.STEERING_MID)
-
-            # Ensure PWM values are integers
-            output_steering = int(output_steering)
-            output_throttle = int(output_throttle)
+                                                  2000,
+                                                  self.STEERING_MID)
 
             if self.is_valid_pwm_value(output_steering) and \
                self.is_valid_pwm_value(output_throttle):
                 if self.debug:
-                    logger.debug(
-                        f"output_steering={output_steering}, "
-                        f"output_throttle={output_throttle}"
+                    print(
+                        "output_steering=%d, output_throttle=%d" % (
+                            output_steering, output_throttle
                         )
+                    )
                 self.write_pwm(output_steering, output_throttle)
             else:
-                logger.warning(
-                    f"Invalid PWM values: steering = {output_steering}, "
-                    f"throttle = {output_throttle}"
-                    )
-                logger.warning(
-                    "Not sending PWM value to MM1"
-                    )
+                print(
+                    f"Warning: steering = {output_steering}, "
+                    f"STEERING_MID = {self.STEERING_MID}"
+                )
+                print(
+                    f"Warning: throttle = {output_throttle}, "
+                    f"MAX_FORWARD = {self.MAX_FORWARD}, "
+                    f"STOPPED_PWM = {self.STOPPED_PWM}, "
+                    f"MAX_REVERSE = {self.MAX_REVERSE}"
+                )
+                print("Not sending PWM value to MM1")
 
         except OSError as err:
-            logger.error(
-                f"Unexpected issue setting PWM "
-                f"(check wires to motor board): {err}"
-                )
+            print(
+                "Unexpected issue setting PWM (check wires to motor board): "
+                "{0}".format(err))
 
     def is_valid_pwm_value(self, value):
         """Check if the PWM value is within valid range (1000 to 2000)"""
@@ -381,10 +382,6 @@ if __name__ == "__main__":
     # Initialize the configuration (replace with actual configuration object)
     class MockConfig:
         AUTO_RECORD_ON_THROTTLE = True
-        MM1_STEERING_MID = 1500
-        MM1_MAX_FORWARD = 2000
-        MM1_STOPPED_PWM = 1500
-        MM1_MAX_REVERSE = 1000
         MM1_SHOW_STEERING_VALUE = True
         JOYSTICK_DEADZONE = 0.1
         MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
