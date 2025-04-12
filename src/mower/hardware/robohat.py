@@ -374,12 +374,12 @@ if __name__ == "__main__":
 
     cfg = MockConfig()
 
-    # Initialize the RoboHATController
+    # Initialize the RoboHATDriver
     driver = RoboHATDriver(debug=True)
 
     # Test the movement by simulating serial input
     try:
-        print("Testing RoboHATController...")
+        print("Testing RoboHATDriver...")
         for i in range(5):
             try:
                 print(f"Test iteration {i + 1}")
