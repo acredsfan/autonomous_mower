@@ -25,7 +25,7 @@ def send_test_signals():
             for steering, throttle in test_data:
                 # IMPORTANT: No '\r' in the string, just 10 characters "1500,
                 # 1500"
-                command_str = f"{steering}, {throttle}"  # e.g. "1500, 1500"
+                command_str = f"{steering}, {throttle} \r\n"  # e.g. "1500, 1500"
                 ser.write(command_str.encode())
 
                 print(f"Sent: {command_str}")

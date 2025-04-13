@@ -26,7 +26,7 @@ import rotaryio
 
 # Customisation variables
 DEBUG = False
-USB_SERIAL = False
+USB_SERIAL = True
 SMOOTHING_INTERVAL_IN_S = 0.025
 ACCEL_RATE = 10
 USE_QUADRATURE = False  # Set to False to use regular encoder
@@ -64,7 +64,7 @@ if USB_SERIAL:
 
 ## functions
 
-def servo_duty_cycle(pulse_ms, frequency=60):
+def servo_duty_cycle(pulse_ms, frequency=5):
     """
     Calculate the servo duty cycle for a given pulse width in milliseconds.
 
