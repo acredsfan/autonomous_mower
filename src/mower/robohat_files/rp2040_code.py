@@ -1,8 +1,19 @@
-# Donkey Car Driver for 2040-based boards such as the Raspberry Pi Pico and KB2040
-#
-# Notes:
-#   This is to be run using CircuitPython 9.x
-#   Last Updated: 7/07/2024
+"""
+RP2040 Code for Donkey Car Driver
+
+This script is designed to run on RP2040-based boards such as the Raspberry Pi Pico and KB2040. It handles RC control, serial communication, and motor control for the RoboHAT MM1.
+
+Features:
+- Reads RC signals and processes them for steering and throttle.
+- Handles serial communication with a Raspberry Pi for remote control.
+- Supports both RC and serial control modes.
+- Provides encoder feedback for motor position.
+
+Dependencies:
+- CircuitPython 9.x
+
+Last Updated: 10/07/2024
+"""
 
 import time
 import board
@@ -55,7 +66,14 @@ if USB_SERIAL:
 
 def servo_duty_cycle(pulse_ms, frequency=60):
     """
-    Formula for working out the servo duty_cycle at 16 bit input
+    Calculate the servo duty cycle for a given pulse width in milliseconds.
+
+    Args:
+        pulse_ms (float): The pulse width in milliseconds.
+        frequency (int): The frequency of the PWM signal in Hz (default is 60).
+
+    Returns:
+        int: The duty cycle value for the servo (16-bit resolution).
     """
     period_ms = 1.0 / frequency * 1000.0
     duty_cycle = int(pulse_ms / 1000 / (period_ms / 65535.0))
@@ -63,7 +81,13 @@ def servo_duty_cycle(pulse_ms, frequency=60):
 
 def state_changed(control):
     """
-    Reads the RC channel and smoothes value
+    Process and smooth the RC channel values.
+
+    Args:
+        control (Control): The RC control object containing the channel and value.
+
+    Updates:
+        control.value: Smoothed RC value.
     """
     control.channel.pause()
     for i in range(0, len(control.channel)):
@@ -81,10 +105,24 @@ def state_changed(control):
 
 class Control:
     """
-    Class for a RC Control Channel
-    """
+    Represents an RC control channel.
 
+    Attributes:
+        name (str): Name of the control (e.g., 'Steering', 'Throttle').
+        servo (PWMOut): The PWM output object for the control.
+        channel (PulseIn): The RC channel input object.
+        value (int): The current value of the control (e.g., 1500 for neutral).
+    """
     def __init__(self, name, servo, channel, value):
+        """
+        Initialize the Control object.
+
+        Args:
+            name (str): Name of the control.
+            servo (PWMOut): The PWM output object.
+            channel (PulseIn): The RC channel input object.
+            value (int): Initial value for the control.
+        """
         self.name = name
         self.servo = servo
         self.channel = channel
@@ -115,6 +153,16 @@ position1 = 0
 position2 = 0
 
 def main():
+    """
+    Main loop for the RP2040 code.
+
+    - Reads RC signals and updates steering and throttle values.
+    - Handles serial communication with the Raspberry Pi.
+    - Switches between RC and serial control modes based on input.
+    - Provides encoder feedback for motor position.
+
+    Runs indefinitely.
+    """
     global last_update, continuous_mode, continuous_delay, position1, position2
     last_toggle_time = time.monotonic()
     interval = 1  # Seconds
@@ -224,7 +272,7 @@ def main():
                 data = bytearray()
                 datastr = ''
                 got_data = True
- #               print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+        # print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
         if got_data:
             print("Serial control")
             # Set the servo for serial data (received)
@@ -239,6 +287,19 @@ def main():
 
 
 def handle_command(command):
+    """
+    Handle commands received via UART.
+
+    Args:
+        command (str): The command string received from the Raspberry Pi.
+
+    Commands:
+        - 'r': Reset encoder positions to zero.
+        - 'p': Send current positions and control values to the Raspberry Pi.
+        - 'c': Toggle continuous mode or set delay for continuous updates.
+        - 'rc=enable': Enable RC control mode.
+        - 'rc=disable': Disable RC control mode and enable serial control.
+    """
     global position1, position2, continuous_mode, continuous_delay
     if command == 'r':
         position1 = 0
@@ -266,6 +327,6 @@ def handle_command(command):
             else:
                 print("Continuous mode stopped")
 
-# Run
+# Run the main loop
 print("Run!")
 main()

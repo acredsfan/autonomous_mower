@@ -1,44 +1,43 @@
 import serial
 import time
 
-# Configuration
-SERIAL_PORT = "/dev/ttyACM1"  # Update this to match your setup
+SERIAL_PORT = "/dev/ttyACM1"  # Update as needed
 BAUD_RATE = 115200
 
 
 def send_test_signals():
     try:
-        # Open the serial port
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
 
-            # Test data: steering and throttle values
+            # Use 10-character strings like "1500, 1500"
             test_data = [
-                (1500, 1500),  # Neutral
-                (1600, 1500),  # Slight right
-                (1400, 1500),  # Slight left
-                (1500, 1600),  # Forward
-                (1500, 1400),  # Reverse
-                (1600, 1600),  # Forward-right
-                (1400, 1400),  # Reverse-left
-                (1500, 1500),  # Back to neutral
+                (1500, 1500),
+                (1600, 1500),
+                (1400, 1500),
+                (1500, 1600),
+                (1500, 1400),
+                (1600, 1600),
+                (1400, 1400),
+                (1500, 1500),
             ]
 
             for steering, throttle in test_data:
-                # Format the data as expected by code.py
-                command = f"{steering}, {throttle}\r\n"
-                ser.write(command.encode())
-                print(f"Sent: {command.strip()}")
+                # IMPORTANT: No '\r' in the string, just 10 characters "1500,
+                # 1500"
+                command_str = f"{steering}, {throttle}"  # e.g. "1500, 1500"
+                ser.write(command_str.encode())
 
-                # Wait for a response (if any)
-                response = ser.readline().decode().strip()
+                print(f"Sent: {command_str}")
+
+                # Optionally, you can read any echo or prints from
+                # rp2040_code.py
+                time.sleep(0.5)
+                response = ser.read_all().decode().strip()
                 if response:
                     print(f"Received: {response}")
                 else:
                     print("No response received.")
-
-                # Delay between commands
-                time.sleep(1)
 
     except serial.SerialException as e:
         print(f"Error: {e}")
