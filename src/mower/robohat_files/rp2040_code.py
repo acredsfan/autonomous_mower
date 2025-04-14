@@ -1,7 +1,9 @@
 """
 RP2040 Code for Donkey Car Driver
 
-This script is designed to run on RP2040-based boards such as the Raspberry Pi Pico and KB2040. It handles RC control, serial communication, and motor control for the RoboHAT MM1.
+This script is designed to run on RP2040-based boards such as the Raspberry Pi
+Pico and KB2040. It handles RC control, serial communication, and motor
+control for the RoboHAT MM1.
 
 Features:
 - Reads RC signals and processes them for steering and throttle.
@@ -58,11 +60,12 @@ else:
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 
-## cannot have DEBUG and USB_SERIAL
+# cannot have DEBUG and USB_SERIAL
 if USB_SERIAL:
     DEBUG = False
 
-## functions
+# functions
+
 
 def servo_duty_cycle(pulse_ms, frequency=5):
     """
@@ -79,12 +82,14 @@ def servo_duty_cycle(pulse_ms, frequency=5):
     duty_cycle = int(pulse_ms / 1000 / (period_ms / 65535.0))
     return duty_cycle
 
+
 def state_changed(control):
     """
     Process and smooth the RC channel values.
 
     Args:
-        control (Control): The RC control object containing the channel and value.
+        control (Control): The RC control object
+        containing the channel and value.
 
     Updates:
         control.value: Smoothed RC value.
@@ -103,6 +108,7 @@ def state_changed(control):
     control.channel.clear()
     control.channel.resume()
 
+
 class Control:
     """
     Represents an RC control channel.
@@ -113,6 +119,7 @@ class Control:
         channel (PulseIn): The RC channel input object.
         value (int): The current value of the control (e.g., 1500 for neutral).
     """
+
     def __init__(self, name, servo, channel, value):
         """
         Initialize the Control object.
@@ -128,6 +135,7 @@ class Control:
         self.channel = channel
         self.value = value
         self.servo.duty_cycle = servo_duty_cycle(value)
+
 
 # set up serial UART to Raspberry Pi
 uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.001)
@@ -151,6 +159,7 @@ continuous_delay = 0
 
 position1 = 0
 position2 = 0
+
 
 def main():
     """
@@ -190,11 +199,11 @@ def main():
             current_state2 = encoder2.value
 
             if current_state1 != last_state1:  # encoder1 state changed
-                if current_state1 == False:  # Detect falling edge
+                if not current_state1:  # Detect falling edge
                     position1 += 1
 
             if current_state2 != last_state2:  # encoder2 state changed
-                if current_state2 == False:  # Detect falling edge
+                if not current_state2:  # Detect falling edge
                     position2 += 1
 
             last_state1 = current_state1
@@ -202,7 +211,10 @@ def main():
 
         time.sleep(0.01)  # Debounce delay
 
-        if continuous_mode and (current_time - last_toggle_time >= continuous_delay / 1000.0):
+        if continuous_mode and (
+                current_time -
+                last_toggle_time >= continuous_delay /
+                1000.0):
             uart.write(b"%i, %i, %i, %i; %i, %i\r\n" % (
                 int(steering.value), int(throttle.value),
                 position1, int(current_time * 1000),
@@ -235,7 +247,11 @@ def main():
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
-            uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
+            uart.write(
+                b"%i, %i\r\n" %
+                (int(
+                    steering.value), int(
+                    throttle.value)))
             # print(int(steering.value), int(throttle.value))
 
         while True:
@@ -245,8 +261,6 @@ def main():
             # if no data, break and continue with RC control
             if byte is None:
                 break
-
-
 
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
@@ -278,8 +292,10 @@ def main():
             # Set the servo for serial data (received)
             steering.servo.duty_cycle = servo_duty_cycle(steering_val)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle_val)
-            last_input = time.monotonic()  # Only update here when serial data is received
-        elif time.monotonic() > (last_input + 0.1):  # Timeout to switch back to RC control
+            # Only update here when serial data is received
+            last_input = time.monotonic()
+            # Timeout to switch back to RC control
+        elif time.monotonic() > (last_input + 0.1):
             print("RC control")
             # Set the servo for RC control
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
@@ -326,6 +342,7 @@ def handle_command(command):
                 print("Continuous mode started with default delay")
             else:
                 print("Continuous mode stopped")
+
 
 # Run the main loop
 print("Run!")

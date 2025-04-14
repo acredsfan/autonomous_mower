@@ -54,7 +54,11 @@ class RoboHATController:
         self.SERIAL_BAUD_RATE = cfg.MM1_BAUD_RATE
         self.DEAD_ZONE = cfg.JOYSTICK_DEADZONE
         self.debug = debug
-        self.control_mode = 'serial'  # Set default control mode to 'serial'
+        """
+        By default RC control Mode is off,
+        change toggle to "True" to enable RC control.
+        """
+        self.set_rc_control(False)
 
         # Initialize serial port for reading RC inputs
         try:
@@ -74,6 +78,25 @@ class RoboHATController:
         except serial.SerialTimeoutException:
             logger.error("Serial connection for controller input timed out!")
             self.serial = None
+
+    def set_rc_control(self, enable: bool):
+        """
+        Tells the RP2040 to enable or disable reading from the real RC pins.
+        If disable => we send 'rc=disable'
+        If enable => we send 'rc=enable'
+        """
+        if not self.serial or not self.serial.is_open:
+            print("No serial open, cannot set rc_control.")
+            return
+
+        cmd = "rc=enable\r" if enable else "rc=disable\r"
+        self.serial.write(cmd.encode("utf-8"))
+        time.sleep(0.2)
+        resp = self.serial.read_all().decode().strip()
+        if resp:
+            print("RP2040 responded with:", resp)
+        else:
+            print("No response from RP2040.")
 
     def shutdown(self):
         if self.serial and self.serial.is_open:
@@ -225,6 +248,7 @@ class RoboHATDriver:
         self.MAX_REVERSE = cfg.MM1_MAX_REVERSE
         self.STOPPED_PWM = cfg.MM1_STOPPED_PWM
         self.STEERING_MID = cfg.MM1_STEERING_MID
+        self.serial = None
 
         # Read the serial port from environment variables or use default
         MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")

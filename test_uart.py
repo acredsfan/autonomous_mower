@@ -1,16 +1,24 @@
 import serial
 import time
 
-SERIAL_PORT = "/dev/ttyACM1"  # Update as needed
+SERIAL_PORT = "/dev/ttyACM1"
 BAUD_RATE = 115200
 
 
-def send_test_signals():
+def main():
     try:
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
-            print(f"Connected to {SERIAL_PORT} at {BAUD_RATE} baud.")
+            print(f"Connected to {SERIAL_PORT}.")
 
-            # Use 10-character strings like "1500, 1500"
+            # 1) Disable real RC on the RP2040
+            ser.write(b"rc=disable\r")
+            time.sleep(0.2)
+            print("Sent 'rc=disable'")
+            resp = ser.read_all().decode().strip()
+            if resp:
+                print("RP2040 said:", resp)
+
+            # 2) Send servo lines
             test_data = [
                 (1500, 1500),
                 (1600, 1500),
@@ -21,27 +29,31 @@ def send_test_signals():
                 (1400, 1400),
                 (1500, 1500),
             ]
+            for (st, th) in test_data:
+                line = (
+                    f"{st}, {th}\r\n"
+                )
+                ser.write(line.encode())
+                print("Sent:", line.strip())
+                time.sleep(0.4)
+                resp = ser.read_all().decode().strip()
+                if resp:
+                    print("Got back:", resp)
 
-            for steering, throttle in test_data:
-                # IMPORTANT: No '\r' in the string, just 10 characters "1500,
-                # 1500"
-                command_str = f"{steering}, {throttle} \r\n"  # e.g. "1500, 1500"
-                ser.write(command_str.encode())
+            # 3) Re-enable real RC
+            ser.write(b"rc=enable\r")
+            print("Sent 'rc=enable'")
+            time.sleep(0.5)
+            resp = ser.read_all().decode().strip()
+            if resp:
+                print("RP2040 said:", resp)
 
-                print(f"Sent: {command_str}")
-
-                # Optionally, you can read any echo or prints from
-                # rp2040_code.py
-                time.sleep(0.5)
-                response = ser.read_all().decode().strip()
-                if response:
-                    print(f"Received: {response}")
-                else:
-                    print("No response received.")
+            # Now any new lines you send for servo pulses won't be used
+            # if the RP2040 is looking at real RC pins again.
 
     except serial.SerialException as e:
-        print(f"Error: {e}")
+        print("Error opening port:", e)
 
 
 if __name__ == "__main__":
-    send_test_signals()
+    main()
