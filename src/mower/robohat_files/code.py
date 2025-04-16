@@ -1,17 +1,36 @@
+"""
+rp2040_code.py - Hybrid control firmware for RoboHAT RP2040‑Zero
+
+• Uses USB‑CDC data port for Pi communication (console stays on IF00).
+• Gracefully handles boards without `board.LED` or NeoPixel.
+• RC PWM passthrough unless Pi disables it.
+
+Revision 2025‑04‑16‑c
+"""
+
 from __future__ import annotations
 import time
 import board  # type: ignore
-import digitalio  # type: ignore
 import supervisor  # type: ignore
-
-import usb_cdc  # type:ignore
-import busio  # type: ignore
+import digitalio  # type: ignore
 from pwmio import PWMOut  # type: ignore
 from pulseio import PulseIn  # type: ignore
+import usb_cdc  # type:ignore
 
 # -----------------------------------------------------------------------------
-#                              Pin assignments
+# Safe pin helpers ------------------------------------------------------------
+
+LED_PIN = getattr(board, "LED", None)  # some boards have no board.LED
+NEOPIXEL_PIN = getattr(board, "NEOPIXEL", None)
+
 # -----------------------------------------------------------------------------
+# Global state ----------------------------------------------------------------
+
+rc_control_enabled = True  # toggled by UART cmd
+
+# -----------------------------------------------------------------------------
+# Pin map (change here if needed) ---------------------------------------------
+
 RC1_PIN = board.GP6          # steering PWM in
 RC2_PIN = board.GP5          # throttle PWM in
 
@@ -19,56 +38,50 @@ STEERING_PIN = board.GP10    # steering PWM out
 THROTTLE_PIN = board.GP11    # throttle PWM out
 
 # -----------------------------------------------------------------------------
-#                          Global state & constants
-# -----------------------------------------------------------------------------
-USB_SERIAL = False           # reserved for future use
-rc_control_enabled = True    # toggle via UART cmd  rc=enable / rc=disable
+# Hardware init ---------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-#                               Hardware init
-# -----------------------------------------------------------------------------
-# 50 Hz servo PWM (standard)
+# LED heartbeat (optional)
+led = None
+if LED_PIN is not None:
+    led = digitalio.DigitalInOut(LED_PIN)
+    led.direction = digitalio.Direction.OUTPUT
+    led.value = True
+
+# NeoPixel heartbeat (optional)
+pixel = None
+if NEOPIXEL_PIN is not None:
+    try:
+        import neopixel  # type: ignore
+        pixel = neopixel.NeoPixel(NEOPIXEL_PIN, 1, brightness=0.2)
+    except ImportError:
+        pixel = None
+
+# Servo PWM at 50 Hz
 steering_pwm = PWMOut(STEERING_PIN, duty_cycle=0, frequency=50)
 throttle_pwm = PWMOut(THROTTLE_PIN, duty_cycle=0, frequency=50)
 
-# RC pulse capture
+# RC capture
 rc_steering_in = PulseIn(RC1_PIN, maxlen=32, idle_state=0)
 rc_throttle_in = PulseIn(RC2_PIN, maxlen=32, idle_state=0)
 rc_steering_in.resume()
 rc_throttle_in.resume()
 
-# Built‑in LED for heartbeat
-led = digitalio.DigitalInOut(board.LED)
-led.direction = digitalio.Direction.OUTPUT
-led.value = True
-
 # -----------------------------------------------------------------------------
-#                         UART / USB‑CDC selection
-# -----------------------------------------------------------------------------
-# 1) Prefer USB‑CDC data channel (requires boot.py enabling it)
-# 2) Fallback to Pi ↔ RP2040 hardware UART if not present
-#    or powered only via GPIO
+# UART selection --------------------------------------------------------------
 
-uart = None
 if usb_cdc.data is not None and usb_cdc.data.connected:
-    uart = usb_cdc.data
+    uart = usb_cdc.data  # preferred: USB‑CDC IF02
 else:
-    try:
-        uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.1,
-                          receiver_buffer_size=64)
-    except Exception as _:
-        # No UART available – blink rapidly & halt
-        while True:
-            led.value = not led.value
-            time.sleep(0.1)
+    # Fallback to HW UART on GPIO14/15
+    import busio  # type: ignore
+    uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.1,
+                      receiver_buffer_size=64)
 
 # -----------------------------------------------------------------------------
-#                              Helper functions
-# -----------------------------------------------------------------------------
+# Helpers ---------------------------------------------------------------------
 
 
 def us_to_duty(us: int, freq: int = 50) -> int:
-    """Convert microseconds (1000‑2000) to 16‑bit duty."""
     period_ms = 1000.0 / freq
     return int((us / 1000.0) / (period_ms / 65535.0))
 
@@ -81,8 +94,7 @@ def read_last_pulse(chan: PulseIn) -> int | None:
 
 
 # -----------------------------------------------------------------------------
-#                           Command parser & logic
-# -----------------------------------------------------------------------------
+# Command handling ------------------------------------------------------------
 
 def process_cmd(cmd: str) -> None:
     global rc_control_enabled
@@ -110,27 +122,24 @@ def process_cmd(cmd: str) -> None:
 
 
 # -----------------------------------------------------------------------------
-#                               Main loop
-# -----------------------------------------------------------------------------
+# Main loop -------------------------------------------------------------------
 
 def main() -> None:
-    """Co‑operative loop: UART polling + RC PWM passthrough."""
     buffer = ""
     error_count = 0
 
     while True:
         try:
-            # ---------------- UART polling -----------------
+            # UART byte‑wise read
             if uart.in_waiting:
                 ch = uart.read(1).decode(errors="ignore")
                 if ch == "\r":
-                    cmd = buffer.strip().lower()
+                    process_cmd(buffer.strip().lower())
                     buffer = ""
-                    process_cmd(cmd)
                 else:
-                    buffer = (buffer + ch)[-64:]  # keep last 64 chars
+                    buffer = (buffer + ch)[-64:]
 
-            # ---------------- RC passthrough ---------------
+            # RC passthrough when enabled
             if rc_control_enabled:
                 s_us = read_last_pulse(rc_steering_in)
                 t_us = read_last_pulse(rc_throttle_in)
@@ -139,20 +148,25 @@ def main() -> None:
                 if t_us is not None:
                     throttle_pwm.duty_cycle = us_to_duty(t_us)
 
-            # ---------------- Heartbeat --------------------
-            led.value = not led.value
+            # Heartbeat
+            if led:
+                led.value = not led.value
+            if pixel:
+                pixel[0] = (0, int(bool(led) and led.value) * 20, 0)
+
             time.sleep(0.01)
             error_count = 0
         except Exception:
             error_count += 1
             uart.write(b"error\r\n")
-            for _ in range(4):
-                led.value = not led.value
-                time.sleep(0.05)
+            if led:
+                for _ in range(4):
+                    led.value = not led.value
+                    time.sleep(0.05)
             if error_count >= 3:
                 supervisor.reload()
 
 
 if __name__ == "__main__":
-    print("RP2040 Hybrid Firmware: USB‑CDC ready")
+    print("RP2040 Hybrid Firmware (USB‑CDC data mode)")
     main()
