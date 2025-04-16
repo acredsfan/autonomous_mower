@@ -82,77 +82,48 @@ def read_rc_pulse(rc_in):
     return None
 
 
-def main():
-    # Last known “Serial control” pulses
-    serial_steering = 1500
-    serial_throttle = 1500
-
-    buffer_str = ""
-    last_led = time.monotonic()
-    led_on = False
-
+def handle_uart():
+    buffer = ""
     while True:
-        # Basic LED blink
-        now = time.monotonic()
-        if now - last_led > 1:
-            pixel.fill((0, 50, 0) if led_on else (0, 0, 0))
-            led_on = not led_on
-            last_led = now
-
-        # 1) Read RC pulses if rc_control_enabled
-        if rc_control_enabled:
-            # read steering
-            val_s = read_rc_pulse(rc_steering_in)
-            if val_s is not None:
-                # set servo
-                steering_pwm.duty_cycle = us_to_duty(val_s)
-
-            # read throttle
-            val_t = read_rc_pulse(rc_throttle_in)
-            if val_t is not None:
-                throttle_pwm.duty_cycle = us_to_duty(val_t)
-
-        # 2) Read any serial from Pi
-        byte = uart.read(1)
-        if byte is not None:
-            c = byte.decode(errors="ignore")
-            if c == "\r":
-                # Reached end of a command
-                cmd = buffer_str.strip()
-                buffer_str = ""
-                handle_command(cmd)
-            else:
-                buffer_str += c
-
-            # If we gather >=10 chars with a comma => parse
-            if len(buffer_str) >= 10 and "," in buffer_str:
-                parts = buffer_str.split(",")
-                if len(parts) == 2:
+        try:
+            data = uart.read(1)
+            if data:
+                char = data.decode(errors="ignore")
+                if char == "\r":
+                    cmd = buffer.strip()
+                    buffer = ""
                     try:
-                        serial_steering = int(parts[0].strip())
-                        serial_throttle = int(parts[1].strip())
-                        # Echo back the values over UART
-                        uart.write(
-                            (
-                                f"{serial_steering}, {serial_throttle}\r\n"
-                            ).encode()
-                        )
-                        print(
-                            f"Serial control => S={serial_steering}, "
-                            f"T={serial_throttle}")
-                        # If RC is disabled, apply these pulses
-                        if not rc_control_enabled:
-                            steering_pwm.duty_cycle = us_to_duty(
-                                serial_steering)
-                            throttle_pwm.duty_cycle = us_to_duty(
-                                serial_throttle)
-                    except ValueError:
-                        uart.write(b"parse_error\r\n")
-                        print("Parse error for steering, throttle.")
-                buffer_str = ""
+                        if cmd == "rc=enable":
+                            global rc_control_enabled
+                            rc_control_enabled = True
+                            uart.write(b"rc=enable\r\n")
+                        elif cmd == "rc=disable":
+                            rc_control_enabled = False
+                            uart.write(b"rc=disable\r\n")
+                        elif "," in cmd:
+                            parts = cmd.split(",")
+                            if len(parts) == 2:
+                                s = int(parts[0].strip())
+                                t = int(parts[1].strip())
+                                uart.write(f"{s}, {t}\r\n".encode())
+                                # If RC is disabled, apply these pulses
+                                if not rc_control_enabled:
+                                    steering_pwm.duty_cycle = us_to_duty(s)
+                                    throttle_pwm.duty_cycle = us_to_duty(t)
+                            else:
+                                uart.write(b"parse_error\r\n")
+                        else:
+                            uart.write(b"unknown_cmd\r\n")
+                    except Exception:
+                        uart.write(b"error\r\n")
+                else:
+                    buffer += char
+            time.sleep(0.01)
+        except Exception:
+            uart.write(b"error\r\n")
+            time.sleep(0.1)
 
-        time.sleep(0.01)
 
-
-print("Run!")
-main()
+if __name__ == "__main__":
+    print("Run!")
+    handle_uart()
