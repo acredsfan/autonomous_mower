@@ -187,6 +187,72 @@ The `.env` file contains all configuration settings. Key sections include:
 
 See `.env.example` for detailed descriptions of each setting.
 
+## Remote Access Setup
+
+The mower supports several remote access methods, configurable via the `.env` file. **Choose only one method at a time** by setting `REMOTE_ACCESS_TYPE` in your `.env`.
+
+### ⚠️ Security Warning: Port Forwarding
+Port forwarding exposes your mower’s web interface directly to the internet. **This is not recommended unless you fully understand the risks and have secured your device (strong passwords, firewall, etc.).** For most users, DDNS, Cloudflare Tunnel, or NGROK are safer options.
+
+### 1. Port Forwarding
+- Set in `.env`:
+  ```
+  REMOTE_ACCESS_TYPE=port_forward
+  ```
+- Manually configure your router to forward the web UI port (default: 5000) to your mower’s local IP.
+- Access your mower at `http://<your-public-ip>:5000`.
+
+### 2. Dynamic DNS (DDNS)
+- Set in `.env`:
+  ```
+  REMOTE_ACCESS_TYPE=ddns
+  DDNS_PROVIDER=duckdns  # or noip
+  DDNS_DOMAIN=your-domain.duckdns.org
+  DDNS_TOKEN=your-token
+  ```
+- The setup script will install and configure the DDNS client.
+- Combine with port forwarding for external access.
+
+### 3. Cloudflare Tunnel
+- Set in `.env`:
+  ```
+  REMOTE_ACCESS_TYPE=cloudflare
+  CLOUDFLARE_TOKEN=your-token
+  CLOUDFLARE_ZONE_ID=your-zone-id
+  CLOUDFLARE_TUNNEL_NAME=mower-tunnel
+  ```
+- The setup script will install and configure Cloudflare Tunnel.
+- No port forwarding required; Cloudflare provides a secure public URL.
+
+### 4. Custom Domain with SSL
+- Set in `.env`:
+  ```
+  REMOTE_ACCESS_TYPE=custom_domain
+  CUSTOM_DOMAIN=mower.yourdomain.com
+  SSL_EMAIL=your-email@example.com
+  ```
+- The setup script will install Certbot and configure SSL for your domain.
+- You must own the domain and point its DNS to your mower’s public IP.
+
+### 5. NGROK
+- Set in `.env`:
+  ```
+  REMOTE_ACCESS_TYPE=ngrok
+  NGROK_AUTH_TOKEN=your-token
+  NGROK_DOMAIN=your-reserved-domain.ngrok.io  # Optional
+  ```
+- The setup script will install and configure NGROK.
+- NGROK provides a secure tunnel and public URL.
+
+### Running the Setup
+After editing your `.env`, run:
+
+```bash
+python3 src/mower/utilities/setup_remote_access.py
+```
+
+Check the logs for success or error messages. For more details, see the comments in `.env.example` and the [Remote Access Setup Utility](src/mower/utilities/setup_remote_access.py).
+
 ## Safety Features
 
 1. **Emergency Stop Button**

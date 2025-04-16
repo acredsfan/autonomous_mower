@@ -413,6 +413,17 @@ chmod 755 /var/log/autonomous-mower
 # Success message
 print_success "Installation completed successfully!"
 
+# Prompt to run environment configurator
+echo ""
+echo "You can now configure your environment (.env) file interactively."
+echo "Would you like to run the environment configurator now? (y/n): "
+read yn
+if [ "$yn" = "y" ] || [ "$yn" = "Y" ]; then
+    python3 src/mower/utilities/env_configurator.py
+else
+    echo "You can run it later with: python3 src/mower/utilities/env_configurator.py"
+fi
+
 # Remove trap and exit successfully
 trap - EXIT
 exit 0
