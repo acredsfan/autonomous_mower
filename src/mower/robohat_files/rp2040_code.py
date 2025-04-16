@@ -18,13 +18,13 @@ Last Updated: 10/07/2024
 """
 
 import time
-import board
-import busio
-import neopixel
-from pulseio import PulseIn
-from pwmio import PWMOut
-import digitalio
-import rotaryio
+import board  # type:ignore
+import busio  # type:ignore
+import neopixel  # type:ignore
+from pulseio import PulseIn  # type:ignore
+from pwmio import PWMOut  # type:ignore
+import digitalio  # type:ignore
+import rotaryio  # type:ignore
 
 # Customisation variables
 DEBUG = False

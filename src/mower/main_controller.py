@@ -105,8 +105,8 @@ class ResourceManager:
             self._resources["gpio"]._initialize()
 
             # Initialize I2C bus
-            from busio import I2C
-            import board
+            from busio import I2C  # type:ignore
+            import board  # type:ignore
             i2c = I2C(board.SCL, board.SDA)
 
             # Initialize sensors

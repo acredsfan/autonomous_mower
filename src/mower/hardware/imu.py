@@ -24,9 +24,9 @@ import threading
 import struct
 from enum import Enum
 
-import adafruit_bno08x
-from adafruit_bno08x.uart import BNO08X_UART
-from dotenv import load_dotenv
+import adafruit_bno08x  # type:ignore
+from adafruit_bno08x.uart import BNO08X_UART  # type:ignore
+from dotenv import load_dotenv  # type:ignore
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.hardware.serial_port import SerialPort
 
@@ -473,7 +473,7 @@ class BNO085Sensor:
             - Check USB connections if using a USB-to-serial adapter
             - On Linux, verify user has permissions to access serial ports
         """
-        import serial.tools.list_ports
+        import serial.tools.list_ports  # type:ignore
 
         # Get list of available ports
         available_ports = list(serial.tools.list_ports.comports())

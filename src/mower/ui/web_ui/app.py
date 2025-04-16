@@ -1,13 +1,13 @@
 """Flask web interface for the autonomous mower."""
 
-from flask import (
+from flask import (  # type:ignore
     Flask,
     jsonify,
     render_template,
     request
 )
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask_cors import CORS  # type:ignore
+from flask_socketio import SocketIO, emit  # type:ignore
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -86,9 +86,9 @@ def create_app(mower):
             data = request.get_json()
             settings = data.get('settings', {})
             mowing = settings.get('mowing', {})
-            
+
             path_planner = mower.resource_manager.get_path_planner()
-            
+
             # Update pattern planner settings
             if 'pattern' in mowing:
                 path_planner.pattern_config.pattern_type = (
@@ -100,7 +100,7 @@ def create_app(mower):
                 path_planner.pattern_config.angle = float(mowing['angle'])
             if 'overlap' in mowing:
                 path_planner.pattern_config.overlap = float(mowing['overlap'])
-            
+
             return jsonify({'success': True})
         except Exception as e:
             logger.error(f"Failed to save settings: {e}")

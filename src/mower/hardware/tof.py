@@ -1,6 +1,6 @@
 import time
 
-import adafruit_vl53l0x
+import adafruit_vl53l0x  # type:ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig

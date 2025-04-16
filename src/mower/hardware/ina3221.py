@@ -1,4 +1,4 @@
-import barbudor_ina3221.full as INA3221
+import barbudor_ina3221.full as INA3221  # type:ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig

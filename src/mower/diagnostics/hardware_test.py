@@ -47,7 +47,7 @@ except ImportError as e:
 # Ensure RPi.GPIO is imported conditionally to handle environments
 # without GPIO support
 try:
-    import RPi.GPIO as GPIO
+    import RPi.GPIO as GPIO  # type:ignore
 except ImportError:
     GPIO = None  # Handle gracefully if GPIO is not available
 
@@ -330,7 +330,7 @@ class HardwareTestSuite:
                 return False
 
             # This just checks if we can access the GPIO library without errors
-            import RPi.GPIO as GPIO
+            import RPi.GPIO as GPIO  # type:ignore
             # Check if GPIO is accessible
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(18, GPIO.OUT)

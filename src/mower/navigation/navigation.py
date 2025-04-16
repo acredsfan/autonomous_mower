@@ -3,7 +3,7 @@ import time
 from math import atan2, cos, radians, sin, sqrt
 from typing import Optional, Tuple, Dict
 
-import utm
+import utm  # type:ignore
 from dataclasses import dataclass
 
 from mower.hardware.robohat import RoboHATDriver

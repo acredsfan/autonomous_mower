@@ -12,9 +12,9 @@ Updated version based on recommendations.
 
 import os
 import time
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type:ignore
 
-import serial
+import serial  # type:ignore
 from mower.utilities.utils import Utils
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig

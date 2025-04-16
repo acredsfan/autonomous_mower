@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import os
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type:ignore
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig,
 )

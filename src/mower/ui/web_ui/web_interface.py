@@ -2,8 +2,8 @@
 
 import threading
 from typing import TYPE_CHECKING, Optional
-from flask import Flask
-from flask_socketio import SocketIO
+from flask import Flask  # type:ignore
+from flask_socketio import SocketIO  # type:ignore
 
 from mower.utilities import LoggerConfigInfo
 from mower.ui.web_ui.app import create_app

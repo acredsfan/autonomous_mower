@@ -3,11 +3,11 @@ rp2040_code.py - Hybrid: RC input by default, can be disabled via UART
 """
 
 import time
-import board
-import busio
-import neopixel
-from pulseio import PulseIn
-from pwmio import PWMOut
+import board  # type: ignore
+import busio  # type: ignore
+import neopixel  # type: ignore
+from pulseio import PulseIn  # type: ignore
+from pwmio import PWMOut  # type: ignore
 
 USB_SERIAL = False
 rc_control_enabled = True  # <--- This is our global toggle
@@ -51,12 +51,15 @@ def handle_command(cmd):
     cmd = cmd.strip().lower()
     if cmd == "rc=enable":
         rc_control_enabled = True
+        uart.write(b"rc=enable\r\n")
         print("RC Control Enabled.")
     elif cmd == "rc=disable":
         rc_control_enabled = False
+        uart.write(b"rc=disable\r\n")
         print("RC Control Disabled.")
     else:
         # You can add other commands like 'r', 'p', etc.
+        uart.write((cmd + "\r\n").encode())
         print(f"Ignoring unknown cmd: {cmd}")
 
 
@@ -128,6 +131,12 @@ def main():
                     try:
                         serial_steering = int(parts[0].strip())
                         serial_throttle = int(parts[1].strip())
+                        # Echo back the values over UART
+                        uart.write(
+                            (
+                                f"{serial_steering}, {serial_throttle}\r\n"
+                            ).encode()
+                        )
                         print(
                             f"Serial control => S={serial_steering}, "
                             f"T={serial_throttle}")
@@ -138,6 +147,7 @@ def main():
                             throttle_pwm.duty_cycle = us_to_duty(
                                 serial_throttle)
                     except ValueError:
+                        uart.write(b"parse_error\r\n")
                         print("Parse error for steering, throttle.")
                 buffer_str = ""
 

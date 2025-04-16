@@ -4,9 +4,9 @@ import threading
 import time
 from typing import Tuple
 
-import serial
-import serial.tools.list_ports
-from dotenv import load_dotenv
+import serial  # type:ignore
+import serial.tools.list_ports  # type:ignore
+from dotenv import load_dotenv  # type:ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig

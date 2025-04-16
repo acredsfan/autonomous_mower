@@ -3,8 +3,8 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
-import board
-import busio
+import board  # type:ignore
+import busio  # type:ignore
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )

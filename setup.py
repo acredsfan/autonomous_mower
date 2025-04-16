@@ -1,5 +1,5 @@
 # setup.py
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages  # type:ignore
 
 setup(
     name="autonomous_mower",

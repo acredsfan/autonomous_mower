@@ -11,7 +11,7 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type:ignore
 
 from mower.utilities.logger_config import LoggerConfigInfo
 

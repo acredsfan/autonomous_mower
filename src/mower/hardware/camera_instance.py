@@ -8,8 +8,8 @@ only one instance of the camera is active at a time.
 import os
 import socket
 import threading
-import cv2
-from dotenv import load_dotenv
+import cv2  # type:ignore
+from dotenv import load_dotenv  # type:ignore
 from typing import Optional, Union
 
 from mower.utilities.logger_config import (

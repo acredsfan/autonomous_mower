@@ -1,8 +1,18 @@
-import serial
+import serial  # type:ignore
 import time
 
 SERIAL_PORT = "/dev/ttyACM1"
 BAUD_RATE = 115200
+
+
+def read_response(ser, timeout=1.0):
+    """Read a line from serial with timeout, return as string."""
+    ser.timeout = timeout
+    try:
+        resp = ser.readline().decode(errors="ignore").strip()
+        return resp
+    except Exception:
+        return ""
 
 
 def main():
@@ -12,11 +22,12 @@ def main():
 
             # 1) Disable real RC on the RP2040
             ser.write(b"rc=disable\r")
-            time.sleep(0.2)
             print("Sent 'rc=disable'")
-            resp = ser.read_all().decode().strip()
+            resp = read_response(ser)
             if resp:
                 print("RP2040 said:", resp)
+            else:
+                print("No response from RP2040.")
 
             # 2) Send servo lines
             test_data = [
@@ -30,26 +41,24 @@ def main():
                 (1500, 1500),
             ]
             for (st, th) in test_data:
-                line = (
-                    f"{st}, {th}\r\n"
-                )
+                line = f"{st}, {th}\r\n"
                 ser.write(line.encode())
                 print("Sent:", line.strip())
-                time.sleep(0.4)
-                resp = ser.read_all().decode().strip()
+                resp = read_response(ser)
                 if resp:
                     print("Got back:", resp)
+                else:
+                    print("No response for servo command.")
+                time.sleep(0.4)
 
             # 3) Re-enable real RC
             ser.write(b"rc=enable\r")
             print("Sent 'rc=enable'")
-            time.sleep(0.5)
-            resp = ser.read_all().decode().strip()
+            resp = read_response(ser)
             if resp:
                 print("RP2040 said:", resp)
-
-            # Now any new lines you send for servo pulses won't be used
-            # if the RP2040 is looking at real RC pins again.
+            else:
+                print("No response from RP2040.")
 
     except serial.SerialException as e:
         print("Error opening port:", e)

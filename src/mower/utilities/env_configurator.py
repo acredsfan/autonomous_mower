@@ -1,6 +1,6 @@
 import os
 import shutil
-from dotenv import load_dotenv, set_key
+from dotenv import load_dotenv, set_key  # type:ignore
 from pathlib import Path
 
 

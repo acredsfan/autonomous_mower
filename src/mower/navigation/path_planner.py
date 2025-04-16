@@ -569,7 +569,7 @@ class PathPlanner:
             path_array = np.array(path)
 
             # Calculate convex hull of path points
-            from scipy.spatial import ConvexHull
+            from scipy.spatial import ConvexHull  # type:ignore
             hull = ConvexHull(path_array)
 
             # Calculate area of convex hull

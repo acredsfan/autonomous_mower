@@ -23,12 +23,12 @@ from mower.navigation.gps import (
     GpsNmeaPositions, GpsLatestPosition, GpsPosition
     )
 from mower.navigation.localization import Localization
-from mower.navigation.path_planning import PathPlanner
+from mower.navigation.path_planning import PathPlanner  # type:ignore
 from mower.navigation.navigation import NavigationController
 
 # Obstacle Detection imports
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
-from mower.obstacle_detection.local_obstacle_detection import (
+from mower.obstacle_detection.local_obstacle_detection import (  # type:ignore
     detect_obstacle, detect_drop, stream_frame_with_overlays
     )
 
@@ -81,8 +81,8 @@ def get_blade_controller():
 def get_bme280_sensor():
     global _bme280_sensor
     if _bme280_sensor is None:
-        from busio import I2C
-        import board
+        from busio import I2C  # type:ignore
+        import board  # type:ignore
         i2c = I2C(board.SCL, board.SDA)
         _bme280_sensor = BME280Sensor()
         _bme280_sensor._initialize(i2c)
