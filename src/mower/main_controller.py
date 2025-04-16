@@ -392,7 +392,7 @@ class RobotController:
             self.current_state = SystemState.IDLE
 
             # Initialize all resources
-            self.resource_manager.init_all_resources()
+            self.resource_manager.initialize()
 
             # Initialize key components for quick access
             self.blade_controller = (
@@ -429,7 +429,7 @@ class RobotController:
             logger.info("Shutting down robot...")
             if hasattr(self, 'avoidance_algorithm'):
                 self.avoidance_algorithm.stop()
-            self.resource_manager.cleanup_all_resources()
+            self.resource_manager.cleanup()
 
     def _main_control_loop(self):
         """
@@ -825,9 +825,7 @@ def main():
 
     try:
         # Initialize all resources
-        if not resource_manager.init_all_resources():
-            logger.error("Failed to initialize resources. Exiting.")
-            return
+        resource_manager.initialize()
 
         # Create the robot controller
         robot_controller = RobotController(resource_manager)
@@ -861,7 +859,7 @@ def main():
         logger.exception(f"An error occurred in the main function: {e}")
     finally:
         # Ensure all resources are properly cleaned up
-        resource_manager.cleanup_all_resources()
+        resource_manager.cleanup()
         logger.info("Main controller exited.")
 
 

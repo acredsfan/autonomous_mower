@@ -253,6 +253,60 @@ python3 src/mower/utilities/setup_remote_access.py
 
 Check the logs for success or error messages. For more details, see the comments in `.env.example` and the [Remote Access Setup Utility](src/mower/utilities/setup_remote_access.py).
 
+## Custom Domain & Remote Access Setup
+
+To access your mower remotely using a custom domain or public IP, follow these steps:
+
+### 1. Get Your Raspberry Pi's Public IP Address
+
+On your Raspberry Pi, run:
+
+```
+curl ifconfig.me
+```
+
+or
+
+```
+curl ipinfo.io/ip
+```
+
+This will display your public IP address. You will need this to set up remote access or configure your custom domain.
+
+### 2. Port Forwarding
+
+- Log in to your home router's admin page.
+- Set up port forwarding to forward external traffic (e.g., port 80 or 443) to your Raspberry Pi's local IP address and the port your mower web UI is running on (default: 5000).
+- Make sure your Raspberry Pi has a static local IP or DHCP reservation.
+
+### 3. (Optional) Use a Dynamic DNS Service
+
+If your public IP changes periodically, use a Dynamic DNS (DDNS) service (e.g., DuckDNS, No-IP) to get a hostname that always points to your current IP. Follow the DDNS provider's instructions to set up a client on your Pi.
+
+### 4. Setting Up a Custom Domain
+
+- Register a domain name with your preferred registrar.
+- Set an A record for your domain to point to your public IP (from step 1).
+- If using DDNS, set a CNAME record to your DDNS hostname instead.
+
+### 5. Secure Remote Access (Recommended)
+
+- Enable SSL in your .env file (`ENABLE_SSL=True`) and provide valid certificate and key paths.
+- Consider using a reverse proxy (e.g., Nginx) for added security and flexibility.
+- Optionally, restrict access by IP or enable authentication in your .env file.
+
+### 6. Test Remote Access
+
+- From a device outside your home network, visit `http://<your-public-ip>:<port>` or your custom domain.
+- Ensure you can access the mower web UI securely.
+
+### Troubleshooting
+
+- If you can't connect, check your router's port forwarding, firewall settings, and that your Pi's web UI is running.
+- Use `ping <your-public-ip>` and `telnet <your-public-ip> <port>` to test connectivity.
+
+For more details, see the `docs/setup_remote_access.md` or the [Remote Access](docs/hardware_setup.md#remote-access) section.
+
 ## Safety Features
 
 1. **Emergency Stop Button**
