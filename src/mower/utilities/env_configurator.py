@@ -2,7 +2,6 @@ import os
 import shutil
 from dotenv import load_dotenv, set_key
 from pathlib import Path
-import re
 
 
 def prompt_choice(prompt, choices, default=None):
@@ -72,7 +71,8 @@ def validate_lat_lng(value, field_name):
         return True
     except Exception:
         print(
-            f"[ERROR] {field_name} must be in format: lat,lng (e.g. 39.1,-84.5)")
+            f"[ERROR] {field_name} must be in format: lat,lng "
+            f"(e.g. 39.1,-84.5)")
         return False
 
 
@@ -121,7 +121,8 @@ def prompt_bool(prompt, default=None, help_text=None):
             print(f"[HELP] {line}")
     while True:
         val = input(
-            f"{prompt} (y/n)" + (f" (default: {default}): " if default is not None else ": ")
+            f"{prompt} (y/n)" +
+            (f" (default: {default}): " if default is not None else ": ")
         )
         if not val and default is not None:
             return default
@@ -151,14 +152,21 @@ def update_env_var(env_path, key, value):
 
 def configure_google_maps(env_path):
     print_section_header(
-        "[Google Maps Settings]", "Configure your Google Maps integration for the mower's web UI. "
-        "You can get your API key and map ID from the Google Cloud Console. "
-        "For map centering, right-click your location on https://www.google.com/maps and select 'What's here?' to get coordinates.")
+        "[Google Maps Settings]",
+        ("Configure your Google Maps integration for the mower's web UI. "
+         "You can get your API key and map ID from the Google Cloud Console. "
+         "For map centering, right-click your location on "
+         "https://www.google.com/maps and select 'What's here?' "
+         "to get coordinates."))
     gmaps_key = prompt_value(
         "Google Maps API Key",
         os.getenv("GOOGLE_MAPS_API_KEY"),
         required=True,
-        extra_info="Get an API key at: https://developers.google.com/maps/documentation/javascript/get-api-key",
+        extra_info=(
+            "Get an API key at: "
+            ("https://developers.google.com/maps/documentation/"
+             "javascript/get-api-key")
+        ),
         field_name="Google Maps API Key")
     update_env_var(env_path, "GOOGLE_MAPS_API_KEY", gmaps_key)
     gmaps_map_id = prompt_value(
@@ -333,7 +341,9 @@ def configure_security(env_path):
     enable_ssl = prompt_bool(
         "Enable SSL?", os.getenv(
             "ENABLE_SSL", "True") == "True")
-    ssl_cert = prompt_value("SSL certificate path", os.getenv("SSL_CERT_PATH"))
+    ssl_cert = prompt_value(
+        "SSL certificate path",
+        os.getenv("SSL_CERT_PATH"))
     ssl_key = prompt_value("SSL key path", os.getenv("SSL_KEY_PATH"))
     auth_required = prompt_bool(
         "Require authentication?", os.getenv(
@@ -662,7 +672,10 @@ def configure_backup_recovery(env_path):
 
 def main():
     print("\n=== Autonomous Mower Environment Configurator ===\n")
-    print("This tool will guide you through configuring your .env file for all mower features.\nYou can skip any optional field by pressing Enter.\n")
+    print(
+        "This tool will guide you through configuring your .env file for all "
+        "mower features.\nYou can skip any optional field by pressing Enter.\n"
+    )
     env_path = ensure_env_exists()
     load_dotenv(dotenv_path=env_path, override=True)
     configure_google_maps(env_path)
@@ -693,8 +706,12 @@ def main():
     configure_collision_detection(env_path)
     configure_safety_zones(env_path)
     configure_backup_recovery(env_path)
-    print("\n[INFO] .env updated! You can re-run this tool anytime to update environment settings.")
-    print("[INFO] For help, see the README or documentation in the 'docs/' folder.")
+    print(
+        "\n[INFO] .env updated! You can re-run this tool anytime to update "
+        "environment settings."
+    )
+    print("[INFO] For help, see the README or documentation in the 'docs/' "
+          "folder.")
 
 
 if __name__ == "__main__":
