@@ -8,6 +8,8 @@ import busio  # type: ignore
 import neopixel  # type: ignore
 from pulseio import PulseIn  # type: ignore
 from pwmio import PWMOut  # type: ignore
+import supervisor  # type: ignore
+import digitalio  # type: ignore
 
 USB_SERIAL = False
 rc_control_enabled = True  # <--- This is our global toggle
@@ -32,8 +34,19 @@ throttle_pwm = PWMOut(THROTTLE_PIN, duty_cycle=0, frequency=60)
 rc_steering_in = PulseIn(RC1, maxlen=64, idle_state=0)
 rc_throttle_in = PulseIn(RC2, maxlen=64, idle_state=0)
 
-# Setup UART for Pi <-> Pico
-uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.001)
+# Minimal startup LED indicator for debugging
+led = digitalio.DigitalInOut(board.LED)
+led.direction = digitalio.Direction.OUTPUT
+led.value = True  # Turn on LED to show code.py is running
+
+try:
+    # Setup UART for Pi <-> Pico
+    uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.1)
+except Exception as e:
+    # If UART fails, blink LED rapidly and halt
+    while True:
+        led.value = not led.value
+        time.sleep(0.1)
 
 # For a NeoPixel “heartbeat”
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
@@ -118,10 +131,17 @@ def handle_uart():
                         uart.write(b"error\r\n")
                 else:
                     buffer += char
-            time.sleep(0.01)
-        except Exception:
+            # Blink LED to show main loop is alive
+            led.value = not led.value
+            time.sleep(0.2)
+        except Exception as e:
             uart.write(b"error\r\n")
-            time.sleep(0.1)
+            # Blink LED rapidly to indicate error
+            for _ in range(10):
+                led.value = not led.value
+                time.sleep(0.05)
+            # Optionally, soft reset if in a bad state
+            supervisor.reload()
 
 
 if __name__ == "__main__":
