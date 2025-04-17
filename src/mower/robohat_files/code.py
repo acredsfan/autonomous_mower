@@ -1,9 +1,9 @@
 # code.py  —  UART‑only control firmware for RoboHAT RP2040‑Zero
 #
-# • Listens on hardware UART (GP0/GP1) at 115200 baud
+# • Listens on hardware UART (GP0→Pi RX, GP1←Pi TX) at 115200 baud
 # • Parses rc=enable, rc=disable, “steer,throttle” tuples
 # • Applies PWM (50 Hz) to GP10/GP11
-# Revision 2025‑04‑17
+# Revision 2025‑04‑17‑gp
 
 import time
 import board  # type: ignore
@@ -14,8 +14,18 @@ from pulseio import PulseIn  # type: ignore
 import busio  # type: ignore
 
 # —————————————————————————————————————————————————————
-# UART setup (GP0→Pi RX, GP1←Pi TX)
-uart = busio.UART(board.TX, board.RX, baudrate=115200, timeout=0.1)
+# Explicit UART pins: GP0=TX, GP1=RX
+uart = busio.UART(board.GP0, board.GP1, baudrate=115200, timeout=0.1)
+# startup blink & banner
+try:
+    led = digitalio.DigitalInOut(board.LED)
+    led.direction = digitalio.Direction.OUTPUT
+    for _ in range(3):
+        led.value = not led.value
+        time.sleep(0.1)
+    led.value = False
+except Exception:
+    pass
 uart.write(b"RP2040_UART_READY\r\n")
 
 # —————————————————————————————————————————————————————
@@ -32,15 +42,6 @@ rc_steering_in = PulseIn(board.GP6, maxlen=32, idle_state=0)
 rc_throttle_in = PulseIn(board.GP5, maxlen=32, idle_state=0)
 rc_steering_in.resume()
 rc_throttle_in.resume()
-
-# Heartbeat LED if available
-try:
-    led = digitalio.DigitalInOut(board.LED)
-    led.direction = digitalio.Direction.OUTPUT
-    led.value = True
-except Exception:
-    led = None
-
 # —————————————————————————————————————————————————————
 
 
@@ -87,17 +88,15 @@ buf = ""
 errors = 0
 while True:
     try:
-        # Read one byte if available
         data = uart.read(1)
         if data:
             c = data.decode(errors="ignore")
             if c == "\r":
                 process_cmd(buf)
                 buf = ""
-            elif c not in ("\n",):
+            elif c != "\n":
                 buf = (buf + c)[-64:]
 
-        # RC‑fallback passthrough
         if rc_control_enabled:
             s_us = read_last_pulse(rc_steering_in)
             t_us = read_last_pulse(rc_throttle_in)
@@ -106,19 +105,11 @@ while True:
             if t_us is not None:
                 throttle_pwm.duty_cycle = us_to_duty(t_us)
 
-        # LED heartbeat
-        if led:
-            led.value = not led.value
-
         time.sleep(0.01)
         errors = 0
 
     except Exception:
         errors += 1
         uart.write(b"error\r\n")
-        if led:
-            for _ in range(3):
-                led.value = not led.value
-                time.sleep(0.05)
         if errors >= 3:
             supervisor.reload()
