@@ -3,7 +3,7 @@
 # • log() writes to both USB console (print) and hardware UART
 # • Startup banner, init steps, RX bytes, commands all visible on /dev/serial0
 # • Retains PWM & RC‑fallback features
-# Revision 2025-04-18-minimal-blink-debug
+# Revision 2025-04-18-minimal-blink-try-gp16
 
 import time
 import board  # type: ignore
@@ -30,7 +30,8 @@ RC_THROTTLE_PIN = board.GP5
 # Common options for RP2040-Zero boards include:
 # board.GP25, board.GP16, board.GP17
 # Check your specific board's documentation.
-LED_PIN = board.GP25
+# --- Trying GP16 now ---
+LED_PIN = board.GP16
 
 PWM_FREQUENCY = 50
 LOOP_DELAY_SECONDS = 0.05  # Slightly increased delay
@@ -57,7 +58,7 @@ def log(msg: str) -> None:
     # UART write attempt removed
 
 
-log(">>> code.py starting (minimal-blink-debug build)")
+log(">>> code.py starting (minimal-blink-try-gp16 build)")
 log("NOTE: Hardware UART TX/RX is DISABLED for this test.")
 
 # —————————————————————————————————————————————————————
@@ -168,7 +169,7 @@ while True:
             led.value = led_state
             last_led_toggle_time = current_time
             # Print message to console to show this code is being reached
-            print(f"Loop {loop_counter}: Toggling LED state to {led_state}")
+            print(f"Loop {loop_counter}: Toggling LED state to {led_state} on pin {LED_PIN}")
             loop_counter += 1
 
         # --- Loop Delay ---
