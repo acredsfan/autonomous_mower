@@ -3,7 +3,7 @@
 # • log() writes to both USB console (print) and hardware UART
 # • Startup banner, init steps, RX bytes, commands all visible on /dev/serial0
 # • Retains PWM & RC‑fallback features
-# Revision 2025-04-18-minimal-blink
+# Revision 2025-04-18-minimal-blink-debug
 
 import time
 import board  # type: ignore
@@ -13,7 +13,7 @@ import digitalio  # type: ignore
 from pwmio import PWMOut  # type: ignore
 from pulseio import PulseIn  # type: ignore
 import traceback  # type: ignore
-import microcontroller # For CPU temp/freq if needed later
+import microcontroller  # For CPU temp/freq if needed later
 
 # —————————————————————————————————————————————————————
 # Configuration
@@ -25,14 +25,20 @@ PWM_STEERING_PIN = board.GP10
 PWM_THROTTLE_PIN = board.GP11
 RC_STEERING_PIN = board.GP6
 RC_THROTTLE_PIN = board.GP5
-LED_PIN = board.GP25 # Verify this pin is correct!
+
+# *** MOST LIKELY ISSUE: Verify this is the correct LED pin! ***
+# Common options for RP2040-Zero boards include:
+# board.GP25, board.GP16, board.GP17
+# Check your specific board's documentation.
+LED_PIN = board.GP25
+
 PWM_FREQUENCY = 50
-LOOP_DELAY_SECONDS = 0.05 # Slightly increased delay
+LOOP_DELAY_SECONDS = 0.05  # Slightly increased delay
 
 # —————————————————————————————————————————————————————
 # Setup UART (GP0=TX, GP1=RX)
 # —————————————————————————————————————————————————————
-uart = None # UART DISABLED FOR TEST
+uart = None  # UART DISABLED FOR TEST
 # try:
 #     uart = busio.UART(UART_TX_PIN, UART_RX_PIN, baudrate=UART_BAUD, timeout=0.01)
 #     print("UART initialized") # Print to console only
@@ -43,12 +49,15 @@ uart = None # UART DISABLED FOR TEST
 # —————————————————————————————————————————————————————
 # Logging Function (Console Only)
 # —————————————————————————————————————————————————————
+
+
 def log(msg: str) -> None:
     """Log ONLY to USB console."""
     print(msg)
     # UART write attempt removed
 
-log(">>> code.py starting (minimal-blink build)")
+
+log(">>> code.py starting (minimal-blink-debug build)")
 log("NOTE: Hardware UART TX/RX is DISABLED for this test.")
 
 # —————————————————————————————————————————————————————
@@ -56,15 +65,22 @@ log("NOTE: Hardware UART TX/RX is DISABLED for this test.")
 # —————————————————————————————————————————————————————
 led = None
 try:
+    log(f"Attempting to initialize LED on pin: {LED_PIN}...")
     led = digitalio.DigitalInOut(LED_PIN)
     led.direction = digitalio.Direction.OUTPUT
-    led.value = False
-    log(f"LED initialized on pin: {LED_PIN}")
+    led.value = False  # Start with LED off
+    log(f"LED successfully initialized on pin: {LED_PIN}")
 except AttributeError:
     log(f"LED init failed: Pin {LED_PIN} not found or invalid.")
+    log("Please check the LED_PIN setting in the code!")
+except ValueError as e:
+    log(f"LED init failed: Pin {LED_PIN} likely already in use ({e})")
+    log("Please check the LED_PIN setting and other pin assignments.")
 except Exception as e:
     log(f"LED init failed: {e}")
+    log("Please check the LED_PIN setting in the code!")
 
+# Initial blink to show script start (if LED initialized)
 if led:
     led.value = True
     time.sleep(0.1)
@@ -73,7 +89,7 @@ if led:
 # —————————————————————————————————————————————————————
 # Send Startup Banner (Console Only)
 # —————————————————————————————————————————————————————
-log("RP2040_CONSOLE_READY") # Changed message as UART is off
+log("RP2040_CONSOLE_READY")  # Changed message as UART is off
 
 # —————————————————————————————————————————————————————
 # PWM Outputs (Initialize but not used in loop)
@@ -98,8 +114,10 @@ rc_throttle_in = None
 try:
     rc_steering_in = PulseIn(RC_STEERING_PIN, maxlen=32, idle_state=0)
     rc_throttle_in = PulseIn(RC_THROTTLE_PIN, maxlen=32, idle_state=0)
-    rc_steering_in.clear(); rc_throttle_in.clear()
-    rc_steering_in.resume(); rc_throttle_in.resume()
+    rc_steering_in.clear()
+    rc_throttle_in.clear()
+    rc_steering_in.resume()
+    rc_throttle_in.resume()
     log(f"PulseIn inputs initialized (Steering: {RC_STEERING_PIN}, Throttle: {RC_THROTTLE_PIN})")
 except Exception as e:
     log(f"PulseIn init failed: {e}")
@@ -131,6 +149,7 @@ log("Entering main loop (minimal blink test)...")
 loop_errors = 0
 last_led_toggle_time = time.monotonic()
 led_state = False
+loop_counter = 0  # Counter for debug print
 
 while True:
     try:
@@ -144,17 +163,17 @@ while True:
         pass
 
         # --- LED Heartbeat ---
-        if led and (current_time - last_led_toggle_time >= 0.5): # Toggle every 0.5 seconds
-             led_state = not led_state
-             led.value = led_state
-             last_led_toggle_time = current_time
-             # Maybe print a dot to the console periodically to show activity
-             # if led_state: print(".", end="")
-
+        if led and (current_time - last_led_toggle_time >= 0.5):  # Toggle every 0.5 seconds
+            led_state = not led_state
+            led.value = led_state
+            last_led_toggle_time = current_time
+            # Print message to console to show this code is being reached
+            print(f"Loop {loop_counter}: Toggling LED state to {led_state}")
+            loop_counter += 1
 
         # --- Loop Delay ---
         time.sleep(LOOP_DELAY_SECONDS)
-        loop_errors = 0 # Reset error counter on successful loop iteration
+        loop_errors = 0  # Reset error counter on successful loop iteration
 
     except KeyboardInterrupt:
         log("KeyboardInterrupt detected. Exiting loop.")
@@ -163,7 +182,7 @@ while True:
         loop_errors += 1
         log(f"Main loop exception ({loop_errors}/3): {e}")
         try:
-            traceback.print_exc() # Print to console
+            traceback.print_exc()  # Print to console
         except Exception as trace_e:
             log(f"Error printing traceback: {trace_e}")
 
@@ -179,13 +198,18 @@ while True:
 # Cleanup
 # —————————————————————————————————————————————————————
 log("Exiting script.")
-if steering_pwm: steering_pwm.duty_cycle = 0
-if throttle_pwm: throttle_pwm.duty_cycle = 0
+if steering_pwm:
+    steering_pwm.duty_cycle = 0
+if throttle_pwm:
+    throttle_pwm.duty_cycle = 0
 log("PWMs zeroed.")
 
 # Deinitialize peripherals
-if rc_steering_in: rc_steering_in.deinit()
-if rc_throttle_in: rc_throttle_in.deinit()
-if led: led.deinit()
+if rc_steering_in:
+    rc_steering_in.deinit()
+if rc_throttle_in:
+    rc_throttle_in.deinit()
+if led:
+    led.deinit()
 log("Peripherals deinitialized.")
 # No UART to deinitialize
