@@ -1,10 +1,9 @@
-# code.py — UART debug build for RoboHAT RP2040‑Zero
+# code.py — UART + Console dual logging firmware for RoboHAT RP2040‑Zero
 #
-# • Logs incoming bytes from hardware UART to USB console
-# • Prints startup banner on both USB console & hardware UART
-# • Echoes parsed commands back to USB console
-# • Keeps existing PWM & RC‑fallback logic
-# Revision 2025‑04‑18‑debug
+# • log() writes to both USB console (print) and hardware UART
+# • Startup banner, init steps, RX bytes, commands all visible on /dev/serial0
+# • Retains PWM & RC‑fallback features
+# Revision 2025‑04‑18‑dual
 
 import time
 import board  # type: ignore
@@ -15,48 +14,51 @@ from pwmio import PWMOut  # type: ignore
 from pulseio import PulseIn  # type: ignore
 import traceback  # type: ignore
 
-print(">>> code.py starting (debug build)")
+# —————————————————————————————————————————————————————
+# Setup UART (GP0=TX, GP1=RX)
+uart = busio.UART(board.GP0, board.GP1, baudrate=115200, timeout=0.1)
+
+def log(msg: str) -> None:
+    """Log to USB console and hardware UART."""
+    print(msg)
+    try:
+        uart.write((msg + "\r\n").encode())
+    except Exception:
+        pass
+
+log(">>> code.py starting (dual-logging build)")
 
 # LED init
 try:
     led = digitalio.DigitalInOut(board.LED)
     led.direction = digitalio.Direction.OUTPUT
-    print("LED initialized")
+    log("LED initialized")
 except Exception as e:
-    print("LED init failed:", e)
+    log(f"LED init failed: {e}")
     led = None
 
-# UART setup (GP0=TX, GP1=RX)
-try:
-    uart = busio.UART(board.GP0, board.GP1, baudrate=115200, timeout=0.1)
-    print("UART initialized on GP0/GP1")
-    banner = b"RP2040_UART_READY\r\n"
-    uart.write(banner)
-    print("UART banner sent")
-except Exception as e:
-    print("UART init failed:", e)
-    supervisor.reload()
+# Send startup banner
+log("RP2040_UART_READY")
 
-# PWM outputs init
+# PWM outputs
 try:
     steering_pwm = PWMOut(board.GP10, duty_cycle=0, frequency=50)
     throttle_pwm = PWMOut(board.GP11, duty_cycle=0, frequency=50)
-    print("PWM outputs initialized (GP10/GP11)")
+    log("PWM outputs initialized (GP10/GP11)")
 except Exception as e:
-    print("PWM init failed:", e)
+    log(f"PWM init failed: {e}")
     supervisor.reload()
 
-# PulseIn inputs init
+# PulseIn inputs (RC fallback)
 try:
     rc_steering_in = PulseIn(board.GP6, maxlen=32, idle_state=0)
     rc_throttle_in = PulseIn(board.GP5, maxlen=32, idle_state=0)
     rc_steering_in.resume()
     rc_throttle_in.resume()
-    print("PulseIn inputs initialized (GP6/GP5)")
+    log("PulseIn inputs initialized (GP6/GP5)")
 except Exception as e:
-    print("PulseIn init failed:", e)
+    log(f"PulseIn init failed: {e}")
 
-# State
 rc_control_enabled = True
 
 def us_to_duty(us: int, freq: int = 50) -> int:
@@ -72,7 +74,7 @@ def read_last_pulse(chan: PulseIn) -> int | None:
 def process_cmd(cmd: str) -> None:
     global rc_control_enabled
     cmd = cmd.strip().lower()
-    print("Processing cmd:", cmd)
+    log(f"Processing cmd: {cmd}")
     if cmd == "rc=disable":
         rc_control_enabled = False
         uart.write(b"rc=disable\r\n")
@@ -81,20 +83,20 @@ def process_cmd(cmd: str) -> None:
         uart.write(b"rc=enable\r\n")
     elif "," in cmd:
         try:
-            s_str, t_str = cmd.split(",", 1)
-            s_val = int(s_str.strip())
-            t_val = int(t_str.strip())
-            uart.write(f"{s_val},{t_val}\r\n".encode())
+            s, t = [int(x.strip()) for x in cmd.split(",",1)]
+            uart.write(f"{s},{t}\r\n".encode())
+            log(f"Applied steer={s},throttle={t}")
             if not rc_control_enabled:
-                steering_pwm.duty_cycle = us_to_duty(s_val)
-                throttle_pwm.duty_cycle = us_to_duty(t_val)
+                steering_pwm.duty_cycle = us_to_duty(s)
+                throttle_pwm.duty_cycle = us_to_duty(t)
         except Exception as e:
             uart.write(b"parse_error\r\n")
-            print("parse_error:", e)
+            log(f"parse_error: {e}")
     else:
         uart.write(b"unknown_cmd\r\n")
+        log(f"unknown_cmd: {cmd}")
 
-print("Entering main loop")
+log("Entering main loop")
 buf = ""
 errors = 0
 
@@ -102,13 +104,12 @@ while True:
     try:
         data = uart.read(1)
         if data:
-            # Log every received byte
+            # Always log raw chars
             try:
                 ch = data.decode("utf-8")
             except:
                 ch = repr(data)
-            print("HW_RX:", ch)
-            # Build command buffer
+            log(f"HW_RX: {ch}")
             if ch == "\r":
                 process_cmd(buf)
                 buf = ""
@@ -124,7 +125,6 @@ while True:
             if t_us is not None:
                 throttle_pwm.duty_cycle = us_to_duty(t_us)
 
-        # LED heartbeat
         if led:
             led.value = not led.value
 
@@ -133,7 +133,7 @@ while True:
 
     except Exception as e:
         errors += 1
-        print("Loop exception:", e)
+        log(f"Loop exception: {e}")
         traceback.print_exc()
         uart.write(b"error\r\n")
         if errors >= 3:
