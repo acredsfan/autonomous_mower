@@ -1,7 +1,7 @@
 import serial  # type:ignore
 import time
 
-SERIAL_PORT = "/dev/serial0"   # GPIO14/15 hardware UART
+SERIAL_PORT = "/dev/ttyACM1"   # GPIO14/15 hardware UART
 BAUD_RATE = 115200
 
 
