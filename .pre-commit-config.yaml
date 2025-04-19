@@ -1,0 +1,86 @@
+# Pre-commit hooks configuration for autonomous_mower
+# This file configures pre-commit hooks to run automatically before each commit
+# to ensure code quality and consistency.
+
+repos:
+  # Basic pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(.*\.md|.*\.csv|.*\.txt)$
+      - id: end-of-file-fixer
+        exclude: ^(.*\.csv|.*\.txt)$
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: detect-private-key
+
+  # Black for code formatting
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+        exclude: ^(venv/|\.venv/|\.git/|\.tox/|build/|dist/)
+
+  # isort for import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length", "88"]
+        exclude: ^(venv/|\.venv/|\.git/|\.tox/|build/|dist/)
+
+  # Flake8 for linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [
+          'flake8-docstrings>=1.6.0',
+          'flake8-bugbear>=22.1.11',
+        ]
+        args: [
+          '--max-line-length=88',
+          '--extend-ignore=E203,W503,D100,D104',
+          '--exclude=venv,\.venv,\.git,\.tox,build,dist'
+        ]
+
+  # mypy for type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [
+          'types-requests',
+          'types-PyYAML',
+        ]
+        args: [
+          '--ignore-missing-imports',
+          '--disallow-untyped-defs',
+          '--disallow-incomplete-defs',
+          '--check-untyped-defs',
+          '--disallow-untyped-decorators',
+          '--no-implicit-optional',
+          '--warn-redundant-casts',
+          '--warn-return-any',
+          '--warn-unused-ignores',
+          '--warn-unused-configs',
+          '--exclude=venv/|\.venv/|\.git/|\.tox/|build/|dist/'
+        ]
+        exclude: ^(venv/|\.venv/|\.git/|\.tox/|build/|dist/)
+
+  # Bandit for security checks
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.7
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        additional_dependencies: ['bandit[toml]']
+        exclude: ^(tests/|venv/|\.venv/|\.git/|\.tox/|build/|dist/)
