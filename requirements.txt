@@ -8,7 +8,7 @@ smbus2==0.4.1
 RPi.GPIO==0.7.0
 adafruit-circuitpython-mpu6050==1.1.9
 flask==3.0.0
-flask-socketio==5.1.0
+flask-socketio==5.5.1
 geopy==2.1.0
 imutils==0.5.4
 networkx==2.6.0
