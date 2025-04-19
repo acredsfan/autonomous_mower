@@ -639,21 +639,55 @@ class Mower:
         Returns:
             The result of the command execution
         """
+        # Validate command
+        if not isinstance(command, str):
+            return {"error": "Command must be a string"}
+
+        # Initialize params if None
         if params is None:
             params = {}
+
+        # Validate params
+        if not isinstance(params, dict):
+            return {"error": "Parameters must be a dictionary"}
 
         self.logger.info(f"Executing command: {command} with params: {params}")
 
         try:
             if command == "move":
-                # Handle manual movement commands
-                direction = params.get("direction")
-                speed = params.get("speed", 0.5)
+                # Validate required parameters
+                if "direction" not in params:
+                    return {"error": "Missing required parameter: direction"}
 
+                direction = params.get("direction")
+
+                # Validate direction
+                if not isinstance(direction, str):
+                    return {"error": "Direction must be a string"}
+
+                valid_directions = ["forward", "backward", "left", "right", "stop"]
+                if direction not in valid_directions:
+                    return {"error": f"Invalid direction: {direction}. Valid directions are: {', '.join(valid_directions)}"}
+
+                # Validate speed parameter
+                speed = params.get("speed", 0.5)
+                if not isinstance(speed, (int, float)):
+                    return {"error": "Speed must be a number"}
+
+                if speed < 0.0 or speed > 1.0:
+                    return {"error": "Speed must be between 0.0 and 1.0"}
+
+                # Validate no unexpected parameters
+                unexpected_params = set(params.keys()) - {"direction", "speed"}
+                if unexpected_params:
+                    return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
+
+                # Get motor driver
                 robohat_driver = self.resource_manager.get_robohat_driver()
                 if not robohat_driver:
                     return {"error": "Motor driver not available"}
 
+                # Execute command
                 if direction == "forward":
                     robohat_driver.forward(speed)
                 elif direction == "backward":
@@ -664,30 +698,44 @@ class Mower:
                     robohat_driver.right(speed)
                 elif direction == "stop":
                     robohat_driver.stop()
-                else:
-                    return {"error": f"Unknown direction: {direction}"}
 
                 return {"success": True}
 
             elif command == "blade":
-                # Handle blade commands
+                # Validate required parameters
+                if "action" not in params:
+                    return {"error": "Missing required parameter: action"}
+
                 action = params.get("action")
 
+                # Validate action
+                if not isinstance(action, str):
+                    return {"error": "Action must be a string"}
+
+                valid_actions = ["start", "stop"]
+                if action not in valid_actions:
+                    return {"error": f"Invalid action: {action}. Valid actions are: {', '.join(valid_actions)}"}
+
+                # Validate no unexpected parameters
+                unexpected_params = set(params.keys()) - {"action"}
+                if unexpected_params:
+                    return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
+
+                # Get blade controller
                 blade_controller = self.resource_manager.get_blade_controller()
                 if not blade_controller:
                     return {"error": "Blade controller not available"}
 
+                # Execute command
                 if action == "start":
                     blade_controller.start_blade()
                 elif action == "stop":
                     blade_controller.stop_blade()
-                else:
-                    return {"error": f"Unknown blade action: {action}"}
 
                 return {"success": True}
 
             else:
-                return {"error": f"Unknown command: {command}"}
+                return {"error": f"Unknown command: {command}. Valid commands are: move, blade"}
 
         except Exception as e:
             self.logger.error(f"Error executing command {command}: {e}")

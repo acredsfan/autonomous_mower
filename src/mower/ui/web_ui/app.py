@@ -319,9 +319,24 @@ def create_app(mower):
     def handle_control_command(data):
         """Handle control commands from client."""
         try:
-            command = data.get('command')
-            params = data.get('params', {})
+            # Validate data
+            if not isinstance(data, dict):
+                raise ValueError("Invalid data format: expected a dictionary")
 
+            # Validate command
+            if 'command' not in data:
+                raise ValueError("Missing required field: command")
+
+            command = data.get('command')
+            if not isinstance(command, str):
+                raise ValueError("Command must be a string")
+
+            # Validate params
+            params = data.get('params', {})
+            if not isinstance(params, dict):
+                raise ValueError("Parameters must be a dictionary")
+
+            # Handle emergency stop separately
             if command == 'emergency_stop':
                 mower.emergency_stop()
                 emit('command_response', {
@@ -329,16 +344,46 @@ def create_app(mower):
                     'success': True,
                     'message': 'Emergency stop activated'
                 })
-            else:
-                # Handle other commands...
+            # Handle other valid commands
+            elif command in ['move', 'blade']:
+                # Execute the command
                 result = mower.execute_command(command, params)
+
+                # Check if there was an error
+                if 'error' in result:
+                    emit('command_response', {
+                        'command': command,
+                        'success': False,
+                        'error': result['error']
+                    })
+                else:
+                    emit('command_response', {
+                        'command': command,
+                        'success': True,
+                        'result': result
+                    })
+            else:
+                # Invalid command
                 emit('command_response', {
                     'command': command,
-                    'success': True,
-                    'result': result
+                    'success': False,
+                    'error': f"Unknown command: {command}. Valid commands are: move, blade, emergency_stop"
                 })
+        except ValueError as e:
+            # Handle validation errors
+            cmd = command if 'command' in locals() else 'unknown'
+            error_msg = f"Validation error for command {cmd}: {str(e)}"
+            logger.error(error_msg)
+            emit(
+                'command_response',
+                {
+                    'command': cmd,
+                    'success': False,
+                    'error': str(e)
+                }
+            )
         except Exception as e:
-            # Handle error case
+            # Handle other errors
             cmd = command if 'command' in locals() else 'unknown'
             error_parts = [
                 "Error handling command",
