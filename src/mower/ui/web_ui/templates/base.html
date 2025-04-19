@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ g.get('lang_code', request.accept_languages.best_match(['en', 'es', 'fr', 'de', 'zh'])) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@400;700&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.4/dist/jquery.min.js"></script>
+    <meta name="theme-color" content="#2e5c1e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -19,21 +24,21 @@
                     <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Autonomous Mower Logo" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22 viewBox%3D%220 0 40 40%22%3E%3Cpath fill%3D%22%234a8e39%22 d%3D%22M20 2C9.5 2 2 9.5 2 20c0 10.5 7.5 18 18 18s18-7.5 18-18c0-10.5-7.5-18-18-18zm0 30c-6.6 0-12-5.4-12-12S13.4 8 20 8s12 5.4 12 12-5.4 12-12 12z%22%2F%3E%3C%2Fsvg%3E'">
                     <span>Autonomous Mower</span>
                 </div>
-                
+
                 <button class="menu-toggle" id="menuToggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                
+
                 <nav class="nav-main">
                     <ul>
                         <li><a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">
-                            <i class="fas fa-home"></i> Dashboard
+                            <i class="fas fa-home"></i> {{ _('Dashboard') }}
                         </a></li>
                         <li><a href="{{ url_for('control') }}" class="{% if request.path == url_for('control') %}active{% endif %}">
-                            <i class="fas fa-gamepad"></i> Control
+                            <i class="fas fa-gamepad"></i> {{ _('Control') }}
                         </a></li>
                         <li><a href="{{ url_for('map_view') }}" class="{% if request.path == url_for('map_view') %}active{% endif %}">
-                            <i class="fas fa-map"></i> Map
+                            <i class="fas fa-map"></i> {{ _('Map') }}
                         </a></li>
                         <li><a href="{{ url_for('diagnostics') }}" class="{% if request.path == url_for('diagnostics') %}active{% endif %}">
                             <i class="fas fa-stethoscope"></i> Diagnostics
@@ -43,14 +48,26 @@
                         </a></li>
                     </ul>
                 </nav>
-                
+
+                <div class="language-selector">
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" id="languageDropdown">
+                            <i class="fas fa-globe"></i>
+                            <span id="currentLanguage">English</span>
+                        </button>
+                        <div class="dropdown-menu" id="languageMenu">
+                            <!-- Language options will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
                 <div class="connection-status">
                     <span class="status-indicator status-online" id="connectionStatus"></span>
                     <span id="connectionText">Connected</span>
                 </div>
             </div>
         </header>
-        
+
         <div class="content-wrapper">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
@@ -70,7 +87,7 @@
                             <span id="gpsStatus">--</span>
                         </div>
                     </div>
-                    
+
                     <h4>Quick Controls</h4>
                     <div class="quick-controls mb-3">
                         <button class="btn btn-primary btn-block mb-1" id="startMowingBtn">
@@ -83,7 +100,7 @@
                             <i class="fas fa-home"></i> Return Home
                         </button>
                     </div>
-                    
+
                     <h4>Navigation</h4>
                     <ul class="sidebar-nav">
                         <li><a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">
@@ -110,18 +127,18 @@
                     </ul>
                 </div>
             </aside>
-            
+
             <!-- Main content -->
             <main class="main-content">
                 <!-- Alerts container -->
                 <div id="alertsContainer"></div>
-                
+
                 <!-- Page content -->
                 {% block content %}
                 {% endblock %}
             </main>
         </div>
-        
+
         <!-- Footer -->
         <footer class="footer">
             <div class="container footer-content">
@@ -134,18 +151,61 @@
             </div>
         </footer>
     </div>
-    
+
     <!-- Core JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.6.1/dist/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/helper.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/mobile-app.js') }}"></script>
+
     <!-- Mobile menu toggle script -->
     <script>
-        document.getElementById('menuToggle').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('show');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sidebar toggle
+            document.getElementById('menuToggle').addEventListener('click', function() {
+                document.getElementById('sidebar').classList.toggle('show');
+                document.querySelector('.nav-main').classList.toggle('show');
+                this.classList.toggle('active');
+
+                // Change icon based on state
+                const icon = this.querySelector('i');
+                if (icon.classList.contains('fa-bars')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                } else {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            });
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', function(event) {
+                const sidebar = document.getElementById('sidebar');
+                const navMain = document.querySelector('.nav-main');
+                const menuToggle = document.getElementById('menuToggle');
+
+                if (sidebar.classList.contains('show') && 
+                    !sidebar.contains(event.target) && 
+                    !menuToggle.contains(event.target)) {
+                    sidebar.classList.remove('show');
+                    navMain.classList.remove('show');
+                    menuToggle.classList.remove('active');
+
+                    // Reset icon
+                    const icon = menuToggle.querySelector('i');
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            });
+
+            // Add dark mode toggle if supported
+            if (window.matchMedia('(prefers-color-scheme)').media !== 'not all') {
+                document.body.classList.add('dark-mode-enabled');
+            }
         });
     </script>
-    
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

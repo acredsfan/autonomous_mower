@@ -35,7 +35,7 @@
                 <div class="status-card-value" id="mowerStateDisplay">Idle</div>
                 <div class="status-card-footer" id="currentAction">Ready</div>
             </div>
-            
+
             <!-- Battery Status -->
             <div class="status-card">
                 <div class="status-card-header">Battery</div>
@@ -45,14 +45,14 @@
                     <span id="chargingStatus"></span>
                 </div>
             </div>
-            
+
             <!-- GPS Status -->
             <div class="status-card">
                 <div class="status-card-header">GPS</div>
                 <div class="status-card-value" id="gpsStatusDisplay">No Fix</div>
                 <div class="status-card-footer" id="satelliteCount">0 satellites</div>
             </div>
-            
+
             <!-- Mowing Progress -->
             <div class="status-card">
                 <div class="status-card-header">Mowing Progress</div>
@@ -82,7 +82,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Quick Controls -->
         <div class="card mb-3">
             <div class="card-header">
@@ -102,11 +102,20 @@
                     <button class="btn btn-secondary" id="dashboardManualBtn">
                         <i class="fas fa-gamepad"></i> Manual Control
                     </button>
+                    <a href="{{ url_for('setup_wizard') }}" class="btn btn-info">
+                        <i class="fas fa-magic"></i> Setup Wizard
+                    </a>
+                    <a href="{{ url_for('schedule') }}" class="btn btn-info">
+                        <i class="fas fa-calendar-alt"></i> Schedule
+                    </a>
+                    <a href="{{ url_for('system_health') }}" class="btn btn-info">
+                        <i class="fas fa-heartbeat"></i> System Health
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Right column - Sensor data and system info -->
     <div class="dashboard-column">
         <!-- Sensor readings -->
@@ -143,7 +152,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- System information -->
         <div class="card mb-3">
             <div class="card-header">
@@ -174,7 +183,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Error alerts -->
         <div class="card card-error mb-3" id="errorCard" style="display: none;">
             <div class="card-header bg-danger text-white">
@@ -197,16 +206,16 @@
     let currentPositionMarker;
     let homePositionMarker;
     let pathLine;
-    
+
     // Initialize map when the page loads
     function initializeMap() {
         map = L.map('mapPreview').setView([0, 0], 18);
-        
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-        
+
         // Create markers but don't add them yet
         currentPositionMarker = L.marker([0, 0], {
             icon: L.divIcon({
@@ -216,7 +225,7 @@
                 iconAnchor: [15, 15]
             })
         });
-        
+
         homePositionMarker = L.marker([0, 0], {
             icon: L.divIcon({
                 className: 'home-marker',
@@ -225,7 +234,7 @@
                 iconAnchor: [15, 15]
             })
         });
-        
+
         // Create path line but don't add it yet
         pathLine = L.polyline([], {
             color: 'var(--grass-medium)',
@@ -233,75 +242,75 @@
             opacity: 0.7
         });
     }
-    
+
     // Update map with new position data
     function updateMap(data) {
         if (!map) return;
-        
+
         // Update current position marker
         if (data.currentPosition) {
             const [lat, lng] = data.currentPosition;
             currentPositionMarker.setLatLng([lat, lng]).addTo(map);
             map.setView([lat, lng], map.getZoom());
         }
-        
+
         // Update home position marker
         if (data.homePosition) {
             const [lat, lng] = data.homePosition;
             homePositionMarker.setLatLng([lat, lng]).addTo(map);
         }
-        
+
         // Update path line
         if (data.waypoints && data.waypoints.length > 0) {
             const pathPoints = data.waypoints.map(wp => [wp.lat, wp.lng]);
             pathLine.setLatLngs(pathPoints).addTo(map);
-            
+
             // Fit map to path if needed
             if (pathPoints.length > 1) {
                 map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
             }
         }
     }
-    
+
     // Update time display
     function updateTimeDisplay() {
         const now = new Date();
         const timeString = now.toLocaleTimeString();
         document.getElementById('timeDisplay').textContent = timeString;
     }
-    
+
     // Initialize page-specific elements
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize map
         initializeMap();
-        
+
         // Update time every second
         updateTimeDisplay();
         setInterval(updateTimeDisplay, 1000);
-        
+
         // Set up dashboard-specific buttons
         document.getElementById('dashboardStartMowingBtn').addEventListener('click', function() {
             sendCommand('start_mowing');
         });
-        
+
         document.getElementById('dashboardStopBtn').addEventListener('click', function() {
             sendCommand('stop');
         });
-        
+
         document.getElementById('dashboardReturnHomeBtn').addEventListener('click', function() {
             sendCommand('return_home');
         });
-        
+
         document.getElementById('dashboardManualBtn').addEventListener('click', function() {
             window.location.href = "{{ url_for('control') }}";
         });
-        
+
         document.getElementById('refreshBtn').addEventListener('click', function() {
             socket.emit('request_data', { type: 'all' });
             showAlert('Refreshing data...', 'info', 2000);
             document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
         });
-        
+
         // Set up error acknowledgment
         document.getElementById('clearErrorBtn').addEventListener('click', function() {
             document.getElementById('errorCard').style.display = 'none';
@@ -318,19 +327,19 @@
         align-items: center;
         margin-bottom: 1.5rem;
     }
-    
+
     .dashboard-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
     }
-    
+
     .map-preview {
         height: 300px;
         border-radius: var(--border-radius);
         overflow: hidden;
     }
-    
+
     .status-card {
         background-color: var(--white);
         border-radius: var(--border-radius);
@@ -339,48 +348,48 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     .status-card-header {
         font-size: 0.875rem;
         color: var(--gray);
         margin-bottom: 0.5rem;
     }
-    
+
     .status-card-value {
         font-size: 1.5rem;
         font-weight: 500;
         margin-bottom: 0.5rem;
         color: var(--dirt-dark);
     }
-    
+
     .status-card-footer {
         font-size: 0.875rem;
         color: var(--dirt-medium);
         margin-top: auto;
     }
-    
+
     .sensor-item {
         text-align: center;
         padding: 1rem;
         background-color: var(--light-gray);
         border-radius: var(--border-radius);
     }
-    
+
     .info-item {
         display: flex;
         justify-content: space-between;
         padding: 0.5rem 0;
         border-bottom: 1px solid var(--dirt-pale);
     }
-    
+
     .info-item:last-child {
         border-bottom: none;
     }
-    
+
     .info-label {
         font-weight: 500;
     }
-    
+
     /* Map markers */
     .mower-marker {
         background-color: var(--grass-medium);
@@ -389,7 +398,7 @@
         line-height: 30px;
         color: white;
     }
-    
+
     .home-marker {
         background-color: var(--dirt-medium);
         border-radius: 50%;
@@ -397,7 +406,7 @@
         line-height: 30px;
         color: white;
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 992px) {
         .dashboard-layout {

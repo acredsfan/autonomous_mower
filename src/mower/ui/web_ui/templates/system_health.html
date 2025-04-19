@@ -1,0 +1,1039 @@
+{% extends "base.html" %}
+
+{% block title %}System Health - Autonomous Mower{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+<style>
+    .health-dashboard {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .health-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+    }
+
+    .health-indicator {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .health-indicator-label {
+        flex: 1;
+        font-weight: 500;
+    }
+
+    .health-indicator-value {
+        text-align: right;
+        font-weight: 500;
+    }
+
+    .health-indicator-status {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-left: 10px;
+    }
+
+    .status-good {
+        background-color: var(--accent-green);
+    }
+
+    .status-warning {
+        background-color: var(--accent-yellow);
+    }
+
+    .status-critical {
+        background-color: var(--accent-red);
+    }
+
+    .threshold-config {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .threshold-label {
+        flex: 1;
+    }
+
+    .threshold-value {
+        width: 80px;
+        margin-left: 10px;
+    }
+
+    .resource-usage {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+    }
+
+    .resource-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+
+    .resource-bar {
+        height: 8px;
+        background-color: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .resource-value {
+        height: 100%;
+        background-color: var(--grass-medium);
+    }
+
+    .resource-value.warning {
+        background-color: var(--accent-yellow);
+    }
+
+    .resource-value.critical {
+        background-color: var(--accent-red);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>System Health Dashboard</h1>
+    <div class="d-flex align-center">
+        <span id="timeDisplay" class="mr-2">--:--:--</span>
+        <button id="refreshBtn" class="btn btn-secondary btn-sm">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="health-dashboard">
+    <!-- System Overview -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>System Overview</h3>
+            <div class="card-header-actions">
+                <span id="lastUpdated">Last updated: --:--:--</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="health-grid">
+                <!-- CPU Usage -->
+                <div class="resource-usage">
+                    <div class="resource-label">
+                        <span>CPU Usage</span>
+                        <span id="cpuUsageValue">---%</span>
+                    </div>
+                    <div class="resource-bar">
+                        <div class="resource-value" id="cpuUsageBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Memory Usage -->
+                <div class="resource-usage">
+                    <div class="resource-label">
+                        <span>Memory Usage</span>
+                        <span id="memoryUsageValue">--- MB / --- MB</span>
+                    </div>
+                    <div class="resource-bar">
+                        <div class="resource-value" id="memoryUsageBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Disk Usage -->
+                <div class="resource-usage">
+                    <div class="resource-label">
+                        <span>Disk Usage</span>
+                        <span id="diskUsageValue">--- GB / --- GB</span>
+                    </div>
+                    <div class="resource-bar">
+                        <div class="resource-value" id="diskUsageBar" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Temperature -->
+                <div class="resource-usage">
+                    <div class="resource-label">
+                        <span>CPU Temperature</span>
+                        <span id="cpuTempValue">---°C</span>
+                    </div>
+                    <div class="resource-bar">
+                        <div class="resource-value" id="cpuTempBar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="system-info mt-3">
+                <div class="info-item">
+                    <div class="info-label">System Uptime:</div>
+                    <div class="info-value" id="systemUptime">-- : -- : --</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Kernel Version:</div>
+                    <div class="info-value" id="kernelVersion">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Python Version:</div>
+                    <div class="info-value" id="pythonVersion">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Application Version:</div>
+                    <div class="info-value" id="appVersion">---</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hardware Health -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Hardware Health</h3>
+        </div>
+        <div class="card-body">
+            <div class="health-grid">
+                <!-- Motors -->
+                <div class="component-health">
+                    <h4>Motors</h4>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Left Motor</div>
+                        <div class="health-indicator-value" id="leftMotorTemp">--°C</div>
+                        <div class="health-indicator-status status-good" id="leftMotorStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Right Motor</div>
+                        <div class="health-indicator-value" id="rightMotorTemp">--°C</div>
+                        <div class="health-indicator-status status-good" id="rightMotorStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Blade Motor</div>
+                        <div class="health-indicator-value" id="bladeMotorTemp">--°C</div>
+                        <div class="health-indicator-status status-good" id="bladeMotorStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Sensors -->
+                <div class="component-health">
+                    <h4>Sensors</h4>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">GPS</div>
+                        <div class="health-indicator-value" id="gpsStatus">--</div>
+                        <div class="health-indicator-status status-good" id="gpsHealthStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">IMU</div>
+                        <div class="health-indicator-value" id="imuStatus">--</div>
+                        <div class="health-indicator-status status-good" id="imuHealthStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Camera</div>
+                        <div class="health-indicator-value" id="cameraStatus">--</div>
+                        <div class="health-indicator-status status-good" id="cameraHealthStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Power -->
+                <div class="component-health">
+                    <h4>Power</h4>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Battery</div>
+                        <div class="health-indicator-value" id="batteryHealth">--%</div>
+                        <div class="health-indicator-status status-good" id="batteryHealthStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Charging Circuit</div>
+                        <div class="health-indicator-value" id="chargingStatus">--</div>
+                        <div class="health-indicator-status status-good" id="chargingHealthStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Power Consumption</div>
+                        <div class="health-indicator-value" id="powerConsumption">-- W</div>
+                        <div class="health-indicator-status status-good" id="powerHealthStatus"></div>
+                    </div>
+                </div>
+
+                <!-- Network -->
+                <div class="component-health">
+                    <h4>Network</h4>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">WiFi Signal</div>
+                        <div class="health-indicator-value" id="wifiSignal">-- dBm</div>
+                        <div class="health-indicator-status status-good" id="wifiHealthStatus"></div>
+                    </div>
+                    <div class="health-indicator">
+                        <div class="health-indicator-label">Network Latency</div>
+                        <div class="health-indicator-value" id="networkLatency">-- ms</div>
+                        <div class="health-indicator-status status-good" id="networkHealthStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historical Data -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Historical Data</h3>
+            <div class="card-header-actions">
+                <select id="timeRangeSelect" class="form-select form-select-sm">
+                    <option value="1h">Last Hour</option>
+                    <option value="6h">Last 6 Hours</option>
+                    <option value="24h" selected>Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-tabs mb-3">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="cpu-tab" data-toggle="tab" href="#cpu-chart">CPU & Temperature</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="memory-tab" data-toggle="tab" href="#memory-chart">Memory</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="battery-tab" data-toggle="tab" href="#battery-chart">Battery</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="network-tab" data-toggle="tab" href="#network-chart">Network</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="cpu-chart">
+                    <div class="chart-container">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="memory-chart">
+                    <div class="chart-container">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="battery-chart">
+                    <div class="chart-container">
+                        <canvas id="batteryChart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="network-chart">
+                    <div class="chart-container">
+                        <canvas id="networkChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Thresholds -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Alert Thresholds</h3>
+            <div class="card-header-actions">
+                <button id="saveThresholdsBtn" class="btn btn-sm btn-success">
+                    <i class="fas fa-save"></i> Save Thresholds
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="health-grid">
+                <!-- CPU Thresholds -->
+                <div class="threshold-group">
+                    <h4>CPU</h4>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Warning Threshold (%)</div>
+                        <input type="number" class="form-control threshold-value" id="cpuWarningThreshold" min="0" max="100" value="70">
+                    </div>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Critical Threshold (%)</div>
+                        <input type="number" class="form-control threshold-value" id="cpuCriticalThreshold" min="0" max="100" value="90">
+                    </div>
+                </div>
+
+                <!-- Memory Thresholds -->
+                <div class="threshold-group">
+                    <h4>Memory</h4>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Warning Threshold (%)</div>
+                        <input type="number" class="form-control threshold-value" id="memoryWarningThreshold" min="0" max="100" value="70">
+                    </div>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Critical Threshold (%)</div>
+                        <input type="number" class="form-control threshold-value" id="memoryCriticalThreshold" min="0" max="100" value="90">
+                    </div>
+                </div>
+
+                <!-- Temperature Thresholds -->
+                <div class="threshold-group">
+                    <h4>Temperature</h4>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Warning Threshold (°C)</div>
+                        <input type="number" class="form-control threshold-value" id="tempWarningThreshold" min="0" max="100" value="70">
+                    </div>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Critical Threshold (°C)</div>
+                        <input type="number" class="form-control threshold-value" id="tempCriticalThreshold" min="0" max="100" value="85">
+                    </div>
+                </div>
+
+                <!-- Battery Thresholds -->
+                <div class="threshold-group">
+                    <h4>Battery</h4>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Low Warning (%)</div>
+                        <input type="number" class="form-control threshold-value" id="batteryWarningThreshold" min="0" max="100" value="30">
+                    </div>
+                    <div class="threshold-config">
+                        <div class="threshold-label">Critical Low (%)</div>
+                        <input type="number" class="form-control threshold-value" id="batteryCriticalThreshold" min="0" max="100" value="15">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Charts for historical data
+    let cpuChart, memoryChart, batteryChart, networkChart;
+
+    // Sample data for demonstration
+    const sampleData = {
+        timestamps: Array.from({length: 24}, (_, i) => {
+            const date = new Date();
+            date.setHours(date.getHours() - 24 + i);
+            return date.toLocaleTimeString();
+        }),
+        cpu: Array.from({length: 24}, () => Math.floor(Math.random() * 60) + 10),
+        temperature: Array.from({length: 24}, () => Math.floor(Math.random() * 30) + 40),
+        memory: Array.from({length: 24}, () => Math.floor(Math.random() * 40) + 30),
+        battery: Array.from({length: 24}, (_, i) => {
+            // Simulate battery discharge and charge cycle
+            const hour = (new Date().getHours() - 24 + i) % 24;
+            if (hour >= 22 || hour < 6) {
+                return Math.min(100, 60 + i % 24 * 1.5); // Charging at night
+            } else {
+                return Math.max(30, 100 - (i % 24) * 1.2); // Discharging during day
+            }
+        }),
+        wifi: Array.from({length: 24}, () => Math.floor(Math.random() * 30) - 80), // dBm values
+        latency: Array.from({length: 24}, () => Math.floor(Math.random() * 100) + 10)
+    };
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize time display
+        updateTimeDisplay();
+        setInterval(updateTimeDisplay, 1000);
+
+        // Initialize charts
+        initializeCharts();
+
+        // Load system health data
+        loadSystemHealthData();
+
+        // Set up refresh button
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            loadSystemHealthData();
+            document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+        });
+
+        // Set up time range selector
+        document.getElementById('timeRangeSelect').addEventListener('change', function() {
+            updateChartTimeRange(this.value);
+        });
+
+        // Set up tab switching
+        document.querySelectorAll('.nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Hide all tab panes
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                });
+
+                // Deactivate all tabs
+                document.querySelectorAll('.nav-link').forEach(t => {
+                    t.classList.remove('active');
+                });
+
+                // Activate clicked tab
+                this.classList.add('active');
+
+                // Show corresponding tab pane
+                const target = this.getAttribute('href');
+                document.querySelector(target).classList.add('show', 'active');
+            });
+        });
+
+        // Set up save thresholds button
+        document.getElementById('saveThresholdsBtn').addEventListener('click', function() {
+            saveAlertThresholds();
+        });
+    });
+
+    // Update time display
+    function updateTimeDisplay() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        document.getElementById('timeDisplay').textContent = timeString;
+    }
+
+    // Initialize charts
+    function initializeCharts() {
+        // CPU and Temperature Chart
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: {
+                labels: sampleData.timestamps,
+                datasets: [
+                    {
+                        label: 'CPU Usage (%)',
+                        data: sampleData.cpu,
+                        borderColor: 'rgba(74, 142, 57, 1)',
+                        backgroundColor: 'rgba(74, 142, 57, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Temperature (°C)',
+                        data: sampleData.temperature,
+                        borderColor: 'rgba(244, 67, 54, 1)',
+                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'CPU Usage (%)'
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // Memory Chart
+        const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+        memoryChart = new Chart(memoryCtx, {
+            type: 'line',
+            data: {
+                labels: sampleData.timestamps,
+                datasets: [{
+                    label: 'Memory Usage (%)',
+                    data: sampleData.memory,
+                    borderColor: 'rgba(3, 169, 244, 1)',
+                    backgroundColor: 'rgba(3, 169, 244, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Memory Usage (%)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Battery Chart
+        const batteryCtx = document.getElementById('batteryChart').getContext('2d');
+        batteryChart = new Chart(batteryCtx, {
+            type: 'line',
+            data: {
+                labels: sampleData.timestamps,
+                datasets: [{
+                    label: 'Battery Level (%)',
+                    data: sampleData.battery,
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Battery Level (%)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Network Chart
+        const networkCtx = document.getElementById('networkChart').getContext('2d');
+        networkChart = new Chart(networkCtx, {
+            type: 'line',
+            data: {
+                labels: sampleData.timestamps,
+                datasets: [
+                    {
+                        label: 'WiFi Signal (dBm)',
+                        data: sampleData.wifi,
+                        borderColor: 'rgba(156, 39, 176, 1)',
+                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Latency (ms)',
+                        data: sampleData.latency,
+                        borderColor: 'rgba(255, 87, 34, 1)',
+                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'WiFi Signal (dBm)'
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Latency (ms)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Load system health data from server
+    function loadSystemHealthData() {
+        // In a real implementation, this would fetch data from the server
+        // For now, we'll use sample data
+
+        // Update system overview
+        updateSystemOverview({
+            cpuUsage: Math.floor(Math.random() * 60) + 10,
+            memoryUsage: {
+                used: Math.floor(Math.random() * 1024) + 512,
+                total: 2048
+            },
+            diskUsage: {
+                used: Math.floor(Math.random() * 10) + 5,
+                total: 32
+            },
+            cpuTemp: Math.floor(Math.random() * 20) + 40,
+            uptime: "1d 6h 32m",
+            kernelVersion: "5.15.0-1015-raspi",
+            pythonVersion: "3.9.2",
+            appVersion: "1.0.0"
+        });
+
+        // Update hardware health
+        updateHardwareHealth({
+            motors: {
+                left: {
+                    temp: Math.floor(Math.random() * 20) + 30,
+                    status: "good"
+                },
+                right: {
+                    temp: Math.floor(Math.random() * 20) + 30,
+                    status: "good"
+                },
+                blade: {
+                    temp: Math.floor(Math.random() * 20) + 35,
+                    status: "good"
+                }
+            },
+            sensors: {
+                gps: {
+                    status: "8 satellites",
+                    health: "good"
+                },
+                imu: {
+                    status: "Calibrated",
+                    health: "good"
+                },
+                camera: {
+                    status: "Active",
+                    health: "good"
+                }
+            },
+            power: {
+                battery: {
+                    health: "92%",
+                    status: "good"
+                },
+                charging: {
+                    status: "Normal",
+                    health: "good"
+                },
+                consumption: {
+                    value: "5.2 W",
+                    health: "good"
+                }
+            },
+            network: {
+                wifi: {
+                    signal: "-67 dBm",
+                    health: "good"
+                },
+                latency: {
+                    value: "45 ms",
+                    health: "good"
+                }
+            }
+        });
+
+        // Update charts with new data
+        updateCharts();
+    }
+
+    // Update system overview section
+    function updateSystemOverview(data) {
+        // CPU Usage
+        document.getElementById('cpuUsageValue').textContent = data.cpuUsage + '%';
+        const cpuBar = document.getElementById('cpuUsageBar');
+        cpuBar.style.width = data.cpuUsage + '%';
+
+        // Update CPU bar color based on usage
+        if (data.cpuUsage > 90) {
+            cpuBar.className = 'resource-value critical';
+        } else if (data.cpuUsage > 70) {
+            cpuBar.className = 'resource-value warning';
+        } else {
+            cpuBar.className = 'resource-value';
+        }
+
+        // Memory Usage
+        const memoryPercent = Math.round((data.memoryUsage.used / data.memoryUsage.total) * 100);
+        document.getElementById('memoryUsageValue').textContent = 
+            `${data.memoryUsage.used} MB / ${data.memoryUsage.total} MB`;
+        const memoryBar = document.getElementById('memoryUsageBar');
+        memoryBar.style.width = memoryPercent + '%';
+
+        // Update memory bar color based on usage
+        if (memoryPercent > 90) {
+            memoryBar.className = 'resource-value critical';
+        } else if (memoryPercent > 70) {
+            memoryBar.className = 'resource-value warning';
+        } else {
+            memoryBar.className = 'resource-value';
+        }
+
+        // Disk Usage
+        const diskPercent = Math.round((data.diskUsage.used / data.diskUsage.total) * 100);
+        document.getElementById('diskUsageValue').textContent = 
+            `${data.diskUsage.used} GB / ${data.diskUsage.total} GB`;
+        const diskBar = document.getElementById('diskUsageBar');
+        diskBar.style.width = diskPercent + '%';
+
+        // Update disk bar color based on usage
+        if (diskPercent > 90) {
+            diskBar.className = 'resource-value critical';
+        } else if (diskPercent > 70) {
+            diskBar.className = 'resource-value warning';
+        } else {
+            diskBar.className = 'resource-value';
+        }
+
+        // CPU Temperature
+        if (data.cpuTemp) {
+            document.getElementById('cpuTempValue').textContent = data.cpuTemp.toFixed(1) + '°C';
+            const tempBar = document.getElementById('cpuTempBar');
+            const tempPercent = Math.min(100, (data.cpuTemp / 100) * 100);
+            tempBar.style.width = tempPercent + '%';
+
+            // Update temperature bar color based on value
+            if (data.cpuTemp > 80) {
+                tempBar.className = 'resource-value critical';
+            } else if (data.cpuTemp > 70) {
+                tempBar.className = 'resource-value warning';
+            } else {
+                tempBar.className = 'resource-value';
+            }
+        } else {
+            document.getElementById('cpuTempValue').textContent = 'N/A';
+            document.getElementById('cpuTempBar').style.width = '0%';
+        }
+
+        // System Info
+        document.getElementById('systemUptime').textContent = data.uptime;
+        document.getElementById('kernelVersion').textContent = data.system_info.kernel_version;
+        document.getElementById('pythonVersion').textContent = data.system_info.python_version;
+        document.getElementById('appVersion').textContent = data.system_info.app_version;
+    }
+
+    // Update hardware health section
+    function updateHardwareHealth(data) {
+        // Motors
+        if (data.motors) {
+            // Left Motor
+            document.getElementById('leftMotorTemp').textContent = data.motors.left.temp + '°C';
+            const leftMotorStatus = document.getElementById('leftMotorStatus');
+            leftMotorStatus.className = 'health-indicator-status status-' + data.motors.left.status;
+
+            // Right Motor
+            document.getElementById('rightMotorTemp').textContent = data.motors.right.temp + '°C';
+            const rightMotorStatus = document.getElementById('rightMotorStatus');
+            rightMotorStatus.className = 'health-indicator-status status-' + data.motors.right.status;
+
+            // Blade Motor
+            document.getElementById('bladeMotorTemp').textContent = data.motors.blade.temp + '°C';
+            const bladeMotorStatus = document.getElementById('bladeMotorStatus');
+            bladeMotorStatus.className = 'health-indicator-status status-' + data.motors.blade.status;
+        }
+
+        // Sensors
+        if (data.sensors) {
+            // GPS
+            document.getElementById('gpsStatus').textContent = data.sensors.gps.status;
+            const gpsHealthStatus = document.getElementById('gpsHealthStatus');
+            gpsHealthStatus.className = 'health-indicator-status status-' + data.sensors.gps.health;
+
+            // IMU
+            document.getElementById('imuStatus').textContent = data.sensors.imu.status;
+            const imuHealthStatus = document.getElementById('imuHealthStatus');
+            imuHealthStatus.className = 'health-indicator-status status-' + data.sensors.imu.health;
+
+            // Camera
+            document.getElementById('cameraStatus').textContent = data.sensors.camera.status;
+            const cameraHealthStatus = document.getElementById('cameraHealthStatus');
+            cameraHealthStatus.className = 'health-indicator-status status-' + data.sensors.camera.health;
+        }
+
+        // Power
+        if (data.power) {
+            // Battery
+            document.getElementById('batteryHealth').textContent = data.power.battery.health;
+            const batteryHealthStatus = document.getElementById('batteryHealthStatus');
+            batteryHealthStatus.className = 'health-indicator-status status-' + data.power.battery.status;
+
+            // Charging Circuit
+            document.getElementById('chargingStatus').textContent = data.power.charging.status;
+            const chargingHealthStatus = document.getElementById('chargingHealthStatus');
+            chargingHealthStatus.className = 'health-indicator-status status-' + data.power.charging.health;
+
+            // Power Consumption
+            document.getElementById('powerConsumption').textContent = data.power.consumption.value;
+            const powerHealthStatus = document.getElementById('powerHealthStatus');
+            powerHealthStatus.className = 'health-indicator-status status-' + data.power.consumption.health;
+        }
+
+        // Network
+        if (data.network) {
+            // WiFi Signal
+            document.getElementById('wifiSignal').textContent = data.network.wifi.signal;
+            const wifiHealthStatus = document.getElementById('wifiHealthStatus');
+            wifiHealthStatus.className = 'health-indicator-status status-' + data.network.wifi.health;
+
+            // Network Latency
+            document.getElementById('networkLatency').textContent = data.network.latency.value;
+            const networkHealthStatus = document.getElementById('networkHealthStatus');
+            networkHealthStatus.className = 'health-indicator-status status-' + data.network.latency.health;
+        }
+    }
+
+    // Update charts with new data
+    function updateCharts() {
+        // In a real implementation, this would update the charts with data from the server
+        // For now, we'll just update with random data
+
+        // Update CPU chart
+        if (cpuChart) {
+            cpuChart.data.labels = sampleData.timestamps;
+            cpuChart.data.datasets[0].data = sampleData.cpu;
+            cpuChart.data.datasets[1].data = sampleData.temperature;
+            cpuChart.update();
+        }
+
+        // Update Memory chart
+        if (memoryChart) {
+            memoryChart.data.labels = sampleData.timestamps;
+            memoryChart.data.datasets[0].data = sampleData.memory;
+            memoryChart.update();
+        }
+
+        // Update Battery chart
+        if (batteryChart) {
+            batteryChart.data.labels = sampleData.timestamps;
+            batteryChart.data.datasets[0].data = sampleData.battery;
+            batteryChart.update();
+        }
+
+        // Update Network chart
+        if (networkChart) {
+            networkChart.data.labels = sampleData.timestamps;
+            networkChart.data.datasets[0].data = sampleData.wifi;
+            networkChart.data.datasets[1].data = sampleData.latency;
+            networkChart.update();
+        }
+    }
+
+    // Update chart time range
+    function updateChartTimeRange(range) {
+        // In a real implementation, this would fetch data for the selected time range
+        // For now, we'll just simulate different data for different ranges
+
+        let dataPoints;
+        switch (range) {
+            case '1h':
+                dataPoints = 60; // One point per minute
+                break;
+            case '6h':
+                dataPoints = 72; // One point per 5 minutes
+                break;
+            case '24h':
+                dataPoints = 24; // One point per hour
+                break;
+            case '7d':
+                dataPoints = 168; // One point per hour for 7 days
+                break;
+            case '30d':
+                dataPoints = 30; // One point per day
+                break;
+            default:
+                dataPoints = 24;
+        }
+
+        // Generate new sample data with the appropriate number of points
+        sampleData.timestamps = Array.from({length: dataPoints}, (_, i) => {
+            const date = new Date();
+            if (range === '1h') {
+                date.setMinutes(date.getMinutes() - dataPoints + i);
+                return date.toLocaleTimeString();
+            } else if (range === '6h') {
+                date.setMinutes(date.getMinutes() - (dataPoints * 5) + (i * 5));
+                return date.toLocaleTimeString();
+            } else if (range === '24h') {
+                date.setHours(date.getHours() - dataPoints + i);
+                return date.toLocaleTimeString();
+            } else if (range === '7d') {
+                date.setHours(date.getHours() - dataPoints + i);
+                return date.toLocaleDateString() + ' ' + date.getHours() + ':00';
+            } else {
+                date.setDate(date.getDate() - dataPoints + i);
+                return date.toLocaleDateString();
+            }
+        });
+
+        // Generate new data for each chart
+        sampleData.cpu = Array.from({length: dataPoints}, () => Math.floor(Math.random() * 60) + 10);
+        sampleData.temperature = Array.from({length: dataPoints}, () => Math.floor(Math.random() * 30) + 40);
+        sampleData.memory = Array.from({length: dataPoints}, () => Math.floor(Math.random() * 40) + 30);
+        sampleData.battery = Array.from({length: dataPoints}, (_, i) => {
+            // Simulate battery discharge and charge cycle
+            const hour = (new Date().getHours() - dataPoints + i) % 24;
+            if (hour >= 22 || hour < 6) {
+                return Math.min(100, 60 + i % 24 * 1.5); // Charging at night
+            } else {
+                return Math.max(30, 100 - (i % 24) * 1.2); // Discharging during day
+            }
+        });
+        sampleData.wifi = Array.from({length: dataPoints}, () => Math.floor(Math.random() * 30) - 80);
+        sampleData.latency = Array.from({length: dataPoints}, () => Math.floor(Math.random() * 100) + 10);
+
+        // Update charts with new data
+        updateCharts();
+    }
+
+    // Save alert thresholds
+    function saveAlertThresholds() {
+        // Get threshold values from form
+        const thresholds = {
+            cpu: {
+                warning: parseInt(document.getElementById('cpuWarningThreshold').value),
+                critical: parseInt(document.getElementById('cpuCriticalThreshold').value)
+            },
+            memory: {
+                warning: parseInt(document.getElementById('memoryWarningThreshold').value),
+                critical: parseInt(document.getElementById('memoryCriticalThreshold').value)
+            },
+            temperature: {
+                warning: parseInt(document.getElementById('tempWarningThreshold').value),
+                critical: parseInt(document.getElementById('tempCriticalThreshold').value)
+            },
+            battery: {
+                warning: parseInt(document.getElementById('batteryWarningThreshold').value),
+                critical: parseInt(document.getElementById('batteryCriticalThreshold').value)
+            }
+        };
+
+        // Send to server
+        fetch('/api/save-thresholds', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ thresholds: thresholds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Alert thresholds saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save thresholds: ' + (data.error || 'Unknown error'), 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Error: ' + error.message, 'danger');
+        });
+    }

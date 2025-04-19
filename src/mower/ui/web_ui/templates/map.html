@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Mowing Patterns - Autonomous Mower{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    .pattern-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .pattern-card {
+        flex: 1;
+        min-width: 120px;
+        border: 2px solid transparent;
+        border-radius: var(--border-radius);
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background-color: var(--white);
+    }
+    
+    .pattern-card:hover {
+        border-color: var(--grass-light);
+        background-color: var(--grass-pale);
+    }
+    
+    .pattern-card.active {
+        border-color: var(--grass-medium);
+        background-color: var(--grass-pale);
+    }
+    
+    .pattern-icon {
+        font-size: 24px;
+        margin-bottom: 5px;
+        color: var(--grass-medium);
+    }
+    
+    .pattern-name {
+        font-weight: 500;
+    }
+    
+    .settings-group {
+        margin-bottom: 15px;
+    }
+    
+    .settings-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .settings-item {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .coverage-info {
+        display: flex;
+        align-items: center;
+        margin-top: 10px;
+    }
+    
+    .coverage-bar {
+        flex: 1;
+        height: 10px;
+        background-color: #e0e0e0;
+        border-radius: 5px;
+        margin: 0 10px;
+        overflow: hidden;
+    }
+    
+    .coverage-progress {
+        height: 100%;
+        background-color: var(--grass-medium);
+        width: 0%;
+        transition: width 0.5s ease;
+    }
+    
+    @media (max-width: 768px) {
+        .pattern-card {
+            min-width: 100px;
+        }
+        
+        .settings-item {
+            min-width: 150px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Mowing Pattern Visualization</h1>
+    <div class="d-flex align-center">
+        <span class="status-indicator" id="mapConnectionStatus"></span>
+        <span id="mapStatusText" class="mr-2">Connected</span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Pattern Selection</h3>
+    </div>
+    <div class="card-body">
+        <div class="pattern-selector">
+            <div class="pattern-card" data-pattern="PARALLEL">
+                <div class="pattern-icon"><i class="fas fa-grip-lines"></i></div>
+                <div class="pattern-name">Parallel</div>
+            </div>
+            <div class="pattern-card" data-pattern="SPIRAL">
+                <div class="pattern-icon"><i class="fas fa-circle-notch"></i></div>
+                <div class="pattern-name">Spiral</div>
+            </div>
+            <div class="pattern-card" data-pattern="ZIGZAG">
+                <div class="pattern-icon"><i class="fas fa-wave-square"></i></div>
+                <div class="pattern-name">Zigzag</div>
+            </div>
+            <div class="pattern-card" data-pattern="CHECKERBOARD">
+                <div class="pattern-icon"><i class="fas fa-th-large"></i></div>
+                <div class="pattern-name">Checkerboard</div>
+            </div>
+            <div class="pattern-card" data-pattern="DIAMOND">
+                <div class="pattern-icon"><i class="fas fa-diamond"></i></div>
+                <div class="pattern-name">Diamond</div>
+            </div>
+            <div class="pattern-card" data-pattern="WAVES">
+                <div class="pattern-icon"><i class="fas fa-water"></i></div>
+                <div class="pattern-name">Waves</div>
+            </div>
+            <div class="pattern-card" data-pattern="CONCENTRIC">
+                <div class="pattern-icon"><i class="fas fa-bullseye"></i></div>
+                <div class="pattern-name">Concentric</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 col-lg-8">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Map View</h3>
+                <div class="card-header-actions">
+                    <button id="toggle-satellite" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-satellite"></i> Toggle Satellite
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="map" class="map-container"></div>
+                <div class="coverage-info mt-2">
+                    <span>Coverage:</span>
+                    <div class="coverage-bar">
+                        <div class="coverage-progress" id="coverageProgress"></div>
+                    </div>
+                    <span id="coveragePercent">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Pattern Settings</h3>
+            </div>
+            <div class="card-body">
+                <div class="settings-group">
+                    <label for="patternSpacing" class="form-label">Spacing (meters)</label>
+                    <input type="range" class="form-control" id="patternSpacing" min="0.1" max="2.0" step="0.1" value="0.5">
+                    <div class="d-flex justify-between">
+                        <span>0.1m</span>
+                        <span id="spacingValue">0.5m</span>
+                        <span>2.0m</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <label for="patternAngle" class="form-label">Angle (degrees)</label>
+                    <input type="range" class="form-control" id="patternAngle" min="0" max="359" step="1" value="0">
+                    <div class="d-flex justify-between">
+                        <span>0°</span>
+                        <span id="angleValue">0°</span>
+                        <span>359°</span>
+                    </div>
+                </div>
+                
+                <div class="settings-group">
+                    <label for="patternOverlap" class="form-label">Overlap</label>
+                    <input type="range" class="form-control" id="patternOverlap" min="0" max="0.5" step="0.05" value="0.1">
+                    <div class="d-flex justify-between">
+                        <span>0%</span>
+                        <span id="overlapValue">10%</span>
+                        <span>50%</span>
+                    </div>
+                </div>
+                
+                <button id="applySettings" class="btn btn-primary btn-block mt-3">
+                    <i class="fas fa-check"></i> Apply Settings
+                </button>
+                
+                <button id="saveSettings" class="btn btn-success btn-block mt-2">
+                    <i class="fas fa-save"></i> Save as Default
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3>Pattern Statistics</h3>
+            </div>
+            <div class="card-body">
+                <div class="stats-item d-flex justify-between mb-2">
+                    <span>Total Area:</span>
+                    <span id="totalArea">-- m²</span>
+                </div>
+                <div class="stats-item d-flex justify-between mb-2">
+                    <span>Path Length:</span>
+                    <span id="pathLength">-- m</span>
+                </div>
+                <div class="stats-item d-flex justify-between mb-2">
+                    <span>Estimated Time:</span>
+                    <span id="estimatedTime">-- min</span>
+                </div>
+                <div class="stats-item d-flex justify-between mb-2">
+                    <span>Battery Usage:</span>
+                    <span id="batteryUsage">--%</span>
+                </div>
+                <div class="stats-item d-flex justify-between">
+                    <span>Efficiency:</span>
+                    <span id="efficiency">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/mowing-patterns.js') }}"></script>
+<script>
+    // Initialize connection status
+    function updateMapConnectionStatus() {
+        const statusIndicator = document.getElementById('mapConnectionStatus');
+        const statusText = document.getElementById('mapStatusText');
+        
+        if (isConnected) {
+            statusIndicator.className = 'status-indicator status-online';
+            statusText.textContent = 'Connected';
+        } else {
+            statusIndicator.className = 'status-indicator status-offline';
+            statusText.textContent = 'Disconnected';
+        }
+    }
+    
+    // Update settings display values
+    document.getElementById('patternSpacing').addEventListener('input', function() {
+        document.getElementById('spacingValue').textContent = this.value + 'm';
+    });
+    
+    document.getElementById('patternAngle').addEventListener('input', function() {
+        document.getElementById('angleValue').textContent = this.value + '°';
+    });
+    
+    document.getElementById('patternOverlap').addEventListener('input', function() {
+        const percent = Math.round(this.value * 100);
+        document.getElementById('overlapValue').textContent = percent + '%';
+    });
+    
+    // Pattern selection
+    document.querySelectorAll('.pattern-card').forEach(card => {
+        card.addEventListener('click', function() {
+            document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Update pattern type
+            const patternType = this.dataset.pattern;
+            if (typeof updateMowingPattern === 'function') {
+                updateMowingPattern(patternType);
+            }
+        });
+    });
+    
+    // Apply settings button
+    document.getElementById('applySettings').addEventListener('click', function() {
+        const settings = {
+            spacing: parseFloat(document.getElementById('patternSpacing').value),
+            angle: parseInt(document.getElementById('patternAngle').value),
+            overlap: parseFloat(document.getElementById('patternOverlap').value)
+        };
+        
+        if (typeof applyPatternSettings === 'function') {
+            applyPatternSettings(settings);
+        }
+    });
+    
+    // Save settings button
+    document.getElementById('saveSettings').addEventListener('click', function() {
+        const settings = {
+            pattern: document.querySelector('.pattern-card.active')?.dataset.pattern || 'PARALLEL',
+            spacing: parseFloat(document.getElementById('patternSpacing').value),
+            angle: parseInt(document.getElementById('patternAngle').value),
+            overlap: parseFloat(document.getElementById('patternOverlap').value)
+        };
+        
+        // Send to server
+        sendCommand('save_settings', { settings: { mowing: settings } }, function(response) {
+            if (response.success) {
+                showAlert('Settings saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save settings: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        });
+    });
+    
+    // Initialize with default pattern
+    document.querySelector('.pattern-card[data-pattern="PARALLEL"]').classList.add('active');
+</script>
+{% endblock %}

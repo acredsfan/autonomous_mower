@@ -6,6 +6,12 @@
 <div class="dashboard-header">
     <h1>Settings</h1>
     <div class="d-flex align-center">
+        <a href="{{ url_for('setup_wizard') }}" class="btn btn-primary mr-2">
+            <i class="fas fa-magic"></i> Setup Wizard
+        </a>
+        <a href="{{ url_for('schedule') }}" class="btn btn-primary mr-2">
+            <i class="fas fa-calendar-alt"></i> Schedule
+        </a>
         <button id="save-settings-btn" class="btn btn-success">
             <i class="fas fa-save"></i> Save Settings
         </button>
@@ -22,7 +28,7 @@
             <div class="card-body">
                 <form id="schedule-form">
                     <div class="form-group">
-                        <label class="form-label">Mowing Days:</label>
+                        <label class="form-label" data-help="Select the days of the week when you want the mower to operate.">Mowing Days:</label>
                         <div class="days-selector">
                             {% for day in ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
                             <div class="day-checkbox">
@@ -32,9 +38,9 @@
                             {% endfor %}
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label class="form-label">Mowing Hours:</label>
+                        <label class="form-label" data-help="Set the time range during which the mower will operate on the selected days.">Mowing Hours:</label>
                         <div class="time-range">
                             <div class="time-input">
                                 <label for="startTime">Start Time:</label>
@@ -49,7 +55,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div class="card mb-3">
             <div class="card-header">
                 <h3>Mowing Parameters</h3>
@@ -57,23 +63,23 @@
             <div class="card-body">
                 <form id="mowing-params-form">
                     <div class="form-group">
-                        <label for="mowingSpeed" class="form-label">Mowing Speed:</label>
+                        <label for="mowingSpeed" class="form-label" data-help="Adjust the speed at which the mower moves. Higher speeds cover more area but may reduce cutting quality.">Mowing Speed:</label>
                         <div class="range-with-value">
                             <input type="range" class="form-range" id="mowingSpeed" name="mowingSpeed" min="1" max="10" value="5">
                             <span id="mowingSpeedValue">5</span>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="bladeHeight" class="form-label">Blade Height (mm):</label>
+                        <label for="bladeHeight" class="form-label" data-help="Set the cutting height of the mower blade. Lower settings give a shorter cut, while higher settings are better for longer grass.">Blade Height (mm):</label>
                         <div class="range-with-value">
                             <input type="range" class="form-range" id="bladeHeight" name="bladeHeight" min="20" max="100" value="40">
                             <span id="bladeHeightValue">40</span>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="patternType" class="form-label">Mowing Pattern:</label>
+                        <label for="patternType" class="form-label" data-help="Select the pattern the mower will follow. Different patterns are suitable for different lawn shapes and sizes.">Mowing Pattern:</label>
                         <select id="patternType" name="patternType" class="form-select">
                             <option value="PARALLEL">Parallel Lines</option>
                             <option value="SPIRAL">Spiral</option>
@@ -85,7 +91,7 @@
                             <option value="CUSTOM">Custom</option>
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="coveragePercent" class="form-label">Coverage Percentage:</label>
                         <div class="range-with-value">
@@ -97,7 +103,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Right column - System Settings -->
     <div class="settings-column">
         <div class="card mb-3">
@@ -107,33 +113,33 @@
             <div class="card-body">
                 <form id="system-settings-form">
                     <div class="form-group">
-                        <label for="gpsAccuracyThreshold" class="form-label">GPS Accuracy Threshold (m):</label>
+                        <label for="gpsAccuracyThreshold" class="form-label" data-help="The maximum acceptable GPS error in meters. Lower values provide more precise navigation but may cause the mower to pause more frequently when GPS signal is weak.">GPS Accuracy Threshold (m):</label>
                         <input type="number" class="form-control" id="gpsAccuracyThreshold" name="gpsAccuracyThreshold" min="0.1" max="10" step="0.1" value="2.0">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="batteryLowThreshold" class="form-label">Battery Low Threshold (%):</label>
+                        <label for="batteryLowThreshold" class="form-label" data-help="When the battery level falls below this percentage, the mower will return to the charging station. Higher values ensure the mower has enough power to return home safely.">Battery Low Threshold (%):</label>
                         <input type="number" class="form-control" id="batteryLowThreshold" name="batteryLowThreshold" min="5" max="50" value="20">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="obstacleSensitivity" class="form-label">Obstacle Detection Sensitivity:</label>
+                        <label for="obstacleSensitivity" class="form-label" data-help="Controls how sensitive the mower is to detecting obstacles. Higher values make the mower more cautious but may cause more false positives.">Obstacle Detection Sensitivity:</label>
                         <div class="range-with-value">
                             <input type="range" class="form-range" id="obstacleSensitivity" name="obstacleSensitivity" min="1" max="10" value="7">
                             <span id="obstacleSensitivityValue">7</span>
                         </div>
                     </div>
-                    
+
                     <div class="form-group form-check">
                         <input type="checkbox" class="form-check-input" id="enableCamera" name="enableCamera" checked>
                         <label class="form-check-label" for="enableCamera">Enable Camera</label>
                     </div>
-                    
+
                     <div class="form-group form-check">
                         <input type="checkbox" class="form-check-input" id="enableObstacleAvoidance" name="enableObstacleAvoidance" checked>
                         <label class="form-check-label" for="enableObstacleAvoidance">Enable Obstacle Avoidance</label>
                     </div>
-                    
+
                     <div class="form-group form-check">
                         <input type="checkbox" class="form-check-input" id="enableRainSensor" name="enableRainSensor" checked>
                         <label class="form-check-label" for="enableRainSensor">Enable Rain Sensor</label>
@@ -141,7 +147,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div class="card mb-3">
             <div class="card-header">
                 <h3>Maintenance</h3>
@@ -151,20 +157,20 @@
                     <label class="form-label">Firmware Version:</label>
                     <p class="text-info" id="firmwareVersion">1.0.0</p>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Last Maintenance:</label>
                     <p class="text-info" id="lastMaintenance">2023-04-01</p>
                 </div>
-                
+
                 <div class="form-group">
                     <label class="form-label">Blade Hours:</label>
                     <p class="text-info" id="bladeHours">42.5 hours</p>
                     <button id="reset-blade-hours" class="btn btn-sm btn-secondary">Reset Blade Hours</button>
                 </div>
-                
+
                 <hr>
-                
+
                 <div class="maintenance-buttons">
                     <button id="update-firmware" class="btn btn-primary">
                         <i class="fas fa-download"></i> Update Firmware
@@ -194,15 +200,15 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Load settings from server
         loadSettings();
-        
+
         // Initialize range inputs
         initRangeInputs();
-        
+
         // Save settings button
         document.getElementById('save-settings-btn').addEventListener('click', function() {
             saveAllSettings();
         });
-        
+
         // Maintenance button handlers
         document.getElementById('reset-blade-hours').addEventListener('click', function() {
             if (confirm('Are you sure you want to reset the blade hours counter?')) {
@@ -211,7 +217,7 @@
                 showAlert('Blade hours have been reset!', 'success');
             }
         });
-        
+
         document.getElementById('update-firmware').addEventListener('click', function() {
             showAlert('Checking for firmware updates...', 'info');
             sendCommand('check_firmware_update', {}, function(response) {
@@ -225,7 +231,7 @@
                 }
             });
         });
-        
+
         document.getElementById('backup-config').addEventListener('click', function() {
             sendCommand('backup_config', {}, function(response) {
                 if (response.success) {
@@ -236,18 +242,18 @@
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                    
+
                     showAlert('Configuration backed up successfully!', 'success');
                 } else {
                     showAlert('Failed to backup configuration.', 'danger');
                 }
             });
         });
-        
+
         document.getElementById('restore-config').addEventListener('click', function() {
             document.getElementById('config-file-input').click();
         });
-        
+
         document.getElementById('config-file-input').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
@@ -272,7 +278,7 @@
                 reader.readAsText(file);
             }
         });
-        
+
         document.getElementById('reset-defaults').addEventListener('click', function() {
             if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
                 sendCommand('reset_defaults', {}, function(response) {
@@ -288,7 +294,7 @@
             }
         });
     });
-    
+
     // Initialize all range inputs with value displays
     function initRangeInputs() {
         const rangeInputs = document.querySelectorAll('.form-range');
@@ -306,7 +312,7 @@
             }
         });
     }
-    
+
     // Load all settings from the server
     function loadSettings() {
         sendCommand('get_settings', {}, function(response) {
@@ -316,7 +322,7 @@
                 showAlert('Failed to load settings.', 'danger');
             }
         });
-        
+
         // Get system info for maintenance section
         sendCommand('get_system_info', {}, function(response) {
             if (response.success) {
@@ -326,7 +332,7 @@
             }
         });
     }
-    
+
     // Apply settings from the server to the UI
     function applySettings(settings) {
         // Schedule settings
@@ -338,7 +344,7 @@
                     checkbox.checked = settings.schedule.days.includes(checkbox.value);
                 });
             }
-            
+
             // Set times
             if (settings.schedule.startTime) {
                 document.getElementById('startTime').value = settings.schedule.startTime;
@@ -347,35 +353,35 @@
                 document.getElementById('endTime').value = settings.schedule.endTime;
             }
         }
-        
+
         // Mowing parameters
         if (settings.mowing) {
             document.getElementById('mowingSpeed').value = settings.mowing.speed || 5;
             document.getElementById('mowingSpeedValue').textContent = settings.mowing.speed || 5;
-            
+
             document.getElementById('bladeHeight').value = settings.mowing.bladeHeight || 40;
             document.getElementById('bladeHeightValue').textContent = settings.mowing.bladeHeight || 40;
-            
+
             document.getElementById('patternType').value = settings.mowing.pattern || 'PARALLEL';
-            
+
             document.getElementById('coveragePercent').value = settings.mowing.coverage || 95;
             document.getElementById('coveragePercentValue').textContent = (settings.mowing.coverage || 95) + '%';
         }
-        
+
         // System settings
         if (settings.system) {
             document.getElementById('gpsAccuracyThreshold').value = settings.system.gpsAccuracyThreshold || 2.0;
             document.getElementById('batteryLowThreshold').value = settings.system.batteryLowThreshold || 20;
-            
+
             document.getElementById('obstacleSensitivity').value = settings.system.obstacleSensitivity || 7;
             document.getElementById('obstacleSensitivityValue').textContent = settings.system.obstacleSensitivity || 7;
-            
+
             document.getElementById('enableCamera').checked = settings.system.enableCamera !== false;
             document.getElementById('enableObstacleAvoidance').checked = settings.system.enableObstacleAvoidance !== false;
             document.getElementById('enableRainSensor').checked = settings.system.enableRainSensor !== false;
         }
     }
-    
+
     // Save all settings to the server
     function saveAllSettings() {
         const settings = {
@@ -399,7 +405,7 @@
                 enableRainSensor: document.getElementById('enableRainSensor').checked
             }
         };
-        
+
         sendCommand('save_settings', { settings: settings }, function(response) {
             if (response.success) {
                 showAlert('Settings saved successfully!', 'success');
@@ -417,14 +423,14 @@
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
     }
-    
+
     .days-selector {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 1rem;
     }
-    
+
     .day-checkbox {
         display: flex;
         align-items: center;
@@ -432,37 +438,37 @@
         padding: 6px 10px;
         border-radius: var(--border-radius);
     }
-    
+
     .day-checkbox input[type="checkbox"] {
         margin-right: 5px;
     }
-    
+
     .form-group {
         margin-bottom: 1.5rem;
     }
-    
+
     .form-label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 500;
     }
-    
+
     .range-with-value {
         display: flex;
         align-items: center;
     }
-    
+
     .range-with-value input {
         flex-grow: 1;
         margin-right: 10px;
     }
-    
+
     .range-with-value span {
         min-width: 2rem;
         text-align: right;
         font-weight: bold;
     }
-    
+
     .form-control {
         width: 100%;
         padding: 8px 12px;
@@ -471,7 +477,7 @@
         background-color: var(--light);
         color: var(--dark);
     }
-    
+
     .form-range {
         -webkit-appearance: none;
         appearance: none;
@@ -480,7 +486,7 @@
         border-radius: 5px;
         outline: none;
     }
-    
+
     .form-range::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -490,7 +496,7 @@
         background: var(--grass-medium);
         cursor: pointer;
     }
-    
+
     .form-range::-moz-range-thumb {
         width: 20px;
         height: 20px;
@@ -498,7 +504,7 @@
         background: var(--grass-medium);
         cursor: pointer;
     }
-    
+
     .form-select {
         width: 100%;
         padding: 8px 12px;
@@ -507,39 +513,39 @@
         background-color: var(--light);
         color: var(--dark);
     }
-    
+
     .time-range {
         display: flex;
         gap: 15px;
     }
-    
+
     .time-input {
         flex: 1;
     }
-    
+
     .text-info {
         color: var(--primary);
         font-weight: 500;
         margin-top: 0;
     }
-    
+
     .maintenance-buttons {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
     }
-    
+
     .maintenance-buttons .btn {
         flex: 1 0 calc(50% - 10px);
         margin-bottom: 10px;
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 992px) {
         .settings-layout {
             grid-template-columns: 1fr;
         }
-        
+
         .time-range {
             flex-direction: column;
             gap: 10px;

@@ -1,0 +1,139 @@
+# Spanish translations for Autonomous Mower.
+# Copyright (C) 2023 Autonomous Mower Project
+# This file is distributed under the same license as the Autonomous Mower project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-04-19 12:00+0000\n"
+"PO-Revision-Date: 2023-04-19 12:00+0000\n"
+"Last-Translator: Autonomous Mower Team\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Navigation
+msgid "Dashboard"
+msgstr "Panel de Control"
+
+msgid "Control"
+msgstr "Control"
+
+msgid "Map"
+msgstr "Mapa"
+
+msgid "Diagnostics"
+msgstr "Diagnósticos"
+
+msgid "Settings"
+msgstr "Configuración"
+
+# System Status
+msgid "System Status"
+msgstr "Estado del Sistema"
+
+msgid "Battery:"
+msgstr "Batería:"
+
+msgid "Mower:"
+msgstr "Cortacésped:"
+
+msgid "GPS:"
+msgstr "GPS:"
+
+# Quick Controls
+msgid "Quick Controls"
+msgstr "Controles Rápidos"
+
+msgid "Start Mowing"
+msgstr "Comenzar a Cortar"
+
+msgid "Stop Mower"
+msgstr "Detener Cortacésped"
+
+msgid "Return Home"
+msgstr "Volver a Casa"
+
+# Navigation
+msgid "Navigation"
+msgstr "Navegación"
+
+msgid "Manual Control"
+msgstr "Control Manual"
+
+msgid "Mowing Area"
+msgstr "Área de Corte"
+
+msgid "Camera Feed"
+msgstr "Cámara"
+
+# Mower States
+msgid "Idle"
+msgstr "Inactivo"
+
+msgid "Starting Up"
+msgstr "Iniciando"
+
+msgid "Mowing"
+msgstr "Cortando"
+
+msgid "Avoiding Obstacle"
+msgstr "Evitando Obstáculo"
+
+msgid "Returning Home"
+msgstr "Volviendo a Casa"
+
+msgid "Docked"
+msgstr "En Base"
+
+msgid "Error"
+msgstr "Error"
+
+msgid "Emergency Stop"
+msgstr "Parada de Emergencia"
+
+# Footer
+msgid "Autonomous Mower Project"
+msgstr "Proyecto Cortacésped Autónomo"
+
+# Alerts
+msgid "System initializing. Connecting to mower..."
+msgstr "Inicializando sistema. Conectando al cortacésped..."
+
+msgid "Connected to mower system"
+msgstr "Conectado al sistema del cortacésped"
+
+msgid "Connection lost. Attempting to reconnect..."
+msgstr "Conexión perdida. Intentando reconectar..."
+
+msgid "Connection error:"
+msgstr "Error de conexión:"
+
+msgid "Command executed successfully"
+msgstr "Comando ejecutado con éxito"
+
+msgid "Command failed"
+msgstr "Comando fallido"
+
+msgid "Settings updated successfully"
+msgstr "Configuración actualizada con éxito"
+
+# Language selector
+msgid "English"
+msgstr "Inglés"
+
+msgid "Español"
+msgstr "Español"
+
+msgid "Français"
+msgstr "Francés"
+
+msgid "Deutsch"
+msgstr "Alemán"
+
+msgid "中文"
+msgstr "Chino"

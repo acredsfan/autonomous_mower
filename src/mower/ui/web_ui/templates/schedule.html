@@ -1,0 +1,844 @@
+{% extends "base.html" %}
+
+{% block title %}Mowing Schedule - Autonomous Mower{% endblock %}
+
+{% block head_extra %}
+<style>
+    .schedule-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: 100px repeat(7, 1fr);
+        gap: 1px;
+        background-color: var(--dirt-light);
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .schedule-header {
+        background-color: var(--grass-dark);
+        color: var(--white);
+        padding: 10px;
+        text-align: center;
+        font-weight: 500;
+    }
+    
+    .time-slot {
+        background-color: var(--white);
+        padding: 10px;
+        text-align: center;
+        border-bottom: 1px solid var(--dirt-pale);
+    }
+    
+    .time-label {
+        background-color: var(--grass-medium);
+        color: var(--white);
+        padding: 10px;
+        text-align: right;
+        font-weight: 500;
+        border-bottom: 1px solid var(--dirt-pale);
+    }
+    
+    .schedule-cell {
+        background-color: var(--white);
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-bottom: 1px solid var(--dirt-pale);
+    }
+    
+    .schedule-cell:hover {
+        background-color: var(--grass-pale);
+    }
+    
+    .schedule-cell.active {
+        background-color: var(--grass-light);
+    }
+    
+    .schedule-controls {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+    
+    .automation-rule {
+        background-color: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-small);
+    }
+    
+    .automation-rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .automation-rule-title {
+        font-weight: 500;
+        font-size: 1.1rem;
+    }
+    
+    .automation-rule-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .automation-rule-body {
+        color: var(--dirt-medium);
+        margin-bottom: 0.5rem;
+    }
+    
+    .automation-rule-footer {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        color: var(--dirt-medium);
+    }
+    
+    .rule-enabled {
+        color: var(--accent-green);
+    }
+    
+    .rule-disabled {
+        color: var(--dirt-light);
+    }
+    
+    .add-rule-form {
+        background-color: var(--white);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-small);
+    }
+    
+    .condition-row, .action-row {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: center;
+    }
+    
+    .condition-type, .action-type {
+        flex: 1;
+    }
+    
+    .condition-value, .action-value {
+        flex: 1;
+    }
+    
+    .condition-remove, .action-remove {
+        flex: 0 0 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Mowing Schedule & Automation</h1>
+    <div class="d-flex align-center">
+        <button id="save-schedule-btn" class="btn btn-success">
+            <i class="fas fa-save"></i> Save Schedule
+        </button>
+    </div>
+</div>
+
+<div class="schedule-container">
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Weekly Schedule</h3>
+            <div class="card-header-actions">
+                <button id="clear-schedule-btn" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-eraser"></i> Clear All
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="schedule-controls">
+                <div class="form-group">
+                    <label for="defaultStartTime" class="form-label">Default Start Time:</label>
+                    <input type="time" id="defaultStartTime" class="form-control" value="10:00">
+                </div>
+                <div class="form-group">
+                    <label for="defaultDuration" class="form-label">Default Duration:</label>
+                    <select id="defaultDuration" class="form-select">
+                        <option value="1">1 hour</option>
+                        <option value="2" selected>2 hours</option>
+                        <option value="3">3 hours</option>
+                        <option value="4">4 hours</option>
+                        <option value="6">6 hours</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quickSelect" class="form-label">Quick Select:</label>
+                    <select id="quickSelect" class="form-select">
+                        <option value="">Choose a pattern...</option>
+                        <option value="weekdays">Weekdays (Mon-Fri)</option>
+                        <option value="weekends">Weekends (Sat-Sun)</option>
+                        <option value="everyday">Every Day</option>
+                        <option value="alternate">Alternate Days</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="schedule-grid" id="scheduleGrid">
+                <!-- Headers -->
+                <div class="schedule-header">Time</div>
+                <div class="schedule-header">Monday</div>
+                <div class="schedule-header">Tuesday</div>
+                <div class="schedule-header">Wednesday</div>
+                <div class="schedule-header">Thursday</div>
+                <div class="schedule-header">Friday</div>
+                <div class="schedule-header">Saturday</div>
+                <div class="schedule-header">Sunday</div>
+                
+                <!-- Time slots will be generated by JavaScript -->
+            </div>
+            
+            <div class="help-text">
+                <p><i class="fas fa-info-circle"></i> Click on a cell to schedule mowing for that time slot. Click again to remove it.</p>
+                <p>The mower will automatically return to the charging station when the scheduled time ends or when the battery is low.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Automation Rules</h3>
+            <div class="card-header-actions">
+                <button id="add-rule-btn" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add Rule
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Add rule form (initially hidden) -->
+            <div class="add-rule-form" id="addRuleForm" style="display: none;">
+                <h4>Create Automation Rule</h4>
+                
+                <div class="form-group">
+                    <label for="ruleName" class="form-label">Rule Name:</label>
+                    <input type="text" id="ruleName" class="form-control" placeholder="e.g., Rain Delay, Seasonal Adjustment">
+                </div>
+                
+                <h5>Conditions (When)</h5>
+                <div id="conditionsContainer">
+                    <div class="condition-row">
+                        <div class="condition-type">
+                            <select class="form-select condition-type-select">
+                                <option value="weather">Weather Condition</option>
+                                <option value="temperature">Temperature</option>
+                                <option value="time">Time of Day</option>
+                                <option value="day">Day of Week</option>
+                                <option value="season">Season</option>
+                            </select>
+                        </div>
+                        <div class="condition-value">
+                            <select class="form-select condition-value-select">
+                                <option value="rain">Is Raining</option>
+                                <option value="forecast_rain">Rain Forecast</option>
+                                <option value="sunny">Is Sunny</option>
+                                <option value="windy">Is Windy</option>
+                            </select>
+                        </div>
+                        <div class="condition-remove">
+                            <button class="btn btn-sm btn-danger remove-condition-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-sm btn-secondary mt-2 mb-3" id="addConditionBtn">
+                    <i class="fas fa-plus"></i> Add Condition
+                </button>
+                
+                <h5>Actions (Then)</h5>
+                <div id="actionsContainer">
+                    <div class="action-row">
+                        <div class="action-type">
+                            <select class="form-select action-type-select">
+                                <option value="skip">Skip Scheduled Mowing</option>
+                                <option value="delay">Delay Mowing</option>
+                                <option value="adjust_height">Adjust Cutting Height</option>
+                                <option value="adjust_pattern">Change Mowing Pattern</option>
+                                <option value="notify">Send Notification</option>
+                            </select>
+                        </div>
+                        <div class="action-value">
+                            <input type="text" class="form-control action-value-input" placeholder="Value">
+                        </div>
+                        <div class="action-remove">
+                            <button class="btn btn-sm btn-danger remove-action-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-sm btn-secondary mt-2 mb-3" id="addActionBtn">
+                    <i class="fas fa-plus"></i> Add Action
+                </button>
+                
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="ruleEnabled" checked>
+                    <label class="form-check-label" for="ruleEnabled">Enable this rule</label>
+                </div>
+                
+                <div class="form-actions mt-3">
+                    <button class="btn btn-primary" id="saveRuleBtn">Save Rule</button>
+                    <button class="btn btn-secondary" id="cancelRuleBtn">Cancel</button>
+                </div>
+            </div>
+            
+            <!-- Existing rules -->
+            <div id="rulesContainer">
+                <!-- Example rule (will be replaced by actual rules) -->
+                <div class="automation-rule">
+                    <div class="automation-rule-header">
+                        <div class="automation-rule-title">Rain Delay</div>
+                        <div class="automation-rule-actions">
+                            <button class="btn btn-sm btn-secondary edit-rule-btn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-rule-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="automation-rule-body">
+                        When it's raining or rain is forecast, skip scheduled mowing
+                    </div>
+                    <div class="automation-rule-footer">
+                        <div class="rule-status rule-enabled">
+                            <i class="fas fa-check-circle"></i> Enabled
+                        </div>
+                        <div class="rule-last-triggered">
+                            Last triggered: Never
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="automation-rule">
+                    <div class="automation-rule-header">
+                        <div class="automation-rule-title">Summer Height Adjustment</div>
+                        <div class="automation-rule-actions">
+                            <button class="btn btn-sm btn-secondary edit-rule-btn">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-rule-btn">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="automation-rule-body">
+                        When temperature is above 30°C, increase cutting height to 50mm
+                    </div>
+                    <div class="automation-rule-footer">
+                        <div class="rule-status rule-enabled">
+                            <i class="fas fa-check-circle"></i> Enabled
+                        </div>
+                        <div class="rule-last-triggered">
+                            Last triggered: 2 days ago
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Store the schedule data
+    let scheduleData = {
+        monday: [],
+        tuesday: [],
+        wednesday: [],
+        thursday: [],
+        friday: [],
+        saturday: [],
+        sunday: []
+    };
+    
+    // Store automation rules
+    let automationRules = [];
+    
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generate time slots
+        generateTimeSlots();
+        
+        // Load existing schedule
+        loadSchedule();
+        
+        // Load existing automation rules
+        loadAutomationRules();
+        
+        // Set up event listeners
+        setupEventListeners();
+    });
+    
+    // Generate time slots in the schedule grid
+    function generateTimeSlots() {
+        const scheduleGrid = document.getElementById('scheduleGrid');
+        const startHour = 6; // 6 AM
+        const endHour = 22;  // 10 PM
+        
+        for (let hour = startHour; hour < endHour; hour++) {
+            // Create time label
+            const timeLabel = document.createElement('div');
+            timeLabel.className = 'time-label';
+            timeLabel.textContent = formatHour(hour);
+            scheduleGrid.appendChild(timeLabel);
+            
+            // Create cells for each day
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            days.forEach(day => {
+                const cell = document.createElement('div');
+                cell.className = 'schedule-cell';
+                cell.dataset.day = day;
+                cell.dataset.hour = hour;
+                
+                // Add click handler
+                cell.addEventListener('click', function() {
+                    toggleScheduleCell(this);
+                });
+                
+                scheduleGrid.appendChild(cell);
+            });
+        }
+    }
+    
+    // Format hour for display (12-hour format)
+    function formatHour(hour) {
+        if (hour === 0) return '12 AM';
+        if (hour === 12) return '12 PM';
+        return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+    }
+    
+    // Toggle schedule cell active state
+    function toggleScheduleCell(cell) {
+        cell.classList.toggle('active');
+        
+        // Update schedule data
+        const day = cell.dataset.day;
+        const hour = parseInt(cell.dataset.hour);
+        
+        if (cell.classList.contains('active')) {
+            // Add to schedule if not already there
+            if (!scheduleData[day].includes(hour)) {
+                scheduleData[day].push(hour);
+            }
+        } else {
+            // Remove from schedule
+            scheduleData[day] = scheduleData[day].filter(h => h !== hour);
+        }
+    }
+    
+    // Load existing schedule from server
+    function loadSchedule() {
+        sendCommand('get_schedule', {}, function(response) {
+            if (response.success && response.schedule) {
+                // Update our schedule data
+                scheduleData = response.schedule;
+                
+                // Update UI to reflect loaded schedule
+                updateScheduleUI();
+            } else {
+                showAlert('Failed to load schedule.', 'warning');
+            }
+        });
+    }
+    
+    // Update UI to reflect current schedule data
+    function updateScheduleUI() {
+        // Clear all active cells
+        document.querySelectorAll('.schedule-cell').forEach(cell => {
+            cell.classList.remove('active');
+        });
+        
+        // Set active cells based on schedule data
+        for (const [day, hours] of Object.entries(scheduleData)) {
+            hours.forEach(hour => {
+                const cell = document.querySelector(`.schedule-cell[data-day="${day}"][data-hour="${hour}"]`);
+                if (cell) {
+                    cell.classList.add('active');
+                }
+            });
+        }
+    }
+    
+    // Load automation rules from server
+    function loadAutomationRules() {
+        sendCommand('get_automation_rules', {}, function(response) {
+            if (response.success && response.rules) {
+                automationRules = response.rules;
+                updateRulesUI();
+            }
+        });
+    }
+    
+    // Update UI to reflect current automation rules
+    function updateRulesUI() {
+        const rulesContainer = document.getElementById('rulesContainer');
+        rulesContainer.innerHTML = '';
+        
+        if (automationRules.length === 0) {
+            rulesContainer.innerHTML = '<p>No automation rules defined yet. Click "Add Rule" to create one.</p>';
+            return;
+        }
+        
+        automationRules.forEach((rule, index) => {
+            const ruleElement = document.createElement('div');
+            ruleElement.className = 'automation-rule';
+            ruleElement.dataset.ruleIndex = index;
+            
+            ruleElement.innerHTML = `
+                <div class="automation-rule-header">
+                    <div class="automation-rule-title">${rule.name}</div>
+                    <div class="automation-rule-actions">
+                        <button class="btn btn-sm btn-secondary edit-rule-btn">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-rule-btn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="automation-rule-body">
+                    ${formatRuleDescription(rule)}
+                </div>
+                <div class="automation-rule-footer">
+                    <div class="rule-status ${rule.enabled ? 'rule-enabled' : 'rule-disabled'}">
+                        <i class="fas fa-${rule.enabled ? 'check' : 'times'}-circle"></i> 
+                        ${rule.enabled ? 'Enabled' : 'Disabled'}
+                    </div>
+                    <div class="rule-last-triggered">
+                        Last triggered: ${rule.lastTriggered || 'Never'}
+                    </div>
+                </div>
+            `;
+            
+            rulesContainer.appendChild(ruleElement);
+            
+            // Add event listeners for edit and delete buttons
+            ruleElement.querySelector('.edit-rule-btn').addEventListener('click', function() {
+                editRule(index);
+            });
+            
+            ruleElement.querySelector('.delete-rule-btn').addEventListener('click', function() {
+                deleteRule(index);
+            });
+        });
+    }
+    
+    // Format rule description for display
+    function formatRuleDescription(rule) {
+        let description = 'When ';
+        
+        // Format conditions
+        if (rule.conditions.length === 0) {
+            description += 'always';
+        } else {
+            rule.conditions.forEach((condition, index) => {
+                if (index > 0) {
+                    description += ' and ';
+                }
+                
+                switch (condition.type) {
+                    case 'weather':
+                        description += `it's ${condition.value}`;
+                        break;
+                    case 'temperature':
+                        description += `temperature is ${condition.operator || '>'} ${condition.value}°C`;
+                        break;
+                    case 'time':
+                        description += `time is ${condition.value}`;
+                        break;
+                    case 'day':
+                        description += `it's ${condition.value}`;
+                        break;
+                    case 'season':
+                        description += `it's ${condition.value}`;
+                        break;
+                    default:
+                        description += `${condition.type} is ${condition.value}`;
+                }
+            });
+        }
+        
+        description += ', ';
+        
+        // Format actions
+        rule.actions.forEach((action, index) => {
+            if (index > 0) {
+                description += ' and ';
+            }
+            
+            switch (action.type) {
+                case 'skip':
+                    description += 'skip scheduled mowing';
+                    break;
+                case 'delay':
+                    description += `delay mowing by ${action.value} hours`;
+                    break;
+                case 'adjust_height':
+                    description += `adjust cutting height to ${action.value}mm`;
+                    break;
+                case 'adjust_pattern':
+                    description += `change mowing pattern to ${action.value}`;
+                    break;
+                case 'notify':
+                    description += `send notification "${action.value}"`;
+                    break;
+                default:
+                    description += `${action.type} ${action.value}`;
+            }
+        });
+        
+        return description;
+    }
+    
+    // Set up event listeners
+    function setupEventListeners() {
+        // Save schedule button
+        document.getElementById('save-schedule-btn').addEventListener('click', function() {
+            saveSchedule();
+        });
+        
+        // Clear schedule button
+        document.getElementById('clear-schedule-btn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the entire schedule?')) {
+                scheduleData = {
+                    monday: [],
+                    tuesday: [],
+                    wednesday: [],
+                    thursday: [],
+                    friday: [],
+                    saturday: [],
+                    sunday: []
+                };
+                updateScheduleUI();
+            }
+        });
+        
+        // Quick select dropdown
+        document.getElementById('quickSelect').addEventListener('change', function() {
+            applyQuickSelect(this.value);
+            this.value = ''; // Reset dropdown
+        });
+        
+        // Add rule button
+        document.getElementById('add-rule-btn').addEventListener('click', function() {
+            showAddRuleForm();
+        });
+        
+        // Save rule button
+        document.getElementById('saveRuleBtn').addEventListener('click', function() {
+            saveRule();
+        });
+        
+        // Cancel rule button
+        document.getElementById('cancelRuleBtn').addEventListener('click', function() {
+            hideAddRuleForm();
+        });
+        
+        // Add condition button
+        document.getElementById('addConditionBtn').addEventListener('click', function() {
+            addConditionRow();
+        });
+        
+        // Add action button
+        document.getElementById('addActionBtn').addEventListener('click', function() {
+            addActionRow();
+        });
+        
+        // Set up dynamic event listeners for condition type changes
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('condition-type-select')) {
+                updateConditionValueOptions(e.target);
+            }
+            
+            if (e.target.classList.contains('action-type-select')) {
+                updateActionValueInput(e.target);
+            }
+        });
+        
+        // Set up dynamic event listeners for remove buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-condition-btn') || 
+                e.target.parentElement.classList.contains('remove-condition-btn')) {
+                const button = e.target.classList.contains('remove-condition-btn') ? 
+                    e.target : e.target.parentElement;
+                removeConditionRow(button);
+            }
+            
+            if (e.target.classList.contains('remove-action-btn') || 
+                e.target.parentElement.classList.contains('remove-action-btn')) {
+                const button = e.target.classList.contains('remove-action-btn') ? 
+                    e.target : e.target.parentElement;
+                removeActionRow(button);
+            }
+        });
+    }
+    
+    // Apply quick select pattern
+    function applyQuickSelect(pattern) {
+        if (!pattern) return;
+        
+        // Get default values
+        const defaultStartHour = parseInt(document.getElementById('defaultStartTime').value.split(':')[0]);
+        const defaultDuration = parseInt(document.getElementById('defaultDuration').value);
+        
+        // Clear current schedule
+        scheduleData = {
+            monday: [],
+            tuesday: [],
+            wednesday: [],
+            thursday: [],
+            friday: [],
+            saturday: [],
+            sunday: []
+        };
+        
+        // Apply pattern
+        switch (pattern) {
+            case 'weekdays':
+                for (let hour = defaultStartHour; hour < defaultStartHour + defaultDuration; hour++) {
+                    scheduleData.monday.push(hour);
+                    scheduleData.tuesday.push(hour);
+                    scheduleData.wednesday.push(hour);
+                    scheduleData.thursday.push(hour);
+                    scheduleData.friday.push(hour);
+                }
+                break;
+                
+            case 'weekends':
+                for (let hour = defaultStartHour; hour < defaultStartHour + defaultDuration; hour++) {
+                    scheduleData.saturday.push(hour);
+                    scheduleData.sunday.push(hour);
+                }
+                break;
+                
+            case 'everyday':
+                for (let hour = defaultStartHour; hour < defaultStartHour + defaultDuration; hour++) {
+                    scheduleData.monday.push(hour);
+                    scheduleData.tuesday.push(hour);
+                    scheduleData.wednesday.push(hour);
+                    scheduleData.thursday.push(hour);
+                    scheduleData.friday.push(hour);
+                    scheduleData.saturday.push(hour);
+                    scheduleData.sunday.push(hour);
+                }
+                break;
+                
+            case 'alternate':
+                for (let hour = defaultStartHour; hour < defaultStartHour + defaultDuration; hour++) {
+                    scheduleData.monday.push(hour);
+                    scheduleData.wednesday.push(hour);
+                    scheduleData.friday.push(hour);
+                    scheduleData.sunday.push(hour);
+                }
+                break;
+        }
+        
+        // Update UI
+        updateScheduleUI();
+    }
+    
+    // Save schedule to server
+    function saveSchedule() {
+        sendCommand('save_schedule', { schedule: scheduleData }, function(response) {
+            if (response.success) {
+                showAlert('Schedule saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save schedule: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        });
+    }
+    
+    // Show add rule form
+    function showAddRuleForm() {
+        // Reset form
+        document.getElementById('ruleName').value = '';
+        document.getElementById('ruleEnabled').checked = true;
+        
+        // Clear conditions and actions
+        document.getElementById('conditionsContainer').innerHTML = '';
+        document.getElementById('actionsContainer').innerHTML = '';
+        
+        // Add default condition and action
+        addConditionRow();
+        addActionRow();
+        
+        // Show form
+        document.getElementById('addRuleForm').style.display = 'block';
+        
+        // Scroll to form
+        document.getElementById('addRuleForm').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    // Hide add rule form
+    function hideAddRuleForm() {
+        document.getElementById('addRuleForm').style.display = 'none';
+    }
+    
+    // Add a new condition row
+    function addConditionRow() {
+        const container = document.getElementById('conditionsContainer');
+        const row = document.createElement('div');
+        row.className = 'condition-row';
+        
+        row.innerHTML = `
+            <div class="condition-type">
+                <select class="form-select condition-type-select">
+                    <option value="weather">Weather Condition</option>
+                    <option value="temperature">Temperature</option>
+                    <option value="time">Time of Day</option>
+                    <option value="day">Day of Week</option>
+                    <option value="season">Season</option>
+                </select>
+            </div>
+            <div class="condition-value">
+                <select class="form-select condition-value-select">
+                    <option value="rain">Is Raining</option>
+                    <option value="forecast_rain">Rain Forecast</option>
+                    <option value="sunny">Is Sunny</option>
+                    <option value="windy">Is Windy</option>
+                </select>
+            </div>
+            <div class="condition-remove">
+                <button class="btn btn-sm btn-danger remove-condition-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(row);
+    }
+    
+    // Remove a condition row
+    function removeConditionRow(button) {
+        const row = button.closest('.condition-row');
+        if (document.querySelectorAll('.condition-row').length > 1) {
+            row.remove();
+        } else {
+            showAlert('At least one condition is required', 'warning');
+        }
+    }
+    
+    // Add a new action row
+    function addActionRow() {
+        const container = document.getElementById('actionsContainer');
+        const row = document.createElement('div');
+        row.className = 'action-row';
+        
+        row.innerHTML = `
+            <div class="action-type">

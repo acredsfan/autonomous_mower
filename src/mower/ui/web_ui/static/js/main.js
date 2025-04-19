@@ -67,22 +67,25 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initializeUI() {
     updateConnectionStatus(false);
-    
+
+    // Initialize language selector
+    initializeLanguageSelector();
+
     // Initialize any charts or visualizations
     if (typeof initializeCharts === 'function') {
         initializeCharts();
     }
-    
+
     // Initialize map if on map page
     if (typeof initializeMap === 'function') {
         initializeMap();
     }
-    
+
     // Initialize joystick if on control page
     if (typeof initializeJoystick === 'function') {
         initializeJoystick();
     }
-    
+
     // Show a welcome message in the alerts container
     showAlert('System initializing. Connecting to mower...', 'info');
 }
@@ -93,59 +96,59 @@ function initializeUI() {
 function setupSocketConnection() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socketUrl = `${protocol}//${window.location.host}`;
-    
+
     socket = io(socketUrl);
-    
+
     // Connection established
     socket.on('connect', function() {
         isConnected = true;
         reconnectAttempts = 0;
         updateConnectionStatus(true);
         showAlert('Connected to mower system', 'success', 3000);
-        
+
         // Request initial data
         socket.emit('request_data', { type: 'all' });
     });
-    
+
     // Connection lost
     socket.on('disconnect', function() {
         isConnected = false;
         updateConnectionStatus(false);
         showAlert('Connection lost. Attempting to reconnect...', 'warning');
-        
+
         attemptReconnect();
     });
-    
+
     // Handle errors
     socket.on('connect_error', function(error) {
         isConnected = false;
         updateConnectionStatus(false);
         console.error('Connection error:', error);
         showAlert('Connection error: ' + error.message, 'danger');
-        
+
         attemptReconnect();
     });
-    
+
     // Handle system status updates
     socket.on('status_update', function(data) {
         updateSystemStatus(data);
     });
-    
+
     // Handle sensor data updates
     socket.on('sensor_data', function(data) {
         updateSensorData(data);
     });
-    
+
     // Handle position updates
     socket.on('position_update', function(data) {
         updatePositionData(data);
     });
-    
+
     // Handle command responses
     socket.on('command_response', function(data) {
         handleCommandResponse(data);
     });
-    
+
     // Handle alert messages from server
     socket.on('alert', function(data) {
         showAlert(data.message, data.type, data.duration);
@@ -160,9 +163,9 @@ function attemptReconnect() {
         showAlert('Maximum reconnection attempts reached. Please refresh the page.', 'danger');
         return;
     }
-    
+
     reconnectAttempts++;
-    
+
     setTimeout(function() {
         if (!isConnected) {
             socket.connect();
@@ -179,25 +182,25 @@ function setupEventListeners() {
     const startMowingBtn = document.getElementById('startMowingBtn');
     const stopMowingBtn = document.getElementById('stopMowingBtn');
     const returnHomeBtn = document.getElementById('returnHomeBtn');
-    
+
     if (startMowingBtn) {
         startMowingBtn.addEventListener('click', function() {
             sendCommand('start_mowing');
         });
     }
-    
+
     if (stopMowingBtn) {
         stopMowingBtn.addEventListener('click', function() {
             sendCommand('stop');
         });
     }
-    
+
     if (returnHomeBtn) {
         returnHomeBtn.addEventListener('click', function() {
             sendCommand('return_home');
         });
     }
-    
+
     // Set up page-specific event listeners
     setupPageSpecificListeners();
 }
@@ -217,7 +220,7 @@ function setupPageSpecificListeners() {
             });
         });
     }
-    
+
     // Settings form
     const settingsForm = document.getElementById('settingsForm');
     if (settingsForm) {
@@ -225,11 +228,11 @@ function setupPageSpecificListeners() {
             e.preventDefault();
             const formData = new FormData(this);
             const settings = {};
-            
+
             for (const [key, value] of formData.entries()) {
                 settings[key] = value;
             }
-            
+
             sendCommand('update_settings', settings);
         });
     }
@@ -246,9 +249,9 @@ function sendCommand(command, params = {}) {
         showAlert('Cannot send command: Not connected to the server', 'danger');
         return;
     }
-    
+
     showAlert(`Sending command: ${command}`, 'info', 2000);
-    
+
     socket.emit('control_command', {
         command: command,
         params: params
@@ -263,7 +266,7 @@ function sendCommand(command, params = {}) {
 function updateConnectionStatus(connected) {
     const statusIndicator = document.getElementById('connectionStatus');
     const statusText = document.getElementById('connectionText');
-    
+
     if (statusIndicator && statusText) {
         if (connected) {
             statusIndicator.className = 'status-indicator status-online';
@@ -283,21 +286,21 @@ function updateConnectionStatus(connected) {
 function updateSystemStatus(data) {
     // Update our internal state
     Object.assign(systemState.status, data);
-    
+
     // Update battery status
     if (data.battery !== undefined) {
         Object.assign(systemState.battery, data.battery);
-        
+
         const batteryStatus = document.getElementById('batteryStatus');
         if (batteryStatus) {
             const batteryPercentage = Math.round(systemState.battery.percentage);
             batteryStatus.textContent = `${batteryPercentage}%`;
-            
+
             // Add charging indicator if applicable
             if (systemState.battery.charging) {
                 batteryStatus.innerHTML += ' <i class="fas fa-bolt"></i>';
             }
-            
+
             // Color coding based on battery level
             if (batteryPercentage < 20) {
                 batteryStatus.className = 'text-danger';
@@ -308,13 +311,13 @@ function updateSystemStatus(data) {
             }
         }
     }
-    
+
     // Update mower status
     if (data.state !== undefined) {
         const mowerStatus = document.getElementById('mowerStatus');
         if (mowerStatus) {
             mowerStatus.textContent = formatRobotState(data.state);
-            
+
             // Apply appropriate styling based on state
             if (data.state === 'ERROR' || data.state === 'EMERGENCY_STOP') {
                 mowerStatus.className = 'text-danger';
@@ -325,11 +328,11 @@ function updateSystemStatus(data) {
             }
         }
     }
-    
+
     // Update GPS status
     if (data.gps !== undefined) {
         Object.assign(systemState.gps, data.gps);
-        
+
         const gpsStatus = document.getElementById('gpsStatus');
         if (gpsStatus) {
             if (systemState.gps.fix) {
@@ -341,7 +344,7 @@ function updateSystemStatus(data) {
             }
         }
     }
-    
+
     // Update additional status elements if they exist
     updateAdditionalStatusElements();
 }
@@ -364,7 +367,7 @@ function formatRobotState(state) {
         'ERROR': 'Error',
         'EMERGENCY_STOP': 'Emergency Stop'
     };
-    
+
     return stateMap[state] || state;
 }
 
@@ -377,7 +380,7 @@ function updateAdditionalStatusElements() {
     if (currentActionElement && systemState.status.currentAction) {
         currentActionElement.textContent = systemState.status.currentAction;
     }
-    
+
     // Error message display
     const errorMessageElement = document.getElementById('errorMessage');
     if (errorMessageElement) {
@@ -388,7 +391,7 @@ function updateAdditionalStatusElements() {
             errorMessageElement.parentElement.style.display = 'none';
         }
     }
-    
+
     // Mode indicator (Autonomous/Manual)
     const modeIndicator = document.getElementById('modeIndicator');
     if (modeIndicator) {
@@ -405,7 +408,7 @@ function updateAdditionalStatusElements() {
 function updateSensorData(data) {
     // Update our internal state
     Object.assign(systemState.sensors, data);
-    
+
     // Update sensor readings on the page
     for (const [key, value] of Object.entries(data)) {
         const element = document.getElementById(`sensor_${key}`);
@@ -413,7 +416,7 @@ function updateSensorData(data) {
             // Format the value appropriately based on sensor type
             let formattedValue = value;
             let unit = '';
-            
+
             switch (key) {
                 case 'temperature':
                     formattedValue = value.toFixed(1);
@@ -435,50 +438,50 @@ function updateSensorData(data) {
                 default:
                     formattedValue = value.toString();
             }
-            
+
             element.textContent = `${formattedValue}${unit}`;
         }
     }
-    
+
     // Update IMU data if available
     if (data.imu) {
         Object.assign(systemState.imu, data.imu);
-        
+
         const headingElement = document.getElementById('sensor_heading');
         if (headingElement) {
             headingElement.textContent = `${Math.round(systemState.imu.heading)}°`;
         }
-        
+
         const rollElement = document.getElementById('sensor_roll');
         if (rollElement) {
             rollElement.textContent = `${systemState.imu.roll.toFixed(1)}°`;
         }
-        
+
         const pitchElement = document.getElementById('sensor_pitch');
         if (pitchElement) {
             pitchElement.textContent = `${systemState.imu.pitch.toFixed(1)}°`;
         }
-        
+
         // Update safety status if available
         if (data.imu.safety_status) {
             updateSafetyStatus(data.imu.safety_status);
         }
     }
-    
+
     // Update motor data if available
     if (data.motors) {
         Object.assign(systemState.motors, data.motors);
-        
+
         const leftSpeedElement = document.getElementById('motor_left');
         if (leftSpeedElement) {
             leftSpeedElement.textContent = `${Math.round(systemState.motors.leftSpeed * 100)}%`;
         }
-        
+
         const rightSpeedElement = document.getElementById('motor_right');
         if (rightSpeedElement) {
             rightSpeedElement.textContent = `${Math.round(systemState.motors.rightSpeed * 100)}%`;
         }
-        
+
         const bladeSpeedElement = document.getElementById('motor_blade');
         if (bladeSpeedElement) {
             bladeSpeedElement.textContent = `${Math.round(systemState.motors.bladeSpeed * 100)}%`;
@@ -496,7 +499,7 @@ function updateSafetyStatus(status) {
             overallStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Warning';
         }
     }
-    
+
     // Update tilt status
     const tiltStatus = document.getElementById('tiltStatus');
     if (tiltStatus) {
@@ -506,7 +509,7 @@ function updateSafetyStatus(status) {
             tiltStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Excessive Tilt';
         }
     }
-    
+
     // Update impact status
     const impactStatus = document.getElementById('impactStatus');
     if (impactStatus) {
@@ -516,7 +519,7 @@ function updateSafetyStatus(status) {
             impactStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Impact Detected';
         }
     }
-    
+
     // Update acceleration status
     const accelStatus = document.getElementById('accelerationStatus');
     if (accelStatus) {
@@ -526,7 +529,7 @@ function updateSafetyStatus(status) {
             accelStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Abnormal';
         }
     }
-    
+
     // Update last event message
     const lastEvent = document.getElementById('lastSafetyEvent');
     if (lastEvent && status.messages && status.messages.length > 0) {
@@ -535,7 +538,7 @@ function updateSafetyStatus(status) {
         const timestamp = new Date().toLocaleTimeString();
         lastEvent.textContent += ` (${timestamp})`;
     }
-    
+
     // If any safety condition is violated, show alert
     if (!status.is_safe) {
         showSafetyAlert(status.messages);
@@ -545,20 +548,20 @@ function updateSafetyStatus(status) {
 function showSafetyAlert(messages) {
     const alertContainer = document.getElementById('alertContainer');
     if (!alertContainer) return;
-    
+
     const alertDiv = document.createElement('div');
     alertDiv.className = 'alert alert-danger alert-dismissible fade show';
     alertDiv.role = 'alert';
-    
+
     const messageHtml = messages.map(msg => `<div>${msg}</div>`).join('');
     alertDiv.innerHTML = `
         <strong>Safety Alert!</strong>
         ${messageHtml}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     `;
-    
+
     alertContainer.appendChild(alertDiv);
-    
+
     // Remove alert after 5 seconds
     setTimeout(() => {
         alertDiv.remove();
@@ -573,16 +576,16 @@ function showSafetyAlert(messages) {
 function updatePositionData(data) {
     // Update our internal state
     Object.assign(systemState.position, data);
-    
+
     // Update position display elements
     const latElement = document.getElementById('position_latitude');
     const lngElement = document.getElementById('position_longitude');
-    
+
     if (latElement && lngElement && data.currentPosition) {
         latElement.textContent = data.currentPosition[0].toFixed(6);
         lngElement.textContent = data.currentPosition[1].toFixed(6);
     }
-    
+
     // Update map if it exists and the updateMap function is available
     if (typeof updateMap === 'function' && data.currentPosition) {
         updateMap(data);
@@ -600,18 +603,74 @@ function handleCommandResponse(data) {
     } else {
         showAlert(data.message || 'Command failed', 'danger');
     }
-    
+
     // If the command was a settings update, show success message
     if (data.command === 'update_settings' && data.success) {
         showAlert('Settings updated successfully', 'success', 3000);
     }
-    
+
     // If we need to refresh the page after a command
     if (data.refresh) {
         setTimeout(function() {
             window.location.reload();
         }, 1500);
     }
+}
+
+/**
+ * Initialize the language selector dropdown
+ */
+function initializeLanguageSelector() {
+    // Get language dropdown elements
+    const languageDropdown = document.getElementById('languageDropdown');
+    const languageMenu = document.getElementById('languageMenu');
+    const currentLanguageText = document.getElementById('currentLanguage');
+
+    if (!languageDropdown || !languageMenu || !currentLanguageText) {
+        return; // Elements not found
+    }
+
+    // Fetch supported languages from the server
+    fetch('/api/languages')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.languages) {
+                // Clear existing menu items
+                languageMenu.innerHTML = '';
+
+                // Add language options to the dropdown
+                data.languages.forEach(lang => {
+                    const langItem = document.createElement('a');
+                    langItem.href = `/language/${lang.code}?next=${window.location.pathname}`;
+                    langItem.className = 'dropdown-item';
+                    langItem.textContent = lang.name;
+
+                    // Mark current language as active
+                    if (lang.code === data.current) {
+                        langItem.classList.add('active');
+                        currentLanguageText.textContent = lang.name;
+                    }
+
+                    languageMenu.appendChild(langItem);
+                });
+
+                // Toggle dropdown on click
+                languageDropdown.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    languageMenu.classList.toggle('show');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!languageDropdown.contains(e.target)) {
+                        languageMenu.classList.remove('show');
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching languages:', error);
+        });
 }
 
 /**
@@ -624,7 +683,7 @@ function handleCommandResponse(data) {
 function showAlert(message, type = 'info', duration = 0) {
     const alertsContainer = document.getElementById('alertsContainer');
     if (!alertsContainer) return;
-    
+
     const alertId = 'alert_' + Date.now();
     const alertHtml = `
         <div id="${alertId}" class="alert alert-${type} d-flex justify-between align-center">
@@ -634,9 +693,9 @@ function showAlert(message, type = 'info', duration = 0) {
             </button>
         </div>
     `;
-    
+
     alertsContainer.insertAdjacentHTML('beforeend', alertHtml);
-    
+
     // Auto-hide the alert after duration (if not 0)
     if (duration > 0) {
         setTimeout(function() {

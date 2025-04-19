@@ -11,38 +11,38 @@
     --grass-medium: #4a8e39;  /* Medium grass for buttons, links */
     --grass-light: #8bc34a;   /* Light grass for accents */
     --grass-pale: #c5e1a5;    /* Very light grass for hover states */
-    
+
     /* Secondary colors - dirt/soil tones */
     --dirt-dark: #5d4037;     /* Dark soil for text */
     --dirt-medium: #795548;   /* Medium soil for borders */
     --dirt-light: #a1887f;    /* Light soil for inactive elements */
     --dirt-pale: #d7ccc8;     /* Very light soil for backgrounds */
-    
+
     /* Accent colors */
     --accent-blue: #03a9f4;   /* Water/sky blue for status indicators */
     --accent-yellow: #ffc107; /* Warning color */
     --accent-red: #f44336;    /* Error/danger color */
     --accent-green: #4caf50;  /* Success color */
-    
+
     /* Neutral colors */
     --white: #ffffff;
     --light-gray: #f5f5f5;
     --gray: #9e9e9e;
     --dark-gray: #424242;
     --black: #212121;
-    
+
     /* Font families */
     --font-primary: 'Roboto', 'Segoe UI', 'Helvetica Neue', sans-serif;
     --font-headings: 'Roboto Condensed', 'Arial', sans-serif;
     --font-monospace: 'Roboto Mono', 'Consolas', monospace;
-    
+
     /* Layout variables */
     --header-height: 60px;
     --sidebar-width: 250px;
     --container-max-width: 1200px;
     --content-padding: 20px;
     --border-radius: 4px;
-    
+
     /* Shadows */
     --shadow-small: 0 2px 4px rgba(0, 0, 0, 0.1);
     --shadow-medium: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -185,6 +185,72 @@ img {
 
 .nav-main a.active {
     background-color: var(--grass-medium);
+}
+
+/* Language selector */
+.language-selector {
+    margin-right: 15px;
+    position: relative;
+}
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle {
+    background: none;
+    border: none;
+    color: var(--white);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-toggle i {
+    margin-right: 5px;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-medium);
+    min-width: 150px;
+    z-index: 1000;
+    display: none;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: block;
+    padding: 8px 15px;
+    color: var(--dirt-dark);
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: var(--grass-pale);
+    text-decoration: none;
+}
+
+.dropdown-item.active {
+    background-color: var(--grass-light);
+    color: var(--white);
 }
 
 /* Mobile menu toggle */
@@ -592,7 +658,7 @@ img {
     .content-wrapper {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
         transform: translateX(-100%);
@@ -602,19 +668,19 @@ img {
         bottom: 0;
         z-index: 99;
     }
-    
+
     .sidebar.show {
         transform: translateX(0);
     }
-    
+
     .menu-toggle {
         display: block;
     }
-    
+
     .nav-main {
         display: none;
     }
-    
+
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
@@ -624,24 +690,24 @@ img {
     html {
         font-size: 14px;
     }
-    
+
     .header-content {
         padding: 0 var(--content-padding);
     }
-    
+
     .control-buttons {
         flex-direction: column;
     }
-    
+
     .control-buttons .btn {
         width: 100%;
     }
-    
+
     .joystick-container {
         width: 150px;
         height: 150px;
     }
-    
+
     .joystick-handle {
         width: 50px;
         height: 50px;

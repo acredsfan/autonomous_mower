@@ -1,5 +1,6 @@
 """Web interface for the autonomous mower."""
 
+import os
 import threading
 from typing import TYPE_CHECKING, Optional
 from flask import Flask  # type:ignore
@@ -92,17 +93,44 @@ class WebInterface:
         """Run the web server.
 
         This method runs in a separate thread and handles the actual
-        web server operation.
+        web server operation. If SSL is enabled in the configuration,
+        the server will use HTTPS.
         """
         try:
             if self.socketio and self.app:
+                # Get configuration from mower's config manager
+                config_manager = self.mower.resource_manager.get_config_manager()
+                web_ui_config = config_manager.get_config_section('web_ui')
+
+                # Get web UI port from config or environment
+                port = int(web_ui_config.get('port', 5000))
+
+                # Check if SSL is enabled
+                ssl_enabled = web_ui_config.get('enable_ssl', False)
+                ssl_context = None
+
+                if ssl_enabled:
+                    ssl_cert = web_ui_config.get('ssl_cert_path', '')
+                    ssl_key = web_ui_config.get('ssl_key_path', '')
+
+                    if ssl_cert and ssl_key and os.path.exists(ssl_cert) and os.path.exists(ssl_key):
+                        self.logger.info(f"Starting web server with SSL on port {port}")
+                        ssl_context = (ssl_cert, ssl_key)
+                    else:
+                        self.logger.warning(
+                            "SSL is enabled but certificate or key file not found. "
+                            "Falling back to HTTP."
+                        )
+
+                # Start the server
                 self.socketio.run(
                     self.app,
                     host='0.0.0.0',
-                    port=5000,
+                    port=port,
                     debug=False,
-                    use_reloader=False
-                    )
+                    use_reloader=False,
+                    ssl_context=ssl_context
+                )
         except Exception as e:
             self.logger.error(f"Error in web server thread: {e}")
             self._is_running = False

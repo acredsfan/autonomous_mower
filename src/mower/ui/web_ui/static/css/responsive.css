@@ -1,0 +1,311 @@
+/* 
+ * Autonomous Mower Web Interface - Enhanced Responsive Design
+ * 
+ * This file contains additional responsive design improvements
+ * to make the interface more mobile-friendly and adaptive to different screen sizes.
+ */
+
+/* Additional breakpoints for more granular control */
+:root {
+    --breakpoint-xs: 0;
+    --breakpoint-sm: 576px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 992px;
+    --breakpoint-xl: 1200px;
+    --breakpoint-xxl: 1400px;
+}
+
+/* Improved mobile navigation */
+@media (max-width: 768px) {
+    .nav-main {
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        right: 0;
+        background-color: var(--grass-dark);
+        padding: 1rem;
+        z-index: 98;
+        transform: translateY(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .nav-main.show {
+        transform: translateY(0);
+    }
+    
+    .nav-main ul {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .nav-main li {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .nav-main a {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: var(--border-radius);
+    }
+    
+    /* Toggle button for mobile navigation */
+    .nav-toggle {
+        display: block;
+        margin-left: auto;
+        margin-right: 1rem;
+    }
+    
+    /* Adjust header for mobile */
+    .header-content {
+        justify-content: space-between;
+    }
+    
+    .logo span {
+        display: none; /* Hide logo text on small screens */
+    }
+}
+
+/* Enhanced responsive grid system */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -0.75rem;
+    margin-left: -0.75rem;
+}
+
+.col {
+    position: relative;
+    width: 100%;
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+}
+
+/* Responsive columns */
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+.col-6 { flex: 0 0 50%; max-width: 50%; }
+.col-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+.col-3 { flex: 0 0 25%; max-width: 25%; }
+
+@media (max-width: 576px) {
+    .col-sm-12 { flex: 0 0 100%; max-width: 100%; }
+    .col-sm-6 { flex: 0 0 50%; max-width: 50%; }
+    
+    /* Adjust card padding for small screens */
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    /* Make buttons larger for touch targets */
+    .btn {
+        padding: 0.625rem 1.25rem;
+        font-size: 1.1rem;
+    }
+    
+    /* Increase form control height for better touch targets */
+    .form-control {
+        height: 3rem;
+        font-size: 1.1rem;
+    }
+    
+    /* Adjust spacing */
+    .mb-sm-2 { margin-bottom: 1rem; }
+    .mb-sm-3 { margin-bottom: 1.5rem; }
+}
+
+@media (min-width: 577px) and (max-width: 768px) {
+    .col-md-12 { flex: 0 0 100%; max-width: 100%; }
+    .col-md-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-md-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+}
+
+@media (min-width: 769px) and (max-width: 992px) {
+    .col-lg-12 { flex: 0 0 100%; max-width: 100%; }
+    .col-lg-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-lg-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+    .col-lg-3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+/* Improved dashboard responsiveness */
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Stack control buttons on small screens */
+    .control-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    /* Make joystick more responsive */
+    .joystick-container {
+        width: 180px;
+        height: 180px;
+        margin: 0 auto 1.5rem;
+    }
+}
+
+/* Improved touch-friendly controls */
+@media (max-width: 768px) {
+    /* Larger touch targets */
+    .sidebar-nav a {
+        padding: 0.875rem 1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Adjust form elements for touch */
+    select.form-control {
+        height: 3rem;
+    }
+    
+    /* Larger checkboxes and radio buttons */
+    input[type="checkbox"], input[type="radio"] {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    /* Improved button spacing */
+    .btn + .btn {
+        margin-top: 0.5rem;
+    }
+}
+
+/* Improved table responsiveness */
+@media (max-width: 768px) {
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Convert tables to cards on small screens */
+    .table-to-cards thead {
+        display: none;
+    }
+    
+    .table-to-cards tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--dirt-light);
+        border-radius: var(--border-radius);
+    }
+    
+    .table-to-cards tbody td {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--dirt-pale);
+    }
+    
+    .table-to-cards tbody td:last-child {
+        border-bottom: none;
+    }
+    
+    .table-to-cards tbody td:before {
+        content: attr(data-label);
+        font-weight: bold;
+        text-align: left;
+        padding-right: 1rem;
+    }
+}
+
+/* Improved modal responsiveness */
+@media (max-width: 576px) {
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+}
+
+/* Improved accessibility for touch devices */
+@media (hover: none) {
+    /* Larger hit areas for touch */
+    .btn, .form-control, a {
+        min-height: 44px; /* Apple's recommended minimum touch target size */
+    }
+    
+    /* Remove hover effects that can cause issues on touch devices */
+    a:hover, .btn:hover {
+        text-decoration: none;
+    }
+}
+
+/* Dark mode support for OLED screens (battery saving) */
+@media (prefers-color-scheme: dark) {
+    .dark-mode-enabled {
+        --white: #121212;
+        --light-gray: #1e1e1e;
+        --gray: #888888;
+        --dark-gray: #cccccc;
+        --black: #f5f5f5;
+        
+        /* Adjust other colors for dark mode */
+        --grass-dark: #1b3a0e;
+        --grass-medium: #2d5c1e;
+        --grass-light: #4a8e39;
+        --grass-pale: #2d5c1e;
+        
+        --dirt-dark: #d7ccc8;
+        --dirt-medium: #a1887f;
+        --dirt-light: #795548;
+        --dirt-pale: #5d4037;
+    }
+}
+
+/* Print styles for reports and diagnostics */
+@media print {
+    .header, .footer, .sidebar, .no-print {
+        display: none !important;
+    }
+    
+    .main-content {
+        width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    body {
+        font-size: 12pt;
+        color: #000;
+        background-color: #fff;
+    }
+    
+    a {
+        text-decoration: none;
+        color: #000;
+    }
+    
+    .page-break {
+        page-break-before: always;
+    }
+}
