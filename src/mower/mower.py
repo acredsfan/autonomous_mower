@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 
 # Hardware imports
 from mower.hardware.blade_controller import BladeController
+from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.gpio_manager import GPIOManager
@@ -130,8 +131,10 @@ class ResourceManager:
             self._resources["motor_driver"] = RoboHATDriver()
             self._resources["motor_driver"].__init__()
 
-            self._resources["blade"] = BladeController()
-            self._resources["blade"].__init__()
+            # Create blade controller with adapter for interface compatibility
+            blade_controller = BladeController()
+            blade_controller.__init__()
+            self._resources["blade"] = BladeControllerAdapter(blade_controller)
 
             # Initialize camera
             self._resources["camera"] = get_camera_instance()

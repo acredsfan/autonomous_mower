@@ -8,6 +8,7 @@ maintainability.
 
 from typing import Optional
 
+from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
 from mower.interfaces.hardware import BladeControllerInterface, MotorDriverInterface
 from mower.interfaces.navigation import GpsInterface, LocalizationInterface, PathPlannerInterface
 from mower.interfaces.obstacle_detection import AvoidanceAlgorithmInterface
@@ -17,11 +18,11 @@ from mower.utilities.logger_config import LoggerConfigInfo
 class Robot:
     """
     Main robot class with dependency injection.
-    
+
     This class coordinates all the components of the autonomous mower
     using dependency injection for better testability and maintainability.
     """
-    
+
     def __init__(
         self,
         blade_controller: BladeControllerInterface,
@@ -33,7 +34,7 @@ class Robot:
     ):
         """
         Initialize the robot with all required components.
-        
+
         Args:
             blade_controller: Blade controller component
             motor_driver: Motor driver component
@@ -49,12 +50,12 @@ class Robot:
         self.gps = gps
         self.path_planner = path_planner
         self.logger = LoggerConfigInfo.get_logger(__name__)
-        
+
     def run(self):
         """Main function to run the robot operations."""
         try:
             self.logger.info("Components initialized.")
-            
+
             # Start the autonomous mower
             self.mow_yard()
         except Exception as e:
@@ -65,7 +66,7 @@ class Robot:
             if self.motor_driver:
                 self.motor_driver.shutdown()
             self.logger.info("Robot operation ended.")
-    
+
     def mow_yard(self):
         """
         Mow the yard autonomously.
@@ -77,7 +78,7 @@ class Robot:
         self.avoidance_algorithm.start()
         self.localization.start()
         self.gps.start()
-        
+
         self.logger.info("Mowing started.")
 
 
@@ -92,10 +93,10 @@ def create_robot(
 ) -> Robot:
     """
     Create a Robot instance with all dependencies.
-    
+
     If any dependency is not provided, it will be created using the
     default implementation.
-    
+
     Args:
         blade_controller: Blade controller component
         motor_driver: Motor driver component
@@ -103,7 +104,7 @@ def create_robot(
         avoidance_algorithm: Obstacle avoidance component
         gps: GPS component
         path_planner: Path planner component
-        
+
     Returns:
         Robot: A fully initialized Robot instance
     """
@@ -115,7 +116,7 @@ def create_robot(
         get_gps_nmea_positions,
         get_path_planner,
     )
-    
+
     # Use provided dependencies or create default ones
     blade_controller = blade_controller or get_blade_controller()
     motor_driver = motor_driver or get_robohat_driver()
@@ -123,7 +124,7 @@ def create_robot(
     avoidance_algorithm = avoidance_algorithm or get_avoidance_algorithm()
     gps = gps or get_gps_nmea_positions()
     path_planner = path_planner or get_path_planner()
-    
+
     return Robot(
         blade_controller=blade_controller,
         motor_driver=motor_driver,
