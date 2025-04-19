@@ -5,7 +5,7 @@ This document contains a comprehensive list of improvement tasks for the autonom
 ## Architecture Improvements
 
 [x] Resolve resource management inconsistency between main_controller.py and mower.py
-[ ] Implement proper dependency injection throughout the codebase
+[x] Implement proper dependency injection throughout the codebase
 [ ] Create a unified error handling and reporting system
 [ ] Refactor state management to use a consistent approach across components
 [ ] Implement a proper event system for inter-component communication
