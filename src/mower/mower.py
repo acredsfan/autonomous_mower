@@ -16,6 +16,7 @@ from mower.config_management import (
     get_config_manager, get_config, set_config,
     CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
 )
+from mower.utilities import load_config, save_config, cleanup_resources
 
 # Hardware imports
 from mower.hardware.blade_controller import BladeController
@@ -101,28 +102,7 @@ class ResourceManager:
         Returns:
             dict: Configuration data, or None if the file doesn't exist or there was an error
         """
-        try:
-            # Get the configuration manager
-            config_manager = get_config_manager()
-
-            # Get the full path to the configuration file
-            if isinstance(filename, str) and not Path(filename).is_absolute():
-                config_path = CONFIG_DIR / filename
-            else:
-                config_path = Path(filename)
-
-            # Check if the file exists
-            if not config_path.exists():
-                logger.warning(f"Configuration file {filename} not found")
-                return None
-
-            # Load the configuration file
-            config = config_manager.load(str(config_path))
-            logger.info(f"Loaded configuration from {filename}")
-            return config
-        except Exception as e:
-            logger.error(f"Error loading config file {filename}: {e}")
-            return None
+        return load_config(filename)
 
     def _save_config(self, filename, data):
         """
@@ -135,23 +115,7 @@ class ResourceManager:
         Returns:
             bool: True if the configuration was saved successfully, False otherwise
         """
-        try:
-            # Get the configuration manager
-            config_manager = get_config_manager()
-
-            # Get the full path to the configuration file
-            if isinstance(filename, str) and not Path(filename).is_absolute():
-                config_path = CONFIG_DIR / filename
-            else:
-                config_path = Path(filename)
-
-            # Save the configuration file
-            config_manager.save(str(config_path), data)
-            logger.info(f"Saved configuration to {filename}")
-            return True
-        except Exception as e:
-            logger.error(f"Error saving config file {filename}: {e}")
-            return False
+        return save_config(filename, data)
 
     def _initialize_hardware(self):
         """Initialize all hardware components."""
@@ -270,27 +234,10 @@ class ResourceManager:
 
     def cleanup(self):
         """Clean up all resources."""
-        with self._lock:
-            if not self._initialized:
-                return
-
-            try:
-                # Clean up hardware in reverse order
-                for name, resource in reversed(list(self._resources.items())):
-                    try:
-                        if hasattr(resource, 'cleanup'):
-                            resource.cleanup()
-                        elif hasattr(resource, 'shutdown'):
-                            resource.shutdown()
-                    except Exception as e:
-                        logger.error(f"Error cleaning up {name}: {e}")
-
-                self._resources.clear()
-                self._initialized = False
-                logger.info("All resources cleaned up successfully")
-            except Exception as e:
-                logger.error(f"Error during cleanup: {e}")
-                raise
+        result = cleanup_resources(self._resources, self._initialized, self._lock)
+        if result:
+            self._initialized = False
+        return result
 
     def get_resource(self, name):
         """

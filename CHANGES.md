@@ -266,3 +266,36 @@ Refactored long methods (>50 lines) into smaller, focused functions to improve c
 - Easier debugging by isolating functionality into well-named methods
 - More extensible code structure that makes it easier to add new features
 - Consistent coding style across the codebase
+
+## Removed Duplicate Code and Implemented Shared Utilities
+
+### Overview
+Identified and removed duplicate code across the codebase by implementing shared utilities. This improves code maintainability, reduces the risk of inconsistencies, and makes the codebase more DRY (Don't Repeat Yourself).
+
+### Changes Made
+1. Created a new utility module `resource_utils.py` with shared functions:
+   - `load_config`: Centralized function for loading configuration files
+   - `save_config`: Centralized function for saving configuration data to files
+   - `cleanup_resources`: Centralized function for cleaning up resources in a thread-safe way
+
+2. Updated the `utilities` package's `__init__.py` to expose these new utility functions.
+
+3. Refactored `mower.py` to use the shared utilities:
+   - Replaced `_load_config` method with a call to the shared utility
+   - Replaced `_save_config` method with a call to the shared utility
+   - Replaced `cleanup` method with a call to the shared utility
+
+4. Refactored `main_controller.py` to use the shared utilities:
+   - Replaced `_load_config` method with a call to the shared utility
+   - Replaced `cleanup` method with a call to the shared utility
+
+5. Updated tasks.md to mark the "Remove duplicate code and implement shared utilities" task as completed.
+
+### Benefits
+- Reduced code duplication, making the codebase more maintainable
+- Ensured consistent behavior across different components
+- Simplified code by centralizing common functionality
+- Made it easier to update shared functionality in one place
+- Improved code readability by using well-named utility functions
+- Reduced the risk of bugs due to inconsistent implementations
+- Made the codebase more modular and easier to test
