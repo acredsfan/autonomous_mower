@@ -35,8 +35,8 @@ This document contains a comprehensive list of improvement tasks for the autonom
 [x] Implement property-based testing for complex algorithms
 [x] Add performance benchmarks for critical operations
 [x] Create a CI/CD pipeline for automated testing
-[ ] Implement test coverage reporting
-[ ] Add regression tests for known issues
+[x] Implement test coverage reporting
+[x] Add regression tests for known issues
 
 ## Documentation
 
