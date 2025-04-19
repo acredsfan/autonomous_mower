@@ -11,6 +11,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any, Union
 
+# Configuration management
+from mower.config_management import (
+    get_config_manager, get_config, set_config,
+    CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
+)
+
 # Hardware imports
 from mower.hardware.blade_controller import BladeController
 from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
@@ -50,12 +56,6 @@ from mower.utilities.utils import Utils
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
 
-# Base directory for consistent file referencing
-BASE_DIR = Path(__file__).parent.parent.parent
-
-# Configuration directory
-CONFIG_DIR = BASE_DIR / "config"
-
 
 class MowerMode(Enum):
     """Enumeration of possible mower operation modes."""
@@ -91,16 +91,67 @@ class ResourceManager:
         if config_path:
             self._load_config(config_path)
 
-    def _load_config(self, config_path):
-        """Load configuration from file."""
+    def _load_config(self, filename):
+        """
+        Load a configuration file using the configuration manager.
+
+        Args:
+            filename: Name or path of the configuration file to load
+
+        Returns:
+            dict: Configuration data, or None if the file doesn't exist or there was an error
+        """
         try:
-            with open(config_path, 'r') as f:
-                config = json.load(f)
-                logger.info(f"Loaded configuration from {config_path}")
-                return config
+            # Get the configuration manager
+            config_manager = get_config_manager()
+
+            # Get the full path to the configuration file
+            if isinstance(filename, str) and not Path(filename).is_absolute():
+                config_path = CONFIG_DIR / filename
+            else:
+                config_path = Path(filename)
+
+            # Check if the file exists
+            if not config_path.exists():
+                logger.warning(f"Configuration file {filename} not found")
+                return None
+
+            # Load the configuration file
+            config = config_manager.load(str(config_path))
+            logger.info(f"Loaded configuration from {filename}")
+            return config
         except Exception as e:
-            logger.error(f"Error loading config from {config_path}: {e}")
+            logger.error(f"Error loading config file {filename}: {e}")
             return None
+
+    def _save_config(self, filename, data):
+        """
+        Save configuration data to a file using the configuration manager.
+
+        Args:
+            filename: Name or path of the configuration file to save
+            data: Configuration data to save
+
+        Returns:
+            bool: True if the configuration was saved successfully, False otherwise
+        """
+        try:
+            # Get the configuration manager
+            config_manager = get_config_manager()
+
+            # Get the full path to the configuration file
+            if isinstance(filename, str) and not Path(filename).is_absolute():
+                config_path = CONFIG_DIR / filename
+            else:
+                config_path = Path(filename)
+
+            # Save the configuration file
+            config_manager.save(str(config_path), data)
+            logger.info(f"Saved configuration to {filename}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving config file {filename}: {e}")
+            return False
 
     def _initialize_hardware(self):
         """Initialize all hardware components."""
@@ -162,22 +213,22 @@ class ResourceManager:
 
             # Initialize pattern planner with learning capabilities
             pattern_config = PatternConfig(
-                pattern_type=PatternType.PARALLEL,
-                spacing=0.3,  # 30cm spacing between passes
-                angle=0.0,  # Start with parallel to x-axis
-                overlap=0.1,  # 10% overlap between passes
-                start_point=(0.0, 0.0),  # Will be updated with actual position
-                boundary_points=[]  # Will be loaded from config
+                pattern_type=PatternType[get_config('path_planning.pattern_type', 'PARALLEL')],
+                spacing=get_config('path_planning.spacing', 0.3),  # 30cm spacing between passes
+                angle=get_config('path_planning.angle', 0.0),  # Start with parallel to x-axis
+                overlap=get_config('path_planning.overlap', 0.1),  # 10% overlap between passes
+                start_point=get_config('path_planning.start_point', (0.0, 0.0)),  # Will be updated with actual position
+                boundary_points=get_config('path_planning.boundary_points', [])  # Will be loaded from config
             )
 
             learning_config = LearningConfig(
-                learning_rate=0.1,
-                discount_factor=0.9,
-                exploration_rate=0.2,
-                memory_size=1000,
-                batch_size=32,
-                update_frequency=100,
-                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json")
+                learning_rate=get_config('path_planning.learning.learning_rate', 0.1),
+                discount_factor=get_config('path_planning.learning.discount_factor', 0.9),
+                exploration_rate=get_config('path_planning.learning.exploration_rate', 0.2),
+                memory_size=get_config('path_planning.learning.memory_size', 1000),
+                batch_size=get_config('path_planning.learning.batch_size', 32),
+                update_frequency=get_config('path_planning.learning.update_frequency', 100),
+                model_path=get_config('path_planning.learning.model_path', str(PATTERN_PLANNER_PATH))
             )
 
             self._resources["path_planner"] = NewPathPlanner(
@@ -338,13 +389,10 @@ class Mower:
 
         # Load home location from configuration
         try:
-            home_config_path = CONFIG_DIR / "home_location.json"
-            if home_config_path.exists():
-                with open(home_config_path, 'r') as f:
-                    home_config = json.load(f)
-                    if home_config and 'location' in home_config:
-                        self.home_location = home_config['location']
-                        self.logger.info(f"Loaded home location: {self.home_location}")
+            home_config = self.resource_manager._load_config("home_location.json")
+            if home_config and 'location' in home_config:
+                self.home_location = home_config['location']
+                self.logger.info(f"Loaded home location: {self.home_location}")
         except Exception as e:
             self.logger.error(f"Failed to load home location: {e}")
 
@@ -517,15 +565,10 @@ class Mower:
         self.home_location = location
 
         # Save to configuration file
-        try:
-            home_config_path = CONFIG_DIR / "home_location.json"
-            with open(home_config_path, 'w') as f:
-                json.dump({"location": location}, f)
+        result = self.resource_manager._save_config("home_location.json", {"location": location})
+        if result:
             self.logger.info(f"Saved home location: {location}")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error saving home location: {e}")
-            return False
+        return result
 
     def get_boundary(self):
         """Get the yard boundary."""
@@ -545,30 +588,20 @@ class Mower:
             path_planner.pattern_config.boundary_points = boundary
 
         # Save to configuration file
-        try:
-            boundary_path = CONFIG_DIR / "boundary.json"
-            with open(boundary_path, 'w') as f:
-                json.dump({"boundary": boundary}, f)
+        result = self.resource_manager._save_config("boundary.json", {"boundary": boundary})
+        if result:
             self.logger.info("Saved boundary configuration")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error saving boundary: {e}")
-            return False
+        return result
 
     def save_no_go_zones(self, zones):
         """Save no-go zones."""
         self.no_go_zones = zones
 
         # Save to configuration file
-        try:
-            zones_path = CONFIG_DIR / "no_go_zones.json"
-            with open(zones_path, 'w') as f:
-                json.dump({"zones": zones}, f)
+        result = self.resource_manager._save_config("no_go_zones.json", {"zones": zones})
+        if result:
             self.logger.info("Saved no-go zones configuration")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error saving no-go zones: {e}")
-            return False
+        return result
 
     def get_mowing_schedule(self):
         """Get the mowing schedule."""
@@ -579,15 +612,10 @@ class Mower:
         self.mowing_schedule = schedule
 
         # Save to configuration file
-        try:
-            schedule_path = CONFIG_DIR / "schedule.json"
-            with open(schedule_path, 'w') as f:
-                json.dump({"schedule": schedule}, f)
+        result = self.resource_manager._save_config("schedule.json", {"schedule": schedule})
+        if result:
             self.logger.info("Saved mowing schedule")
-            return True
-        except Exception as e:
-            self.logger.error(f"Error saving mowing schedule: {e}")
-            return False
+        return result
 
     def get_current_path(self):
         """Get the current planned path."""
@@ -873,6 +901,7 @@ def start_web_interface():
 
 def start_robot_logic():
     """Start the robot logic."""
+    # Import here to avoid circular import
     from mower.robot import run_robot
     robot_thread = threading.Thread(target=run_robot, daemon=True)
     robot_thread.start()

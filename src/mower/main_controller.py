@@ -35,6 +35,7 @@ import threading
 import time
 from enum import Enum
 from pathlib import Path
+from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
@@ -44,7 +45,7 @@ from mower.hardware.tof import VL53L0XSensors
 from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.blade_controller import BladeController
 from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.serial_port import SerialPort
+from mower.hardware.serial_port import SerialPort, GPS_BAUDRATE
 from mower.navigation.localization import Localization
 from mower.navigation.path_planner import (
     PathPlanner, PatternConfig, LearningConfig, PatternType
@@ -55,16 +56,13 @@ from mower.obstacle_detection.avoidance_algorithm import (
 )
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
-from src.mower.hardware.serial_port import GPS_BAUDRATE
+from mower.config_management import (
+    get_config_manager, get_config, set_config,
+    CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
+)
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
-
-# Base directory for consistent file referencing
-BASE_DIR = Path(__file__).parent.parent.parent
-
-# Configuration directory
-CONFIG_DIR = BASE_DIR / "config"
 
 
 # System state enumeration
@@ -86,18 +84,21 @@ class ResourceManager:
     accessing resources and ensures proper initialization order and cleanup.
     """
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path: Optional[str] = None) -> None:
         """
         Initialize the resource manager.
+
+        Args:
+            config_path: Optional path to configuration file
         """
-        self._initialized = False
-        self._resources = {}
-        self._lock = threading.Lock()
+        self._initialized: bool = False
+        self._resources: Dict[str, Any] = {}
+        self._lock: threading.Lock = threading.Lock()
 
         if config_path:
             self._load_config(config_path)
 
-    def _initialize_hardware(self):
+    def _initialize_hardware(self) -> None:
         """Initialize all hardware components."""
         try:
             # Initialize GPIO first
@@ -148,30 +149,32 @@ class ResourceManager:
             logger.error(f"Error initializing hardware: {e}")
             raise
 
-    def _initialize_software(self):
+    def _initialize_software(self) -> None:
         """Initialize all software components."""
         try:
             # Initialize localization
             self._resources["localization"] = Localization()
 
             # Initialize pattern planner with learning capabilities
+            # Get pattern configuration from the configuration manager
             pattern_config = PatternConfig(
-                pattern_type=PatternType.PARALLEL,
-                spacing=0.3,  # 30cm spacing between passes
-                angle=0.0,  # Start with parallel to x-axis
-                overlap=0.1,  # 10% overlap between passes
+                pattern_type=PatternType[get_config('path_planning.pattern_type', 'PARALLEL')],
+                spacing=get_config('path_planning.spacing', 0.3),  # 30cm spacing between passes
+                angle=get_config('path_planning.angle', 0.0),  # Start with parallel to x-axis
+                overlap=get_config('path_planning.overlap', 0.1),  # 10% overlap between passes
                 start_point=(0.0, 0.0),  # Will be updated with actual position
                 boundary_points=[]  # Will be loaded from config
             )
 
+            # Get learning configuration from the configuration manager
             learning_config = LearningConfig(
-                learning_rate=0.1,
-                discount_factor=0.9,
-                exploration_rate=0.2,
-                memory_size=1000,
-                batch_size=32,
-                update_frequency=100,
-                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json")
+                learning_rate=get_config('path_planning.learning_rate', 0.1),
+                discount_factor=get_config('path_planning.discount_factor', 0.9),
+                exploration_rate=get_config('path_planning.exploration_rate', 0.2),
+                memory_size=get_config('path_planning.memory_size', 1000),
+                batch_size=get_config('path_planning.batch_size', 32),
+                update_frequency=get_config('path_planning.update_frequency', 100),
+                model_path=str(PATTERN_PLANNER_PATH)
             )
 
             self._resources["path_planner"] = PathPlanner(
@@ -198,7 +201,7 @@ class ResourceManager:
             logger.error(f"Error initializing software: {e}")
             raise
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Initialize all resources."""
         with self._lock:
             if self._initialized:
@@ -214,7 +217,7 @@ class ResourceManager:
                 self.cleanup()
                 raise
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up all resources."""
         with self._lock:
             if not self._initialized:
@@ -235,7 +238,7 @@ class ResourceManager:
                 logger.error(f"Error during cleanup: {e}")
                 raise
 
-    def get_resource(self, name):
+    def get_resource(self, name: str) -> Any:
         """
         Get a resource by name.
 
@@ -247,57 +250,58 @@ class ResourceManager:
 
         Raises:
             KeyError: If the resource is not found.
+            RuntimeError: If resources are not initialized.
         """
         with self._lock:
             if not self._initialized:
                 raise RuntimeError("Resources not initialized")
             return self._resources[name]
 
-    def get_path_planner(self):
+    def get_path_planner(self) -> Optional[PathPlanner]:
         """Get the path planner instance."""
         return self._resources.get("path_planner")
 
-    def get_navigation(self):
+    def get_navigation(self) -> Optional[NavigationController]:
         """Get the navigation controller instance."""
         return self._resources.get("navigation")
 
-    def get_obstacle_detection(self):
+    def get_obstacle_detection(self) -> Optional[Any]:
         """Get the obstacle detection instance."""
         return self._resources.get("obstacle_detection")
 
-    def get_web_interface(self):
+    def get_web_interface(self) -> Optional[WebInterface]:
         """Get the web interface instance."""
         return self._resources.get("web_interface")
 
-    def get_blade_controller(self):
+    def get_blade_controller(self) -> Optional[BladeController]:
         """Get the blade controller instance."""
         return self._resources.get("blade")
 
-    def get_bme280_sensor(self):
+    def get_bme280_sensor(self) -> Optional[BME280Sensor]:
         """Get the BME280 sensor instance."""
         return self._resources.get("bme280")
 
-    def get_camera(self):
+    def get_camera(self) -> Optional[Any]:
         """Get the camera instance."""
         return self._resources.get("camera")
 
-    def get_robohat_driver(self):
+    def get_robohat_driver(self) -> Optional[RoboHATDriver]:
         """Get the RoboHAT driver instance."""
         return self._resources.get("motor_driver")
 
-    def get_gps_position(self):
+    def get_gps_position(self) -> Optional[SerialPort]:
         """Get the GPS position instance."""
         return self._resources.get("gps_serial")
 
-    def get_imu_sensor(self):
+    def get_imu_sensor(self) -> Optional[BNO085Sensor]:
         """Get the IMU sensor instance."""
         return self._resources.get("imu")
 
-    def get_ina3221_sensor(self):
+    def get_ina3221_sensor(self) -> Optional[INA3221Sensor]:
         """Get the INA3221 sensor instance."""
         return self._resources.get("ina3221")
 
-    def get_tof_sensors(self):
+    def get_tof_sensors(self) -> Optional[VL53L0XSensors]:
         """Get the ToF sensors instance."""
         return self._resources.get("tof")
 
@@ -334,7 +338,7 @@ class RobotController:
         - For unexpected stops, check sensor readings and obstacle detection
     """
 
-    def __init__(self, resource_manager):
+    def __init__(self, resource_manager: ResourceManager) -> None:
         """
         Initialize the robot controller with resource manager and default
         state.
@@ -354,27 +358,55 @@ class RobotController:
 
         # Load home location from configuration
         try:
-            home_config = self._load_config('home_location.json')
-            if home_config and 'location' in home_config:
-                self.home_location = home_config['location']
+            # Get the home location from the configuration manager
+            home_location = get_config('home.location')
+            if not home_location:
+                # Try to load from the home location file
+                home_config = self._load_config('home_location.json')
+                if home_config and 'location' in home_config:
+                    home_location = home_config['location']
+                    # Save to the configuration manager for future use
+                    set_config('home.location', home_location)
+
+            if home_location:
+                self.home_location = home_location
                 logger.info(f"Loaded home location: {self.home_location}")
         except Exception as e:
             logger.error(f"Failed to load home location: {e}")
 
         logger.info("Robot controller initialized")
 
-    def _load_config(self, filename):
-        """Load a configuration file from the standard config location."""
-        config_path = self.resource_manager.user_polygon_path.parent / filename
-        if config_path.exists():
-            try:
-                with open(config_path, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading config file {filename}: {e}")
-        return None
+    def _load_config(self, filename: str) -> Optional[Dict[str, Any]]:
+        """
+        Load a configuration file using the configuration manager.
 
-    def run_robot(self):
+        Args:
+            filename: Name of the configuration file to load
+
+        Returns:
+            dict: Configuration data, or None if the file doesn't exist or there was an error
+        """
+        try:
+            # Get the configuration manager
+            config_manager = get_config_manager()
+
+            # Get the full path to the configuration file
+            config_path = CONFIG_DIR / filename
+
+            # Check if the file exists
+            if not config_path.exists():
+                logger.warning(f"Configuration file {filename} not found")
+                return None
+
+            # Load the configuration file
+            config = config_manager.load(str(config_path))
+            logger.info(f"Loaded configuration from {filename}")
+            return config
+        except Exception as e:
+            logger.error(f"Error loading config file {filename}: {e}")
+            return None
+
+    def run_robot(self) -> None:
         """
         Main entry point to start the robot operation.
 
@@ -431,7 +463,7 @@ class RobotController:
                 self.avoidance_algorithm.stop()
             self.resource_manager.cleanup()
 
-    def _main_control_loop(self):
+    def _main_control_loop(self) -> None:
         """
         Main control loop that handles state transitions and monitoring.
 
@@ -517,7 +549,7 @@ class RobotController:
             self.current_state = SystemState.ERROR
             self.error_condition = str(e)
 
-    def _check_emergency_conditions(self):
+    def _check_emergency_conditions(self) -> bool:
         """
         Check for conditions that would trigger an emergency stop.
 
@@ -548,7 +580,7 @@ class RobotController:
             # Default to emergency stop on error to be safe
             return True
 
-    def _check_at_home(self):
+    def _check_at_home(self) -> bool:
         """
         Check if the robot has reached the home location.
 
@@ -588,7 +620,7 @@ class RobotController:
             logger.error(f"Error checking home position: {e}")
             return False
 
-    def mow_yard(self):
+    def mow_yard(self) -> bool:
         """
         Main mowing operation logic for autonomous mowing.
 
@@ -684,7 +716,7 @@ class RobotController:
 
             return False
 
-    def _navigate_to_waypoint(self, waypoint):
+    def _navigate_to_waypoint(self, waypoint: Tuple[float, float]) -> bool:
         """Navigate to a specific waypoint."""
         try:
             navigation = self.resource_manager.get_navigation()
@@ -719,7 +751,7 @@ class RobotController:
             logger.error(f"Error navigating to waypoint: {e}")
             return False
 
-    def _return_home(self):
+    def _return_home(self) -> bool:
         """
         Navigate back to the home/charging location.
 
@@ -747,7 +779,7 @@ class RobotController:
             logger.error(f"Error initiating return to home: {e}")
             return False
 
-    def start_manual_control(self):
+    def start_manual_control(self) -> bool:
         """
         Switch to manual control mode.
 
@@ -778,7 +810,7 @@ class RobotController:
             logger.error(f"Error switching to manual control: {e}")
             return False
 
-    def stop_all_operations(self):
+    def stop_all_operations(self) -> bool:
         """
         Stop all operations and return to IDLE state.
 
@@ -802,7 +834,7 @@ class RobotController:
             return False
 
 
-def main():
+def main() -> None:
     """
     Main entry point for the autonomous mower application.
 

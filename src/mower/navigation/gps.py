@@ -310,7 +310,7 @@ if __name__ == "__main__":
 
     import numpy as np
     import readchar
-    from src.mower.hardware.serial_port import SerialPort
+    from mower.hardware.serial_port import SerialPort
 
     def stats(data):
         """
