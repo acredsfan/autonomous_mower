@@ -299,3 +299,46 @@ Identified and removed duplicate code across the codebase by implementing shared
 - Improved code readability by using well-named utility functions
 - Reduced the risk of bugs due to inconsistent implementations
 - Made the codebase more modular and easier to test
+
+## Added Pre-commit Hooks for Code Formatting and Linting
+
+### Overview
+Added pre-commit hooks to automate code quality checks and ensure consistent code style across the project. This helps catch issues early in the development process and maintains a high standard of code quality.
+
+### Changes Made
+1. Created a `.pre-commit-config.yaml` file with configurations for:
+   - Basic file checks (trailing whitespace, end-of-file newline, etc.)
+   - Black for code formatting
+   - isort for import sorting
+   - Flake8 for linting
+   - mypy for type checking
+   - Bandit for security checks
+
+2. Added tool configurations to `pyproject.toml`:
+   - Black configuration for code formatting
+   - isort configuration for import sorting
+   - Bandit configuration for security checks
+
+3. Created a setup script (`scripts/setup_hooks.py`) to:
+   - Check if pre-commit is installed
+   - Install pre-commit if needed
+   - Install development dependencies
+   - Install the pre-commit hooks
+   - Provide information about the installed hooks
+
+4. Updated tasks.md to mark the "Add pre-commit hooks for code formatting and linting" task as completed.
+
+### Benefits
+- Automated code quality checks before each commit
+- Consistent code style across the project
+- Early detection of potential issues
+- Reduced time spent on code reviews for style issues
+- Improved code quality and maintainability
+- Enhanced security through automated security checks
+- Better developer experience with clear feedback on code quality issues
+
+### Usage
+To set up the pre-commit hooks:
+1. Run the setup script: `python scripts/setup_hooks.py`
+2. The hooks will run automatically on each commit
+3. You can run the hooks manually with: `pre-commit run --all-files`

@@ -24,7 +24,7 @@ This document contains a comprehensive list of improvement tasks for the autonom
 [x] Implement proper thread synchronization in all multi-threaded components
 [x] Refactor long methods (>50 lines) into smaller, focused functions
 [x] Remove duplicate code and implement shared utilities
-[ ] Add pre-commit hooks for code formatting and linting
+[x] Add pre-commit hooks for code formatting and linting
 
 ## Testing
 
