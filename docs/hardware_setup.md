@@ -1,395 +1,312 @@
-# Hardware Setup Guide
+# Hardware Setup
 
-This guide provides comprehensive instructions for setting up the hardware components of the Autonomous Mower system. Follow these steps carefully to ensure proper connections and configuration.
+This document provides detailed instructions for setting up the hardware components of the Autonomous Mower.
 
-## Table of Contents
+## Overview
 
-1. [System Overview](#system-overview)
-2. [Required Components](#required-components)
-3. [Wiring Diagram](#wiring-diagram)
-4. [Component Setup](#component-setup)
-   - [Raspberry Pi](#raspberry-pi)
-   - [Motor Control](#motor-control)
-   - [GPS and Navigation](#gps-and-navigation)
-   - [Sensors](#sensors)
-   - [Power System](#power-system)
-   - [Camera](#camera)
-5. [Hardware Testing](#hardware-testing)
-6. [Troubleshooting](#troubleshooting)
-
-## System Overview
-
-The autonomous mower hardware system consists of several interconnected components:
-
-- **Computing Core**: Raspberry Pi that runs the main control software
-- **Motor Control System**: Drives wheel motors and blade motors
-- **Navigation System**: GPS and IMU for position tracking and heading
-- **Sensor System**: Various sensors for obstacle detection and environmental monitoring
-- **Power System**: Battery, charging system, and power management
-- **Communications**: WiFi connectivity for remote monitoring and control
-
-All these components work together to create a robust autonomous mowing platform capable of navigating your yard safely and efficiently.
+The Autonomous Mower requires several hardware components to function properly. This guide will walk you through the process of assembling and connecting these components.
 
 ## Required Components
 
-### Essential Components
+### Core Components
 
-| Component | Recommended Model | Quantity | Purpose |
-|-----------|-------------------|----------|---------|
-| Single-board Computer | Raspberry Pi 4 (4GB+) | 1 | Main controller |
-| Motor Driver | RoboHAT Motor Controller | 1 | Controls wheel motors |
-| Wheel Motors | 12V Worm Gear Motors | 2 | Propulsion system |
-| Blade Motor | 12V DC Motor (997 type) | 1 | Cutting system |
-| Blade Motor Controller | IBT-4 Motor Driver | 1 | Controls blade motors |
-| GPS Module | GPS-RTK-SMA or NEO-M8N | 1 | Position tracking |
-| IMU | BNO085 Sensor | 1 | Orientation tracking |
-| Distance Sensors | VL53L0X ToF Sensors | 2+ | Obstacle detection |
-| Camera | Raspberry Pi Camera Module | 1 | Visual navigation |
-| Environmental Sensor | BME280 | 1 | Weather monitoring |
-| Power Monitor | INA3221 | 1 | Battery management |
-| Battery | 12V 20AH LiFePO4 | 1 | Power supply |
-| Solar Panel | 20W 12V Panel | 1 | Battery charging |
-| Solar Charge Controller | 10A 12V Controller | 1 | Charge management |
-| WiFi Adapter | AC1300 WiFi Adapter | 1 | Connectivity |
-| DC-DC Converter | 12V to 5V Buck Converter | 1 | Power regulation |
-| I2C Splitter | I2C Hub | 1 | Sensor connections |
-| Hall Effect Sensors | KY-003 | 2 | Wheel encoders |
+- Raspberry Pi 4B (4GB RAM or better recommended)
+- Raspberry Pi Camera Module v2 or v3
+- RoboHAT motor controller board
+- 2 x 12V DC motors with encoders (for drive wheels)
+- 1 x 12V DC motor (for cutting blade)
+- 12V LiPo battery (minimum 5000mAh recommended)
+- Emergency stop button (normally closed)
+- GPS module (e.g., NEO-6M)
+- IMU sensor (e.g., BNO085)
+- 3 x Ultrasonic distance sensors (HC-SR04)
+- Optional: Google Coral USB Accelerator for improved obstacle detection
 
-### Tools Required
+### Chassis and Mechanical Components
+
+- Mower chassis (custom or modified from existing mower)
+- 2 x Drive wheels (minimum 20cm diameter recommended)
+- 1 x Castor wheel (front)
+- Cutting blade assembly
+- Blade guard
+- Weatherproof enclosure for electronics
+- Charging station
+
+### Tools and Supplies
 
 - Soldering iron and solder
-- Wire strippers
+- Wire cutters and strippers
 - Heat shrink tubing
+- Screwdrivers (Phillips and flathead)
+- M3 and M4 screws and nuts
+- Zip ties
+- Electrical tape
 - Multimeter
-- Screwdriver set
-- Wire cutters
-- Crimping tool and connectors
-- Cable ties
 
-## Wiring Diagram
+## Assembly Diagram
 
-![Wiring Diagram](images/wiring_diagram.png)
+```
+                                   +-------------+
+                                   |  Raspberry  |
+                                   |     Pi      |
+                                   +------+------+
+                                          |
+                                          v
++-------------+    +-------------+    +---+---+    +-------------+
+|    Camera   |<-->|    GPIO     |<-->| Robo  |<-->|  Motors &   |
+|   Module    |    | Connections |    |  HAT  |    |   Blade     |
++-------------+    +------+------+    +---+---+    +-------------+
+                          ^               |
+                          |               v
+                   +------+------+    +---+---+
+                   |   Sensors   |    | Power |
+                   | (GPS, IMU,  |    | Mgmt  |
+                   | Ultrasonic) |    +---+---+
+                   +-------------+        |
+                                          v
+                                   +------+------+
+                                   |   Battery   |
+                                   |   (12V)     |
+                                   +-------------+
+```
 
-*Note: The above image shows the complete wiring diagram for all components. Follow this diagram for proper connections.*
+## Step-by-Step Assembly
 
-## Component Setup
+### 1. Chassis Preparation
 
-### Raspberry Pi
+1. If using a modified existing mower, remove all original electronics and the gas/electric motor
+2. Clean the chassis and ensure it's free from debris and sharp edges
+3. Drill mounting holes for the Raspberry Pi, RoboHAT, and other components
+4. Install the castor wheel at the front of the chassis
+5. Mount the drive wheels and motors
 
-1. **Initial Setup**:
-   - Flash Raspberry Pi OS (64-bit) to the microSD card
-   - Configure WiFi and enable SSH, I2C, SPI, and Serial interfaces
-   - Update the system: `sudo apt update && sudo apt upgrade -y`
+![Chassis Preparation](images/chassis_preparation.jpg)
 
-2. **Connections**:
-   - Connect 5V power from the buck converter
-   - Connect the I2C bus to the I2C splitter
-   - Connect the SPI bus to the appropriate sensors
-   - Connect the camera to the CSI port
-   - Connect the USB WiFi adapter
+### 2. Electronics Mounting
 
-3. **Configuration**:
-   ```bash
-   # Enable I2C
-   sudo raspi-config nonint do_i2c 0
-   
-   # Enable SPI
-   sudo raspi-config nonint do_spi 0
-   
-   # Enable camera
-   sudo raspi-config nonint do_camera 0
-   
-   # Enable serial (disable login shell, enable hardware)
-   sudo raspi-config nonint do_serial 2
-   ```
+1. Create a weatherproof enclosure for the electronics
+2. Mount the Raspberry Pi in the enclosure
+3. Mount the RoboHAT on top of or adjacent to the Raspberry Pi
+4. Secure all connections with screws
+5. Ensure adequate ventilation for cooling
 
-### Motor Control
+![Electronics Mounting](images/electronics_mounting.jpg)
 
-#### RoboHAT Motor Controller
+### 3. Motor Connections
 
-1. **Installation**:
-   - Connect the RoboHAT to the Raspberry Pi's GPIO pins
-   - Secure it with standoffs to prevent movement
+1. Connect the drive motors to the RoboHAT:
+   - Left motor: M1 terminals
+   - Right motor: M2 terminals
+2. Connect the blade motor to the RoboHAT:
+   - Blade motor: M3 terminals
+3. Connect the motor encoders to the encoder inputs on the RoboHAT
 
-2. **Motor Connections**:
-   - Connect left wheel motor to outputs M1A and M1B
-   - Connect right wheel motor to outputs M2A and M2B
-   - Connect the motor power input to the battery (12V)
-   - Ensure proper polarity on all connections
+![Motor Connections](images/motor_connections.jpg)
 
-3. **Configuration**:
-   - Upload the `rp2040_code.py` from the `robohat_files` directory to the RoboHAT's RP2040 microcontroller
-   - Rename it to `code.py` on the controller
-   - Connect to the Raspberry Pi via I2C (default address: 0x40)
+### 4. Sensor Installation
 
-#### Blade Motor Controller (IBT-4)
+#### Camera Module
 
-1. **Connections**:
-   - Connect R_EN and L_EN to 5V (enable pins)
-   - Connect RPWM to GPIO23 on the Raspberry Pi
-   - Connect LPWM to GPIO24 on the Raspberry Pi
-   - Connect VCC to 5V
-   - Connect GND to ground
-   - Connect motor outputs to the blade motor
-   - Connect power input to the battery (12V)
+1. Connect the camera module to the Raspberry Pi's camera port using the ribbon cable
+2. Mount the camera at the front of the mower, facing forward
+3. Ensure the camera has a clear view of the area in front of the mower
+4. Secure the ribbon cable to prevent damage
 
-2. **Testing**:
-   ```bash
-   # Install GPIO library if not already installed
-   sudo pip3 install RPi.GPIO
-   
-   # Test blade motor (forward)
-   python3 -m mower.diagnostics.blade_test
-   ```
-
-### GPS and Navigation
+![Camera Installation](images/camera_installation.jpg)
 
 #### GPS Module
 
-1. **Mounting**:
-   - Mount the GPS antenna on the highest point of the mower with a clear view of the sky
-   - Keep the antenna away from other electronics to minimize interference
-   - Use a ground plane under the antenna if possible for better reception
+1. Connect the GPS module to the Raspberry Pi:
+   - VCC to 3.3V
+   - GND to GND
+   - TX to GPIO15 (RXD)
+   - RX to GPIO14 (TXD)
+2. Mount the GPS module on top of the mower with a clear view of the sky
+3. Use a GPS antenna if necessary for better reception
 
-2. **Connections**:
-   - Connect the GPS module to the Raspberry Pi via UART
-   - Connect VCC to 3.3V
-   - Connect GND to ground
-   - Connect TX to RXD (GPIO15) on the Raspberry Pi
-   - Connect RX to TXD (GPIO14) on the Raspberry Pi
+![GPS Installation](images/gps_installation.jpg)
 
-3. **Configuration**:
-   - Set the baud rate to 9600 (default) or 115200 if using a high-speed module
-   - Update the `.env` file with the correct serial port: `GPS_SERIAL_PORT=/dev/ttyAMA0`
+#### IMU Sensor
 
-#### BNO085 IMU
+1. Connect the IMU sensor to the Raspberry Pi's I2C pins:
+   - VCC to 3.3V
+   - GND to GND
+   - SDA to GPIO2
+   - SCL to GPIO3
+2. Mount the IMU sensor securely to the chassis to minimize vibration
+3. Ensure the sensor is oriented correctly (arrow pointing forward)
 
-1. **Mounting**:
-   - Mount the IMU on a flat, level surface
-   - Align the forward axis with the forward direction of the mower
-   - Secure it firmly to prevent vibration
+![IMU Installation](images/imu_installation.jpg)
 
-2. **Connections**:
-   - Connect the IMU to the I2C splitter
-   - Connect VIN to 3.3V
-   - Connect GND to ground
-   - Connect SCL to the I2C clock line
-   - Connect SDA to the I2C data line
+#### Ultrasonic Sensors
 
-3. **Calibration**:
-   - Run the calibration procedure: `python3 -m mower.diagnostics.imu_calibration`
-   - Follow the on-screen instructions to perform the calibration movements
-   - Verify proper operation with: `python3 -m mower.diagnostics.imu_test`
+1. Connect the ultrasonic sensors to the Raspberry Pi:
+   - VCC to 5V
+   - GND to GND
+   - TRIG to GPIO pins (e.g., GPIO23, GPIO24, GPIO25)
+   - ECHO to GPIO pins (e.g., GPIO17, GPIO27, GPIO22)
+2. Mount the sensors:
+   - Front sensor: Facing forward
+   - Left sensor: Facing left
+   - Right sensor: Facing right
+3. Ensure the sensors have a clear view without obstructions
 
-### Sensors
+![Ultrasonic Installation](images/ultrasonic_installation.jpg)
 
-#### VL53L0X Distance Sensors
+### 5. Power System
 
-1. **Mounting**:
-   - Mount sensors at the front of the mower, facing forward
-   - Position multiple sensors to cover different angles (e.g., front-left, front-center, front-right)
-   - Protect sensors from direct sunlight and water
+1. Mount the battery securely in the chassis
+2. Connect the battery to the RoboHAT power input:
+   - Positive (red) to VIN
+   - Negative (black) to GND
+3. Install a power switch between the battery and RoboHAT
+4. Add a fuse for protection (10A recommended)
 
-2. **Connections**:
-   - Connect each sensor to the I2C splitter
-   - Connect VIN to 3.3V
-   - Connect GND to ground
-   - Connect SCL to the I2C clock line
-   - Connect SDA to the I2C data line
-   - Connect XSHUT pins to GPIO pins for address configuration:
-     - Sensor 1: GPIO4
-     - Sensor 2: GPIO17
-     - Sensor 3: GPIO27 (if using a third sensor)
+![Power System](images/power_system.jpg)
 
-3. **Address Configuration**:
-   - The software will automatically assign different I2C addresses to multiple VL53L0X sensors
-   - Default addresses start at 0x29 and increment for each additional sensor
+### 6. Emergency Stop Button
 
-#### BME280 Environmental Sensor
+1. Mount the emergency stop button in an easily accessible location
+2. Connect the emergency stop button:
+   - Wire the button between GPIO7 and GND
+   - Ensure the button is normally closed (NC)
+3. Test the emergency stop functionality
 
-1. **Mounting**:
-   - Mount the sensor in a location with good airflow
-   - Protect it from direct sunlight and rain
+![Emergency Stop](images/emergency_stop.jpg)
 
-2. **Connections**:
-   - Connect the sensor to the I2C splitter
-   - Connect VIN to 3.3V
-   - Connect GND to ground
-   - Connect SCL to the I2C clock line
-   - Connect SDA to the I2C data line
+### 7. Blade Assembly
 
-3. **Testing**:
-   - Verify proper operation with: `python3 -m mower.diagnostics.bme280_test`
+1. Mount the cutting blade motor securely to the chassis
+2. Attach the cutting blade to the motor shaft
+3. Install the blade guard around the blade
+4. Ensure the blade can spin freely without contacting any part of the chassis
 
-#### Hall Effect Sensors (Wheel Encoders)
+![Blade Assembly](images/blade_assembly.jpg)
 
-1. **Mounting**:
-   - Attach magnets to the wheel hubs
-   - Mount the Hall effect sensors close to the path of the magnets
-   - Adjust the position to ensure reliable triggering
+### 8. Charging Station
 
-2. **Connections**:
-   - Connect VCC to 3.3V
-   - Connect GND to ground
-   - Connect signal pin to GPIO inputs:
-     - Left wheel: GPIO5
-     - Right wheel: GPIO6
+1. Assemble the charging station according to its instructions
+2. Position it in a suitable location in your yard
+3. Connect it to a power outlet
+4. Test the connection between the mower and the charging station
 
-3. **Testing**:
-   - Verify proper operation with: `python3 -m mower.diagnostics.encoder_test`
+![Charging Station](images/charging_station.jpg)
 
-### Power System
+## Wiring Diagram
 
-#### Battery and Power Management
+### Raspberry Pi GPIO Connections
 
-1. **Battery Setup**:
-   - Mount the LiFePO4 battery securely in the mower chassis
-   - Connect the battery to the power distribution system
-   - Install a main power switch for emergency shutdown
-   - Add appropriate fusing for all major circuits
+| Component | GPIO Pin | Function |
+|-----------|----------|----------|
+| RoboHAT | Various | Motor control, I2C, etc. |
+| GPS Module | GPIO14/15 | UART |
+| IMU Sensor | GPIO2/3 | I2C |
+| Ultrasonic (Front) | GPIO23/17 | TRIG/ECHO |
+| Ultrasonic (Left) | GPIO24/27 | TRIG/ECHO |
+| Ultrasonic (Right) | GPIO25/22 | TRIG/ECHO |
+| Emergency Stop | GPIO7 | Input (NC) |
 
-2. **Solar Charging System**:
-   - Mount the solar panel on top of the mower, angled for optimal sun exposure
-   - Connect the solar panel to the charge controller
-   - Connect the charge controller to the battery
-   - Configure the charge controller for LiFePO4 batteries
+### RoboHAT Connections
 
-3. **Power Distribution**:
-   - Connect the DC-DC buck converter to the battery
-   - Set the output of the buck converter to 5V
-   - Connect the 5V output to the Raspberry Pi
-   - Connect the 12V battery directly to the motor controllers
+| Terminal | Connection |
+|----------|------------|
+| M1 | Left Drive Motor |
+| M2 | Right Drive Motor |
+| M3 | Cutting Blade Motor |
+| VIN | Battery Positive |
+| GND | Battery Negative |
+| ENC1 | Left Motor Encoder |
+| ENC2 | Right Motor Encoder |
 
-4. **INA3221 Power Monitor**:
+## Testing the Hardware
 
-   - **Connections**:
-     - Connect the sensor to the I2C splitter
-     - Connect V+ to 3.3V
-     - Connect GND to ground
-     - Connect SCL to the I2C clock line
-     - Connect SDA to the I2C data line
-     - Connect Channel 1 to monitor battery voltage and current
-     - Connect Channel 2 to monitor motor current (optional)
-     - Connect Channel 3 to monitor solar panel output (optional)
+After completing the assembly, perform the following tests to ensure everything is working correctly:
 
-   - **Configuration**:
-     - Configure the shunt resistor values in the software to match your setup
-     - Set appropriate voltage and current thresholds in the `.env` file
+### 1. Power Test
 
-### Camera
+1. Turn on the power switch
+2. Check that the Raspberry Pi powers up (green LED should light up)
+3. Check that the RoboHAT powers up (status LEDs should light up)
 
-1. **Mounting**:
-   - Mount the camera at the front of the mower for obstacle detection
-   - Position it to have a clear view of the ground ahead
-   - Protect it from direct sunlight and water
+### 2. Motor Test
 
-2. **Connections**:
-   - Connect the camera to the Raspberry Pi's CSI port using the ribbon cable
-   - Ensure the cable is properly seated on both ends
+1. Run the motor test script:
+   ```bash
+   python3 src/mower/diagnostics/motor_test.py
+   ```
+2. Verify that both drive motors and the blade motor function correctly
 
-3. **Testing**:
-   - Verify proper operation with: `python3 -m mower.diagnostics.camera_test`
+### 3. Sensor Test
 
-## Hardware Testing
+1. Run the sensor test script:
+   ```bash
+   python3 src/mower/diagnostics/sensor_test.py
+   ```
+2. Verify that all sensors are providing valid readings
 
-After completing all connections, run the comprehensive hardware test to verify all components are working correctly:
+### 4. Emergency Stop Test
 
-```bash
-python3 -m mower.diagnostics.hardware_test
-```
-
-This will test each component and report any issues found. Address any failures before proceeding to operation.
+1. Start the mower in test mode
+2. Press the emergency stop button
+3. Verify that all motors stop immediately
 
 ## Troubleshooting
 
-### General Troubleshooting
+### Motors Not Running
 
-1. **Check Power First**: Always verify that components are receiving the correct voltage.
-2. **Inspect Connections**: Look for loose wires, poor solder joints, or disconnected cables.
-3. **Verify Ground Connections**: Many issues stem from improper grounding.
-4. **Check for Shorts**: Use a multimeter to check for short circuits.
-5. **Review Logs**: Check system logs for error messages: `tail -f /var/log/syslog`
+1. Check power connections
+2. Verify motor wiring
+3. Check for blown fuses
+4. Test motors directly with a battery
 
-### Component-Specific Issues
+### Sensors Not Working
 
-#### Raspberry Pi Issues
+1. Check wiring connections
+2. Verify GPIO pin assignments in software
+3. Test sensors with simple test scripts
+4. Check for hardware damage
 
-- **Won't Boot**: Check power supply, SD card, and connections.
-- **Overheating**: Ensure proper ventilation and consider adding a heat sink or fan.
-- **Crashes Randomly**: Check for power supply issues or SD card corruption.
+### Raspberry Pi Not Booting
 
-#### Motor Control Issues
-
-- **Motors Don't Run**: Check connections, power, and motor driver configuration.
-- **Motors Run in Wrong Direction**: Swap the motor leads or reverse direction in software.
-- **Erratic Movement**: Check for loose connections or interference with the motor driver.
-
-#### GPS Issues
-
-- **No Fix**: Ensure the antenna has a clear view of the sky and check connections.
-- **Poor Accuracy**: Verify antenna placement and consider using RTK corrections.
-- **Serial Communication Errors**: Check baud rate settings and UART configuration.
-
-#### Sensor Issues
-
-- **I2C Device Not Found**: Check connections, verify I2C is enabled, and check addresses.
-- **Incorrect Readings**: Calibrate sensors and check for interference.
-- **Intermittent Operation**: Check for loose connections or power issues.
-
-#### Power System Issues
-
-- **Low Battery Voltage**: Check charging system and battery health.
-- **Overheating Components**: Check for current draw issues or inadequate cooling.
-- **Solar Panel Not Charging**: Verify connections and ensure panel has sunlight exposure.
-
-#### Camera Issues
-
-- **No Image**: Check ribbon cable connections and camera module integrity.
-- **Poor Image Quality**: Clean lens and adjust camera settings.
-- **High CPU Usage**: Adjust resolution and frame rate in settings.
-
-### Advanced Troubleshooting
-
-For persistent issues, use these diagnostic commands:
-
-- **I2C Bus Scan**: `i2cdetect -y 1`
-- **USB Device List**: `lsusb`
-- **Serial Port List**: `ls -la /dev/tty*`
-- **GPIO Status**: `gpio readall`
-- **System Resource Usage**: `htop`
-- **Network Connectivity**: `iwconfig` or `ifconfig`
-
-### Getting Help
-
-If you encounter issues you cannot resolve, please:
-
-1. Check the project documentation for known issues
-2. Search the GitHub issues for similar problems
-3. Create a new issue with detailed information about the problem
-4. Include logs, photos of connections, and steps to reproduce the issue
+1. Check power supply
+2. Verify SD card is properly inserted
+3. Try a fresh OS installation
+4. Check for physical damage
 
 ## Maintenance
 
-Perform regular maintenance to keep your autonomous mower functioning properly:
+Regular maintenance is essential for reliable operation:
 
-1. **Weekly Checks**:
-   - Inspect all electrical connections
-   - Check blade sharpness and balance
-   - Clean camera lens and sensors
-   - Verify wheel operation and check for debris
+1. **Weekly**:
+   - Clean the blade and blade guard
+   - Check all sensors for debris
+   - Inspect wiring for damage
 
-2. **Monthly Checks**:
-   - Calibrate the IMU
-   - Check battery health and charging system
-   - Update software to the latest version
-   - Inspect chassis and mechanical components
-   - Clean or replace air filters (if installed)
+2. **Monthly**:
+   - Check battery connections
+   - Tighten any loose screws
+   - Lubricate wheel bearings if necessary
 
-3. **Seasonal Maintenance**:
-   - Replace blades if needed
-   - Check motor bearings and lubricate if necessary
-   - Clean solar panel surface
-   - Verify waterproofing integrity
-   - Recalibrate sensors
+3. **Quarterly**:
+   - Check motor brushes (if applicable)
+   - Inspect the chassis for damage
+   - Clean the electronics enclosure
 
-By following these maintenance procedures, you can ensure reliable operation of your autonomous mower throughout its service life. 
+## Safety Considerations
+
+- Always disconnect the battery before performing maintenance
+- Keep hands away from the cutting blade
+- Test the emergency stop button regularly
+- Store the mower in a dry, secure location when not in use
+- Follow all local regulations regarding autonomous devices
+
+## Conclusion
+
+With the hardware properly assembled and tested, your Autonomous Mower is ready for software installation and configuration. Refer to the [Software Setup](software_setup.md) guide for the next steps.
+
+## References
+
+- [Raspberry Pi GPIO Documentation](https://www.raspberrypi.org/documentation/usage/gpio/)
+- [RoboHAT Documentation](https://robohat.org/docs)
+- [Motor Specifications](https://www.example.com/motor_specs)
+- [Sensor Datasheets](https://www.example.com/sensor_datasheets)
