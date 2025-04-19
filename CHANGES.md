@@ -134,3 +134,30 @@ Fixed circular imports and inconsistent import paths in the codebase to improve 
 - Made the codebase more robust by preventing import-related issues
 - Improved code readability with clear import organization
 - Simplified dependency management
+
+## Standardized Naming Conventions
+
+### Overview
+Standardized naming conventions across the codebase to improve code readability, maintainability, and consistency. This ensures that all code follows the same naming patterns, making it easier for developers to understand and work with the code.
+
+### Changes Made
+1. Renamed functions to follow snake_case convention:
+   - Changed `parseGpsPosition` to `parse_gps_position` in navigation/gps.py
+   - Added proper docstring with triple double quotes
+
+2. Fixed relative imports to use absolute imports:
+   - Changed `from hardware.serial_port import SerialLineReader` to `from mower.hardware.serial_port import SerialLineReader` in navigation/gps.py
+
+3. Renamed variables to avoid conflicts with Python standard library:
+   - Changed `logging` variable to `logger` in robot.py to avoid conflict with Python's logging module
+   - Updated all references to use the new variable name
+
+4. Updated tasks.md to mark the "Standardize naming conventions across the codebase" task as completed.
+
+### Benefits
+- Improved code readability with consistent naming patterns
+- Reduced potential bugs from naming conflicts with Python standard library
+- Enhanced maintainability with standardized conventions
+- Better alignment with Python best practices (PEP 8)
+- Easier onboarding for new developers
+- More consistent codebase overall

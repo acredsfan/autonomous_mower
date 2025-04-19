@@ -47,7 +47,7 @@ class GpsNmeaPositions(metaclass=SingletonMeta):
         positions = []
         if lines:
             for ts, nmea in lines:
-                position = parseGpsPosition(nmea, self.debug)
+                position = parse_gps_position(nmea, self.debug)
                 if position:
                     positions.append((ts, *position))
         return positions
@@ -59,7 +59,7 @@ class GpsPosition(metaclass=SingletonMeta):
     """
 
     def __init__(self, serial_port, debug=False):
-        from hardware.serial_port import SerialLineReader
+        from mower.hardware.serial_port import SerialLineReader
         self.line_reader = SerialLineReader(serial_port)
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
@@ -194,7 +194,17 @@ class GpsPlayer(metaclass=SingletonMeta):
 
 
 # Parsing and Utility Functions (unchanged)
-def parseGpsPosition(line, debug=False):
+def parse_gps_position(line, debug=False):
+    """
+    Parse a GPS NMEA sentence and convert to UTM coordinates.
+
+    Args:
+        line: NMEA sentence to parse
+        debug: Whether to enable debug logging
+
+    Returns:
+        Tuple of (easting, northing, zone_number, zone_letter) or None if parsing failed
+    """
     if not line:
         return None
     line = line.strip()
@@ -577,7 +587,7 @@ if __name__ == "__main__":
     waypoints = []
     waypoint_samples = []
 
-    from hardware.serial_port import SerialLineReader
+    from mower.hardware.serial_port import SerialLineReader
 
     try:
         serial_port = SerialPort(args.serial, baudrate=args.baudrate,
