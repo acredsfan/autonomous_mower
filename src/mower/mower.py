@@ -628,6 +628,125 @@ class Mower:
             self.logger.error(f"Error getting current path: {e}")
             return []
 
+    def _validate_command_params(self, command, params):
+        """
+        Validate command and parameters.
+
+        Args:
+            command: The command to validate
+            params: Parameters to validate
+
+        Returns:
+            dict: Error response if validation fails, None if validation passes
+        """
+        # Validate command
+        if not isinstance(command, str):
+            return {"error": "Command must be a string"}
+
+        # Validate params
+        if not isinstance(params, dict):
+            return {"error": "Parameters must be a dictionary"}
+
+        return None
+
+    def _execute_move_command(self, params):
+        """
+        Execute the 'move' command.
+
+        Args:
+            params: Command parameters
+
+        Returns:
+            dict: Result of the command execution
+        """
+        # Validate required parameters
+        if "direction" not in params:
+            return {"error": "Missing required parameter: direction"}
+
+        direction = params.get("direction")
+
+        # Validate direction
+        if not isinstance(direction, str):
+            return {"error": "Direction must be a string"}
+
+        valid_directions = ["forward", "backward", "left", "right", "stop"]
+        if direction not in valid_directions:
+            return {"error": f"Invalid direction: {direction}. Valid directions are: {', '.join(valid_directions)}"}
+
+        # Validate speed parameter
+        speed = params.get("speed", 0.5)
+        if not isinstance(speed, (int, float)):
+            return {"error": "Speed must be a number"}
+
+        if speed < 0.0 or speed > 1.0:
+            return {"error": "Speed must be between 0.0 and 1.0"}
+
+        # Validate no unexpected parameters
+        unexpected_params = set(params.keys()) - {"direction", "speed"}
+        if unexpected_params:
+            return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
+
+        # Get motor driver
+        robohat_driver = self.resource_manager.get_robohat_driver()
+        if not robohat_driver:
+            return {"error": "Motor driver not available"}
+
+        # Execute command
+        if direction == "forward":
+            robohat_driver.forward(speed)
+        elif direction == "backward":
+            robohat_driver.backward(speed)
+        elif direction == "left":
+            robohat_driver.left(speed)
+        elif direction == "right":
+            robohat_driver.right(speed)
+        elif direction == "stop":
+            robohat_driver.stop()
+
+        return {"success": True}
+
+    def _execute_blade_command(self, params):
+        """
+        Execute the 'blade' command.
+
+        Args:
+            params: Command parameters
+
+        Returns:
+            dict: Result of the command execution
+        """
+        # Validate required parameters
+        if "action" not in params:
+            return {"error": "Missing required parameter: action"}
+
+        action = params.get("action")
+
+        # Validate action
+        if not isinstance(action, str):
+            return {"error": "Action must be a string"}
+
+        valid_actions = ["start", "stop"]
+        if action not in valid_actions:
+            return {"error": f"Invalid action: {action}. Valid actions are: {', '.join(valid_actions)}"}
+
+        # Validate no unexpected parameters
+        unexpected_params = set(params.keys()) - {"action"}
+        if unexpected_params:
+            return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
+
+        # Get blade controller
+        blade_controller = self.resource_manager.get_blade_controller()
+        if not blade_controller:
+            return {"error": "Blade controller not available"}
+
+        # Execute command
+        if action == "start":
+            blade_controller.start_blade()
+        elif action == "stop":
+            blade_controller.stop_blade()
+
+        return {"success": True}
+
     def execute_command(self, command, params=None):
         """
         Execute a command with the given parameters.
@@ -639,101 +758,23 @@ class Mower:
         Returns:
             The result of the command execution
         """
-        # Validate command
-        if not isinstance(command, str):
-            return {"error": "Command must be a string"}
-
         # Initialize params if None
         if params is None:
             params = {}
 
-        # Validate params
-        if not isinstance(params, dict):
-            return {"error": "Parameters must be a dictionary"}
+        # Validate command and parameters
+        validation_error = self._validate_command_params(command, params)
+        if validation_error:
+            return validation_error
 
         self.logger.info(f"Executing command: {command} with params: {params}")
 
         try:
+            # Dispatch command to appropriate handler
             if command == "move":
-                # Validate required parameters
-                if "direction" not in params:
-                    return {"error": "Missing required parameter: direction"}
-
-                direction = params.get("direction")
-
-                # Validate direction
-                if not isinstance(direction, str):
-                    return {"error": "Direction must be a string"}
-
-                valid_directions = ["forward", "backward", "left", "right", "stop"]
-                if direction not in valid_directions:
-                    return {"error": f"Invalid direction: {direction}. Valid directions are: {', '.join(valid_directions)}"}
-
-                # Validate speed parameter
-                speed = params.get("speed", 0.5)
-                if not isinstance(speed, (int, float)):
-                    return {"error": "Speed must be a number"}
-
-                if speed < 0.0 or speed > 1.0:
-                    return {"error": "Speed must be between 0.0 and 1.0"}
-
-                # Validate no unexpected parameters
-                unexpected_params = set(params.keys()) - {"direction", "speed"}
-                if unexpected_params:
-                    return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
-
-                # Get motor driver
-                robohat_driver = self.resource_manager.get_robohat_driver()
-                if not robohat_driver:
-                    return {"error": "Motor driver not available"}
-
-                # Execute command
-                if direction == "forward":
-                    robohat_driver.forward(speed)
-                elif direction == "backward":
-                    robohat_driver.backward(speed)
-                elif direction == "left":
-                    robohat_driver.left(speed)
-                elif direction == "right":
-                    robohat_driver.right(speed)
-                elif direction == "stop":
-                    robohat_driver.stop()
-
-                return {"success": True}
-
+                return self._execute_move_command(params)
             elif command == "blade":
-                # Validate required parameters
-                if "action" not in params:
-                    return {"error": "Missing required parameter: action"}
-
-                action = params.get("action")
-
-                # Validate action
-                if not isinstance(action, str):
-                    return {"error": "Action must be a string"}
-
-                valid_actions = ["start", "stop"]
-                if action not in valid_actions:
-                    return {"error": f"Invalid action: {action}. Valid actions are: {', '.join(valid_actions)}"}
-
-                # Validate no unexpected parameters
-                unexpected_params = set(params.keys()) - {"action"}
-                if unexpected_params:
-                    return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
-
-                # Get blade controller
-                blade_controller = self.resource_manager.get_blade_controller()
-                if not blade_controller:
-                    return {"error": "Blade controller not available"}
-
-                # Execute command
-                if action == "start":
-                    blade_controller.start_blade()
-                elif action == "stop":
-                    blade_controller.stop_blade()
-
-                return {"success": True}
-
+                return self._execute_blade_command(params)
             else:
                 return {"error": f"Unknown command: {command}. Valid commands are: move, blade"}
 

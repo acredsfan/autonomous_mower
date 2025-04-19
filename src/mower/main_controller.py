@@ -463,6 +463,79 @@ class RobotController:
                 self.avoidance_algorithm.stop()
             self.resource_manager.cleanup()
 
+    def _handle_idle_state(self) -> None:
+        """
+        Handle the IDLE state.
+
+        In IDLE state, the robot is waiting for commands from the UI.
+        """
+        # In IDLE state, just check for commands from UI
+        time.sleep(0.5)
+
+    def _handle_mowing_state(self) -> None:
+        """
+        Handle the MOWING state.
+
+        In MOWING state, the robot is actively mowing and monitoring for obstacles.
+        """
+        # Check if avoidance is active and handle it
+        avoidance_state = self.avoidance_algorithm.current_state
+        if avoidance_state != AvoidanceState.NORMAL:
+            if not self.avoidance_active:
+                logger.info("Avoidance activated, pausing mowing")
+                self.avoidance_active = True
+                self.current_state = SystemState.AVOIDING
+
+    def _handle_avoiding_state(self) -> None:
+        """
+        Handle the AVOIDING state.
+
+        In AVOIDING state, the robot is actively avoiding an obstacle.
+        """
+        # Check if avoidance has completed
+        avoidance_state = self.avoidance_algorithm.current_state
+        if avoidance_state == AvoidanceState.NORMAL:
+            if self.avoidance_active:
+                logger.info("Avoidance completed, resuming mowing")
+                self.avoidance_active = False
+                self.current_state = SystemState.MOWING
+        # Check for recovery failures
+        elif avoidance_state == AvoidanceState.RECOVERY:
+            recovery_attempts = self.avoidance_algorithm.recovery_attempts
+            if recovery_attempts >= self.avoidance_algorithm.max_recovery_attempts:
+                logger.error("Failed to recover from obstacle after multiple attempts")
+                self.error_condition = "Failed to recover from obstacle"
+                self.current_state = SystemState.ERROR
+
+    def _handle_returning_home_state(self) -> None:
+        """
+        Handle the RETURNING_HOME state.
+
+        In RETURNING_HOME state, the robot is navigating back to its home/charging location.
+        """
+        # Check if we've reached home
+        if self._check_at_home():
+            logger.info("Reached home location")
+            self.navigation_controller.stop()
+            self.current_state = SystemState.DOCKED
+
+    def _handle_emergency_stop_state(self) -> None:
+        """
+        Handle the EMERGENCY_STOP state.
+
+        In EMERGENCY_STOP state, the robot has detected an emergency condition
+        and has stopped all motors.
+        """
+        # Handle emergency stop - ensure all motors are stopped
+        self.navigation_controller.stop()
+        self.blade_controller.stop_blade()
+        logger.critical("Emergency stop - all motors stopped")
+
+        # Check if emergency condition is cleared
+        if not self._check_emergency_conditions():
+            logger.info("Emergency condition cleared")
+            self.current_state = SystemState.IDLE
+
     def _main_control_loop(self) -> None:
         """
         Main control loop that handles state transitions and monitoring.
@@ -473,73 +546,22 @@ class RobotController:
         """
         try:
             while self.current_state != SystemState.ERROR:
-                # Check for emergency stop conditions (battery,
-                # temperature, etc.)
+                # Check for emergency stop conditions (battery, temperature, etc.)
                 if self._check_emergency_conditions():
                     self.current_state = SystemState.EMERGENCY_STOP
                     logger.warning("Emergency stop condition detected")
 
-                # State-specific actions
+                # Handle state-specific actions
                 if self.current_state == SystemState.IDLE:
-                    # In IDLE state, just check for commands from UI
-                    time.sleep(0.5)
-
+                    self._handle_idle_state()
                 elif self.current_state == SystemState.MOWING:
-                    # Check if avoidance is active and handle it
-                    avoidance_state = self.avoidance_algorithm.current_state
-                    if avoidance_state != AvoidanceState.NORMAL:
-                        if not self.avoidance_active:
-                            logger.info(
-                                "Avoidance activated, pausing mowing"
-                            )
-                            self.avoidance_active = True
-                            self.current_state = SystemState.AVOIDING
-
+                    self._handle_mowing_state()
                 elif self.current_state == SystemState.AVOIDING:
-                    # Check if avoidance has completed
-                    avoidance_state = self.avoidance_algorithm.current_state
-                    if avoidance_state == AvoidanceState.NORMAL:
-                        if self.avoidance_active:
-                            logger.info(
-                                "Avoidance completed, resuming mowing"
-                            )
-                            self.avoidance_active = False
-                            self.current_state = SystemState.MOWING
-                    # Check for recovery failures
-                    elif avoidance_state == AvoidanceState.RECOVERY:
-                        recovery_attempts = (
-                            self.avoidance_algorithm.recovery_attempts
-                        )
-                        if (
-                            recovery_attempts >=
-                                self.avoidance_algorithm.max_recovery_attempts
-                        ):
-                            logger.error(
-                                "Failed to recover from obstacle after "
-                                "multiple attempts"
-                            )
-                            self.error_condition = (
-                                "Failed to recover from obstacle"
-                            )
-                            self.current_state = SystemState.ERROR
-
+                    self._handle_avoiding_state()
                 elif self.current_state == SystemState.RETURNING_HOME:
-                    # Check if we've reached home
-                    if self._check_at_home():
-                        logger.info("Reached home location")
-                        self.navigation_controller.stop()
-                        self.current_state = SystemState.DOCKED
-
+                    self._handle_returning_home_state()
                 elif self.current_state == SystemState.EMERGENCY_STOP:
-                    # Handle emergency stop - ensure all motors are stopped
-                    self.navigation_controller.stop()
-                    self.blade_controller.stop_blade()
-                    logger.critical("Emergency stop - all motors stopped")
-
-                    # Check if emergency condition is cleared
-                    if not self._check_emergency_conditions():
-                        logger.info("Emergency condition cleared")
-                        self.current_state = SystemState.IDLE
+                    self._handle_emergency_stop_state()
 
                 # Brief pause to avoid CPU spinning
                 time.sleep(0.1)

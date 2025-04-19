@@ -812,6 +812,110 @@ class AvoidanceAlgorithm:
             logger.error(f"Error calculating alternative route: {e}")
             return False
 
+    def _get_current_position_and_heading(self) -> Tuple[Optional[Tuple[float, float]], Optional[float]]:
+        """
+        Get the robot's current position and heading.
+
+        Returns:
+            Tuple containing:
+                - Tuple[float, float]: Current position as (lat, lng) or None if unavailable
+                - float: Current heading in radians or None if unavailable
+        """
+        current_position = self.motor_controller.get_current_position()
+        if not current_position:
+            logger.warning("Couldn't get current position for obstacle estimation")
+            return None, None
+
+        heading = self.motor_controller.get_current_heading()
+        if heading is None:
+            logger.warning("Couldn't get current heading for obstacle estimation")
+            return current_position, None
+
+        heading_rad = math.radians(heading)
+        return current_position, heading_rad
+
+    def _determine_obstacle_parameters(self, obstacle_data: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], float, float]:
+        """
+        Determine obstacle parameters (distance, angle) based on sensor data.
+
+        Args:
+            obstacle_data: Dictionary containing sensor readings
+
+        Returns:
+            Tuple containing:
+                - Dict: Result dictionary with sensor and confidence information, or None if parameters can't be determined
+                - float: Distance to obstacle in cm
+                - float: Angle to obstacle in radians
+        """
+        result = {
+            'position': None,
+            'type': 'static',
+            'confidence': 0.8,
+            'sensor': 'unknown'
+        }
+
+        distance = 0.0
+        obstacle_angle = 0.0
+
+        if (obstacle_data.get('left_sensor', False) and
+                obstacle_data.get('right_sensor', False)):
+            distance = self.obstacle_threshold
+            obstacle_angle = 0.0
+            result['sensor'] = 'tof_both'
+
+        elif obstacle_data.get('left_sensor', False):
+            distance = self.obstacle_threshold
+            obstacle_angle = math.radians(30.0)
+            result['sensor'] = 'tof_left'
+
+        elif obstacle_data.get('right_sensor', False):
+            distance = self.obstacle_threshold
+            obstacle_angle = math.radians(-30.0)
+            result['sensor'] = 'tof_right'
+
+        elif obstacle_data.get('camera_detected', False):
+            distance = self.obstacle_threshold * 1.5
+            obstacle_angle = 0.0
+            result['sensor'] = 'camera'
+            result['confidence'] = 0.9
+
+        else:
+            logger.warning("Cannot determine obstacle direction from sensor data")
+            return None, 0.0, 0.0
+
+        return result, distance, obstacle_angle
+
+    def _calculate_obstacle_coordinates(
+            self, 
+            current_position: Tuple[float, float], 
+            heading_rad: float, 
+            distance: float, 
+            obstacle_angle: float
+        ) -> Tuple[float, float]:
+        """
+        Calculate obstacle coordinates in world coordinate system.
+
+        Args:
+            current_position: Current position as (lat, lng)
+            heading_rad: Current heading in radians
+            distance: Distance to obstacle in cm
+            obstacle_angle: Angle to obstacle in radians
+
+        Returns:
+            Tuple[float, float]: Obstacle position as (lat, lng)
+        """
+        current_lat, current_lng = current_position[0], current_position[1]
+        obstacle_heading = (heading_rad + obstacle_angle) % (2 * math.pi)
+
+        # Convert distance in cm to lat/lng coordinates
+        meters_to_lat = 0.0000089
+        meters_to_lng = 0.0000089 / math.cos(math.radians(current_lat))
+
+        obstacle_lat = current_lat + (distance * math.cos(obstacle_heading) * meters_to_lat)
+        obstacle_lng = current_lng + (distance * math.sin(obstacle_heading) * meters_to_lng)
+
+        return (obstacle_lat, obstacle_lng)
+
     def _estimate_obstacle_position(self) -> Dict[str, Any]:
         """
         Estimate the position of detected obstacles in world coordinates.
@@ -830,88 +934,31 @@ class AvoidanceAlgorithm:
                 - 'sensor': Which sensor detected the obstacle
         """
         try:
-            current_position = self.motor_controller.get_current_position()
-            if not current_position:
-                logger.warning(
-                    "Couldn't get current position for obstacle estimation"
-                )
+            # Get current position and heading
+            current_position, heading_rad = self._get_current_position_and_heading()
+            if current_position is None or heading_rad is None:
                 return {}
 
-            current_lat, current_lng = current_position[0], current_position[1]
-
-            heading = self.motor_controller.get_current_heading()
-            if heading is None:
-                logger.warning(
-                    "Couldn't get current heading for obstacle estimation"
-                )
-                return {}
-
-            heading_rad = math.radians(heading)
-
+            # Get obstacle data from thread-safe storage
             obstacle_data = None
             with self.thread_lock:
                 obstacle_data = self.obstacle_data
 
             if not obstacle_data:
-                logger.warning(
-                    "No obstacle data available for position estimation"
-                )
+                logger.warning("No obstacle data available for position estimation")
                 return {}
 
-            result = {
-                'position': None,
-                'type': 'static',
-                'confidence': 0.8,
-                'sensor': 'unknown'
-            }
-
-            distance = 0.0
-            obstacle_angle = 0.0
-
-            if (obstacle_data.get('left_sensor', False) and
-                    obstacle_data.get('right_sensor', False)):
-                distance = self.obstacle_threshold
-                obstacle_angle = 0.0
-                result['sensor'] = 'tof_both'
-
-            elif obstacle_data.get('left_sensor', False):
-                distance = self.obstacle_threshold
-                obstacle_angle = math.radians(30.0)
-                result['sensor'] = 'tof_left'
-
-            elif obstacle_data.get('right_sensor', False):
-                distance = self.obstacle_threshold
-                obstacle_angle = math.radians(-30.0)
-                result['sensor'] = 'tof_right'
-
-            elif obstacle_data.get('camera_detected', False):
-                distance = self.obstacle_threshold * 1.5
-                obstacle_angle = 0.0
-                result['sensor'] = 'camera'
-                result['confidence'] = 0.9
-
-            else:
-                logger.warning(
-                    "Cannot determine obstacle direction from sensor data"
-                )
+            # Determine obstacle parameters based on sensor data
+            result, distance, obstacle_angle = self._determine_obstacle_parameters(obstacle_data)
+            if result is None:
                 return {}
 
-            obstacle_heading = (heading_rad + obstacle_angle) % (2 * math.pi)
-
-            meters_to_lat = 0.0000089
-            meters_to_lng = (
-                0.0000089 / math.cos(math.radians(current_lat))
+            # Calculate obstacle position in world coordinates
+            obstacle_position = self._calculate_obstacle_coordinates(
+                current_position, heading_rad, distance, obstacle_angle
             )
 
-            obstacle_lat = current_lat + (
-                distance * math.cos(obstacle_heading) * meters_to_lat
-            )
-            obstacle_lng = current_lng + (
-                distance * math.sin(obstacle_heading) * meters_to_lng
-            )
-
-            result['position'] = (obstacle_lat, obstacle_lng)
-
+            result['position'] = obstacle_position
             logger.debug(f"Estimated obstacle position: {result['position']}")
 
             return result
