@@ -226,16 +226,13 @@ The Autonomous Mower requires several hardware components to function properly. 
 | IMU Sensor | Second UART (/dev/ttyAMA2) | Orientation data |
 | VL53L0X Sensors | GPIO2/3 | I2C (shared bus, addresses 0x29 and 0x30) |
 | IBT-4 Motor Driver | Various GPIO pins | Blade motor control |
-| INA3221 Power Montitor | GPIO pins | Battery/Power Monitoring |
+| INA3221 Power Monitor | GPIO pins | Battery/Power Monitoring |
 | Emergency Stop (Optional) | GPIO7 | Input (NC) |
 
 ### RoboHAT Connections
 
 | Terminal | Connection |
 |----------|------------|
-| RC1 | MDDRC10 Left Motor Input |
-| RC2 | MDDRC10 Right Motor Input |
-| RC3 | IBT-4 Blade Motor Input |
 | VIN | Battery Positive |
 | GND | Battery Negative |
 | ENC1 | Left Motor Hall Sensor |
