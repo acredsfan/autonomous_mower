@@ -737,7 +737,7 @@ class Mower:
 _mower_instance = None
 
 
-def get_mower_instance():
+def get_mower_instance() -> Mower:
     """Get the singleton instance of the Mower class."""
     global _mower_instance
     if _mower_instance is None:
@@ -746,61 +746,61 @@ def get_mower_instance():
     return _mower_instance
 
 
-def get_blade_controller():
+def get_blade_controller() -> BladeControllerAdapter:
     """Get the blade controller instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_blade_controller()
 
 
-def get_bme280_sensor():
+def get_bme280_sensor() -> BME280Sensor:
     """Get the BME280 sensor instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_bme280_sensor()
 
 
-def get_camera():
+def get_camera() -> Any:  # Camera type is not explicitly defined
     """Get the camera instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_camera()
 
 
-def get_gpio_manager():
+def get_gpio_manager() -> GPIOManager:
     """Get the GPIO manager instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_resource("gpio")
 
 
-def get_imu_sensor():
+def get_imu_sensor() -> BNO085Sensor:
     """Get the IMU sensor instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_imu_sensor()
 
 
-def get_ina3221_sensor():
+def get_ina3221_sensor() -> INA3221Sensor:
     """Get the INA3221 sensor instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_ina3221_sensor()
 
 
-def get_robohat_driver():
+def get_robohat_driver() -> RoboHATDriver:
     """Get the RoboHAT driver instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_robohat_driver()
 
 
-def get_sensors():
+def get_sensors() -> EnhancedSensorInterface:
     """Get the sensor interface instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_sensor_interface()
 
 
-def get_serial_port():
+def get_serial_port() -> SerialPort:
     """Get the serial port instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_gps_serial()
 
 
-def get_tof_sensors():
+def get_tof_sensors() -> VL53L0XSensors:
     """Get the ToF sensors instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_tof_sensors()
@@ -808,7 +808,7 @@ def get_tof_sensors():
 
 # Navigation initialization functions
 
-def get_gps_nmea_positions():
+def get_gps_nmea_positions() -> SerialPort:
     """Get the GPS NMEA positions instance."""
     mower = get_mower_instance()
     # This is a special case as we don't have a direct getter in ResourceManager
@@ -816,7 +816,7 @@ def get_gps_nmea_positions():
     return mower.resource_manager.get_gps_serial()
 
 
-def get_gps_latest_position():
+def get_gps_latest_position() -> Optional[GpsLatestPosition]:
     """Get the GPS latest position instance."""
     mower = get_mower_instance()
     # This is a special case as we don't have a direct getter in ResourceManager
@@ -827,26 +827,26 @@ def get_gps_latest_position():
     return None
 
 
-def get_gps_position():
+def get_gps_position() -> SerialPort:
     """Get the GPS position instance."""
     # This is a special case as we don't have a direct getter in ResourceManager
     # We'll use the GPS serial port instead
     return get_gps_nmea_positions()
 
 
-def get_localization():
+def get_localization() -> Localization:
     """Get the localization instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_resource("localization")
 
 
-def get_path_planner():
+def get_path_planner() -> NewPathPlanner:
     """Get the path planner instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_path_planner()
 
 
-def get_navigation_controller():
+def get_navigation_controller() -> NavigationController:
     """Get the navigation controller instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_navigation()
@@ -854,67 +854,68 @@ def get_navigation_controller():
 
 # Obstacle Detection initialization functions
 
-def get_avoidance_algorithm():
+def get_avoidance_algorithm() -> AvoidanceAlgorithm:
     """Get the avoidance algorithm instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_obstacle_detection()
 
 
-def get_detect_obstacle():
+def get_detect_obstacle() -> Any:  # Function type
     """Get the detect obstacle function."""
     return detect_obstacle
 
 
-def get_detect_drop():
+def get_detect_drop() -> Any:  # Function type
     """Get the detect drop function."""
     return detect_drop
 
 
-def get_stream_frame_with_overlays():
+def get_stream_frame_with_overlays() -> Any:  # Function type
     """Get the stream frame with overlays function."""
     return stream_frame_with_overlays
 
 
 # UI and utilities initialization functions
 
-def get_web_interface():
+def get_web_interface() -> WebInterface:
     """Get the web interface instance."""
     mower = get_mower_instance()
     return mower.resource_manager.get_resource("web_interface")
 
 
-def get_logger_config():
+def get_logger_config() -> Any:  # LoggerConfig type
     """Get the logger configuration instance."""
     return LoggerConfig()
 
 
-def get_text_logger():
+def get_text_logger() -> TextLogger:
     """Get the text logger instance."""
     return TextLogger()
 
 
-def get_csv_logger():
+def get_csv_logger() -> CsvLogger:
     """Get the CSV logger instance."""
     return CsvLogger()
 
 
-def get_utils():
+def get_utils() -> Utils:
     """Get the utilities instance."""
     return Utils()
 
 
 # Function to initialize all resources
 
-def init_resources():
+def init_resources() -> Mower:
     """Initialize all resources."""
     mower = get_mower_instance()
     # The mower instance is already initialized in get_mower_instance()
     logger.info("All resources initialized")
+    return mower
 
 
 # Function to cleanup all resources
 
-def cleanup_resources():
+def cleanup_resources() -> None:
     """Clean up all resources."""
     global _mower_instance
     if _mower_instance is not None:
@@ -925,7 +926,7 @@ def cleanup_resources():
 
 # Function to start the web interface
 
-def start_web_interface():
+def start_web_interface() -> None:
     """Start the web interface."""
     mower = get_mower_instance()
     web_interface = mower.resource_manager.get_resource("web_interface")
@@ -935,7 +936,7 @@ def start_web_interface():
 
 # Function to start the robot logic
 
-def start_robot_logic():
+def start_robot_logic() -> None:
     """Start the robot logic."""
     # Import here to avoid circular import
     from mower.robot import run_robot

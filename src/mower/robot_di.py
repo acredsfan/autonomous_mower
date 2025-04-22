@@ -51,7 +51,7 @@ class Robot:
         self.path_planner = path_planner
         self.logger = LoggerConfigInfo.get_logger(__name__)
 
-    def run(self):
+    def run(self) -> None:
         """Main function to run the robot operations."""
         try:
             self.logger.info("Components initialized.")
@@ -67,7 +67,7 @@ class Robot:
                 self.motor_driver.shutdown()
             self.logger.info("Robot operation ended.")
 
-    def mow_yard(self):
+    def mow_yard(self) -> None:
         """
         Mow the yard autonomously.
         """
@@ -135,7 +135,7 @@ def create_robot(
     )
 
 
-def run_robot():
+def run_robot() -> None:
     """Main function to run the robot operations."""
     robot = create_robot()
     robot.run()

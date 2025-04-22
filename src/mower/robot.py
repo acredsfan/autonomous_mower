@@ -13,7 +13,7 @@ from mower.utilities.logger_config import LoggerConfigInfo
 logger = LoggerConfigInfo.get_logger(__name__)
 
 
-def run_robot():
+def run_robot() -> None:
     """Main function to run the robot operations."""
     try:
         # Get components from interfaces
@@ -33,7 +33,7 @@ def run_robot():
         logger.info("Robot operation ended.")
 
 
-def mow_yard():
+def mow_yard() -> None:
     """
     Mow the yard autonomously.
     """
