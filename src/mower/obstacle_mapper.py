@@ -32,8 +32,41 @@ class ObstacleMapper:
 
     def load_yard_boundary(self):
         """Convert polygon_coordinates to a Shapely Polygon."""
-        points = [(coord['lng'], coord['lat'])
-                  for coord in polygon_coordinates]
+        points = []
+
+        # Handle empty or invalid polygon_coordinates
+        if not polygon_coordinates or not isinstance(polygon_coordinates, list):
+            logger.warning("Invalid polygon_coordinates. Using default boundary.")
+            # Return a default small polygon around (0,0)
+            return Polygon([(0.001, 0.001), (0.001, -0.001), 
+                           (-0.001, -0.001), (-0.001, 0.001)])
+
+        # Process each coordinate, handling both 'lng'/'lat' and 'lon'/'lat' formats
+        for coord in polygon_coordinates:
+            if not isinstance(coord, dict):
+                logger.warning(f"Invalid coordinate format: {coord}. Skipping.")
+                continue
+
+            # Try to get longitude (either 'lng' or 'lon')
+            lon = None
+            if 'lng' in coord:
+                lon = coord['lng']
+            elif 'lon' in coord:
+                lon = coord['lon']
+
+            # Try to get latitude
+            lat = coord.get('lat')
+
+            # Only add point if both coordinates are valid
+            if lon is not None and lat is not None:
+                points.append((lon, lat))
+
+        # If no valid points were found, use default
+        if not points:
+            logger.warning("No valid points found in polygon_coordinates. Using default boundary.")
+            return Polygon([(0.001, 0.001), (0.001, -0.001), 
+                           (-0.001, -0.001), (-0.001, 0.001)])
+
         return Polygon(points)
 
     def detect_obstacle(self):

@@ -356,11 +356,31 @@ class Localization:
                 return False
 
             # Then check against detailed polygon if available
-            if self.yard_boundary:
+            if self.yard_boundary and isinstance(self.yard_boundary, list):
                 point = Point(lon, lat)
-                polygon = Polygon(self.yard_boundary)
-                return polygon.contains(point)
 
+                # Convert polygon_coordinates to a format suitable for Polygon
+                polygon_points = []
+                for coord in self.yard_boundary:
+                    if isinstance(coord, dict):
+                        # Try both 'lng'/'lat' and 'lon'/'lat' formats
+                        longitude = None
+                        if 'lng' in coord:
+                            longitude = coord['lng']
+                        elif 'lon' in coord:
+                            longitude = coord['lon']
+
+                        latitude = coord.get('lat')
+
+                        if longitude is not None and latitude is not None:
+                            polygon_points.append((longitude, latitude))
+
+                # Only create polygon if we have enough points
+                if len(polygon_points) >= 3:
+                    polygon = Polygon(polygon_points)
+                    return polygon.contains(point)
+
+            # If we don't have a valid polygon, fall back to rectangular bounds
             return True
 
         except Exception as e:
