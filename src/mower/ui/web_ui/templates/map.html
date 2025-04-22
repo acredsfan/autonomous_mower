@@ -3,8 +3,7 @@
 {% block title %}Mowing Patterns - Autonomous Mower{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=drawing,geometry"></script>
 <style>
     .pattern-selector {
         display: flex;
@@ -12,7 +11,7 @@
         gap: 10px;
         margin-bottom: 15px;
     }
-    
+
     .pattern-card {
         flex: 1;
         min-width: 120px;
@@ -24,49 +23,49 @@
         transition: all 0.2s ease;
         background-color: var(--white);
     }
-    
+
     .pattern-card:hover {
         border-color: var(--grass-light);
         background-color: var(--grass-pale);
     }
-    
+
     .pattern-card.active {
         border-color: var(--grass-medium);
         background-color: var(--grass-pale);
     }
-    
+
     .pattern-icon {
         font-size: 24px;
         margin-bottom: 5px;
         color: var(--grass-medium);
     }
-    
+
     .pattern-name {
         font-weight: 500;
     }
-    
+
     .settings-group {
         margin-bottom: 15px;
     }
-    
+
     .settings-row {
         display: flex;
         flex-wrap: wrap;
         gap: 15px;
         margin-bottom: 10px;
     }
-    
+
     .settings-item {
         flex: 1;
         min-width: 200px;
     }
-    
+
     .coverage-info {
         display: flex;
         align-items: center;
         margin-top: 10px;
     }
-    
+
     .coverage-bar {
         flex: 1;
         height: 10px;
@@ -75,19 +74,19 @@
         margin: 0 10px;
         overflow: hidden;
     }
-    
+
     .coverage-progress {
         height: 100%;
         background-color: var(--grass-medium);
         width: 0%;
         transition: width 0.5s ease;
     }
-    
+
     @media (max-width: 768px) {
         .pattern-card {
             min-width: 100px;
         }
-        
+
         .settings-item {
             min-width: 150px;
         }
@@ -165,7 +164,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-12 col-lg-4">
         <div class="card mb-3">
             <div class="card-header">
@@ -181,7 +180,7 @@
                         <span>2.0m</span>
                     </div>
                 </div>
-                
+
                 <div class="settings-group">
                     <label for="patternAngle" class="form-label">Angle (degrees)</label>
                     <input type="range" class="form-control" id="patternAngle" min="0" max="359" step="1" value="0">
@@ -191,7 +190,7 @@
                         <span>359°</span>
                     </div>
                 </div>
-                
+
                 <div class="settings-group">
                     <label for="patternOverlap" class="form-label">Overlap</label>
                     <input type="range" class="form-control" id="patternOverlap" min="0" max="0.5" step="0.05" value="0.1">
@@ -201,17 +200,17 @@
                         <span>50%</span>
                     </div>
                 </div>
-                
+
                 <button id="applySettings" class="btn btn-primary btn-block mt-3">
                     <i class="fas fa-check"></i> Apply Settings
                 </button>
-                
+
                 <button id="saveSettings" class="btn btn-success btn-block mt-2">
                     <i class="fas fa-save"></i> Save as Default
                 </button>
             </div>
         </div>
-        
+
         <div class="card mb-3">
             <div class="card-header">
                 <h3>Pattern Statistics</h3>
@@ -250,7 +249,7 @@
     function updateMapConnectionStatus() {
         const statusIndicator = document.getElementById('mapConnectionStatus');
         const statusText = document.getElementById('mapStatusText');
-        
+
         if (isConnected) {
             statusIndicator.className = 'status-indicator status-online';
             statusText.textContent = 'Connected';
@@ -259,27 +258,27 @@
             statusText.textContent = 'Disconnected';
         }
     }
-    
+
     // Update settings display values
     document.getElementById('patternSpacing').addEventListener('input', function() {
         document.getElementById('spacingValue').textContent = this.value + 'm';
     });
-    
+
     document.getElementById('patternAngle').addEventListener('input', function() {
         document.getElementById('angleValue').textContent = this.value + '°';
     });
-    
+
     document.getElementById('patternOverlap').addEventListener('input', function() {
         const percent = Math.round(this.value * 100);
         document.getElementById('overlapValue').textContent = percent + '%';
     });
-    
+
     // Pattern selection
     document.querySelectorAll('.pattern-card').forEach(card => {
         card.addEventListener('click', function() {
             document.querySelectorAll('.pattern-card').forEach(c => c.classList.remove('active'));
             this.classList.add('active');
-            
+
             // Update pattern type
             const patternType = this.dataset.pattern;
             if (typeof updateMowingPattern === 'function') {
@@ -287,7 +286,7 @@
             }
         });
     });
-    
+
     // Apply settings button
     document.getElementById('applySettings').addEventListener('click', function() {
         const settings = {
@@ -295,12 +294,12 @@
             angle: parseInt(document.getElementById('patternAngle').value),
             overlap: parseFloat(document.getElementById('patternOverlap').value)
         };
-        
+
         if (typeof applyPatternSettings === 'function') {
             applyPatternSettings(settings);
         }
     });
-    
+
     // Save settings button
     document.getElementById('saveSettings').addEventListener('click', function() {
         const settings = {
@@ -309,7 +308,7 @@
             angle: parseInt(document.getElementById('patternAngle').value),
             overlap: parseFloat(document.getElementById('patternOverlap').value)
         };
-        
+
         // Send to server
         sendCommand('save_settings', { settings: { mowing: settings } }, function(response) {
             if (response.success) {
@@ -319,7 +318,7 @@
             }
         });
     });
-    
+
     // Initialize with default pattern
     document.querySelector('.pattern-card[data-pattern="PARALLEL"]').classList.add('active');
 </script>

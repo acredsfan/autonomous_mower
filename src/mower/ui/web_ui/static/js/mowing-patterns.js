@@ -28,7 +28,7 @@ let satelliteLayer;
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
     loadBoundaryAndSettings();
-    
+
     // Update connection status
     if (typeof updateMapConnectionStatus === 'function') {
         updateMapConnectionStatus();
@@ -36,39 +36,33 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * Initialize the map with Leaflet
+ * Initialize the map with Google Maps
  */
 function initMap() {
+    // Default center (will be updated with boundary data)
+    const defaultCenter = { lat: 0, lng: 0 };
+
     // Initialize the map
-    map = L.map('map').setView([0, 0], 18); // Default view, will be updated
-    
-    // Add the OpenStreetMap tile layer
-    osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 22,
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-    
-    // Add satellite layer (not added by default)
-    satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 22,
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 18,
+        center: defaultCenter,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true
     });
-    
-    // Initialize layers for boundary and pattern
-    boundaryLayer = new L.FeatureGroup();
-    patternLayer = new L.FeatureGroup();
-    map.addLayer(boundaryLayer);
-    map.addLayer(patternLayer);
-    
+
+    // Initialize arrays to store boundary and pattern paths
+    boundaryLayer = [];
+    patternLayer = [];
+
     // Toggle satellite/street view
     document.getElementById('toggle-satellite').addEventListener('click', function() {
         if (isSatelliteView) {
-            map.removeLayer(satelliteLayer);
-            osmLayer.addTo(map);
+            map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
             this.innerHTML = '<i class="fas fa-satellite"></i> Toggle Satellite';
         } else {
-            map.removeLayer(osmLayer);
-            satelliteLayer.addTo(map);
+            map.setMapTypeId(google.maps.MapTypeId.SATELLITE);
             this.innerHTML = '<i class="fas fa-map"></i> Toggle Street';
         }
         isSatelliteView = !isSatelliteView;
@@ -84,32 +78,35 @@ function loadBoundaryAndSettings() {
         if (response.success && response.data && response.data.boundary_points) {
             boundaryPoints = response.data.boundary_points;
             displayBoundary(boundaryPoints);
-            
+
             // Center map on boundary
             if (boundaryPoints.length > 0) {
-                const bounds = L.latLngBounds(boundaryPoints.map(p => [p.lat, p.lng]));
+                const bounds = new google.maps.LatLngBounds();
+                boundaryPoints.forEach(p => {
+                    bounds.extend({lat: parseFloat(p.lat), lng: parseFloat(p.lng)});
+                });
                 map.fitBounds(bounds);
             }
-            
+
             // Load home location
             sendCommand('get_home', {}, function(homeResponse) {
                 if (homeResponse.success && homeResponse.location) {
                     displayHomeLocation(homeResponse.location);
                 }
             });
-            
+
             // Generate initial pattern
             generatePattern(currentPattern, currentSettings);
         } else {
             showAlert('No mowing area defined. Please define an area first.', 'warning');
         }
     });
-    
+
     // Load current settings
     sendCommand('get_settings', {}, function(response) {
         if (response.success && response.data && response.data.mowing) {
             const mowing = response.data.mowing;
-            
+
             // Update current settings
             currentPattern = mowing.pattern || 'PARALLEL';
             currentSettings = {
@@ -117,29 +114,29 @@ function loadBoundaryAndSettings() {
                 angle: mowing.angle || 0,
                 overlap: mowing.overlap || 0.1
             };
-            
+
             // Update UI
             document.querySelector(`.pattern-card[data-pattern="${currentPattern}"]`)?.classList.add('active');
-            
+
             const spacingInput = document.getElementById('patternSpacing');
             const angleInput = document.getElementById('patternAngle');
             const overlapInput = document.getElementById('patternOverlap');
-            
+
             if (spacingInput) {
                 spacingInput.value = currentSettings.spacing;
                 document.getElementById('spacingValue').textContent = currentSettings.spacing + 'm';
             }
-            
+
             if (angleInput) {
                 angleInput.value = currentSettings.angle;
                 document.getElementById('angleValue').textContent = currentSettings.angle + '°';
             }
-            
+
             if (overlapInput) {
                 overlapInput.value = currentSettings.overlap;
                 document.getElementById('overlapValue').textContent = Math.round(currentSettings.overlap * 100) + '%';
             }
-            
+
             // Generate pattern with loaded settings
             generatePattern(currentPattern, currentSettings);
         }
@@ -153,20 +150,40 @@ function loadBoundaryAndSettings() {
  */
 function displayBoundary(points) {
     // Clear previous boundary
-    boundaryLayer.clearLayers();
-    
+    for (let i = 0; i < boundaryLayer.length; i++) {
+        boundaryLayer[i].setMap(null);
+    }
+    boundaryLayer = [];
+
     if (points.length < 3) return;
-    
-    // Create polygon from points
-    const polygon = L.polygon(points.map(p => [p.lat, p.lng]), {
-        color: 'var(--grass-dark)',
-        fillColor: 'var(--grass-pale)',
-        fillOpacity: 0.2,
-        weight: 3
+
+    // Convert points to Google Maps LatLng objects
+    const path = points.map(p => {
+        return { 
+            lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat), 
+            lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng) 
+        };
     });
-    
-    boundaryLayer.addLayer(polygon);
-    
+
+    // Create polygon from points
+    const polygon = new google.maps.Polygon({
+        paths: path,
+        strokeColor: '#689F38',
+        strokeOpacity: 1.0,
+        strokeWeight: 3,
+        fillColor: '#8BC34A',
+        fillOpacity: 0.2,
+        map: map
+    });
+
+    // Add to boundary layer
+    boundaryLayer.push(polygon);
+
+    // Fit map to boundary
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(point => bounds.extend(point));
+    map.fitBounds(bounds);
+
     // Calculate and display area
     const area = calculatePolygonArea(points);
     document.getElementById('totalArea').textContent = area.toFixed(1) + ' m²';
@@ -179,17 +196,26 @@ function displayBoundary(points) {
  */
 function displayHomeLocation(location) {
     if (homeMarker) {
-        map.removeLayer(homeMarker);
+        homeMarker.setMap(null);
     }
-    
-    homeMarker = L.marker([location.lat, location.lng], {
-        icon: L.divIcon({
-            className: 'home-marker',
-            html: '<i class="fas fa-home"></i>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
-        })
-    }).addTo(map);
+
+    // Create a custom marker for home
+    homeMarker = new google.maps.Marker({
+        position: {
+            lat: typeof location.lat === 'number' ? location.lat : parseFloat(location.lat),
+            lng: typeof location.lng === 'number' ? location.lng : parseFloat(location.lng)
+        },
+        map: map,
+        icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#4285F4',
+            fillOpacity: 1,
+            strokeColor: '#FFFFFF',
+            strokeWeight: 2
+        },
+        title: 'Home Location'
+    });
 }
 
 /**
@@ -200,17 +226,20 @@ function displayHomeLocation(location) {
  */
 function generatePattern(patternType, settings) {
     // Clear previous pattern
-    patternLayer.clearLayers();
-    
+    for (let i = 0; i < patternLayer.length; i++) {
+        patternLayer[i].setMap(null);
+    }
+    patternLayer = [];
+
     if (boundaryPoints.length < 3) {
         showAlert('No mowing area defined. Please define an area first.', 'warning');
         return;
     }
-    
+
     // Update current pattern and settings
     currentPattern = patternType;
     currentSettings = settings;
-    
+
     // Request pattern from server
     sendCommand('generate_pattern', {
         pattern_type: patternType,
@@ -237,16 +266,29 @@ function generatePattern(patternType, settings) {
 function generateClientSidePattern(patternType, settings, boundary) {
     // Convert boundary to array of [lat, lng] arrays
     const boundaryArray = boundary.map(p => [p.lat, p.lng]);
-    
-    // Get bounding box of boundary
-    const bounds = L.latLngBounds(boundaryArray);
-    const center = bounds.getCenter();
-    const width = bounds.getEast() - bounds.getWest();
-    const height = bounds.getNorth() - bounds.getSouth();
-    
+
+    // Get bounding box of boundary using Google Maps
+    const bounds = new google.maps.LatLngBounds();
+    boundary.forEach(p => {
+        bounds.extend({
+            lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat),
+            lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng)
+        });
+    });
+
+    // Calculate center and dimensions
+    const northEast = bounds.getNorthEast();
+    const southWest = bounds.getSouthWest();
+    const center = {
+        lat: (northEast.lat() + southWest.lat()) / 2,
+        lng: (northEast.lng() + southWest.lng()) / 2
+    };
+    const width = northEast.lng() - southWest.lng();
+    const height = northEast.lat() - southWest.lat();
+
     // Generate path based on pattern type
     let path = [];
-    
+
     switch (patternType) {
         case 'PARALLEL':
             path = generateParallelPattern(boundaryArray, settings, center, width, height);
@@ -272,7 +314,7 @@ function generateClientSidePattern(patternType, settings, boundary) {
         default:
             path = generateParallelPattern(boundaryArray, settings, center, width, height);
     }
-    
+
     return path;
 }
 
@@ -283,31 +325,31 @@ function generateParallelPattern(boundary, settings, center, width, height) {
     const path = [];
     const angle = settings.angle * (Math.PI / 180); // Convert to radians
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate number of lines needed to cover the area
     const diagonal = Math.sqrt(width * width + height * height);
     const numLines = Math.ceil(diagonal / spacing) + 2; // Add extra lines to ensure coverage
-    
+
     // Calculate start and end points for each line
     for (let i = -numLines / 2; i < numLines / 2; i++) {
         // Calculate offset from center
         const offset = i * spacing;
-        
+
         // Calculate start and end points of the line
         const start = [
             center.lat + Math.sin(angle) * offset - Math.cos(angle) * diagonal / 2,
             center.lng - Math.cos(angle) * offset - Math.sin(angle) * diagonal / 2
         ];
-        
+
         const end = [
             center.lat + Math.sin(angle) * offset + Math.cos(angle) * diagonal / 2,
             center.lng - Math.cos(angle) * offset + Math.sin(angle) * diagonal / 2
         ];
-        
+
         // Add to path
         path.push(start);
         path.push(end);
-        
+
         // If not the last line, add a connecting segment
         if (i < numLines / 2 - 1) {
             path.push(end);
@@ -317,7 +359,7 @@ function generateParallelPattern(boundary, settings, center, width, height) {
             ]);
         }
     }
-    
+
     return path;
 }
 
@@ -327,7 +369,7 @@ function generateParallelPattern(boundary, settings, center, width, height) {
 function generateSpiralPattern(boundary, settings, center) {
     const path = [];
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate maximum radius based on boundary
     let maxRadius = 0;
     for (const point of boundary) {
@@ -336,14 +378,14 @@ function generateSpiralPattern(boundary, settings, center) {
         const distance = Math.sqrt(dx * dx + dy * dy);
         maxRadius = Math.max(maxRadius, distance);
     }
-    
+
     // Generate spiral
     const numTurns = Math.ceil(maxRadius / spacing);
     const angleStep = Math.PI / 36; // 5 degrees in radians
-    
+
     // Start at center
     path.push([center.lat, center.lng]);
-    
+
     // Generate spiral points
     for (let angle = 0; angle <= numTurns * 2 * Math.PI; angle += angleStep) {
         const radius = (angle / (2 * Math.PI)) * spacing;
@@ -351,7 +393,7 @@ function generateSpiralPattern(boundary, settings, center) {
         const y = center.lng + radius * Math.sin(angle);
         path.push([x, y]);
     }
-    
+
     return path;
 }
 
@@ -362,30 +404,30 @@ function generateZigzagPattern(boundary, settings, center, width, height) {
     const path = [];
     const angle = settings.angle * (Math.PI / 180); // Convert to radians
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate rotated width and height
     const rotatedWidth = Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle));
     const rotatedHeight = Math.abs(width * Math.sin(angle)) + Math.abs(height * Math.cos(angle));
-    
+
     // Calculate number of lines needed
     const numLines = Math.ceil(rotatedHeight / spacing) + 2;
-    
+
     // Generate zigzag pattern
     let goingRight = true;
-    
+
     for (let i = -numLines / 2; i < numLines / 2; i++) {
         // Calculate offset from center
         const offset = i * spacing;
-        
+
         // Calculate start and end points based on direction
         let start, end;
-        
+
         if (goingRight) {
             start = [
                 center.lat + Math.sin(angle) * offset - Math.cos(angle) * rotatedWidth / 2,
                 center.lng - Math.cos(angle) * offset - Math.sin(angle) * rotatedWidth / 2
             ];
-            
+
             end = [
                 center.lat + Math.sin(angle) * offset + Math.cos(angle) * rotatedWidth / 2,
                 center.lng - Math.cos(angle) * offset + Math.sin(angle) * rotatedWidth / 2
@@ -395,21 +437,21 @@ function generateZigzagPattern(boundary, settings, center, width, height) {
                 center.lat + Math.sin(angle) * offset + Math.cos(angle) * rotatedWidth / 2,
                 center.lng - Math.cos(angle) * offset + Math.sin(angle) * rotatedWidth / 2
             ];
-            
+
             end = [
                 center.lat + Math.sin(angle) * offset - Math.cos(angle) * rotatedWidth / 2,
                 center.lng - Math.cos(angle) * offset - Math.sin(angle) * rotatedWidth / 2
             ];
         }
-        
+
         // Add to path
         path.push(start);
         path.push(end);
-        
+
         // Toggle direction for next line
         goingRight = !goingRight;
     }
-    
+
     return path;
 }
 
@@ -420,11 +462,11 @@ function generateCheckerboardPattern(boundary, settings, center, width, height) 
     const path = [];
     const angle = settings.angle * (Math.PI / 180);
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // First generate horizontal lines
     const horizontalPath = generateParallelPattern(boundary, settings, center, width, height);
     path.push(...horizontalPath);
-    
+
     // Then generate vertical lines (perpendicular to horizontal)
     const verticalSettings = {
         ...settings,
@@ -432,7 +474,7 @@ function generateCheckerboardPattern(boundary, settings, center, width, height) 
     };
     const verticalPath = generateParallelPattern(boundary, verticalSettings, center, width, height);
     path.push(...verticalPath);
-    
+
     return path;
 }
 
@@ -442,7 +484,7 @@ function generateCheckerboardPattern(boundary, settings, center, width, height) 
 function generateDiamondPattern(boundary, settings, center, width, height) {
     const path = [];
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate maximum radius based on boundary
     let maxRadius = 0;
     for (const point of boundary) {
@@ -451,32 +493,32 @@ function generateDiamondPattern(boundary, settings, center, width, height) {
         const distance = Math.sqrt(dx * dx + dy * dy);
         maxRadius = Math.max(maxRadius, distance);
     }
-    
+
     // Generate concentric diamonds
     const numDiamonds = Math.ceil(maxRadius / spacing);
-    
+
     for (let i = 1; i <= numDiamonds; i++) {
         const radius = i * spacing;
-        
+
         // Diamond points (clockwise from top)
         const top = [center.lat + radius, center.lng];
         const right = [center.lat, center.lng + radius];
         const bottom = [center.lat - radius, center.lng];
         const left = [center.lat, center.lng - radius];
-        
+
         // Add diamond to path
         path.push(top);
         path.push(right);
         path.push(bottom);
         path.push(left);
         path.push(top);
-        
+
         // Connect to next diamond if not the last one
         if (i < numDiamonds) {
             path.push([center.lat + (i + 1) * spacing, center.lng]);
         }
     }
-    
+
     return path;
 }
 
@@ -487,40 +529,40 @@ function generateWavesPattern(boundary, settings, center, width, height) {
     const path = [];
     const angle = settings.angle * (Math.PI / 180);
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate rotated width and height
     const rotatedWidth = Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle));
     const rotatedHeight = Math.abs(width * Math.sin(angle)) + Math.abs(height * Math.cos(angle));
-    
+
     // Calculate number of lines needed
     const numLines = Math.ceil(rotatedHeight / spacing) + 2;
-    
+
     // Wave parameters
     const amplitude = spacing * 2;
     const frequency = 2 * Math.PI / rotatedWidth;
-    
+
     for (let i = -numLines / 2; i < numLines / 2; i++) {
         // Calculate base offset from center
         const baseOffset = i * spacing;
-        
+
         // Generate wave points
         const numPoints = 50; // Number of points per wave
         const points = [];
-        
+
         for (let j = 0; j <= numPoints; j++) {
             const x = -rotatedWidth / 2 + j * (rotatedWidth / numPoints);
             const y = baseOffset + amplitude * Math.sin(frequency * x);
-            
+
             // Rotate point
             const rotatedX = center.lat + x * Math.cos(angle) - y * Math.sin(angle);
             const rotatedY = center.lng + x * Math.sin(angle) + y * Math.cos(angle);
-            
+
             points.push([rotatedX, rotatedY]);
         }
-        
+
         // Add wave to path
         path.push(...points);
-        
+
         // Connect to next wave if not the last one
         if (i < numLines / 2 - 1) {
             const lastPoint = points[points.length - 1];
@@ -532,7 +574,7 @@ function generateWavesPattern(boundary, settings, center, width, height) {
             path.push(nextWaveStart);
         }
     }
-    
+
     return path;
 }
 
@@ -542,7 +584,7 @@ function generateWavesPattern(boundary, settings, center, width, height) {
 function generateConcentricPattern(boundary, settings, center) {
     const path = [];
     const spacing = settings.spacing * (1 - settings.overlap);
-    
+
     // Calculate maximum radius based on boundary
     let maxRadius = 0;
     for (const point of boundary) {
@@ -551,15 +593,15 @@ function generateConcentricPattern(boundary, settings, center) {
         const distance = Math.sqrt(dx * dx + dy * dy);
         maxRadius = Math.max(maxRadius, distance);
     }
-    
+
     // Generate concentric circles
     const numCircles = Math.ceil(maxRadius / spacing);
-    
+
     for (let i = 1; i <= numCircles; i++) {
         const radius = i * spacing;
         const numPoints = Math.max(20, Math.floor(2 * Math.PI * radius / spacing));
         const angleStep = 2 * Math.PI / numPoints;
-        
+
         // Generate circle points
         const circlePoints = [];
         for (let angle = 0; angle < 2 * Math.PI; angle += angleStep) {
@@ -567,13 +609,13 @@ function generateConcentricPattern(boundary, settings, center) {
             const y = center.lng + radius * Math.sin(angle);
             circlePoints.push([x, y]);
         }
-        
+
         // Close the circle
         circlePoints.push(circlePoints[0]);
-        
+
         // Add circle to path
         path.push(...circlePoints);
-        
+
         // Connect to next circle if not the last one
         if (i < numCircles) {
             path.push(circlePoints[0]);
@@ -583,7 +625,7 @@ function generateConcentricPattern(boundary, settings, center) {
             ]);
         }
     }
-    
+
     return path;
 }
 
@@ -595,23 +637,45 @@ function generateConcentricPattern(boundary, settings, center) {
  */
 function displayPattern(path, coverage) {
     // Clear previous pattern
-    patternLayer.clearLayers();
-    
+    for (let i = 0; i < patternLayer.length; i++) {
+        patternLayer[i].setMap(null);
+    }
+    patternLayer = [];
+
     if (!path || path.length === 0) return;
-    
-    // Create polyline from path
-    const polyline = L.polyline(path, {
-        color: 'var(--grass-medium)',
-        weight: 3,
-        opacity: 0.8,
-        dashArray: '5, 5'
+
+    // Convert path to Google Maps LatLng objects
+    const googlePath = path.map(point => {
+        return new google.maps.LatLng(
+            typeof point[0] === 'number' ? point[0] : parseFloat(point[0]),
+            typeof point[1] === 'number' ? point[1] : parseFloat(point[1])
+        );
     });
-    
-    patternLayer.addLayer(polyline);
-    
+
+    // Create polyline from path
+    const polyline = new google.maps.Polyline({
+        path: googlePath,
+        strokeColor: '#8BC34A', // grass-medium color
+        strokeWeight: 3,
+        strokeOpacity: 0.8,
+        icons: [{
+            icon: {
+                path: 'M 0,-1 0,1',
+                strokeOpacity: 1,
+                scale: 3
+            },
+            offset: '0',
+            repeat: '10px'
+        }],
+        map: map
+    });
+
+    // Add to pattern layer
+    patternLayer.push(polyline);
+
     // Store path for calculations
     patternPath = path;
-    
+
     // Calculate and display statistics
     updatePatternStatistics(path, coverage);
 }
@@ -626,23 +690,23 @@ function updatePatternStatistics(path, coverage) {
     // Calculate path length
     const pathLength = calculatePathLength(path);
     document.getElementById('pathLength').textContent = pathLength.toFixed(1) + ' m';
-    
+
     // Update coverage display
     const coveragePercent = Math.round(coverage * 100);
     document.getElementById('coveragePercent').textContent = coveragePercent + '%';
     document.getElementById('coverageProgress').style.width = coveragePercent + '%';
-    
+
     // Calculate estimated time (assuming 0.5 m/s speed)
     const speed = 0.5; // m/s
     const timeSeconds = pathLength / speed;
     const timeMinutes = timeSeconds / 60;
     document.getElementById('estimatedTime').textContent = timeMinutes.toFixed(1) + ' min';
-    
+
     // Estimate battery usage (rough estimate)
     const batteryPerHour = 20; // % per hour
     const batteryUsage = (timeMinutes / 60) * batteryPerHour;
     document.getElementById('batteryUsage').textContent = batteryUsage.toFixed(1) + '%';
-    
+
     // Calculate efficiency (coverage per meter)
     const area = calculatePolygonArea(boundaryPoints);
     const efficiency = (coverage * area) / pathLength;
@@ -657,14 +721,22 @@ function updatePatternStatistics(path, coverage) {
  */
 function calculatePathLength(path) {
     if (!path || path.length < 2) return 0;
-    
+
     let length = 0;
     for (let i = 1; i < path.length; i++) {
-        const p1 = L.latLng(path[i-1][0], path[i-1][1]);
-        const p2 = L.latLng(path[i][0], path[i][1]);
-        length += p1.distanceTo(p2);
+        const p1 = new google.maps.LatLng(
+            typeof path[i-1][0] === 'number' ? path[i-1][0] : parseFloat(path[i-1][0]),
+            typeof path[i-1][1] === 'number' ? path[i-1][1] : parseFloat(path[i-1][1])
+        );
+        const p2 = new google.maps.LatLng(
+            typeof path[i][0] === 'number' ? path[i][0] : parseFloat(path[i][0]),
+            typeof path[i][1] === 'number' ? path[i][1] : parseFloat(path[i][1])
+        );
+
+        // Calculate distance using the haversine formula
+        length += google.maps.geometry.spherical.computeDistanceBetween(p1, p2);
     }
-    
+
     return length;
 }
 
@@ -676,12 +748,17 @@ function calculatePathLength(path) {
  */
 function calculatePolygonArea(points) {
     if (!points || points.length < 3) return 0;
-    
-    // Convert to Leaflet latLngs
-    const latLngs = points.map(p => L.latLng(p.lat, p.lng));
-    
-    // Use Leaflet's geodesic area calculation
-    return L.GeometryUtil.geodesicArea(latLngs);
+
+    // Convert to Google Maps LatLng objects
+    const latLngs = points.map(p => {
+        return new google.maps.LatLng(
+            typeof p.lat === 'number' ? p.lat : parseFloat(p.lat),
+            typeof p.lng === 'number' ? p.lng : parseFloat(p.lng)
+        );
+    });
+
+    // Use Google Maps geometry library to calculate area
+    return google.maps.geometry.spherical.computeArea(latLngs);
 }
 
 /**
@@ -694,14 +771,14 @@ function calculatePolygonArea(points) {
 function calculateCoverage(path, boundary) {
     // This is a simplified calculation
     // In a real implementation, this would use a more sophisticated algorithm
-    
+
     // For now, we'll use a rough estimate based on path length and area
     const pathLength = calculatePathLength(path);
     const area = calculatePolygonArea(boundary);
-    
+
     // Estimate coverage based on path length and spacing
     const coverage = Math.min(1.0, (pathLength * currentSettings.spacing) / area);
-    
+
     return coverage;
 }
 

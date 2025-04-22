@@ -3,10 +3,19 @@
 {% block title %}Mowing Area - Autonomous Mower{% endblock %}
 
 {% block head_extra %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=drawing,geometry"></script>
+<style>
+    /* Custom styles for Google Maps */
+    .map-container {
+        height: 400px;
+        width: 100%;
+        border-radius: var(--border-radius);
+    }
+    .home-marker {
+        color: var(--primary);
+        font-size: 24px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -59,7 +68,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="card mb-3">
         <div class="card-header">
             <h3>Camera Feed</h3>
@@ -106,7 +115,7 @@
     let homeMarker;
     let isPolygonComplete = false;
     let isSatelliteView = false;
-    
+
     // Initialize map when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         initMap();
@@ -114,126 +123,160 @@
         updateAreaConnectionStatus();
         initCameraControls();
     });
-    
+
     function initMap() {
+        // Default center (will be updated with GPS)
+        const defaultCenter = { lat: 0, lng: 0 };
+
         // Initialize the map
-        map = L.map('map').setView([0, 0], 18); // Default view, will be updated with GPS
-        
-        // Add the OpenStreetMap tile layer
-        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 22,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // Add satellite layer
-        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 22,
-            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 18,
+            center: defaultCenter,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true
         });
-        
-        // Initialize the FeatureGroup to store editable layers
-        drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
-        
-        // Initialize the draw control and pass it the FeatureGroup
-        drawControl = new L.Control.Draw({
-            draw: {
-                polyline: false,
-                circle: false,
-                rectangle: false,
-                circlemarker: false,
-                marker: false,
-                polygon: {
-                    allowIntersection: false,
-                    shapeOptions: {
-                        color: 'var(--grass-medium)',
-                        fillColor: 'var(--grass-pale)',
-                        fillOpacity: 0.5
-                    }
-                }
+
+        // Initialize the drawing manager
+        drawControl = new google.maps.drawing.DrawingManager({
+            drawingMode: null,
+            drawingControl: true,
+            drawingControlOptions: {
+                position: google.maps.ControlPosition.TOP_CENTER,
+                drawingModes: [
+                    google.maps.drawing.OverlayType.POLYGON
+                ]
             },
-            edit: {
-                featureGroup: drawnItems,
-                remove: true,
-                edit: true
+            polygonOptions: {
+                fillColor: '#8BC34A',
+                fillOpacity: 0.5,
+                strokeWeight: 3,
+                strokeColor: '#689F38',
+                clickable: true,
+                editable: true,
+                zIndex: 1
             }
         });
-        map.addControl(drawControl);
-        
+        drawControl.setMap(map);
+
+        // Initialize array to store drawn polygons
+        drawnItems = [];
+
         // Get current position from GPS and center map
         sendCommand('get_position', {}, function(response) {
             if (response.success && response.data.latitude && response.data.longitude) {
-                map.setView([response.data.latitude, response.data.longitude], 18);
+                const position = { 
+                    lat: response.data.latitude, 
+                    lng: response.data.longitude 
+                };
+                map.setCenter(position);
             } else {
                 showAlert('Unable to get current position. Using default view.', 'warning');
             }
         });
-        
+
         // Load existing polygon if available
         loadExistingArea();
-        
-        // Handle map events
-        map.on(L.Draw.Event.CREATED, function(event) {
-            const layer = event.layer;
-            drawnItems.addLayer(layer);
+
+        // Handle polygon complete event
+        google.maps.event.addListener(drawControl, 'polygoncomplete', function(polygon) {
+            // Clear any existing polygons
+            clearPolygons();
+
+            // Add the new polygon to our array
+            drawnItems.push(polygon);
+
+            // Enable the confirm button
             isPolygonComplete = true;
             document.getElementById('confirm-area-button').disabled = false;
+
+            // Set drawing mode to null (hand tool)
+            drawControl.setDrawingMode(null);
         });
-        
+
         // Toggle satellite/street view
         document.getElementById('toggle-satellite').addEventListener('click', function() {
             if (isSatelliteView) {
-                map.removeLayer(satelliteLayer);
-                osmLayer.addTo(map);
+                map.setMapTypeId(google.maps.MapTypeId.ROADMAP);
                 this.innerHTML = '<i class="fas fa-satellite"></i> Show Satellite';
             } else {
-                map.removeLayer(osmLayer);
-                satelliteLayer.addTo(map);
+                map.setMapTypeId(google.maps.MapTypeId.SATELLITE);
                 this.innerHTML = '<i class="fas fa-map"></i> Show Street Map';
             }
             isSatelliteView = !isSatelliteView;
         });
     }
-    
+
+    // Helper function to clear all polygons
+    function clearPolygons() {
+        for (let i = 0; i < drawnItems.length; i++) {
+            drawnItems[i].setMap(null);
+        }
+        drawnItems = [];
+    }
+
     function initControls() {
         // Confirm area button
         document.getElementById('confirm-area-button').addEventListener('click', function() {
-            if (isPolygonComplete) {
-                const polygonLayer = drawnItems.getLayers().find(layer => layer instanceof L.Polygon);
-                if (polygonLayer) {
-                    const coordinates = polygonLayer.getLatLngs()[0].map(point => [point.lat, point.lng]);
-                    sendCommand('save_area', { coordinates: coordinates }, function(response) {
-                        if (response.success) {
-                            showAlert('Mowing area saved successfully!', 'success');
-                            document.getElementById('confirm-home-button').disabled = false;
-                        } else {
-                            showAlert('Failed to save mowing area.', 'danger');
-                        }
+            if (isPolygonComplete && drawnItems.length > 0) {
+                const polygon = drawnItems[0];
+                const path = polygon.getPath();
+                const coordinates = [];
+
+                // Extract coordinates from the polygon path
+                for (let i = 0; i < path.getLength(); i++) {
+                    const point = path.getAt(i);
+                    coordinates.push({
+                        lat: point.lat(),
+                        lng: point.lng()
                     });
                 }
+
+                sendCommand('save_area', { coordinates: coordinates }, function(response) {
+                    if (response.success) {
+                        showAlert('Mowing area saved successfully!', 'success');
+                        document.getElementById('confirm-home-button').disabled = false;
+                    } else {
+                        showAlert('Failed to save mowing area.', 'danger');
+                    }
+                });
             }
         });
-        
+
         // Set home location button
         document.getElementById('confirm-home-button').addEventListener('click', function() {
             sendCommand('get_position', {}, function(response) {
                 if (response.success && response.data.latitude && response.data.longitude) {
-                    const homeLocation = [response.data.latitude, response.data.longitude];
-                    
+                    const homeLocation = {
+                        lat: response.data.latitude,
+                        lng: response.data.longitude
+                    };
+
                     // Add or update home marker
                     if (homeMarker) {
-                        map.removeLayer(homeMarker);
+                        homeMarker.setMap(null);
                     }
-                    
-                    homeMarker = L.marker(homeLocation, {
-                        icon: L.divIcon({
-                            className: 'home-marker',
-                            html: '<i class="fas fa-home"></i>',
-                            iconSize: [30, 30]
-                        })
-                    }).addTo(map);
-                    
-                    sendCommand('save_home', { location: homeLocation }, function(response) {
+
+                    // Create a custom marker for home
+                    homeMarker = new google.maps.Marker({
+                        position: homeLocation,
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: '#4285F4',
+                            fillOpacity: 1,
+                            strokeColor: '#FFFFFF',
+                            strokeWeight: 2
+                        },
+                        title: 'Home Location'
+                    });
+
+                    // Save home location
+                    sendCommand('save_home', { 
+                        location: [homeLocation.lat, homeLocation.lng] 
+                    }, function(response) {
                         if (response.success) {
                             showAlert('Home location saved successfully!', 'success');
                         } else {
@@ -245,24 +288,35 @@
                 }
             });
         });
-        
+
         // Check polygon button
         document.getElementById('check-polygon-button').addEventListener('click', function() {
-            const polygonLayer = drawnItems.getLayers().find(layer => layer instanceof L.Polygon);
-            if (polygonLayer) {
-                const coordinates = polygonLayer.getLatLngs()[0].map(point => [point.lat.toFixed(6), point.lng.toFixed(6)]);
+            if (drawnItems.length > 0) {
+                const polygon = drawnItems[0];
+                const path = polygon.getPath();
+                const coordinates = [];
+
+                // Extract coordinates from the polygon path
+                for (let i = 0; i < path.getLength(); i++) {
+                    const point = path.getAt(i);
+                    coordinates.push([
+                        point.lat().toFixed(6),
+                        point.lng().toFixed(6)
+                    ]);
+                }
+
                 document.getElementById('coordinates-display').textContent = JSON.stringify(coordinates, null, 2);
                 document.getElementById('coordinatesCard').style.display = 'block';
             } else {
                 showAlert('No polygon defined yet.', 'warning');
             }
         });
-        
+
         // Close coordinates card
         document.getElementById('close-coordinates').addEventListener('click', function() {
             document.getElementById('coordinatesCard').style.display = 'none';
         });
-        
+
         // Copy coordinates
         document.getElementById('copy-coordinates').addEventListener('click', function() {
             const coordText = document.getElementById('coordinates-display').textContent;
@@ -272,12 +326,12 @@
                 showAlert('Failed to copy coordinates.', 'danger');
             });
         });
-        
+
         // Reset area button
         document.getElementById('reset-area-button').addEventListener('click', function() {
-            drawnItems.clearLayers();
+            clearPolygons();
             if (homeMarker) {
-                map.removeLayer(homeMarker);
+                homeMarker.setMap(null);
                 homeMarker = null;
             }
             isPolygonComplete = false;
@@ -286,53 +340,84 @@
             document.getElementById('coordinatesCard').style.display = 'none';
         });
     }
-    
+
     function loadExistingArea() {
         sendCommand('get_area', {}, function(response) {
             if (response.success && response.data.coordinates && response.data.coordinates.length > 0) {
-                // Create a polygon from the coordinates
-                const polygon = L.polygon(response.data.coordinates, {
-                    color: 'var(--grass-medium)',
-                    fillColor: 'var(--grass-pale)',
-                    fillOpacity: 0.5
+                // Clear any existing polygons
+                clearPolygons();
+
+                // Convert coordinates to Google Maps LatLng objects
+                const coordinates = response.data.coordinates;
+                const path = coordinates.map(coord => {
+                    return { 
+                        lat: typeof coord.lat === 'number' ? coord.lat : parseFloat(coord.lat), 
+                        lng: typeof coord.lng === 'number' ? coord.lng : parseFloat(coord.lng) 
+                    };
                 });
-                drawnItems.addLayer(polygon);
-                
+
+                // Create a polygon from the coordinates
+                const polygon = new google.maps.Polygon({
+                    paths: path,
+                    strokeColor: '#689F38',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
+                    fillColor: '#8BC34A',
+                    fillOpacity: 0.5,
+                    editable: true
+                });
+
+                // Add the polygon to the map and our array
+                polygon.setMap(map);
+                drawnItems.push(polygon);
+
                 // Fit the map to the polygon
-                map.fitBounds(polygon.getBounds());
-                
+                const bounds = new google.maps.LatLngBounds();
+                path.forEach(point => bounds.extend(point));
+                map.fitBounds(bounds);
+
                 isPolygonComplete = true;
                 document.getElementById('confirm-area-button').disabled = false;
                 document.getElementById('confirm-home-button').disabled = false;
-                
+
                 showAlert('Loaded existing mowing area.', 'success', 3000);
             }
         });
-        
+
         // Load home location if available
         sendCommand('get_home', {}, function(response) {
             if (response.success && response.data.location && response.data.location.length === 2) {
-                const homeLocation = response.data.location;
-                
-                homeMarker = L.marker(homeLocation, {
-                    icon: L.divIcon({
-                        className: 'home-marker',
-                        html: '<i class="fas fa-home"></i>',
-                        iconSize: [30, 30]
-                    })
-                }).addTo(map);
+                const homeLocation = {
+                    lat: response.data.location[0],
+                    lng: response.data.location[1]
+                };
+
+                // Create a custom marker for home
+                homeMarker = new google.maps.Marker({
+                    position: homeLocation,
+                    map: map,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 10,
+                        fillColor: '#4285F4',
+                        fillOpacity: 1,
+                        strokeColor: '#FFFFFF',
+                        strokeWeight: 2
+                    },
+                    title: 'Home Location'
+                });
             }
         });
     }
-    
+
     // Initialize camera controls
     function initCameraControls() {
         const toggleCameraBtn = document.getElementById('toggleCameraBtn');
         const videoFeed = document.getElementById('video_feed');
         const cameraOverlay = document.getElementById('cameraOverlay');
-        
+
         let cameraActive = true;
-        
+
         if (toggleCameraBtn && videoFeed) {
             toggleCameraBtn.addEventListener('click', function() {
                 cameraActive = !cameraActive;
@@ -346,25 +431,25 @@
                 sendCommand('toggle_camera', { enabled: cameraActive });
             });
         }
-        
+
         // Handle video feed loading
         if (videoFeed && cameraOverlay) {
             videoFeed.onload = function() {
                 cameraOverlay.style.display = 'none';
             };
-            
+
             videoFeed.onerror = function() {
                 cameraOverlay.style.display = 'flex';
                 cameraOverlay.innerHTML = '<div class="camera-status">Camera Unavailable</div>';
             };
         }
     }
-    
+
     // Update the area page connection status
     function updateAreaConnectionStatus() {
         const statusIndicator = document.getElementById('areaConnectionStatus');
         const statusText = document.getElementById('areaStatusText');
-        
+
         if (statusIndicator && statusText) {
             if (isConnected) {
                 statusIndicator.className = 'status-indicator status-online';
@@ -375,7 +460,7 @@
             }
         }
     }
-    
+
     // Clean up when navigating away
     window.addEventListener('beforeunload', function() {
         if (map) {
@@ -392,19 +477,19 @@
         border-radius: var(--border-radius);
         z-index: 1;
     }
-    
+
     .map-controls {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
         margin-top: 1.5rem;
     }
-    
+
     .map-instructions {
         color: var(--gray);
         font-size: 0.9rem;
     }
-    
+
     .coordinates-display {
         background-color: var(--dark);
         color: var(--light);
@@ -415,14 +500,14 @@
         overflow-x: auto;
         max-height: 200px;
     }
-    
+
     .home-marker {
         color: var(--primary);
         font-size: 24px;
         text-align: center;
         line-height: 30px;
     }
-    
+
     .camera-container {
         position: relative;
         width: 100%;
@@ -431,13 +516,13 @@
         border-radius: var(--border-radius);
         overflow: hidden;
     }
-    
+
     .camera-feed {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
-    
+
     .camera-overlay {
         position: absolute;
         top: 0;
@@ -450,24 +535,24 @@
         align-items: center;
         color: white;
     }
-    
+
     .camera-status {
         font-size: 1.2rem;
         text-align: center;
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 992px) {
         .map-controls {
             grid-template-columns: 1fr;
         }
     }
-    
+
     @media (max-width: 576px) {
         .map-container {
             height: 300px;
         }
-        
+
         .camera-container {
             height: 200px;
         }

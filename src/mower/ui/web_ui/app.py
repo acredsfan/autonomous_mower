@@ -86,12 +86,14 @@ def create_app(mower):
     @app.route('/area')
     def area():
         """Render the area configuration page."""
-        return render_template('area.html')
+        google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+        return render_template('area.html', google_maps_api_key=google_maps_api_key)
 
     @app.route('/map')
     def map_view():
         """Render the map view page."""
-        return render_template('map.html')
+        google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+        return render_template('map.html', google_maps_api_key=google_maps_api_key)
 
     @app.route('/diagnostics')
     def diagnostics():
