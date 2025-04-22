@@ -86,6 +86,28 @@ The installation script will:
 - Configure hardware interfaces
 - Set up the watchdog timer
 
+### 5. Interactive Setup Wizard
+
+After installation, run the interactive setup wizard to configure your mower:
+
+```bash
+# Run the setup wizard
+python3 setup_wizard.py
+```
+
+The setup wizard provides a user-friendly interface to:
+- Detect and configure hardware components
+- Set up mapping and navigation
+- Configure safety features
+- Set up the web interface and remote access
+- Create a mowing schedule
+- Configure weather integration
+- Set up security features
+
+The wizard adapts to your inputs, only showing relevant options based on your hardware and preferences. It provides clear instructions for obtaining any required tokens or credentials (like Google Maps API keys or weather service tokens).
+
+If you need to interrupt the setup process, your progress will be saved, and you can continue where you left off by running the wizard again.
+
 #### Note on Python Package Installation
 This project uses system-wide Python package installation with the `--break-system-packages` flag to bypass PEP 668 restrictions. This is because:
 1. The mower requires direct access to hardware interfaces (GPIO, I2C, etc.)

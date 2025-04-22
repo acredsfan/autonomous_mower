@@ -13,24 +13,23 @@ The Autonomous Mower requires several hardware components to function properly. 
 - Raspberry Pi 4B (4GB RAM or better recommended)
 - Raspberry Pi Camera Module v2 or v3
 - RoboHAT motor controller board
-- 2 x 12V DC motors with encoders (for drive wheels)
-- 1 x 12V DC motor (for cutting blade)
-- 12V LiPo battery (minimum 5000mAh recommended)
-- Emergency stop button (normally closed)
-- GPS module (e.g., NEO-6M)
+- 2 x 12V Worm Gear DC motors (Hall Sensors added Separately) (for drive wheels)
+- 1 x 12V DC motor (for cutting blade such as a 997 DC motor)
+- 12V 20AH LiFePO4 Battery
+- Optional but recommended: Emergency stop button (normally closed)
+- GPS module with RTK compatibility (e.g., SparkFun GPS-RTK-SMA Kit)
 - IMU sensor (e.g., BNO085)
-- 3 x Ultrasonic distance sensors (HC-SR04)
+- 2 x VL53L0X Time of Flight Sensors
+- INA3221 Power Monitor
 - Optional: Google Coral USB Accelerator for improved obstacle detection
 
 ### Chassis and Mechanical Components
 
-- Mower chassis (custom or modified from existing mower)
-- 2 x Drive wheels (minimum 20cm diameter recommended)
-- 1 x Castor wheel (front)
-- Cutting blade assembly
-- Blade guard
-- Weatherproof enclosure for electronics
-- Charging station
+- Mower chassis (e.g. https://cults3d.com/en/3d-model/home/pimowrobot-case or modified from existing mower)
+- 30W 12V Solar Panel (e.g., Offgridtec 30W)
+- 10A 12V Solar Charge Controller (e.g., Renogy)
+- DC 12V/24V to 5V Step Down Converter With USB C output
+- Charging station (alternative to solar charging)
 
 ### Tools and Supplies
 
@@ -94,12 +93,13 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ### 3. Motor Connections
 
-1. Connect the drive motors to the RoboHAT:
+1. Connect the drive motors to the MDDRC10 motor driver:
    - Left motor: M1 terminals
    - Right motor: M2 terminals
-2. Connect the blade motor to the RoboHAT:
-   - Blade motor: M3 terminals
-3. Connect the motor encoders to the encoder inputs on the RoboHAT
+   - The MDDRC10 takes input from the RoboHAT (RC inputs and encoder inputs)
+2. Connect the 997 DC motor for blades to the IBT-4 motor driver:
+   - Connect the IBT-4 driver to the appropriate GPIO pins (see Raspberry Pi GPIO.xlsx)
+3. Connect the motor encoders (Hall Sensors) to the encoder inputs on the RoboHAT
 
 ![Motor Connections](images/motor_connections.jpg)
 
@@ -114,63 +114,71 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ![Camera Installation](images/camera_installation.jpg)
 
-#### GPS Module
+#### GPS Module with RTK Compatibility
 
-1. Connect the GPS module to the Raspberry Pi:
-   - VCC to 3.3V
-   - GND to GND
-   - TX to GPIO15 (RXD)
-   - RX to GPIO14 (TXD)
+1. Connect the GPS module (e.g., SparkFun GPS-RTK-SMA Kit) to the Raspberry Pi's USB port:
+   - Connect the GPS module to any available USB port on the Raspberry Pi
 2. Mount the GPS module on top of the mower with a clear view of the sky
-3. Use a GPS antenna if necessary for better reception
+3. Use the included GPS antenna for better reception
+4. For RTK functionality (millimeter accuracy):
+   - Set up a base station OR
+   - Subscribe to an NTRIP correction service
+   - If centimeter accuracy (1.5-2.5 meters) is sufficient, a NEO-M9N or NEO-M8N can be used without RTK
 
 ![GPS Installation](images/gps_installation.jpg)
 
 #### IMU Sensor
 
-1. Connect the IMU sensor to the Raspberry Pi's I2C pins:
+1. Connect the IMU sensor to the Raspberry Pi's second UART:
    - VCC to 3.3V
    - GND to GND
-   - SDA to GPIO2
-   - SCL to GPIO3
-2. Mount the IMU sensor securely to the chassis to minimize vibration
-3. Ensure the sensor is oriented correctly (arrow pointing forward)
+   - Refer to Raspberry Pi GPIO.xlsx for proper UART pins
+2. Enable the second UART in Raspberry Pi configuration:
+   - Edit /boot/config.txt to add the necessary overlay for the second UART
+   - Reboot the Raspberry Pi after making changes
+3. Mount the IMU sensor securely to the chassis to minimize vibration
+4. Ensure the sensor is oriented correctly (arrow pointing forward)
 
 ![IMU Installation](images/imu_installation.jpg)
 
-#### Ultrasonic Sensors
+#### VL53L0X Time of Flight Sensors
 
-1. Connect the ultrasonic sensors to the Raspberry Pi:
-   - VCC to 5V
+1. Connect the VL53L0X sensors to the Raspberry Pi's I2C pins:
+   - VCC to 3.3V
    - GND to GND
-   - TRIG to GPIO pins (e.g., GPIO23, GPIO24, GPIO25)
-   - ECHO to GPIO pins (e.g., GPIO17, GPIO27, GPIO22)
+   - SDA to GPIO2/RoboHAT SDA (I2C1 SDA)
+   - SCL to GPIO3/RoboHAT SCL (I2C1 SCL)
+   - Connect XSHUT pins to GPIO pins for address configuration
+   - Left sensor uses I2C address 0x29
+   - Right sensor uses I2C address 0x30
 2. Mount the sensors:
-   - Front sensor: Facing forward
-   - Left sensor: Facing left
-   - Right sensor: Facing right
+   - Left sensor: Facing left for obstacle detection
+   - Right sensor: Facing right for obstacle detection
 3. Ensure the sensors have a clear view without obstructions
 
-![Ultrasonic Installation](images/ultrasonic_installation.jpg)
+![ToF Sensors Installation](images/tof_installation.jpg)
 
 ### 5. Power System
 
-1. Mount the battery securely in the chassis
-2. Connect the battery to the RoboHAT power input:
-   - Positive (red) to VIN
-   - Negative (black) to GND
-3. Install a power switch between the battery and RoboHAT
-4. Add a fuse for protection (10A recommended)
+1. Mount the 12V 20AH LiFePO4 battery securely in the chassis
+   - LiFePO4 batteries are preferred for their safety, longer lifespan, and stable discharge
+   - Ensure proper ventilation around the battery
+2. Connect the battery to the Step Down Converter:
+3. Connect the battery to all 12V components:
+   - IBT-4 motor driver
+   - MDDRC10 motor driver
+4. Connect the Step Down Converter's USB C output to the Raspberry Pi's power input
 
 ![Power System](images/power_system.jpg)
 
-### 6. Emergency Stop Button
+### 6. Emergency Stop Button (Optional but Recommended)
 
 1. Mount the emergency stop button in an easily accessible location
 2. Connect the emergency stop button:
    - Wire the button between GPIO7 and GND
    - Ensure the button is normally closed (NC)
 3. Test the emergency stop functionality
+4. While optional, an emergency stop button is strongly recommended for safety
 
 ![Emergency Stop](images/emergency_stop.jpg)
 
@@ -183,7 +191,22 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ![Blade Assembly](images/blade_assembly.jpg)
 
-### 8. Charging Station
+### 8. Power System Options
+
+#### Solar Charging (Primary Option)
+
+1. Mount the solar panel securely on top of the mower
+2. Connect the solar panel to the charge controller:
+   - Positive (red) to the solar input positive terminal
+   - Negative (black) to the solar input negative terminal
+3. Connect the charge controller to the battery:
+   - Positive (red) to the battery output positive terminal
+   - Negative (black) to the battery output negative terminal
+4. Position the solar panel for maximum sun exposure
+
+![Solar Charging](images/solar_charging.jpg)
+
+#### Charging Station (Alternative Option)
 
 1. Assemble the charging station according to its instructions
 2. Position it in a suitable location in your yard
@@ -196,27 +219,58 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ### Raspberry Pi GPIO Connections
 
-| Component | GPIO Pin | Function |
-|-----------|----------|----------|
-| RoboHAT | Various | Motor control, I2C, etc. |
-| GPS Module | GPIO14/15 | UART |
-| IMU Sensor | GPIO2/3 | I2C |
-| Ultrasonic (Front) | GPIO23/17 | TRIG/ECHO |
-| Ultrasonic (Left) | GPIO24/27 | TRIG/ECHO |
-| Ultrasonic (Right) | GPIO25/22 | TRIG/ECHO |
-| Emergency Stop | GPIO7 | Input (NC) |
+| Component | Connection | Function |
+|-----------|------------|----------|
+| RoboHAT | Various GPIO pins | Motor control, RC inputs, encoder inputs |
+| GPS Module (RTK) | USB Port | Serial communication |
+| IMU Sensor | Second UART (/dev/ttyAMA2) | Orientation data |
+| VL53L0X Sensors | GPIO2/3 | I2C (shared bus, addresses 0x29 and 0x30) |
+| IBT-4 Motor Driver | Various GPIO pins | Blade motor control |
+| INA3221 Power Montitor | GPIO pins | Battery/Power Monitoring |
+| Emergency Stop (Optional) | GPIO7 | Input (NC) |
 
 ### RoboHAT Connections
 
 | Terminal | Connection |
 |----------|------------|
-| M1 | Left Drive Motor |
-| M2 | Right Drive Motor |
-| M3 | Cutting Blade Motor |
+| RC1 | MDDRC10 Left Motor Input |
+| RC2 | MDDRC10 Right Motor Input |
+| RC3 | IBT-4 Blade Motor Input |
 | VIN | Battery Positive |
 | GND | Battery Negative |
-| ENC1 | Left Motor Encoder |
-| ENC2 | Right Motor Encoder |
+| ENC1 | Left Motor Hall Sensor |
+| ENC2 | Right Motor Hall Sensor |
+
+### MDDRC10 Motor Driver Connections
+
+| Terminal | Connection          |
+|----------|---------------------|
+| IN1      | RoboHAT RC Throttle |
+| IN2      | RoboHAT RC Steering |
+| M1       | Left Drive Motor    |
+| M2       | Right Drive Motor   |
+| VIN      | Battery Positive    |
+| GND      | Battery Negative    |
+
+### IBT-4 Motor Driver Connections
+
+| Terminal | Connection |
+|----------|------------|
+| PWM Input | RoboHAT RC3 output |
+| Motor Output | 997 DC Blade Motor |
+| VIN | Battery Positive |
+| GND | Battery Negative |
+
+### Solar Charging Connections
+
+| Component | Connection |
+|-----------|------------|
+| Solar Panel + | Charge Controller Solar Input + |
+| Solar Panel - | Charge Controller Solar Input - |
+| Charge Controller Battery + | Battery Positive |
+| Charge Controller Battery - | Battery Negative |
+| Charge Controller Load + | RoboHAT VIN (optional) |
+| Charge Controller Load - | RoboHAT GND (optional) |
 
 ## Testing the Hardware
 
@@ -244,11 +298,18 @@ After completing the assembly, perform the following tests to ensure everything 
    ```
 2. Verify that all sensors are providing valid readings
 
-### 4. Emergency Stop Test
+### 4. Emergency Stop Test (if installed)
 
 1. Start the mower in test mode
 2. Press the emergency stop button
 3. Verify that all motors stop immediately
+
+### 5. Solar Charging Test (if using solar panel)
+
+1. Place the solar panel in direct sunlight
+2. Check the charge controller indicators
+3. Verify that the battery is receiving charge
+4. Measure the voltage at the battery terminals to confirm charging
 
 ## Troubleshooting
 
@@ -262,9 +323,10 @@ After completing the assembly, perform the following tests to ensure everything 
 ### Sensors Not Working
 
 1. Check wiring connections
-2. Verify GPIO pin assignments in software
-3. Test sensors with simple test scripts
-4. Check for hardware damage
+2. Verify I2C addresses for VL53L0X sensors
+3. Check I2C bus with `i2cdetect -y 1` command
+4. Test sensors with simple test scripts
+5. Check for hardware damage
 
 ### Raspberry Pi Not Booting
 
@@ -309,4 +371,8 @@ With the hardware properly assembled and tested, your Autonomous Mower is ready 
 - [Raspberry Pi GPIO Documentation](https://www.raspberrypi.org/documentation/usage/gpio/)
 - [RoboHAT Documentation](https://robohat.org/docs)
 - [Motor Specifications](https://www.example.com/motor_specs)
-- [Sensor Datasheets](https://www.example.com/sensor_datasheets)
+- [VL53L0X Time of Flight Sensor Datasheet](https://www.st.com/resource/en/datasheet/vl53l0x.pdf)
+- [SparkFun GPS-RTK-SMA Kit Documentation](https://learn.sparkfun.com/tutorials/gps-rtk-hookup-guide)
+- [LiFePO4 Battery Information](https://www.batteryspace.com/lifepo4-batteries.aspx)
+- [Renogy Solar Charge Controller Manual](https://www.renogy.com/template/files/Manuals/10A%20Charge%20Controller%20Manual.pdf)
+- [RTK GPS Guide](https://learn.sparkfun.com/tutorials/what-is-gps-rtk/all)

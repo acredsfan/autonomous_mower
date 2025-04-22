@@ -146,16 +146,16 @@ setup_emergency_stop() {
     # Add udev rule for GPIO access
     echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
     echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
-    
+
     # Configure GPIO7 for emergency stop
     echo "7" | sudo tee /sys/class/gpio/export
     echo "in" | sudo tee /sys/class/gpio/gpio7/direction
     echo "both" | sudo tee /sys/class/gpio/gpio7/edge
     sudo chown -R root:gpio /sys/class/gpio/gpio7
     sudo chmod -R 770 /sys/class/gpio/gpio7
-    
+
     sudo udevadm control --reload-rules && sudo udevadm trigger
-    
+
     print_info "Emergency stop button configured on GPIO7"
     print_info "Please connect emergency stop button between GPIO7 and GND"
     print_info "Button should be normally closed (NC) for fail-safe operation"
@@ -244,7 +244,7 @@ read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support..."
-    
+
     # Check if Coral TPU is connected
     if ! lsusb | grep -q "1a6e:089a"; then
         print_warning "Coral TPU not detected. Please connect the device and try again."
@@ -254,58 +254,58 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             exit 1
         fi
     fi
-    
+
     # Add Coral repository and install Edge TPU runtime
     print_info "Installing Edge TPU runtime..."
     echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
     check_command "Adding Coral repository" || exit 1
-    
+
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
     check_command "Adding Coral GPG key" || exit 1
-    
+
     sudo apt-get update
     check_command "Updating package list for Coral" || exit 1
-    
+
     # Install standard version for thermal stability
     sudo apt-get install -y libedgetpu1-std
     check_command "Installing Edge TPU runtime" || exit 1
-    
+
     # Set up udev rules for USB access
     print_info "Setting up USB access rules..."
     echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a6e",ATTRS{idProduct}=="089a",MODE="0666"' | sudo tee /etc/udev/rules.d/99-coral-tpu.rules
     check_command "Setting up udev rules" || exit 1
-    
+
     sudo udevadm control --reload-rules && sudo udevadm trigger
     check_command "Reloading udev rules" || exit 1
-    
+
     # Install GDAL Python package first
     sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --global-option=build_ext --global-option="-I/usr/include/gdal"
     check_command "Installing GDAL" || exit 1
-    
+
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
     sudo pip3 install -e ".[coral]" --break-system-packages
     check_command "Installing Coral dependencies" || exit 1
-    
+
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
     mkdir -p src/mower/obstacle_detection/models
     check_command "Creating models directory" || exit 1
-    
+
     # Download model files
     print_info "Downloading model files..."
     wget -O src/mower/obstacle_detection/models/detect_edgetpu.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
     check_command "Downloading Edge TPU model" || exit 1
-    
+
     wget -O src/mower/obstacle_detection/models/detect.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite
     check_command "Downloading standard model" || exit 1
-    
+
     wget -O src/mower/obstacle_detection/models/labelmap.txt \
         https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt
     check_command "Downloading label map" || exit 1
-    
+
     print_info "Coral TPU setup complete!"
     print_info "Notes:"
     print_info "1. Using standard performance mode for thermal stability"
@@ -413,15 +413,15 @@ chmod 755 /var/log/autonomous-mower
 # Success message
 print_success "Installation completed successfully!"
 
-# Prompt to run environment configurator
+# Prompt to run setup wizard
 echo ""
-echo "You can now configure your environment (.env) file interactively."
-echo "Would you like to run the environment configurator now? (y/n): "
+echo "You can now configure your mower interactively using the setup wizard."
+echo "Would you like to run the setup wizard now? (y/n): "
 read yn
 if [ "$yn" = "y" ] || [ "$yn" = "Y" ]; then
-    python3 src/mower/utilities/env_configurator.py
+    python3 setup_wizard.py
 else
-    echo "You can run it later with: python3 src/mower/utilities/env_configurator.py"
+    echo "You can run it later with: python3 setup_wizard.py"
 fi
 
 # Remove trap and exit successfully
