@@ -30,7 +30,6 @@ setup(
         "psutil>=5.9.0",
         "py3nvml>=0.2.7",
         "pyudev>=0.24.0",
-        "systemd-python>=234",
         "python-daemon>=3.0.1",
         "supervisor>=4.2.5",
         "prometheus_client>=0.17.0",
@@ -45,6 +44,9 @@ setup(
         "certifi>=2024.7.4",
     ],
     extras_require={
+        "linux": [
+            "systemd-python>=234",
+        ],
         "coral": [
             "tflite-runtime>=2.5.0",
             "pycoral>=2.0.0",
