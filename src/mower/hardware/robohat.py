@@ -28,6 +28,23 @@ MM1_BAUD_RATE = os.getenv("MM1_BAUD_RATE", 115200)
 print("MM1 Serial Port:", MM1_SERIAL_PORT)
 print("MM1 Baud Rate:", MM1_BAUD_RATE)
 
+# Default RoboHAT configuration to support cfg references and avoid NameError
+class _RoboHATConfig:
+    """Default configuration values for RoboHAT hardware."""
+    AUTO_RECORD_ON_THROTTLE: bool = True
+    MM1_SHOW_STEERING_VALUE: bool = True
+    JOYSTICK_DEADZONE: float = 0.1
+    MM1_SERIAL_PORT: str = MM1_SERIAL_PORT
+    MM1_BAUD_RATE: int = MM1_BAUD_RATE
+    MM1_MAX_FORWARD: int = 2000
+    MM1_MAX_REVERSE: int = 1000
+    MM1_STOPPED_PWM: int = 1500
+    MM1_STEERING_MID: int = 1500
+    MM1_SERIAL_TIMEOUT: int = 1
+
+# Global cfg instance for classes
+cfg = _RoboHATConfig()
+
 
 class RoboHATController:
     '''
@@ -37,7 +54,7 @@ class RoboHATController:
     Output range: -1.00 to 1.00
     '''
 
-    def __init__(self, cfg, debug=False):
+    def __init__(self, debug=False):
         # Standard variables
         self.angle = 0.0
         self.throttle = 0.0
@@ -422,21 +439,6 @@ class RoboHATDriver:
 
 
 if __name__ == "__main__":
-
-    # Initialize the configuration (replace with actual configuration object)
-    class MockConfig:
-        AUTO_RECORD_ON_THROTTLE = True
-        MM1_SHOW_STEERING_VALUE = True
-        JOYSTICK_DEADZONE = 0.1
-        MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
-        MM1_BAUD_RATE = 115200
-        MM1_MAX_FORWARD = 2000
-        MM1_MAX_REVERSE = 1000
-        MM1_STOPPED_PWM = 1500
-        MM1_STEERING_MID = 1500
-        MM1_SERIAL_TIMEOUT = 1
-
-    cfg = MockConfig()
 
     # Initialize the RoboHATDriver
     driver = RoboHATDriver(debug=True)

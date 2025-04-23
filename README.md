@@ -350,6 +350,12 @@ Common issues and their solutions:
 ```bash
 ls -l /var/log/autonomous-mower
 ```
+
+The correct output should look similar to this (with 'pi' as the owner and group, and 'drwxr-xr-x' as the permissions):
+```
+drwxr-xr-x 2 pi pi 4096 May 15 10:30 /var/log/autonomous-mower
+```
+
 If permissions are wrong, run:
 ```bash
 sudo chown -R pi:pi /var/log/autonomous-mower
@@ -361,17 +367,59 @@ sudo chmod 755 /var/log/autonomous-mower
 sudo journalctl -u autonomous-mower -n 50 --no-pager
 ```
 
+You should see log entries showing the service startup process. A successful startup would show entries similar to:
+```
+May 15 10:35:20 raspberrypi autonomous-mower[1234]: Starting Autonomous Mower service...
+May 15 10:35:22 raspberrypi autonomous-mower[1234]: Initializing hardware components...
+May 15 10:35:25 raspberrypi autonomous-mower[1234]: Starting web interface on port 5000...
+May 15 10:35:26 raspberrypi autonomous-mower[1234]: Autonomous Mower service started successfully
+```
+
+Look for any error messages that might indicate what's preventing the service from starting.
+
 3. Verify Python environment:
 ```bash
 python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ```
+
+A successful test should show output similar to:
+```
+[INFO] Starting hardware diagnostics in non-interactive mode
+[INFO] Checking Python version... OK (3.9.2)
+[INFO] Checking required packages... OK
+[INFO] Checking GPIO access... OK
+[INFO] Checking I2C access... OK
+[INFO] Checking camera access... OK
+[INFO] Checking GPS module... OK
+[INFO] All tests passed successfully!
+```
+
+If any tests fail, the output will indicate which component is having issues.
 
 ### Camera Issues
 
 1. Check camera connection and enable:
 ```bash
 vcgencmd get_camera
+```
+
+The correct output should show that the camera is detected and enabled:
+```
+supported=1 detected=1
+```
+If you see `detected=0`, the camera is not properly connected.
+
+Then test the camera with:
+```bash
 libcamera-hello -t 5000
+```
+
+This should open a preview window showing the camera feed for 5 seconds. If successful, you'll see output similar to:
+```
+libcamera-hello: Using camera 0, sensor model(s) imx219, color filter pattern RGGB
+libcamera-hello: Preview window resolution 1536x864
+libcamera-hello: Viewfinder size 1536x864, display size 1536x864
+libcamera-hello: Press Ctrl-C to quit
 ```
 
 2. Verify camera devices:
@@ -379,11 +427,27 @@ libcamera-hello -t 5000
 ls /dev/video*
 ```
 
+You should see multiple video devices listed. A typical output on a Raspberry Pi with a camera connected would be:
+```
+/dev/video0  /dev/video1  /dev/video10  /dev/video11  /dev/video12
+```
+The exact number of devices may vary, but you should see at least `/dev/video0`.
+
 3. Check camera permissions:
 ```bash
 groups | grep video
-sudo usermod -aG video pi  # If 'video' group missing
 ```
+
+The output should show that your user (typically 'pi') is a member of the 'video' group:
+```
+pi adm dialout cdrom sudo audio video plugdev games users input netdev gpio i2c spi
+```
+
+If you don't see 'video' in the output, add your user to the video group:
+```bash
+sudo usermod -aG video pi  # Replace 'pi' with your username if different
+```
+Then log out and log back in for the changes to take effect.
 
 ## Contributing
 
