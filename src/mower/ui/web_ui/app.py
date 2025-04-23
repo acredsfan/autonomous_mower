@@ -20,7 +20,7 @@ from mower.utilities.logger_config import LoggerConfigInfo
 from mower.ui.web_ui.auth import init_auth
 from mower.ui.web_ui.permissions import init_permissions, require_permission, Permission
 from mower.ui.web_ui.i18n import init_babel, get_supported_languages
-
+from mower.config_management import get_config_manager
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)

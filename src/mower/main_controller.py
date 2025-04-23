@@ -198,7 +198,8 @@ class ResourceManager:
 
             # Initialize obstacle detection
             self._resources["obstacle_detection"] = AvoidanceAlgorithm(
-                self._resources["path_planner"]
+                resource_manager=self,
+                pattern_planner=self._resources["path_planner"]
             )
 
             # Initialize web interface
@@ -306,6 +307,14 @@ class ResourceManager:
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
         """Alias for get_obstacle_detection."""
         return self.get_obstacle_detection()
+
+    def get_obstacle_detector(self) -> Any:
+        """Return the obstacle detector resource."""
+        return self._resources.get("obstacle_detector")
+
+    def get_camera(self) -> Any:
+        """Return the camera resource."""
+        return self._resources.get("camera")
 
     def start_web_interface(self) -> None:
         """Start the web interface from resources."""
