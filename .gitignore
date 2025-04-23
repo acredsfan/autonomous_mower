@@ -61,6 +61,7 @@ Thumbs.db
 # Documentation build
 docs/_build/
 docs/api/
+original_plan.md
 
 # Test coverage
 .coverage
