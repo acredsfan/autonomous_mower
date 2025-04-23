@@ -37,8 +37,8 @@ def create_app(mower):
     """
     app = Flask(__name__)
 
-    # Get configuration from mower's config manager
-    config_manager = mower.resource_manager.get_config_manager()
+    # Get configuration manager via global function
+    config_manager = get_config_manager()
     web_ui_config = config_manager.get_config_section('web_ui')
 
     # Initialize CSRF protection
@@ -326,7 +326,7 @@ def create_app(mower):
                 # Update other mowing settings
                 if 'cutHeight' in mowing:
                     # Store in configuration
-                    config_manager = mower.resource_manager.get_config_manager()
+                    config_manager = get_config_manager()
                     config_manager.set_config_value('mowing', 'blade_height', mowing['cutHeight'])
                     logger.info(f"Set blade height to {mowing['cutHeight']}mm")
 
@@ -337,7 +337,7 @@ def create_app(mower):
             # Process system settings
             if 'system' in wizard_settings:
                 system = wizard_settings['system']
-                config_manager = mower.resource_manager.get_config_manager()
+                config_manager = get_config_manager()
 
                 # Update mower name
                 if 'name' in system and system['name']:
@@ -717,7 +717,7 @@ def create_app(mower):
         """Get the automation rules."""
         try:
             # Get automation rules from config or database
-            config_manager = mower.resource_manager.get_config_manager()
+            config_manager = get_config_manager()
             rules = config_manager.get_config_value('automation', 'rules', [])
 
             return jsonify({'success': True, 'rules': rules})
@@ -755,7 +755,7 @@ def create_app(mower):
                 return jsonify({'success': False, 'error': 'Rule must have actions array'}), 400
 
             # Get existing rules
-            config_manager = mower.resource_manager.get_config_manager()
+            config_manager = get_config_manager()
             rules = config_manager.get_config_value('automation', 'rules', [])
 
             # Check if we're updating an existing rule
@@ -796,7 +796,7 @@ def create_app(mower):
                 return jsonify({'success': False, 'error': 'No rule index provided'}), 400
 
             # Get existing rules
-            config_manager = mower.resource_manager.get_config_manager()
+            config_manager = get_config_manager()
             rules = config_manager.get_config_value('automation', 'rules', [])
 
             # Check if the index is valid
@@ -963,7 +963,7 @@ def create_app(mower):
                     return jsonify({'success': False, 'error': f'Missing warning or critical threshold for {field}'}), 400
 
             # Save thresholds to configuration
-            config_manager = mower.resource_manager.get_config_manager()
+            config_manager = get_config_manager()
             config_manager.set_config_value('monitoring', 'alert_thresholds', thresholds)
 
             logger.info(f"Alert thresholds updated: {thresholds}")

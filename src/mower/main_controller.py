@@ -37,6 +37,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
+import logging
+from dotenv import load_dotenv
+
+# Suppress dotenv parse warnings
+logging.getLogger('dotenv.main').setLevel(logging.ERROR)
+load_dotenv()
+
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.bme280 import BME280Sensor
