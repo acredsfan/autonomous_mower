@@ -39,7 +39,7 @@ This document contains a comprehensive list of improvement tasks for the autonom
 [x] Create a CI/CD pipeline for automated testing
 [x] Implement test coverage reporting
 [x] Add regression tests for known issues
-[ ] Add integration tests for service startup and main control loop in main_controller.py
+[x] Add integration tests for service startup and main control loop in main_controller.py
 
 ## Documentation
 
@@ -52,7 +52,7 @@ This document contains a comprehensive list of improvement tasks for the autonom
 [x] Document hardware setup with diagrams and photos
 [x] Create a developer onboarding guide
 [x] Add changelog and version history documentation
-[ ] Document service startup and ResourceManager usage in Raspberry Pi environment
+[x] Document service startup and ResourceManager usage in Raspberry Pi environment
 
 ## Performance Optimization
 
@@ -113,5 +113,5 @@ This document contains a comprehensive list of improvement tasks for the autonom
 [x] Implement graceful degradation for component failures
 [x] Create maintenance schedules and reminders
 [x] Add support for fleet management of multiple mowers
-[ ] Create systemd service unit and startup scripts for Raspberry Pi deployment
-[ ] Update CI/CD pipeline to include deployment to Raspberry Pi
+[x] Create systemd service unit and startup scripts for Raspberry Pi deployment
+[x] Update CI/CD pipeline to include deployment to Raspberry Pi

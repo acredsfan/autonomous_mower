@@ -116,6 +116,7 @@ jobs:
         echo "class SMBus: pass" > mock_modules/smbus2.py
         # Add mock modules to Python path
         echo "PYTHONPATH=$PYTHONPATH:$(pwd)/mock_modules" >> $GITHUB_ENV
-    - name: Run integration tests
+    - name: Run integration tests and service startup
       run: |
         pytest tests/integration -v
+        pytest tests/integration/test_service_startup.py -v
