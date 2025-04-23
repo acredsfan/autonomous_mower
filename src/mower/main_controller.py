@@ -292,6 +292,20 @@ class ResourceManager:
         """Get the ToF sensors instance."""
         return self._resources.get("tof")
 
+    def get_navigation_controller(self) -> Optional[NavigationController]:
+        """Alias for get_navigation."""
+        return self.get_navigation()
+
+    def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
+        """Alias for get_obstacle_detection."""
+        return self.get_obstacle_detection()
+
+    def start_web_interface(self) -> None:
+        """Start the web interface from resources."""
+        web_ui = self.get_web_interface()
+        if web_ui:
+            web_ui.start()
+
 
 class RobotController:
     """

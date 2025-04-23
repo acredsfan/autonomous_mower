@@ -8,6 +8,7 @@ from flask_socketio import SocketIO  # type:ignore
 
 from mower.utilities import LoggerConfigInfo
 from mower.ui.web_ui.app import create_app
+from mower.config_management import get_config_manager
 
 if TYPE_CHECKING:
     from mower.mower import Mower
@@ -99,7 +100,7 @@ class WebInterface:
         try:
             if self.socketio and self.app:
                 # Get configuration from mower's config manager
-                config_manager = self.mower.resource_manager.get_config_manager()
+                config_manager = get_config_manager()
                 web_ui_config = config_manager.get_config_section('web_ui')
 
                 # Get web UI port from config or environment
