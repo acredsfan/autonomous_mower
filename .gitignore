@@ -44,7 +44,6 @@ models/*.pth
 models/*.h5
 models/*.onnx
 
-
 # Project specific
 config/user_polygon.json
 config/home_location.json
@@ -74,6 +73,7 @@ htmlcov/
 
 # Custom Rules
 *.mdc
+.junie/
 
 # Distribution / packaging
 .Python
