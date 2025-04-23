@@ -17,6 +17,7 @@ setup(
         "adafruit-circuitpython-mpu6050>=1.1.9",
         "flask>=3.0.0",
         "flask-socketio>=5.1.0",
+        "flask-babel>=3.1.0",
         "geopy>=2.1.0",
         "imutils>=0.5.4",
         "networkx>=2.6.0",
@@ -107,7 +108,7 @@ setup(
     author="Your Name",
     author_email="your.email@example.com",
     description="An autonomous lawn mower control system",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/autonomous_mower",
     classifiers=[
