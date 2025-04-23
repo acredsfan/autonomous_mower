@@ -39,7 +39,7 @@ def create_app(mower):
 
     # Get configuration manager via global function
     config_manager = get_config_manager()
-    web_ui_config = config_manager.get_config_section('web_ui')
+    web_ui_config = config_manager.get_section('web_ui')
 
     # Initialize CSRF protection
     csrf = CSRFProtect(app)
