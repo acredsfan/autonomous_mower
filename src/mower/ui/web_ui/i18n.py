@@ -28,7 +28,7 @@ def init_babel(app: Flask) -> None:
     babel.init_app(app)
     
     # Set up locale selector
-    @babel.localeselector
+    @babel.locale_selector
     def get_locale():
         # 1. Check if user has explicitly set a language in the session
         if 'language' in session:

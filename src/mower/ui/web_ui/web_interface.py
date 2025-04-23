@@ -101,7 +101,7 @@ class WebInterface:
             if self.socketio and self.app:
                 # Get configuration from mower's config manager
                 config_manager = get_config_manager()
-                web_ui_config = config_manager.get_config_section('web_ui')
+                web_ui_config = config_manager.get_section('web_ui')
 
                 # Get web UI port from config or environment
                 port = int(web_ui_config.get('port', 5000))
