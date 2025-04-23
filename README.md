@@ -54,20 +54,7 @@ cd autonomous_mower
 
 ### 3. Create Log Directory and Set Permissions
 
-Before running the installation script or service, you must create the log directory and set the correct permissions:
-
-```bash
-# Create log directory
-sudo mkdir -p /var/log/autonomous-mower
-
-# Set ownership to pi user
-sudo chown -R pi:pi /var/log/autonomous-mower
-
-# Set correct permissions
-sudo chmod 755 /var/log/autonomous-mower
-```
-
-These steps are required only once during initial setup. The service will use this directory for all logging operations.
+This step is handled automatically by `install_requirements.sh`. No manual action is required.
 
 ### 4. Installation
 
@@ -88,8 +75,7 @@ The installation script will:
 
 ### 5. Interactive Setup Wizard
 
-After installation, run the interactive setup wizard to configure your mower:
-
+The installation script automatically launches the interactive setup wizard at the end. You can also rerun it manually anytime:
 ```bash
 # Run the setup wizard
 python3 setup_wizard.py

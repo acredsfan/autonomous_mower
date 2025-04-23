@@ -206,7 +206,9 @@ sudo apt-get install -y \
     curl \
     gdal-bin \
     libgdal-dev \
-    python3-gdal
+    python3-gdal \
+    certbot \
+    ddclient
 check_command "Installing system packages" || exit 1
 
 # Set PYTHONPATH to include our src directory
@@ -316,9 +318,7 @@ fi
 # Create necessary directories
 print_info "Creating necessary directories..."
 mkdir -p logs
-check_command "Creating logs directory" || exit 1
 mkdir -p data
-check_command "Creating data directory" || exit 1
 mkdir -p config
 check_command "Creating config directory" || exit 1
 
@@ -326,6 +326,13 @@ check_command "Creating config directory" || exit 1
 print_info "Setting directory permissions..."
 chmod 755 logs data config
 check_command "Setting directory permissions" || exit 1
+
+# Set up service log directory
+print_info "Setting up service log directory..."
+sudo mkdir -p /var/log/autonomous-mower
+sudo chown -R $(whoami):$(whoami) /var/log/autonomous-mower
+sudo chmod 755 /var/log/autonomous-mower
+check_command "Setting up service log directory" || exit 1
 
 # Setup watchdog before systemd service
 print_info "Setting up watchdog service (required for autonomous-mower.service)..."
@@ -404,25 +411,12 @@ if ! grep -q "bcm2835_wdt" /etc/modules; then
     echo "bcm2835_wdt" >> /etc/modules
 fi
 
-# Create log directory
-print_info "Creating log directory..."
-mkdir -p /var/log/autonomous-mower
-chown -R pi:pi /var/log/autonomous-mower
-chmod 755 /var/log/autonomous-mower
-
 # Success message
 print_success "Installation completed successfully!"
 
-# Prompt to run setup wizard
-echo ""
-echo "You can now configure your mower interactively using the setup wizard."
-echo "Would you like to run the setup wizard now? (y/n): "
-read yn
-if [ "$yn" = "y" ] || [ "$yn" = "Y" ]; then
-    python3 setup_wizard.py
-else
-    echo "You can run it later with: python3 setup_wizard.py"
-fi
+# Run interactive setup wizard automatically
+print_info "Running interactive setup wizard..."
+python3 setup_wizard.py
 
 # Remove trap and exit successfully
 trap - EXIT
