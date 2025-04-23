@@ -24,18 +24,15 @@ def init_babel(app: Flask) -> None:
         os.path.dirname(os.path.abspath(__file__)), 'translations'
     )
     
-    # Initialize Babel with the app
-    babel.init_app(app)
-    
-    # Set up locale selector
-    @babel.locale_selector
+    # Locale selector function
     def get_locale():
-        # 1. Check if user has explicitly set a language in the session
         if 'language' in session:
             return session['language']
-        
-        # 2. Otherwise, try to detect the language from the browser
-        return request.accept_languages.best_match(['en', 'es', 'fr', 'de', 'zh'])
+        codes = [lang['code'] for lang in get_supported_languages()]
+        return request.accept_languages.best_match(codes)
+    
+    # Initialize Babel with custom locale selector
+    babel.init_app(app, locale_selector=get_locale)
 
 def get_supported_languages():
     """Get a list of supported languages.
