@@ -130,7 +130,8 @@ class WebInterface:
                     port=port,
                     debug=False,
                     use_reloader=False,
-                    ssl_context=ssl_context
+                    ssl_context=ssl_context,
+                    allow_unsafe_werkzeug=True
                 )
         except Exception as e:
             self.logger.error(f"Error in web server thread: {e}")
