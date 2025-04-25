@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 
 # Try to import RPi.GPIO, but don't fail if not available
 try:
-    import RPi.GPIO as GPIO  # type:ignore
+    import RPi.GPIO as GPIO
     RPI_GPIO_AVAILABLE = True
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
     GPIO.setwarnings(False)  # Disable warnings
@@ -42,12 +42,6 @@ class GPIOManager:
         if self._simulation_mode:
             logging.info("Running GPIO in simulation mode")
             self._simulated_values: Dict[int, int] = {}
-
-        self._initialize()
-
-    def _initialize(self):
-        """Initialize the GPIOManager (placeholder for future logic)."""
-        logging.info("GPIOManager initialized successfully.")
 
     def setup_pin(self, pin: int, direction: str = "out",
                   initial: Optional[int] = None) -> bool:
@@ -106,14 +100,21 @@ class GPIOManager:
             logging.error(f"Error cleaning up GPIO pin {pin}: {e}")
 
     def cleanup_all(self) -> None:
-        """Clean up all GPIO resources."""
+        """Clean up all GPIO pins used by this manager."""
+        if self._simulation_mode:
+            self._simulated_values.clear()
+            self._pins_setup.clear()
+            return
+
         try:
-            # Ensure pin numbering mode is set before cleanup
-            GPIO.setmode(GPIO.BCM)  # or GPIO.BOARD depending on your setup
-            GPIO.cleanup()
-            logging.info("All GPIO resources cleaned up successfully.")
+            # RPi.GPIO cleanup can take a channel list or clean all if no arg
+            # Cleaning only the pins we set up is safer
+            pins_to_clean = list(self._pins_setup.keys())
+            if pins_to_clean:
+                GPIO.cleanup(pins_to_clean)
+            self._pins_setup.clear()
         except Exception as e:
-            logging.error(f"Error cleaning up GPIO resources: {e}")
+            logging.error(f"Error cleaning up GPIO: {e}")
 
     def set_pin(self, pin: int, value: int) -> bool:
         """
@@ -189,7 +190,7 @@ class GPIOManager:
         state = {
             "simulation_mode": self._simulation_mode,
             "pins": {}
-        }
+            }
 
         if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
@@ -199,42 +200,8 @@ class GPIOManager:
                     state["pins"][pin] = {
                         "value": self.get_pin(pin),
                         "direction": self._pins_setup.get(pin)
-                    }
+                        }
                 except Exception as e:
                     logging.error(f"Error getting state for pin {pin}: {e}")
 
         return state
-
-    def set_pwm(self, pin: int, duty_cycle: float) -> bool:
-        """
-        Set a PWM signal on a GPIO pin.
-
-        Args:
-            pin: The GPIO pin number
-            duty_cycle: Duty cycle as a percentage (0.0 to 100.0)
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        if not (0.0 <= duty_cycle <= 100.0):
-            logging.error(f"Invalid duty cycle value: {duty_cycle}")
-            return False
-
-        if self._simulation_mode:
-            logging.info(
-                f"Simulating PWM on pin {pin} with duty cycle {duty_cycle}%"
-            )
-            return True
-
-        try:
-            if pin not in self._pins_setup or self._pins_setup[pin] != "out":
-                logging.error(f"Pin {pin} is not set up as output for PWM.")
-                return False
-
-            pwm = GPIO.PWM(pin, 1000)  # Set frequency to 1kHz
-            pwm.start(duty_cycle)
-            logging.info(f"PWM set on pin {pin} with duty cycle {duty_cycle}%")
-            return True
-        except Exception as e:
-            logging.error(f"Error setting PWM on pin {pin}: {e}")
-            return False

@@ -1,14 +1,12 @@
 """Web interface for the autonomous mower."""
 
-import os
 import threading
 from typing import TYPE_CHECKING, Optional
-from flask import Flask  # type:ignore
-from flask_socketio import SocketIO  # type:ignore
+from flask import Flask
+from flask_socketio import SocketIO
 
 from mower.utilities import LoggerConfigInfo
 from mower.ui.web_ui.app import create_app
-from mower.config_management import get_config_manager
 
 if TYPE_CHECKING:
     from mower.mower import Mower
@@ -51,7 +49,7 @@ class WebInterface:
             self._thread = threading.Thread(
                 target=self._run_server,
                 daemon=True
-            )
+                )
             self._thread.start()
 
             self._is_running = True
@@ -94,46 +92,17 @@ class WebInterface:
         """Run the web server.
 
         This method runs in a separate thread and handles the actual
-        web server operation. If SSL is enabled in the configuration,
-        the server will use HTTPS.
+        web server operation.
         """
         try:
             if self.socketio and self.app:
-                # Get configuration from mower's config manager
-                config_manager = get_config_manager()
-                web_ui_config = config_manager.get_section('web_ui')
-
-                # Get web UI port from config or environment
-                port = int(web_ui_config.get('port', 5000))
-
-                # Check if SSL is enabled
-                ssl_enabled = web_ui_config.get('enable_ssl', False)
-                ssl_context = None
-
-                if ssl_enabled:
-                    ssl_cert = web_ui_config.get('ssl_cert_path', '')
-                    ssl_key = web_ui_config.get('ssl_key_path', '')
-
-                    if ssl_cert and ssl_key and os.path.exists(ssl_cert) and os.path.exists(ssl_key):
-                        self.logger.info(
-                            f"Starting web server with SSL on port {port}")
-                        ssl_context = (ssl_cert, ssl_key)
-                    else:
-                        self.logger.warning(
-                            "SSL is enabled but certificate or key file not found. "
-                            "Falling back to HTTP."
-                        )
-
-                # Start the server
                 self.socketio.run(
                     self.app,
                     host='0.0.0.0',
-                    port=port,
+                    port=5000,
                     debug=False,
-                    use_reloader=False,
-                    ssl_context=ssl_context,
-                    allow_unsafe_werkzeug=True
-                )
+                    use_reloader=False
+                    )
         except Exception as e:
             self.logger.error(f"Error in web server thread: {e}")
             self._is_running = False
@@ -147,11 +116,3 @@ class WebInterface:
             bool: True if the web interface is running, False otherwise.
         """
         return self._is_running
-
-    def cleanup(self):
-        """Clean up resources used by the web interface."""
-        try:
-            # Add any specific cleanup logic here
-            self.logger.info("Web interface cleaned up successfully.")
-        except Exception as e:
-            self.logger.error(f"Error cleaning up web interface: {e}")

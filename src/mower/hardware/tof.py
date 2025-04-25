@@ -1,10 +1,10 @@
 import time
 
-import adafruit_vl53l0x  # type:ignore
+import adafruit_vl53l0x
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -71,18 +71,6 @@ class VL53L0XSensors:
         left_sensor = VL53L0XSensors.init_vl53l0x(i2c, 0x29)
 
         return left_sensor, right_sensor
-
-    def _initialize(self):
-        """Initialize the ToF sensors."""
-        logging.info("ToF sensors initialized successfully.")
-
-    def read_all(self, sensors):
-        """Read data from all VL53L0X sensors."""
-        try:
-            return [self.read_vl53l0x(sensor) for sensor in sensors]
-        except Exception as e:
-            logging.error(f"Error reading VL53L0X sensors: {e}")
-            return []
 
 
 if __name__ == "__main__":

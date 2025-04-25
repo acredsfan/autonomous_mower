@@ -139,8 +139,8 @@ class PathPlanner:
                 self.pattern_config.pattern_type)
             if not generator:
                 logger.error(
-                    f"Unknown pattern type: {self.pattern_config.pattern_type}"
-                )
+                    f"Unknown pattern type: {
+                        self.pattern_config.pattern_type}")
                 return []
 
             return generator()
@@ -489,7 +489,7 @@ class PathPlanner:
         try:
             # Convert boundary points to string representation
             boundary_str = "_".join(
-                f"{x:.2f},{y:.2f}"
+                f"{x:.2f},{y:.2f}" 
                 for x, y in self.pattern_config.boundary_points
             )
 
@@ -569,7 +569,7 @@ class PathPlanner:
             path_array = np.array(path)
 
             # Calculate convex hull of path points
-            from scipy.spatial import ConvexHull  # type:ignore
+            from scipy.spatial import ConvexHull
             hull = ConvexHull(path_array)
 
             # Calculate area of convex hull
@@ -749,11 +749,3 @@ class PathPlanner:
             logger.error(f"Error loading model: {e}")
             self.q_table = {}
             self.step_count = 0
-
-    def cleanup(self):
-        """Clean up resources used by the path planner."""
-        try:
-            # Add any specific cleanup logic here
-            logger.info("Path planner cleaned up successfully.")
-        except Exception as e:
-            logger.error(f"Error cleaning up path planner: {e}")

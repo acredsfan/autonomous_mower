@@ -146,16 +146,16 @@ setup_emergency_stop() {
     # Add udev rule for GPIO access
     echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
     echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
-
+    
     # Configure GPIO7 for emergency stop
     echo "7" | sudo tee /sys/class/gpio/export
     echo "in" | sudo tee /sys/class/gpio/gpio7/direction
     echo "both" | sudo tee /sys/class/gpio/gpio7/edge
     sudo chown -R root:gpio /sys/class/gpio/gpio7
     sudo chmod -R 770 /sys/class/gpio/gpio7
-
+    
     sudo udevadm control --reload-rules && sudo udevadm trigger
-
+    
     print_info "Emergency stop button configured on GPIO7"
     print_info "Please connect emergency stop button between GPIO7 and GND"
     print_info "Button should be normally closed (NC) for fail-safe operation"
@@ -181,8 +181,8 @@ fi
 
 # Install system dependencies
 print_info "Installing system dependencies..."
-sudo apt-get update && sudo apt-get full-upgrade -y && sudo apt autoremove -y
-check_command "Updating package list and performing full upgrade" || exit 1
+sudo apt-get update && sudo apt-get upgrade -y && sudo apt autoremove -y
+check_command "Updating package list" || exit 1
 
 sudo apt-get install -y \
     python3-pip \
@@ -206,32 +206,25 @@ sudo apt-get install -y \
     curl \
     gdal-bin \
     libgdal-dev \
-    python3-gdal \
-    certbot \
-    ddclient
+    python3-gdal
 check_command "Installing system packages" || exit 1
 
 # Set PYTHONPATH to include our src directory
 export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
-# Ensure PYTHONPATH includes the src directory
-export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-
-echo "PYTHONPATH set to include src directory."
-
 # Upgrade pip
 print_info "Upgrading pip..."
-sudo python3 -m pip install --break-system-packages --upgrade pip
+python3 -m pip install --break-system-packages --upgrade pip
 check_command "Upgrading pip" || exit 1
 
 # Install main package and dependencies
 print_info "Installing Python package and dependencies..."
-sudo python3 -m pip install --break-system-packages --no-cache-dir -e .
+python3 -m pip install --break-system-packages --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-sudo python3 -m pip install --break-system-packages --no-cache-dir \
+python3 -m pip install --break-system-packages --no-cache-dir \
     utm \
     adafruit-circuitpython-bme280 \
     adafruit-circuitpython-bno08x \
@@ -246,7 +239,7 @@ read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support..."
-
+    
     # Check if Coral TPU is connected
     if ! lsusb | grep -q "1a6e:089a"; then
         print_warning "Coral TPU not detected. Please connect the device and try again."
@@ -256,58 +249,58 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             exit 1
         fi
     fi
-
+    
     # Add Coral repository and install Edge TPU runtime
     print_info "Installing Edge TPU runtime..."
     echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
     check_command "Adding Coral repository" || exit 1
-
+    
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
     check_command "Adding Coral GPG key" || exit 1
-
+    
     sudo apt-get update
     check_command "Updating package list for Coral" || exit 1
-
+    
     # Install standard version for thermal stability
     sudo apt-get install -y libedgetpu1-std
     check_command "Installing Edge TPU runtime" || exit 1
-
+    
     # Set up udev rules for USB access
     print_info "Setting up USB access rules..."
     echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a6e",ATTRS{idProduct}=="089a",MODE="0666"' | sudo tee /etc/udev/rules.d/99-coral-tpu.rules
     check_command "Setting up udev rules" || exit 1
-
+    
     sudo udevadm control --reload-rules && sudo udevadm trigger
     check_command "Reloading udev rules" || exit 1
-
+    
     # Install GDAL Python package first
     sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --global-option=build_ext --global-option="-I/usr/include/gdal"
     check_command "Installing GDAL" || exit 1
-
+    
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
     sudo pip3 install -e ".[coral]" --break-system-packages
     check_command "Installing Coral dependencies" || exit 1
-
+    
     # Create models directory with proper permissions
     print_info "Setting up models directory..."
     mkdir -p src/mower/obstacle_detection/models
     check_command "Creating models directory" || exit 1
-
+    
     # Download model files
     print_info "Downloading model files..."
     wget -O src/mower/obstacle_detection/models/detect_edgetpu.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
     check_command "Downloading Edge TPU model" || exit 1
-
+    
     wget -O src/mower/obstacle_detection/models/detect.tflite \
         https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite
     check_command "Downloading standard model" || exit 1
-
+    
     wget -O src/mower/obstacle_detection/models/labelmap.txt \
         https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt
     check_command "Downloading label map" || exit 1
-
+    
     print_info "Coral TPU setup complete!"
     print_info "Notes:"
     print_info "1. Using standard performance mode for thermal stability"
@@ -318,7 +311,9 @@ fi
 # Create necessary directories
 print_info "Creating necessary directories..."
 mkdir -p logs
+check_command "Creating logs directory" || exit 1
 mkdir -p data
+check_command "Creating data directory" || exit 1
 mkdir -p config
 check_command "Creating config directory" || exit 1
 
@@ -326,13 +321,6 @@ check_command "Creating config directory" || exit 1
 print_info "Setting directory permissions..."
 chmod 755 logs data config
 check_command "Setting directory permissions" || exit 1
-
-# Set up service log directory
-print_info "Setting up service log directory..."
-sudo mkdir -p /var/log/autonomous-mower
-sudo chown -R $(whoami):$(whoami) /var/log/autonomous-mower
-sudo chmod 755 /var/log/autonomous-mower
-check_command "Setting up service log directory" || exit 1
 
 # Setup watchdog before systemd service
 print_info "Setting up watchdog service (required for autonomous-mower.service)..."
@@ -411,12 +399,14 @@ if ! grep -q "bcm2835_wdt" /etc/modules; then
     echo "bcm2835_wdt" >> /etc/modules
 fi
 
+# Create log directory
+print_info "Creating log directory..."
+mkdir -p /var/log/autonomous-mower
+chown -R pi:pi /var/log/autonomous-mower
+chmod 755 /var/log/autonomous-mower
+
 # Success message
 print_success "Installation completed successfully!"
-
-# Run interactive setup wizard automatically
-print_info "Running interactive setup wizard..."
-python3 setup_wizard.py
 
 # Remove trap and exit successfully
 trap - EXIT

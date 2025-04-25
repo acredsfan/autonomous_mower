@@ -1,5 +1,10 @@
 {
-    "polygon": [],
+    "polygon": [
+        {"lat": 0.0, "lon": 0.0},
+        {"lat": 0.0, "lon": 10.0},
+        {"lat": 10.0, "lon": 10.0},
+        {"lat": 10.0, "lon": 0.0}
+    ],
     "home_location": {"lat": 0.0, "lon": 0.0},
     "charging_station": {"lat": 0.0, "lon": 0.0}
-}
+} 

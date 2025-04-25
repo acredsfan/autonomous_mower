@@ -3,8 +3,6 @@ Logger configuration module.
 
 This module provides a centralized configuration for logging across the
 autonomous mower application.
-
-Note: Deprecate other logging setups in favor of LoggerConfigInfo.
 """
 
 import os

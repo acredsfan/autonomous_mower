@@ -1,8 +1,8 @@
-import barbudor_ina3221.full as INA3221  # type:ignore
+import barbudor_ina3221.full as INA3221
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -55,18 +55,6 @@ class INA3221Sensor:
         except Exception as e:
             logging.error(f"Error reading battery charge level: {e}")
             return "Error"
-
-    def _initialize(self):
-        """Initialize the INA3221 sensor."""
-        logging.info("INA3221 sensor initialized successfully.")
-
-    def read(self, channel: int):
-        """Read data from the INA3221 sensor for a specific channel."""
-        try:
-            return self.read_ina3221(self.init_ina3221(), channel)
-        except Exception as e:
-            logging.error(f"Error reading INA3221 sensor: {e}")
-            return {}
 
 
 if __name__ == "__main__":

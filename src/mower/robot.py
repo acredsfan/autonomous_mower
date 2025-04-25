@@ -6,34 +6,34 @@ from mower.mower import (
     get_avoidance_algorithm,
     get_gps_nmea_positions,
     get_path_planner,
-)
+    )
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfigInfo.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
-def run_robot() -> None:
+def run_robot():
     """Main function to run the robot operations."""
     try:
         # Get components from interfaces
         blade_controller = get_blade_controller()
         robohat_driver = get_robohat_driver()
-        logger.info("Components initialized.")
+        logging.info("Components initialized.")
 
         # Start the autonomous mower
         mow_yard()
     except Exception as e:
-        logger.exception("An error occurred: %s", e)
+        logging.exception("An error occurred: %s", e)
     finally:
         # Cleanup
         blade_controller.stop()
         if robohat_driver:
             robohat_driver.shutdown()
-        logger.info("Robot operation ended.")
+        logging.info("Robot operation ended.")
 
 
-def mow_yard() -> None:
+def mow_yard():
     """
     Mow the yard autonomously.
     """
@@ -52,4 +52,4 @@ def mow_yard() -> None:
     localization.start()
     position_reader.start()
 
-    logger.info("Mowing started.")
+    logging.info("Mowing started.")

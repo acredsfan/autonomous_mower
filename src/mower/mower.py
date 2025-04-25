@@ -1,52 +1,36 @@
 # Updated 11.1.24
 """
 Module to initialize and manage all resources used in the project.
-Provides a centralized Mower class for resource management and control.
+Each resource is initialized in a separate function to allow on-demand setup.
 """
 
 import threading
-import json
-import time
-from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any, Union
-
-# Configuration management
-from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
-)
-from mower.utilities import load_config, save_config, cleanup_resources
 
 # Hardware imports
 from mower.hardware.blade_controller import BladeController
-from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.sensor_interface import get_sensor_interface, EnhancedSensorInterface
-from mower.hardware.serial_port import SerialPort, GPS_BAUDRATE
+from mower.hardware.sensor_interface import get_sensor_interface
+from mower.hardware.serial_port import SerialPort
 from mower.hardware.tof import VL53L0XSensors
 
 # Navigation imports
 from mower.navigation.gps import (
     GpsNmeaPositions, GpsLatestPosition, GpsPosition
-)
+    )
 from mower.navigation.localization import Localization
-from mower.navigation.path_planning import PathPlanner  # type:ignore
+from mower.navigation.path_planning import PathPlanner
 from mower.navigation.navigation import NavigationController
-from mower.navigation.path_planner import (
-    PathPlanner as NewPathPlanner, PatternConfig, LearningConfig, PatternType
-)
 
 # Obstacle Detection imports
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
-from mower.obstacle_detection.local_obstacle_detection import (  # type:ignore
+from mower.obstacle_detection.local_obstacle_detection import (
     detect_obstacle, detect_drop, stream_frame_with_overlays
-)
+    )
 
 # UI and utilities imports
 from mower.ui.web_ui.web_interface import WebInterface
@@ -54,912 +38,308 @@ from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.utilities.text_writer import TextLogger, CsvLogger
 from mower.utilities.utils import Utils
 
+# Global variables to hold instances
+_blade_controller = None
+_bme280_sensor = None
+_camera_instance = None
+_gpio_manager = None
+_imu_sensor = None
+_ina3221_sensor = None
+_robohat_driver = None
+_serial_port = None
+_tof_sensors = None
+
+_gps_nmea_positions = None
+_gps_latest_position = None
+_gps_position = None
+_localization = None
+_path_planner = None
+
+_avoidance_algorithm = None
+_web_interface = None
+
+_logger_config = None
+_text_logger = None
+_csv_logger = None
+_utils = None
+
+_sensor_interface = None
+
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logging = LoggerConfig.get_logger(__name__)
 
+# Hardware initialization functions
 
-class MowerMode(Enum):
-    """Enumeration of possible mower operation modes."""
-    IDLE = "idle"
-    MOWING = "mowing"
-    DOCKING = "docking"
-    MANUAL = "manual"
-    ERROR = "error"
-    EMERGENCY_STOP = "emergency_stop"
 
+def get_blade_controller():
+    global _blade_controller
+    if _blade_controller is None:
+        _blade_controller = BladeController()
+    return _blade_controller
 
-class ResourceManager:
-    """
-    Manages hardware and software resources for the autonomous mower.
 
-    This class handles initialization, access, and cleanup of all hardware
-    components and software modules. It provides a centralized interface for
-    accessing resources and ensures proper initialization order and cleanup.
-    """
+def get_bme280_sensor():
+    global _bme280_sensor
+    if _bme280_sensor is None:
+        _bme280_sensor = BME280Sensor()
+    return _bme280_sensor
 
-    def __init__(self, config_path=None):
-        """
-        Initialize the resource manager.
 
-        Args:
-            config_path: Optional path to configuration file
-        """
-        self._initialized = False
-        self._resources = {}
-        self._lock = threading.Lock()
-        self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
+def get_camera():
+    global _camera_instance
+    if _camera_instance is None:
+        _camera_instance = get_camera_instance()
+    return _camera_instance
 
-        if config_path:
-            self._load_config(config_path)
 
-    def _load_config(self, filename):
-        """
-        Load a configuration file using the configuration manager.
+def get_gpio_manager():
+    global _gpio_manager
+    if _gpio_manager is None:
+        _gpio_manager = GPIOManager()
+    return _gpio_manager
 
-        Args:
-            filename: Name or path of the configuration file to load
 
-        Returns:
-            dict: Configuration data, or None if the file doesn't exist or there was an error
-        """
-        return load_config(filename)
+def get_imu_sensor():
+    global _imu_sensor
+    if _imu_sensor is None:
+        _imu_sensor = BNO085Sensor()
+    return _imu_sensor
 
-    def _save_config(self, filename, data):
-        """
-        Save configuration data to a file using the configuration manager.
 
-        Args:
-            filename: Name or path of the configuration file to save
-            data: Configuration data to save
+def get_ina3221_sensor():
+    global _ina3221_sensor
+    if _ina3221_sensor is None:
+        _ina3221_sensor = INA3221Sensor()
+    return _ina3221_sensor
 
-        Returns:
-            bool: True if the configuration was saved successfully, False otherwise
-        """
-        return save_config(filename, data)
 
-    def _initialize_hardware(self):
-        """Initialize all hardware components."""
-        try:
-            # Initialize GPIO first
-            self._resources["gpio"] = GPIOManager()
-            self._resources["gpio"]._initialize()
+def get_robohat_driver():
+    global _robohat_driver
+    if _robohat_driver is None:
+        _robohat_driver = RoboHATDriver()
+    return _robohat_driver
 
-            # Initialize I2C bus
-            from busio import I2C  # type:ignore
-            import board  # type:ignore
-            i2c = I2C(board.SCL, board.SDA)
 
-            # Initialize sensors
-            self._resources["imu"] = BNO085Sensor()
-            self._resources["imu"]._initialize()
+def get_sensors():
+    global _sensor_interface
+    if _sensor_interface is None:
+        _sensor_interface = get_sensor_interface()
+    return _sensor_interface
 
-            self._resources["bme280"] = BME280Sensor()
-            self._resources["bme280"]._initialize(i2c)
 
-            self._resources["ina3221"] = INA3221Sensor()
-            self._resources["ina3221"]._initialize()
+def get_serial_port():
+    global _serial_port
+    if _serial_port is None:
+        _serial_port = SerialPort()
+    return _serial_port
 
-            self._resources["tof"] = VL53L0XSensors()
-            self._resources["tof"]._initialize()
 
-            # Initialize motors and blade
-            self._resources["motor_driver"] = RoboHATDriver()
-            self._resources["motor_driver"].__init__()
-
-            # Create blade controller with adapter for interface compatibility
-            blade_controller = BladeController()
-            blade_controller.__init__()
-            self._resources["blade"] = BladeControllerAdapter(blade_controller)
-
-            # Initialize camera
-            self._resources["camera"] = get_camera_instance()
-            self._resources["camera"].__init__()
-
-            # Initialize serial ports
-            self._resources["gps_serial"] = SerialPort(
-                "/dev/ttyAMA0", GPS_BAUDRATE
-            )
-            self._resources["gps_serial"]._initialize()
-
-            # Initialize sensor interface
-            self._resources["sensor_interface"] = EnhancedSensorInterface()
-
-            logger.info("All hardware components initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing hardware: {e}")
-            raise
-
-    def _initialize_software(self):
-        """Initialize all software components."""
-        try:
-            # Initialize localization
-            self._resources["localization"] = Localization()
-
-            # Initialize pattern planner with learning capabilities
-            pattern_config = PatternConfig(
-                pattern_type=PatternType[get_config(
-                    'path_planning.pattern_type', 'PARALLEL')],
-                # 30cm spacing between passes
-                spacing=get_config('path_planning.spacing', 0.3),
-                # Start with parallel to x-axis
-                angle=get_config('path_planning.angle', 0.0),
-                # 10% overlap between passes
-                overlap=get_config('path_planning.overlap', 0.1),
-                # Will be updated with actual position
-                start_point=get_config(
-                    'path_planning.start_point', (0.0, 0.0)),
-                # Will be loaded from config
-                boundary_points=get_config('path_planning.boundary_points', [])
-            )
-
-            learning_config = LearningConfig(
-                learning_rate=get_config(
-                    'path_planning.learning.learning_rate', 0.1),
-                discount_factor=get_config(
-                    'path_planning.learning.discount_factor', 0.9),
-                exploration_rate=get_config(
-                    'path_planning.learning.exploration_rate', 0.2),
-                memory_size=get_config(
-                    'path_planning.learning.memory_size', 1000),
-                batch_size=get_config('path_planning.learning.batch_size', 32),
-                update_frequency=get_config(
-                    'path_planning.learning.update_frequency', 100),
-                model_path=get_config(
-                    'path_planning.learning.model_path', str(PATTERN_PLANNER_PATH))
-            )
-
-            self._resources["path_planner"] = NewPathPlanner(
-                pattern_config, learning_config
-            )
-
-            # Initialize navigation controller
-            self._resources["navigation"] = NavigationController(
-                self._resources["gps_serial"],
-                self._resources["motor_driver"],
-                self._resources["sensor_interface"]
-            )
-
-            # Initialize obstacle detection
-            self._resources["obstacle_detection"] = AvoidanceAlgorithm(
-                self._resources["path_planner"]
-            )
-
-            logger.info("All software components initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing software: {e}")
-            raise
-
-    def initialize(self):
-        """Initialize all resources."""
-        with self._lock:
-            if self._initialized:
-                return
-
-            try:
-                self._initialize_hardware()
-                self._initialize_software()
-                self._initialized = True
-                logger.info("All resources initialized successfully")
-            except Exception as e:
-                logger.error(f"Error during initialization: {e}")
-                self.cleanup()
-                raise
-
-    def cleanup(self):
-        """Clean up all resources."""
-        result = cleanup_resources(
-            self._resources, self._initialized, self._lock)
-        if result:
-            self._initialized = False
-        return result
-
-    def get_resource(self, name):
-        """
-        Get a resource by name.
-
-        Args:
-            name (str): Name of the resource to get.
-
-        Returns:
-            object: The requested resource.
-
-        Raises:
-            KeyError: If the resource is not found.
-        """
-        with self._lock:
-            if not self._initialized:
-                raise RuntimeError("Resources not initialized")
-            return self._resources[name]
-
-    def get_path_planner(self):
-        """Get the path planner instance."""
-        return self._resources.get("path_planner")
-
-    def get_navigation(self):
-        """Get the navigation controller instance."""
-        return self._resources.get("navigation")
-
-    def get_obstacle_detection(self):
-        """Get the obstacle detection instance."""
-        return self._resources.get("obstacle_detection")
-
-    def get_blade_controller(self):
-        """Get the blade controller instance."""
-        return self._resources.get("blade")
-
-    def get_bme280_sensor(self):
-        """Get the BME280 sensor instance."""
-        return self._resources.get("bme280")
-
-    def get_camera(self):
-        """Get the camera instance."""
-        return self._resources.get("camera")
-
-    def get_robohat_driver(self):
-        """Get the RoboHAT driver instance."""
-        return self._resources.get("motor_driver")
-
-    def get_gps_serial(self):
-        """Get the GPS serial instance."""
-        return self._resources.get("gps_serial")
-
-    def get_imu_sensor(self):
-        """Get the IMU sensor instance."""
-        return self._resources.get("imu")
-
-    def get_ina3221_sensor(self):
-        """Get the INA3221 sensor instance."""
-        return self._resources.get("ina3221")
-
-    def get_tof_sensors(self):
-        """Get the ToF sensors instance."""
-        return self._resources.get("tof")
-
-    def get_sensor_interface(self):
-        """Get the sensor interface instance."""
-        return self._resources.get("sensor_interface")
-
-
-class Mower:
-    """
-    Main class for the autonomous mower.
-
-    This class provides a centralized interface for controlling the mower
-    and accessing its resources. It uses the ResourceManager class for
-    resource management and provides methods for mowing, navigation,
-    and other operations.
-    """
-
-    def __init__(self, config_path=None):
-        """
-        Initialize the mower.
-
-        Args:
-            config_path: Optional path to configuration file
-        """
-        self.resource_manager = ResourceManager(config_path)
-        self.mode = MowerMode.IDLE
-        self.error_condition = None
-        self.home_location = None
-        self.boundary = []
-        self.no_go_zones = []
-        self.mowing_schedule = []
-
-        # Initialize logger
-        self.logger = logger
-
-        # Load home location from configuration
-        try:
-            home_config = self.resource_manager._load_config(
-                "home_location.json")
-            if home_config and 'location' in home_config:
-                self.home_location = home_config['location']
-                self.logger.info(f"Loaded home location: {self.home_location}")
-        except Exception as e:
-            self.logger.error(f"Failed to load home location: {e}")
-
-    def initialize(self):
-        """Initialize all resources."""
-        self.resource_manager.initialize()
-
-        # Initialize web interface with self as the mower instance
-        web_interface = WebInterface(mower=self)
-        self.resource_manager._resources["web_interface"] = web_interface
-
-        self.logger.info("Mower initialized successfully")
-
-    def cleanup(self):
-        """Clean up all resources."""
-        self.resource_manager.cleanup()
-        self.logger.info("Mower cleaned up successfully")
-
-    def start(self):
-        """Start the mowing operation."""
-        if self.mode != MowerMode.IDLE:
-            self.logger.warning(f"Cannot start mowing from mode {self.mode}")
-            return False
-
-        self.logger.info("Starting mowing operation")
-        self.mode = MowerMode.MOWING
-
-        # Start the blade
-        blade_controller = self.resource_manager.get_blade_controller()
-        if blade_controller:
-            blade_controller.start_blade()
-
-        # Start navigation
-        path_planner = self.resource_manager.get_path_planner()
-        if path_planner:
-            path_planner.start()
-
-        return True
-
-    def stop(self):
-        """Stop the mowing operation."""
-        self.logger.info("Stopping mowing operation")
-
-        # Stop the blade
-        blade_controller = self.resource_manager.get_blade_controller()
-        if blade_controller:
-            blade_controller.stop_blade()
-
-        # Stop navigation
-        navigation = self.resource_manager.get_navigation()
-        if navigation:
-            navigation.stop()
-
-        self.mode = MowerMode.IDLE
-        return True
-
-    def emergency_stop(self):
-        """Perform an emergency stop."""
-        self.logger.warning("Emergency stop activated")
-
-        # Stop all motors immediately
-        blade_controller = self.resource_manager.get_blade_controller()
-        if blade_controller:
-            blade_controller.stop_blade()
-
-        robohat_driver = self.resource_manager.get_robohat_driver()
-        if robohat_driver:
-            robohat_driver.stop()
-
-        self.mode = MowerMode.EMERGENCY_STOP
-        return True
-
-    def get_mode(self):
-        """Get the current mode of the mower."""
-        return self.mode.value
-
-    def get_battery_level(self):
-        """Get the current battery level."""
-        try:
-            ina3221 = self.resource_manager.get_ina3221_sensor()
-            if ina3221:
-                return ina3221.get_battery_voltage()
-            return None
-        except Exception as e:
-            self.logger.error(f"Error getting battery level: {e}")
-            return None
-
-    def get_safety_status(self):
-        """Get the current safety status."""
-        try:
-            # Check various safety conditions
-            safety_status = {
-                "emergency_stop_active": self.mode == MowerMode.EMERGENCY_STOP,
-                "blade_running": False,
-                "obstacles_detected": False,
-                "battery_low": False
-            }
-
-            # Check blade status
-            blade_controller = self.resource_manager.get_blade_controller()
-            if blade_controller:
-                safety_status["blade_running"] = blade_controller.is_running()
-
-            # Check obstacle detection
-            obstacle_detection = self.resource_manager.get_obstacle_detection()
-            if obstacle_detection:
-                safety_status["obstacles_detected"] = obstacle_detection.check_obstacles(
-                )
-
-            # Check battery level
-            battery_level = self.get_battery_level()
-            if battery_level is not None:
-                # Threshold for low battery
-                safety_status["battery_low"] = battery_level < 11.0
-
-            return safety_status
-        except Exception as e:
-            self.logger.error(f"Error getting safety status: {e}")
-            return {"error": str(e)}
-
-    def get_status(self):
-        """Get the current status of the mower."""
-        try:
-            status = {
-                "mode": self.get_mode(),
-                "battery": self.get_battery_level(),
-                "safety": self.get_safety_status(),
-                "error": self.error_condition
-            }
-
-            # Add position information if available
-            navigation = self.resource_manager.get_navigation()
-            if navigation:
-                status["position"] = navigation.get_status()
-
-            return status
-        except Exception as e:
-            self.logger.error(f"Error getting status: {e}")
-            return {"error": str(e)}
-
-    def get_sensor_data(self):
-        """Get data from all sensors."""
-        try:
-            sensor_data = {}
-
-            # Get IMU data
-            imu = self.resource_manager.get_imu_sensor()
-            if imu:
-                sensor_data["imu"] = imu.get_data()
-
-            # Get BME280 data
-            bme280 = self.resource_manager.get_bme280_sensor()
-            if bme280:
-                sensor_data["bme280"] = bme280.get_data()
-
-            # Get ToF data
-            tof = self.resource_manager.get_tof_sensors()
-            if tof:
-                sensor_data["tof"] = tof.get_data()
-
-            return sensor_data
-        except Exception as e:
-            self.logger.error(f"Error getting sensor data: {e}")
-            return {"error": str(e)}
-
-    def get_home_location(self):
-        """Get the home location."""
-        return self.home_location
-
-    def set_home_location(self, location):
-        """Set the home location."""
-        self.home_location = location
-
-        # Save to configuration file
-        result = self.resource_manager._save_config(
-            "home_location.json", {"location": location})
-        if result:
-            self.logger.info(f"Saved home location: {location}")
-        return result
-
-    def get_boundary(self):
-        """Get the yard boundary."""
-        return self.boundary
-
-    def get_no_go_zones(self):
-        """Get the no-go zones."""
-        return self.no_go_zones
-
-    def save_boundary(self, boundary):
-        """Save the yard boundary."""
-        self.boundary = boundary
-
-        # Update path planner
-        path_planner = self.resource_manager.get_path_planner()
-        if path_planner:
-            path_planner.pattern_config.boundary_points = boundary
-
-        # Save to configuration file
-        result = self.resource_manager._save_config(
-            "boundary.json", {"boundary": boundary})
-        if result:
-            self.logger.info("Saved boundary configuration")
-        return result
-
-    def save_no_go_zones(self, zones):
-        """Save no-go zones."""
-        self.no_go_zones = zones
-
-        # Save to configuration file
-        result = self.resource_manager._save_config(
-            "no_go_zones.json", {"zones": zones})
-        if result:
-            self.logger.info("Saved no-go zones configuration")
-        return result
-
-    def get_mowing_schedule(self):
-        """Get the mowing schedule."""
-        return self.mowing_schedule
-
-    def set_mowing_schedule(self, schedule):
-        """Set the mowing schedule."""
-        self.mowing_schedule = schedule
-
-        # Save to configuration file
-        result = self.resource_manager._save_config(
-            "schedule.json", {"schedule": schedule})
-        if result:
-            self.logger.info("Saved mowing schedule")
-        return result
-
-    def get_current_path(self):
-        """Get the current planned path."""
-        try:
-            path_planner = self.resource_manager.get_path_planner()
-            if path_planner:
-                return path_planner.current_path
-            return []
-        except Exception as e:
-            self.logger.error(f"Error getting current path: {e}")
-            return []
-
-    def _validate_command_params(self, command, params):
-        """
-        Validate command and parameters.
-
-        Args:
-            command: The command to validate
-            params: Parameters to validate
-
-        Returns:
-            dict: Error response if validation fails, None if validation passes
-        """
-        # Validate command
-        if not isinstance(command, str):
-            return {"error": "Command must be a string"}
-
-        # Validate params
-        if not isinstance(params, dict):
-            return {"error": "Parameters must be a dictionary"}
-
-        return None
-
-    def _execute_move_command(self, params):
-        """
-        Execute the 'move' command.
-
-        Args:
-            params: Command parameters
-
-        Returns:
-            dict: Result of the command execution
-        """
-        # Validate required parameters
-        if "direction" not in params:
-            return {"error": "Missing required parameter: direction"}
-
-        direction = params.get("direction")
-
-        # Validate direction
-        if not isinstance(direction, str):
-            return {"error": "Direction must be a string"}
-
-        valid_directions = ["forward", "backward", "left", "right", "stop"]
-        if direction not in valid_directions:
-            return {"error": f"Invalid direction: {direction}. Valid directions are: {', '.join(valid_directions)}"}
-
-        # Validate speed parameter
-        speed = params.get("speed", 0.5)
-        if not isinstance(speed, (int, float)):
-            return {"error": "Speed must be a number"}
-
-        if speed < 0.0 or speed > 1.0:
-            return {"error": "Speed must be between 0.0 and 1.0"}
-
-        # Validate no unexpected parameters
-        unexpected_params = set(params.keys()) - {"direction", "speed"}
-        if unexpected_params:
-            return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
-
-        # Get motor driver
-        robohat_driver = self.resource_manager.get_robohat_driver()
-        if not robohat_driver:
-            return {"error": "Motor driver not available"}
-
-        # Execute command
-        if direction == "forward":
-            robohat_driver.forward(speed)
-        elif direction == "backward":
-            robohat_driver.backward(speed)
-        elif direction == "left":
-            robohat_driver.left(speed)
-        elif direction == "right":
-            robohat_driver.right(speed)
-        elif direction == "stop":
-            robohat_driver.stop()
-
-        return {"success": True}
-
-    def _execute_blade_command(self, params):
-        """
-        Execute the 'blade' command.
-
-        Args:
-            params: Command parameters
-
-        Returns:
-            dict: Result of the command execution
-        """
-        # Validate required parameters
-        if "action" not in params:
-            return {"error": "Missing required parameter: action"}
-
-        action = params.get("action")
-
-        # Validate action
-        if not isinstance(action, str):
-            return {"error": "Action must be a string"}
-
-        valid_actions = ["start", "stop"]
-        if action not in valid_actions:
-            return {"error": f"Invalid action: {action}. Valid actions are: {', '.join(valid_actions)}"}
-
-        # Validate no unexpected parameters
-        unexpected_params = set(params.keys()) - {"action"}
-        if unexpected_params:
-            return {"error": f"Unexpected parameters: {', '.join(unexpected_params)}"}
-
-        # Get blade controller
-        blade_controller = self.resource_manager.get_blade_controller()
-        if not blade_controller:
-            return {"error": "Blade controller not available"}
-
-        # Execute command
-        if action == "start":
-            blade_controller.start_blade()
-        elif action == "stop":
-            blade_controller.stop_blade()
-
-        return {"success": True}
-
-    def execute_command(self, command, params=None):
-        """
-        Execute a command with the given parameters.
-
-        Args:
-            command: The command to execute
-            params: Optional parameters for the command
-
-        Returns:
-            The result of the command execution
-        """
-        # Initialize params if None
-        if params is None:
-            params = {}
-
-        # Validate command and parameters
-        validation_error = self._validate_command_params(command, params)
-        if validation_error:
-            return validation_error
-
-        self.logger.info(f"Executing command: {command} with params: {params}")
-
-        try:
-            # Dispatch command to appropriate handler
-            if command == "move":
-                return self._execute_move_command(params)
-            elif command == "blade":
-                return self._execute_blade_command(params)
-            else:
-                return {"error": f"Unknown command: {command}. Valid commands are: move, blade"}
-
-        except Exception as e:
-            self.logger.error(f"Error executing command {command}: {e}")
-            return {"error": str(e)}
-
-
-# Legacy functions for backward compatibility
-# These functions use the new Mower class internally
-
-# Singleton instance of the Mower class
-_mower_instance = None
-
-
-def get_mower_instance() -> Mower:
-    """Get the singleton instance of the Mower class."""
-    global _mower_instance
-    if _mower_instance is None:
-        _mower_instance = Mower()
-        _mower_instance.initialize()
-    return _mower_instance
-
-
-def get_blade_controller() -> BladeControllerAdapter:
-    """Get the blade controller instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_blade_controller()
-
-
-def get_bme280_sensor() -> BME280Sensor:
-    """Get the BME280 sensor instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_bme280_sensor()
-
-
-def get_camera() -> Any:  # Camera type is not explicitly defined
-    """Get the camera instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_camera()
-
-
-def get_gpio_manager() -> GPIOManager:
-    """Get the GPIO manager instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_resource("gpio")
-
-
-def get_imu_sensor() -> BNO085Sensor:
-    """Get the IMU sensor instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_imu_sensor()
-
-
-def get_ina3221_sensor() -> INA3221Sensor:
-    """Get the INA3221 sensor instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_ina3221_sensor()
-
-
-def get_robohat_driver() -> RoboHATDriver:
-    """Get the RoboHAT driver instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_robohat_driver()
-
-
-def get_sensors() -> EnhancedSensorInterface:
-    """Get the sensor interface instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_sensor_interface()
-
-
-def get_serial_port() -> SerialPort:
-    """Get the serial port instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_gps_serial()
-
-
-def get_tof_sensors() -> VL53L0XSensors:
-    """Get the ToF sensors instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_tof_sensors()
-
+def get_tof_sensors():
+    global _tof_sensors
+    if _tof_sensors is None:
+        _tof_sensors = VL53L0XSensors()
+    return _tof_sensors
 
 # Navigation initialization functions
 
-def get_gps_nmea_positions() -> SerialPort:
-    """Get the GPS NMEA positions instance."""
-    mower = get_mower_instance()
-    # This is a special case as we don't have a direct getter in ResourceManager
-    # We'll use the GPS serial port instead
-    return mower.resource_manager.get_gps_serial()
+
+def get_gps_nmea_positions():
+    global _gps_nmea_positions
+    if _gps_nmea_positions is None:
+        _gps_nmea_positions = GpsNmeaPositions()
+    return _gps_nmea_positions
 
 
-def get_gps_latest_position() -> Optional[GpsLatestPosition]:
-    """Get the GPS latest position instance."""
-    mower = get_mower_instance()
-    # This is a special case as we don't have a direct getter in ResourceManager
-    # We'll use the navigation controller instead
-    navigation = mower.resource_manager.get_navigation()
-    if navigation:
-        return navigation.gps_latest_position
-    return None
+def get_gps_latest_position():
+    global _gps_latest_position
+    if _gps_latest_position is None:
+        _gps_latest_position = GpsLatestPosition(
+            get_gps_nmea_positions())
+    return _gps_latest_position
 
 
-def get_gps_position() -> SerialPort:
-    """Get the GPS position instance."""
-    # This is a special case as we don't have a direct getter in ResourceManager
-    # We'll use the GPS serial port instead
-    return get_gps_nmea_positions()
+def get_gps_position():
+    global _gps_position
+    if _gps_position is None:
+        _gps_position = GpsPosition()
+    return _gps_position
 
 
-def get_localization() -> Localization:
-    """Get the localization instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_resource("localization")
+def get_localization():
+    global _localization
+    if _localization is None:
+        _localization = Localization()
+    return _localization
 
 
-def get_path_planner() -> NewPathPlanner:
-    """Get the path planner instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_path_planner()
+def get_path_planner():
+    global _path_planner
+    if _path_planner is None:
+        _path_planner = PathPlanner(get_localization())
+    return _path_planner
 
 
-def get_navigation_controller() -> NavigationController:
-    """Get the navigation controller instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_navigation()
-
+def get_navigation_controller():
+    global _navigation_controller
+    if _navigation_controller is None:
+        _navigation_controller = NavigationController(
+            gps_latest_position=get_gps_latest_position(),
+            robohat_driver=get_robohat_driver(),
+            sensor_interface=get_sensor_interface())
+    return _navigation_controller
 
 # Obstacle Detection initialization functions
 
-def get_avoidance_algorithm() -> AvoidanceAlgorithm:
-    """Get the avoidance algorithm instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_obstacle_detection()
+
+def get_avoidance_algorithm():
+    global _avoidance_algorithm
+    if _avoidance_algorithm is None:
+        _avoidance_algorithm = AvoidanceAlgorithm()
+    return _avoidance_algorithm
 
 
-def get_detect_obstacle() -> Any:  # Function type
-    """Get the detect obstacle function."""
+def get_detect_obstacle():
     return detect_obstacle
 
 
-def get_detect_drop() -> Any:  # Function type
-    """Get the detect drop function."""
+def get_detect_drop():
     return detect_drop
 
 
-def get_stream_frame_with_overlays() -> Any:  # Function type
-    """Get the stream frame with overlays function."""
+def get_stream_frame_with_overlays():
     return stream_frame_with_overlays
-
 
 # UI and utilities initialization functions
 
-def get_web_interface() -> WebInterface:
-    """Get the web interface instance."""
-    mower = get_mower_instance()
-    return mower.resource_manager.get_resource("web_interface")
+
+def get_web_interface():
+    global _web_interface
+    if _web_interface is None:
+        _web_interface = WebInterface()
+    return _web_interface
 
 
-def get_logger_config() -> Any:  # LoggerConfig type
-    """Get the logger configuration instance."""
-    return LoggerConfig()
+def get_logger_config():
+    global _logger_config
+    if _logger_config is None:
+        _logger_config = LoggerConfig()
+    return _logger_config
 
 
-def get_text_logger() -> TextLogger:
-    """Get the text logger instance."""
-    return TextLogger()
+def get_text_logger():
+    global _text_logger
+    if _text_logger is None:
+        _text_logger = TextLogger()
+    return _text_logger
 
 
-def get_csv_logger() -> CsvLogger:
-    """Get the CSV logger instance."""
-    return CsvLogger()
+def get_csv_logger():
+    global _csv_logger
+    if _csv_logger is None:
+        _csv_logger = CsvLogger()
+    return _csv_logger
 
 
-def get_utils() -> Utils:
-    """Get the utilities instance."""
-    return Utils()
-
+def get_utils():
+    global _utils
+    if _utils is None:
+        _utils = Utils()
+    return _utils
 
 # Function to initialize all resources
 
-def init_resources() -> Mower:
-    """Initialize all resources."""
-    mower = get_mower_instance()
-    # The mower instance is already initialized in get_mower_instance()
-    logger.info("All resources initialized")
-    return mower
 
+def init_resources():
+    get_blade_controller()
+    get_bme280_sensor()
+    get_camera()
+    get_gpio_manager()
+    get_imu_sensor()
+    get_ina3221_sensor()
+    get_robohat_driver()
+    get_sensors()
+    get_serial_port()
+    get_tof_sensors()
+
+    get_gps_nmea_positions()
+    get_gps_latest_position()
+    get_gps_position()
+    get_localization()
+    get_path_planner()
+
+    get_avoidance_algorithm()
+    get_detect_obstacle()
+    get_detect_drop()
+    get_stream_frame_with_overlays()
+
+    get_web_interface()
+
+    get_logger_config()
+    get_text_logger()
+    get_csv_logger()
+    get_utils()
 
 # Function to cleanup all resources
 
-def cleanup_resources() -> None:
-    """Clean up all resources."""
-    global _mower_instance
-    if _mower_instance is not None:
-        _mower_instance.cleanup()
-        _mower_instance = None
-    logger.info("All resources cleaned up")
 
+def cleanup_resources():
+    if _blade_controller is not None:
+        _blade_controller.cleanup()
+    if _bme280_sensor is not None:
+        _bme280_sensor.cleanup()
+    if _camera_instance is not None:
+        _camera_instance.cleanup()
+    if _gpio_manager is not None:
+        _gpio_manager.cleanup()
+    if _imu_sensor is not None:
+        _imu_sensor.cleanup()
+    if _ina3221_sensor is not None:
+        _ina3221_sensor.cleanup()
+    if _robohat_driver is not None:
+        _robohat_driver.shutdown()  # Use shutdown method
+    if _sensor_interface is not None:
+        _sensor_interface.shutdown()
+    if _serial_port is not None:
+        _serial_port.cleanup()
+    if _tof_sensors is not None:
+        _tof_sensors.cleanup()
+
+    if _gps_nmea_positions is not None:
+        _gps_nmea_positions.cleanup()
+    if _gps_latest_position is not None:
+        _gps_latest_position.cleanup()
+    if _gps_position is not None:
+        _gps_position.cleanup()
+    if _localization is not None:
+        _localization.cleanup()
+    if _path_planner is not None:
+        _path_planner.cleanup()
+
+    if _avoidance_algorithm is not None:
+        _avoidance_algorithm.cleanup()
+
+    if _web_interface is not None:
+        _web_interface.shutdown()
+
+    if _logger_config is not None:
+        _logger_config.cleanup()
+    if _text_logger is not None:
+        _text_logger.cleanup()
+    if _csv_logger is not None:
+        _csv_logger.cleanup()
+    if _utils is not None:
+        _utils.cleanup()
 
 # Function to start the web interface
 
-def start_web_interface() -> None:
-    """Start the web interface."""
-    mower = get_mower_instance()
-    web_interface = mower.resource_manager.get_resource("web_interface")
-    if web_interface:
-        web_interface.start()
 
+def start_web_interface():
+    get_web_interface().start()
 
 # Function to start the robot logic
 
-def start_robot_logic() -> None:
-    """Start the robot logic."""
-    # Import here to avoid circular import
+
+def start_robot_logic():
     from mower.robot import run_robot
     robot_thread = threading.Thread(target=run_robot, daemon=True)
     robot_thread.start()
@@ -971,6 +351,6 @@ if __name__ == "__main__":
         start_robot_logic()
         start_web_interface()
     except KeyboardInterrupt:
-        logger.info("Exiting")
+        logging.info("Exiting")
     finally:
         cleanup_resources()

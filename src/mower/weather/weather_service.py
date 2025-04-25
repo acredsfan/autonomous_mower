@@ -11,11 +11,11 @@ import requests
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
-from dotenv import load_dotenv  # type:ignore
+from dotenv import load_dotenv
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
-# Ensure logger initialization uses LoggerConfigInfo for consistency.
+# Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables

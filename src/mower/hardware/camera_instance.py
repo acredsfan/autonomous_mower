@@ -8,13 +8,13 @@ only one instance of the camera is active at a time.
 import os
 import socket
 import threading
-import cv2  # type:ignore
-from dotenv import load_dotenv  # type:ignore
+import cv2
+from dotenv import load_dotenv
 from typing import Optional, Union
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 # Load environment variables
 load_dotenv()
@@ -103,8 +103,8 @@ class CameraInstance:
                         self._camera.create_preview_configuration(
                             main={"size": (self._frame_width,
                                            self._frame_height)}
+                            )
                         )
-                    )
                     self._camera.start()
                     self._is_picamera = True
                     self._is_initialized = True
@@ -186,14 +186,6 @@ class CameraInstance:
             finally:
                 self._is_initialized = False
                 self._camera = None
-
-    def cleanup(self):
-        """Clean up resources used by the CameraInstance."""
-        try:
-            # Add specific cleanup logic here
-            logging.info("CameraInstance cleaned up successfully.")
-        except Exception as e:
-            logging.error(f"Error cleaning up CameraInstance: {e}")
 
 
 def get_camera_instance() -> CameraInstance:

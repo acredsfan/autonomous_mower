@@ -1,16 +1,8 @@
-import serial  # type:ignore
+import serial
 import time
 
 SERIAL_PORT = "/dev/ttyACM1"
 BAUD_RATE = 115200
-
-
-def read_response(ser, timeout=1.0):
-    ser.timeout = timeout
-    try:
-        return ser.readline().decode(errors="ignore").strip()
-    except Exception:
-        return ""
 
 
 def main():
@@ -18,18 +10,46 @@ def main():
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             print(f"Connected to {SERIAL_PORT}.")
 
+            # 1) Disable real RC on the RP2040
+            ser.write(b"rc=disable\r")
+            time.sleep(0.2)
+            print("Sent 'rc=disable'")
+            resp = ser.read_all().decode().strip()
+            if resp:
+                print("RP2040 said:", resp)
+
+            # 2) Send servo lines
             test_data = [
-                (1500, 1500), (1600, 1500), (1400, 1500),
-                (1500, 1600), (1500, 1400), (1600, 1600),
-                (1400, 1400), (1500, 1500),
+                (1500, 1500),
+                (1600, 1500),
+                (1400, 1500),
+                (1500, 1600),
+                (1500, 1400),
+                (1600, 1600),
+                (1400, 1400),
+                (1500, 1500),
             ]
-            for st, th in test_data:
-                # Format: 4 digits, comma, space, 4 digits, CRLF
-                line = f"{st:04d}, {th:04d}\r\n"
+            for (st, th) in test_data:
+                line = (
+                    f"{st}, {th}\r\n"
+                )
                 ser.write(line.encode())
                 print("Sent:", line.strip())
-                print("Got   :", read_response(ser) or "<no resp>")
                 time.sleep(0.4)
+                resp = ser.read_all().decode().strip()
+                if resp:
+                    print("Got back:", resp)
+
+            # 3) Re-enable real RC
+            ser.write(b"rc=enable\r")
+            print("Sent 'rc=enable'")
+            time.sleep(0.5)
+            resp = ser.read_all().decode().strip()
+            if resp:
+                print("RP2040 said:", resp)
+
+            # Now any new lines you send for servo pulses won't be used
+            # if the RP2040 is looking at real RC pins again.
 
     except serial.SerialException as e:
         print("Error opening port:", e)

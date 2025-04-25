@@ -11,17 +11,17 @@ from shapely.geometry import Point, Polygon
 from mower.navigation.gps import (
     GpsLatestPosition,
     GpsNmeaPositions
-)
+    )
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 from mower.constants import (
     max_lat,
     max_lng,
     min_lat,
     min_lng,
     polygon_coordinates
-)
+    )
 
 
 LoggerConfig.configure_logging()
@@ -73,7 +73,7 @@ class Localization:
             heading=0.0,
             accuracy=0.0,
             last_update=time.time()
-        )
+            )
 
         # Initialize sensor interface and position tracking
         self.sensor_interface = None
@@ -87,7 +87,7 @@ class Localization:
             'max_lat': max_lat,
             'min_lng': min_lng,
             'max_lng': max_lng
-        }
+            }
 
         # Kalman filter parameters
         self.kalman_state = None
@@ -100,7 +100,7 @@ class Localization:
         if self.sensor_interface is None:
             from mower.hardware.sensor_interface import (
                 EnhancedSensorInterface
-            )
+                )
             self.sensor_interface = EnhancedSensorInterface()
         return self.sensor_interface
 
@@ -132,7 +132,7 @@ class Localization:
             self,
             gps_data: Dict,
             sensor_data: Dict
-    ) -> Tuple[float, float]:
+            ) -> Tuple[float, float]:
         """
         Process GPS and sensor data for position estimation.
 
@@ -158,7 +158,7 @@ class Localization:
             imu_heading,
             sensor_data.get('speed', 0),
             time.time() - self.position.last_update
-        )
+            )
 
         # Update Kalman filter
         kalman_gain = self._calculate_kalman_gain()
@@ -167,7 +167,7 @@ class Localization:
             kalman_gain,
             gps_lat,
             gps_lon
-        )
+            )
 
         # Update position data
         self._update_position_data(imu_heading)
@@ -190,7 +190,7 @@ class Localization:
                 sensor_data['heading'],
                 sensor_data.get('speed', 0),
                 time.time() - self.position.last_update
-            )
+                )
             self.kalman_state = predicted_pos
             self.kalman_covariance += self.process_noise
 
@@ -207,7 +207,7 @@ class Localization:
             heading: float,
             speed: float,
             time_delta: float
-    ) -> np.ndarray:
+            ) -> np.ndarray:
         """
         Predict next position based on current motion.
 
@@ -239,7 +239,7 @@ class Localization:
             kalman_gain: float,
             gps_lat: float,
             gps_lon: float
-    ) -> np.ndarray:
+            ) -> np.ndarray:
         """
         Update Kalman filter state with new measurements.
 
@@ -255,7 +255,7 @@ class Localization:
         measurement = np.array([gps_lat, gps_lon])
         self.kalman_covariance = (
             (1 - kalman_gain) * self.kalman_covariance + self.process_noise
-        )
+            )
         return predicted_pos + kalman_gain * (measurement - predicted_pos)
 
     def _update_position_data(self, heading: float):
@@ -271,7 +271,7 @@ class Localization:
         self.position.last_update = time.time()
         self.position.accuracy = float(
             np.sqrt(self.kalman_covariance.diagonal().mean())
-        )
+            )
 
     def _update_position_from_kalman(self):
         """Update position object from Kalman state."""
@@ -307,7 +307,7 @@ class Localization:
                 'accuracy': self.position.accuracy,
                 'last_update': self.position.last_update,
                 'in_bounds': in_bounds
-            }
+                }
 
         except Exception as e:
             logging.error(f"Update error: {str(e)}")
@@ -331,7 +331,7 @@ class Localization:
             'last_update': self.position.last_update,
             'in_bounds': False,
             'error': error_msg
-        }
+            }
 
     def is_within_yard(self, lat: float, lon: float) -> bool:
         """
@@ -350,37 +350,17 @@ class Localization:
                 self.boundaries['min_lat'] <= lat <= self.boundaries['max_lat']
                 and
                 self.boundaries['min_lng'] <= lon <= self.boundaries['max_lng']
-            )
+                )
 
             if not in_rectangle:
                 return False
 
             # Then check against detailed polygon if available
-            if self.yard_boundary and isinstance(self.yard_boundary, list):
+            if self.yard_boundary:
                 point = Point(lon, lat)
+                polygon = Polygon(self.yard_boundary)
+                return polygon.contains(point)
 
-                # Convert polygon_coordinates to a format suitable for Polygon
-                polygon_points = []
-                for coord in self.yard_boundary:
-                    if isinstance(coord, dict):
-                        # Try both 'lng'/'lat' and 'lon'/'lat' formats
-                        longitude = None
-                        if 'lng' in coord:
-                            longitude = coord['lng']
-                        elif 'lon' in coord:
-                            longitude = coord['lon']
-
-                        latitude = coord.get('lat')
-
-                        if longitude is not None and latitude is not None:
-                            polygon_points.append((longitude, latitude))
-
-                # Only create polygon if we have enough points
-                if len(polygon_points) >= 3:
-                    polygon = Polygon(polygon_points)
-                    return polygon.contains(point)
-
-            # If we don't have a valid polygon, fall back to rectangular bounds
             return True
 
         except Exception as e:
@@ -405,14 +385,6 @@ class Localization:
         """
         return time.time() - self.position.last_update
 
-    def cleanup(self):
-        """Clean up resources used by the localization module."""
-        try:
-            # Add any specific cleanup logic here
-            logging.info("Localization module cleaned up successfully.")
-        except Exception as e:
-            logging.error(f"Error cleaning up localization module: {e}")
-
 
 def main():
     """Test the localization system."""
@@ -427,7 +399,7 @@ def main():
                 f"Accuracy: {status['accuracy']:.2f}m\n"
                 f"In Bounds: {status['in_bounds']}\n"
                 f"Update Age: {localization.get_last_update_age():.1f}s"
-            )
+                )
             time.sleep(1)
 
     except KeyboardInterrupt:

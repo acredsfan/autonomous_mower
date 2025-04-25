@@ -1,8 +1,8 @@
-from adafruit_bme280 import basic as adafruit_bme280  # type:ignore
+from adafruit_bme280 import basic as adafruit_bme280
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -41,23 +41,9 @@ class BME280Sensor:
                 'temperature_f': round(temperature_f, 1),
                 'humidity': round(sensor.humidity, 1),
                 'pressure': round(sensor.pressure, 1)
-            }
+                }
         except Exception as e:
             logging.error(f"Error during BME280 read: {e}")
-            return {}
-
-    def read(self, i2c):
-        """Read data from the BME280 sensor."""
-        try:
-            sensor = self._initialize(i2c)
-            if sensor is None:
-                logging.error(
-                    "Failed to initialize BME280 sensor during read."
-                )
-                return {}
-            return self.read_bme280(sensor)
-        except Exception as e:
-            logging.error(f"Error reading BME280 sensor: {e}")
             return {}
 
 

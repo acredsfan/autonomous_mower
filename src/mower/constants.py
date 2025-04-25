@@ -1,15 +1,14 @@
 # constants.py
 import json
 from pathlib import Path
-import os
 
-from dotenv import load_dotenv  # type:ignore
+from dotenv import load_dotenv
 from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig,
-)
+    LoggerConfigInfo as LoggerConfig
+    )
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logging = LoggerConfig.get_logger(__name__)
 
 # Load .env variables
 load_dotenv()
@@ -22,32 +21,12 @@ polygon_path = CONFIG_DIR / "user_polygon.json"
 # Open user polygon config file
 try:
     with open(polygon_path) as f:
-        polygon_data = json.load(f)
-        # Extract the polygon coordinates from the correct structure
-        if isinstance(polygon_data, dict) and 'polygon' in polygon_data:
-            polygon_coordinates = polygon_data['polygon']
-        else:
-            # Handle legacy format or unexpected structure
-            polygon_coordinates = polygon_data if isinstance(
-                polygon_data, list) else []
-            logger.warning(
-                "User polygon data has unexpected structure. "
-                "Expected a dictionary with 'polygon' key."
-            )
+        polygon_coordinates = json.load(f)
 except FileNotFoundError:
-    logger.warning(
+    logging.warning(
         "User polygon config file not found. "
         "Initializing with an empty list."
     )
-    polygon_coordinates = []
-except json.JSONDecodeError:
-    logger.error(
-        "Error decoding user polygon JSON file. "
-        "Initializing with an empty list."
-    )
-    polygon_coordinates = []
-except Exception as e:
-    logger.error(f"Unexpected error loading user polygon: {e}")
     polygon_coordinates = []
 
 # Constants for the project
@@ -79,25 +58,10 @@ MM1_STEERING_MID = 1500
 AUTO_RECORD_ON_THROTTLE = True
 JOYSTICK_DEADZONE = 0.1
 SHOW_STEERING_VALUE = True  # Update this based on your use case
-MM1_SERIAL_PORT = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
-MM1_BAUD_RATE = os.getenv("MM1_BAUD_RATE", 115200)
 
 # Derived constants for UI limits
-# Safely extract coordinates with proper error handling
-latitudes = []
-longitudes = []
-
-# Only process if we have valid polygon coordinates
-if polygon_coordinates and isinstance(polygon_coordinates, list):
-    for coord in polygon_coordinates:
-        if isinstance(coord, dict):
-            # Try both 'lat'/'lng' and 'lat'/'lon' formats
-            if 'lat' in coord:
-                latitudes.append(coord['lat'])
-            if 'lng' in coord:
-                longitudes.append(coord['lng'])
-            elif 'lon' in coord:
-                longitudes.append(coord['lon'])
+latitudes = [coord['lat'] for coord in polygon_coordinates]
+longitudes = [coord['lng'] for coord in polygon_coordinates]
 
 min_lat = min(latitudes) if latitudes else 10
 max_lat = max(latitudes) if latitudes else 11

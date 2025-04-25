@@ -19,11 +19,11 @@ load_dotenv(dotenv_path)
 logger = LoggerConfig.get_logger(__name__)
 
 
-GPS_PORT = os.getenv('GPS_SERIAL_PORT')
+GPS_PORT = os.getenv('GPS_SERIAL_PORT', '/dev/ttyACM1')
 GPS_BAUDRATE = int(os.getenv('GPS_BAUD_RATE', '9600'))
-IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT')
+IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
 IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
-MM1_SERIAL_PORT = os.getenv('MM1_SERIAL_PORT')
+MM1_SERIAL_PORT = os.getenv('MM1_SERIAL_PORT', '/dev/ttyACM0')
 MM1_BAUDRATE = int(os.getenv('MM1_BAUD_RATE', '115200'))
 
 

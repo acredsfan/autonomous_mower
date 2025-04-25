@@ -11,8 +11,8 @@ from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 logging = LoggerConfig.get_logger(__name__)
 
 # GPIO pins for blade control
-BLADE_IN1_PIN = 24
-BLADE_IN2_PIN = 25
+BLADE_ENABLE_PIN = 22
+BLADE_DIRECTION_PIN = 23
 
 
 class BladeController:
@@ -27,10 +27,11 @@ class BladeController:
         """Initialize the blade controller."""
         self._gpio = GPIOManager()
         self._enabled = False
+        self._direction = 0
 
         # Set up GPIO pins
-        self._gpio.setup_pin(BLADE_IN1_PIN, "out", 0)
-        self._gpio.setup_pin(BLADE_IN2_PIN, "out", 0)
+        self._gpio.setup_pin(BLADE_ENABLE_PIN, "out", 0)
+        self._gpio.setup_pin(BLADE_DIRECTION_PIN, "out", 0)
 
         logging.info("Blade controller initialized")
 
@@ -43,8 +44,7 @@ class BladeController:
         """
         try:
             if not self._enabled:
-                self._gpio.set_pin(BLADE_IN1_PIN, 1)
-                self._gpio.set_pin(BLADE_IN2_PIN, 0)
+                self._gpio.set_pin(BLADE_ENABLE_PIN, 1)
                 self._enabled = True
                 logging.info("Blade motor enabled")
             return True
@@ -61,8 +61,7 @@ class BladeController:
         """
         try:
             if self._enabled:
-                self._gpio.set_pin(BLADE_IN1_PIN, 0)
-                self._gpio.set_pin(BLADE_IN2_PIN, 0)
+                self._gpio.set_pin(BLADE_ENABLE_PIN, 0)
                 self._enabled = False
                 logging.info("Blade motor disabled")
             return True
@@ -70,28 +69,28 @@ class BladeController:
             logging.error(f"Error disabling blade motor: {e}")
             return False
 
-    def set_speed(self, speed: float) -> bool:
+    def set_direction(self, direction: int) -> bool:
         """
-        Set the blade motor speed.
+        Set the blade motor direction.
 
         Args:
-            speed: Speed value between 0.0 (stopped) and 1.0 (full speed).
+            direction: 0 for forward, 1 for reverse
 
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if successful, False otherwise
         """
         try:
-            if not (0.0 <= speed <= 1.0):
-                logging.error(f"Invalid speed value: {speed}")
+            if direction not in [0, 1]:
+                logging.error(f"Invalid direction value: {direction}")
                 return False
 
-            # Map speed to duty cycle percentage (0 to 100)
-            duty_cycle = speed * 100
-            self._gpio.set_pwm(BLADE_IN1_PIN, duty_cycle)
-            logging.info(f"Blade motor speed set to {speed}")
+            if self._direction != direction:
+                self._gpio.set_pin(BLADE_DIRECTION_PIN, direction)
+                self._direction = direction
+                logging.info(f"Blade motor direction set to {direction}")
             return True
         except Exception as e:
-            logging.error(f"Error setting blade motor speed: {e}")
+            logging.error(f"Error setting blade motor direction: {e}")
             return False
 
     def is_enabled(self) -> bool:
@@ -103,12 +102,21 @@ class BladeController:
         """
         return self._enabled
 
+    def get_direction(self) -> int:
+        """
+        Get the current blade motor direction.
+
+        Returns:
+            int: 0 for forward, 1 for reverse
+        """
+        return self._direction
+
     def cleanup(self) -> None:
         """Clean up GPIO resources."""
         try:
             self.disable()
-            self._gpio.cleanup_pin(BLADE_IN1_PIN)
-            self._gpio.cleanup_pin(BLADE_IN2_PIN)
+            self._gpio.cleanup_pin(BLADE_ENABLE_PIN)
+            self._gpio.cleanup_pin(BLADE_DIRECTION_PIN)
             logging.info("Blade controller cleaned up")
         except Exception as e:
             logging.error(f"Error cleaning up blade controller: {e}")
@@ -122,35 +130,7 @@ class BladeController:
         """
         return {
             "enabled": self._enabled,
-            "in1_pin": BLADE_IN1_PIN,
-            "in2_pin": BLADE_IN2_PIN
-        }
-
-
-if __name__ == "__main__":
-    import time
-
-    logging.info("Starting BladeController test...")
-
-    blade_controller = BladeController()
-
-    try:
-        logging.info("Enabling blade motor...")
-        blade_controller.enable()
-        time.sleep(2)
-
-        logging.info("Setting blade motor speed to 50%...")
-        blade_controller.set_speed(0.5)
-        time.sleep(2)
-
-        logging.info("Disabling blade motor...")
-        blade_controller.disable()
-
-    except Exception as e:
-        logging.error(f"Error during BladeController test: {e}")
-
-    finally:
-        logging.info("Cleaning up BladeController...")
-        blade_controller.cleanup()
-
-    logging.info("BladeController test completed.")
+            "direction": self._direction,
+            "enable_pin": BLADE_ENABLE_PIN,
+            "direction_pin": BLADE_DIRECTION_PIN
+            }

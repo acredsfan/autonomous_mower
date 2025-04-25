@@ -3,34 +3,21 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
-import sys
-import types
-
-try:
-    import board  # type:ignore
-    import busio  # type:ignore
-except (ImportError, NotImplementedError):
-    # Stub board and busio for non-Raspberry Pi platforms
-    board = types.SimpleNamespace(SCL=None, SDA=None)
-
-    class _DummyI2C:
-        def __init__(self, scl, sda):
-            pass
-    busio = types.SimpleNamespace(I2C=_DummyI2C)
-
+import board
+import busio
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import (
     INA3221Sensor
-)
+    )
 from mower.hardware.tof import (
     VL53L0XSensors
-)
+    )
 
-logger = LoggerConfig.get_logger(__name__)
+logging = LoggerConfig.get_logger(__name__)
 
 
 @dataclass
@@ -43,7 +30,7 @@ class SensorStatus:
 
 def _log_error(message: str, error: Exception):
     """Centralized error logging."""
-    logger.error(f"{message}: {str(error)}")
+    logging.error(f"{message}: {str(error)}")
 
 
 def _init_bno085():
@@ -62,39 +49,21 @@ class EnhancedSensorInterface:
     """
 
     def __init__(self):
-        self.sensor_data = {}
-        self._data = {}
-        self._error_thresholds = {
-            'bme280': 3,
-            'bno085': 3,
-            'ina3221': 3,
-            'vl53l0x': 3
-        }
-        self._sensor_status = {
-            'bme280': SensorStatus(working=False, last_reading=datetime.now(), error_count=0, last_error=None),
-            'bno085': SensorStatus(working=False, last_reading=datetime.now(), error_count=0, last_error=None),
-            'ina3221': SensorStatus(working=False, last_reading=datetime.now(), error_count=0, last_error=None),
-            'vl53l0x': SensorStatus(working=False, last_reading=datetime.now(), error_count=0, last_error=None)
-        }
-        self._stop_event = threading.Event()
-        self._sensors = {
-            'bme280': None,
-            'bno085': None,
-            'ina3221': None,
-            'vl53l0x': None
-        }
-        self.shutdown_lines = []
+        self.sensor_data = None
+        self._data = None
+        self._error_thresholds = None
+        self._sensor_status = None
+        self._stop_event = None
+        self._sensors = None
+        self.shutdown_lines = None
         self._i2c = None
-        self._locks = {
-            'i2c': threading.Lock(),
-            'data': threading.Lock(),
-            'status': threading.Lock()
-        }
+        self._locks = None
 
         # Initialize I2C bus
         try:
             self._i2c = busio.I2C(board.SCL, board.SDA)
-            logger.info("I2C bus initialized successfully")
+            self._locks = {'i2c': threading.Lock()}
+            logging.info("I2C bus initialized successfully")
         except Exception as e:
             _log_error("I2C bus initialization failed", e)
             raise
@@ -103,7 +72,7 @@ class EnhancedSensorInterface:
         """Initialize BME280 sensor."""
         try:
             with self._locks['i2c']:
-                self._sensors['bme280'] = BME280Sensor._initialize(self._i2c)
+                return BME280Sensor._initialize(self._i2c)
         except Exception as e:
             _log_error("BME280 initialization failed", e)
             return None
@@ -138,7 +107,7 @@ class EnhancedSensorInterface:
                 'temperature': data.get('temperature_f'),
                 'humidity': data.get('humidity'),
                 'pressure': data.get('pressure')
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('bme280', e)
             return {}
@@ -155,7 +124,7 @@ class EnhancedSensorInterface:
             speed = BNO085Sensor.calculate_speed(self._sensors['bno085'])
             compass = BNO085Sensor.read_bno085_magnetometer(
                 self._sensors['bno085']
-            )
+                )
             # Get safety status
             safety_status = self._sensors['bno085'].get_safety_status()
 
@@ -166,7 +135,7 @@ class EnhancedSensorInterface:
                 'speed': speed,
                 'compass': compass,
                 'safety_status': safety_status
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('bno085', e)
             return {}
@@ -179,17 +148,17 @@ class EnhancedSensorInterface:
         try:
             solar_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 1
-            )
+                )
             battery_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 3
-            )
+                )
             return {
                 'solar_voltage': solar_data.get('bus_voltage'),
                 'solar_current': solar_data.get('current'),
                 'battery_voltage': battery_data.get('bus_voltage'),
                 'battery_current': battery_data.get('current'),
                 'battery_level': battery_data.get('charge_level')
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('ina3221', e)
             return {}
@@ -204,7 +173,7 @@ class EnhancedSensorInterface:
             return {
                 'left_distance': VL53L0XSensors.read_vl53l0x(left),
                 'right_distance': VL53L0XSensors.read_vl53l0x(right)
-            }
+                }
         except Exception as e:
             self._handle_sensor_error('vl53l0x', e)
             return {}
@@ -214,13 +183,13 @@ class EnhancedSensorInterface:
         self._monitoring_thread = threading.Thread(
             target=self._monitor_sensors,
             daemon=True
-        )
+            )
         self._monitoring_thread.start()
 
         self._update_thread = threading.Thread(
             target=self._update_sensor_data,
             daemon=True
-        )
+            )
         self._update_thread.start()
 
     def _monitor_sensors(self):
@@ -247,7 +216,7 @@ class EnhancedSensorInterface:
 
     def _attempt_sensor_recovery(self, sensor_name: str):
         """Attempt to recover a failed sensor."""
-        logger.info(f"Attempting to recover {sensor_name}")
+        logging.info(f"Attempting to recover {sensor_name}")
         initializer = getattr(self, f"_init_{sensor_name}")
         self._init_sensor_with_retry(sensor_name, initializer)
 
@@ -332,80 +301,10 @@ class EnhancedSensorInterface:
             return all(
                 self._sensor_status[sensor].working
                 for sensor in critical_sensors
-            )
+                )
 
     def _init_sensor_with_retry(self, sensor_name, initializer):
-        """Initialize a sensor with retry logic."""
-        max_retries = 3
-        retry_count = 0
-
-        while retry_count < max_retries:
-            try:
-                logger.info(
-                    f"Initializing {sensor_name} (attempt {retry_count + 1}/{max_retries})")
-                sensor = initializer()
-                if sensor:
-                    with self._locks['status']:
-                        self._sensors[sensor_name] = sensor
-                        self._sensor_status[sensor_name].working = True
-                        self._sensor_status[sensor_name].error_count = 0
-                        self._sensor_status[sensor_name].last_error = None
-                    logger.info(f"Successfully initialized {sensor_name}")
-                    return True
-            except Exception as e:
-                retry_count += 1
-                with self._locks['status']:
-                    self._sensor_status[sensor_name].working = False
-                    self._sensor_status[sensor_name].error_count += 1
-                    self._sensor_status[sensor_name].last_error = str(e)
-                logger.error(
-                    f"Failed to initialize {sensor_name} (attempt {retry_count}/{max_retries}): {e}")
-                time.sleep(1)  # Wait before retrying
-
-        logger.error(
-            f"Failed to initialize {sensor_name} after {max_retries} attempts")
-        return False
-
-    def start(self):
-        """Start the EnhancedSensorInterface."""
-        # Initialize sensors
-        for sensor_name in self._sensors.keys():
-            initializer = getattr(self, f"_init_{sensor_name}", None)
-            if initializer:
-                self._init_sensor_with_retry(sensor_name, initializer)
-
-        # Start monitoring threads
-        self._start_monitoring()
-
-        logger.info("EnhancedSensorInterface started successfully.")
-
-    def cleanup(self):
-        """Clean up resources used by the EnhancedSensorInterface."""
-        try:
-            # Signal threads to stop
-            self._stop_event.set()
-
-            # Wait for threads to terminate
-            if hasattr(self, '_monitoring_thread') and self._monitoring_thread is not None:
-                if self._monitoring_thread.is_alive():
-                    self._monitoring_thread.join(timeout=5.0)
-                    if self._monitoring_thread.is_alive():
-                        logger.warning(
-                            "Monitoring thread did not terminate within timeout")
-
-            if hasattr(self, '_update_thread') and self._update_thread is not None:
-                if self._update_thread.is_alive():
-                    self._update_thread.join(timeout=5.0)
-                    if self._update_thread.is_alive():
-                        logger.warning(
-                            "Update thread did not terminate within timeout")
-
-            # Clean up sensor resources
-            self._cleanup_sensors()
-
-            logger.info("EnhancedSensorInterface cleaned up successfully.")
-        except Exception as e:
-            logger.error(f"Error cleaning up EnhancedSensorInterface: {e}")
+        pass
 
 
 def _check_proximity_violation(sensor_data: Dict) -> bool:
@@ -414,9 +313,9 @@ def _check_proximity_violation(sensor_data: Dict) -> bool:
     return any(
         sensor_data.get(
             f'{direction}_distance', float('inf')
-        ) < min_safe_distance
+            ) < min_safe_distance
         for direction in ['left', 'right', 'front']
-    )
+        )
 
 
 def _check_tilt_violation(sensor_data: Dict) -> bool:
@@ -438,7 +337,7 @@ class SafetyMonitor:
         self.monitoring_thread = threading.Thread(
             target=self._monitor_safety,
             daemon=True
-        )
+            )
         self.monitoring_thread.start()
 
     def _monitor_safety(self):
@@ -448,7 +347,7 @@ class SafetyMonitor:
                 self._check_safety_conditions()
                 time.sleep(0.1)
             except Exception as e:
-                logger.error(f"Safety monitoring error: {e}")
+                logging.error(f"Safety monitoring error: {e}")
 
     def _check_safety_conditions(self):
         """Check all safety conditions."""
@@ -480,7 +379,7 @@ class SafetyMonitor:
             'violations': self.safety_violations.copy(),
             'is_safe': len(self.safety_violations) == 0,
             'sensors_ok': self.sensor_interface.is_safe_to_operate()
-        }
+            }
 
     def clear_violations(self):
         """Clear safety violations after they've been addressed."""
@@ -492,16 +391,12 @@ class SafetyMonitor:
         self.monitoring_thread.join()
 
 
-# Singleton accessor for testing
-_sensor_interface_instance: Optional[EnhancedSensorInterface] = None
+# Singleton accessor function
+sensor_interface_instance = EnhancedSensorInterface()
 
 
-def get_sensor_interface() -> EnhancedSensorInterface:
-    """Get the singleton EnhancedSensorInterface."""
-    global _sensor_interface_instance
-    if _sensor_interface_instance is None:
-        _sensor_interface_instance = EnhancedSensorInterface()
-    return _sensor_interface_instance
+def get_sensor_interface():
+    return sensor_interface_instance
 
 
 if __name__ == "__main__":

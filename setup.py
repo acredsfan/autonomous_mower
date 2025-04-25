@@ -1,5 +1,5 @@
 # setup.py
-from setuptools import setup, find_packages  # type:ignore
+from setuptools import setup, find_packages
 
 setup(
     name="autonomous_mower",
@@ -7,7 +7,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
-        "numpy>=1.26.0,<1.27.0",
+        "numpy>=1.22.0",
         "opencv-python>=4.8.1.78",
         "pillow>=10.3.0",
         "pyyaml>=5.4.1",
@@ -17,10 +17,6 @@ setup(
         "adafruit-circuitpython-mpu6050>=1.1.9",
         "flask>=3.0.0",
         "flask-socketio>=5.1.0",
-        "flask-babel>=3.1.0",
-        "flask-cors>=3.0.10",
-        "flask-limiter>=3.5.0",
-        "flask-wtf>=1.2.1",
         "geopy>=2.1.0",
         "imutils>=0.5.4",
         "networkx>=2.6.0",
@@ -34,6 +30,7 @@ setup(
         "psutil>=5.9.0",
         "py3nvml>=0.2.7",
         "pyudev>=0.24.0",
+        "systemd-python>=234",
         "python-daemon>=3.0.1",
         "supervisor>=4.2.5",
         "prometheus_client>=0.17.0",
@@ -48,9 +45,6 @@ setup(
         "certifi>=2024.7.4",
     ],
     extras_require={
-        "linux": [
-            "systemd-python>=234",
-        ],
         "coral": [
             "tflite-runtime>=2.5.0",
             "pycoral>=2.0.0",
@@ -111,7 +105,7 @@ setup(
     author="Your Name",
     author_email="your.email@example.com",
     description="An autonomous lawn mower control system",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/autonomous_mower",
     classifiers=[

@@ -234,7 +234,7 @@ class BNO085Sensor:
                 self.serial_port.timeout = 2.0  # 2 seconds timeout
 
                 logger.info(
-                    f"IMU serial port {self.serial_port_name} opened at "
+                    f"IMU serial port {self.serial_port.port} opened at "
                     f"{self.baudrate} baud with timeout "
                     f"{self.serial_port.timeout}s"
                 )
