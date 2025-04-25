@@ -39,6 +39,7 @@ from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
 import logging
 from dotenv import load_dotenv
+import sys
 
 # Suppress dotenv parse warnings
 logging.getLogger('dotenv.main').setLevel(logging.ERROR)
@@ -108,6 +109,10 @@ class ResourceManager:
 
     def _initialize_hardware(self) -> None:
         """Initialize all hardware components."""
+        # Skip hardware init on non-Linux (e.g., Windows) to allow testing without Pi
+        if sys.platform != "linux":
+            logger.warning("Non-Linux platform detected. Skipping hardware initialization.")
+            return
         try:
             # Initialize GPIO first
             self._resources["gpio"] = GPIOManager()

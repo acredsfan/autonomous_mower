@@ -10,6 +10,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     udev \
+    python3-smbus \
+    i2c-tools \
+    python3-blinka \
+    libgpiod2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Coral repository and install Edge TPU runtime
@@ -38,6 +42,7 @@ RUN wget -q https://raw.githubusercontent.com/google-coral/test_data/master/coco
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -e .
 RUN pip install --no-cache-dir -e ".[coral]"
+RUN pip install --no-cache-dir adafruit-blinka
 
 # Expose necessary ports
 EXPOSE 5000 8080

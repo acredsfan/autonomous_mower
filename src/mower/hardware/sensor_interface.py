@@ -3,8 +3,20 @@ import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
-import board  # type:ignore
-import busio  # type:ignore
+import sys
+import types
+
+try:
+    import board  # type:ignore
+    import busio  # type:ignore
+except (ImportError, NotImplementedError):
+    # Stub board and busio for non-Raspberry Pi platforms
+    board = types.SimpleNamespace(SCL=None, SDA=None)
+    class _DummyI2C:
+        def __init__(self, scl, sda):
+            pass
+    busio = types.SimpleNamespace(I2C=_DummyI2C)
+
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
     )
@@ -474,12 +486,15 @@ class SafetyMonitor:
         self.monitoring_thread.join()
 
 
-# Singleton accessor function
-sensor_interface_instance = EnhancedSensorInterface()
+# Singleton accessor for testing
+_sensor_interface_instance: Optional[EnhancedSensorInterface] = None
 
-
-def get_sensor_interface():
-    return sensor_interface_instance
+def get_sensor_interface() -> EnhancedSensorInterface:
+    """Get the singleton EnhancedSensorInterface."""
+    global _sensor_interface_instance
+    if _sensor_interface_instance is None:
+        _sensor_interface_instance = EnhancedSensorInterface()
+    return _sensor_interface_instance
 
 
 if __name__ == "__main__":
