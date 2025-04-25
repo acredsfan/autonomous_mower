@@ -44,7 +44,7 @@ from mower.hardware.tof import VL53L0XSensors
 from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.blade_controller import BladeController
 from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.serial_port import SerialPort
+from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
 from mower.navigation.localization import Localization
 from mower.navigation.path_planner import (
     PathPlanner, PatternConfig, LearningConfig, PatternType
@@ -108,7 +108,7 @@ class ResourceManager:
             self._resources["motor_driver"] = RoboHATDriver()
             self._resources["blade"] = BladeController()
             self._resources["camera"] = get_camera_instance()
-            self._resources["gps_serial"] = SerialPort("/dev/ttyAMA0")
+            self._resources["gps_serial"] = SerialPort(GPS_PORT, GPS_BAUDRATE)
 
             # Initialize each resource if possible
             for name, res in self._resources.items():
