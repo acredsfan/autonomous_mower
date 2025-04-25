@@ -139,8 +139,8 @@ class PathPlanner:
                 self.pattern_config.pattern_type)
             if not generator:
                 logger.error(
-                    f"Unknown pattern type: {
-                        self.pattern_config.pattern_type}")
+                    f"Unknown pattern type: {self.pattern_config.pattern_type}"
+                )
                 return []
 
             return generator()
@@ -489,7 +489,7 @@ class PathPlanner:
         try:
             # Convert boundary points to string representation
             boundary_str = "_".join(
-                f"{x:.2f},{y:.2f}" 
+                f"{x:.2f},{y:.2f}"
                 for x, y in self.pattern_config.boundary_points
             )
 
