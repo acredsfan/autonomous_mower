@@ -201,7 +201,10 @@ class ResourceManager:
                 raise
 
     def init_all_resources(self) -> bool:
-        """Initialize all resources; return True if successful, False otherwise."""
+        """
+        Initialize all resources; return True if successful, 
+        False otherwise.
+        """
         try:
             self.initialize()
             return True
