@@ -200,6 +200,15 @@ class ResourceManager:
                 self.cleanup()
                 raise
 
+    def init_all_resources(self) -> bool:
+        """Initialize all resources; return True if successful, False otherwise."""
+        try:
+            self.initialize()
+            return True
+        except Exception as e:
+            logger.error(f"ResourceManager init_all_resources failed: {e}")
+            return False
+
     def cleanup(self):
         """Clean up all resources."""
         with self._lock:
@@ -220,6 +229,23 @@ class ResourceManager:
             except Exception as e:
                 logger.error(f"Error during cleanup: {e}")
                 raise
+
+    def cleanup_all_resources(self):
+        """Clean up all initialized resources."""
+        for name, res in self._resources.items():
+            try:
+                if hasattr(res, 'disconnect'):
+                    res.disconnect()
+                elif hasattr(res, 'cleanup'):
+                    res.cleanup()
+                elif hasattr(res, 'stop'):
+                    res.stop()
+                else:
+                    logger.debug(f"No cleanup method for resource '{name}'",)
+            except Exception as e:
+                logger.error(f"Error cleaning up resource '{name}': {e}")
+        self._resources.clear()
+        self._initialized = False
 
     def get_resource(self, name):
         """
