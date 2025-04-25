@@ -26,7 +26,10 @@ try:
     # Validate loaded data for list of coordinate dicts
     if not isinstance(data, list):
         logging.warning(
-            "Invalid polygon_coordinates: expected list, got %s. Using empty list.",
+            (
+                "Invalid polygon_coordinates: expected list, got %s. "
+                "Using empty list."
+            ),
             type(data)
         )
         polygon_coordinates = []
@@ -80,8 +83,14 @@ JOYSTICK_DEADZONE = 0.1
 SHOW_STEERING_VALUE = True  # Update this based on your use case
 
 # Derived constants for UI limits
-latitudes = [coord['lat'] for coord in polygon_coordinates if isinstance(coord, dict) and 'lat' in coord]
-longitudes = [coord['lng'] for coord in polygon_coordinates if isinstance(coord, dict) and 'lng' in coord]
+latitudes = [
+    coord['lat'] for coord in polygon_coordinates
+    if isinstance(coord, dict) and 'lat' in coord
+]
+longitudes = [
+    coord['lng'] for coord in polygon_coordinates
+    if isinstance(coord, dict) and 'lng' in coord
+]
 
 min_lat = min(latitudes) if latitudes else 10
 max_lat = max(latitudes) if latitudes else 11
