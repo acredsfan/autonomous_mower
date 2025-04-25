@@ -119,6 +119,11 @@ class BNO085Sensor:
             cls._instance._initialize()
         return cls._instance
 
+    def _initialize(self):
+        """Initialize singleton instance."""
+        # No-op stub for singleton initialization
+        pass
+
     def __init__(self, serial_port_name=None, baudrate=115200):
         """
         Initialize the BNO085 sensor interface.
@@ -171,6 +176,7 @@ class BNO085Sensor:
 
         # Try to establish a connection immediately
         self.connect()
+        self.sensor = None  # Ensure sensor attribute exists for cleanup
 
     def connect(self):
         """
