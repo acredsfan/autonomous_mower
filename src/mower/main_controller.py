@@ -99,37 +99,29 @@ class ResourceManager:
     def _initialize_hardware(self):
         """Initialize all hardware components."""
         try:
-            # Initialize GPIO first
+            # Initialize all hardware resources
             self._resources["gpio"] = GPIOManager()
-            self._resources["gpio"]._initialize()
-
-            # Initialize sensors
             self._resources["imu"] = BNO085Sensor()
-            self._resources["imu"]._initialize()
-
             self._resources["bme280"] = BME280Sensor()
-            self._resources["bme280"]._initialize()
-
             self._resources["ina3221"] = INA3221Sensor()
-            self._resources["ina3221"]._initialize()
-
             self._resources["tof"] = VL53L0XSensors()
-            self._resources["tof"]._initialize()
-
-            # Initialize motors and blade
             self._resources["motor_driver"] = RoboHATDriver()
-            self._resources["motor_driver"]._initialize()
-
             self._resources["blade"] = BladeController()
-            self._resources["blade"]._initialize()
-
-            # Initialize camera
             self._resources["camera"] = get_camera_instance()
-            self._resources["camera"]._initialize()
-
-            # Initialize serial ports
             self._resources["gps_serial"] = SerialPort("/dev/ttyAMA0")
-            self._resources["gps_serial"]._initialize()
+
+            # Initialize each resource if possible
+            for name, res in self._resources.items():
+                if hasattr(res, "initialize"):
+                    try:
+                        res.initialize()
+                    except Exception as e:
+                        logger.error(f"Error initializing {name}: {e}")
+                elif hasattr(res, "_initialize"):
+                    try:
+                        res._initialize()
+                    except Exception as e:
+                        logger.error(f"Error initializing {name}: {e}")
 
             logger.info("All hardware components initialized successfully")
         except Exception as e:
@@ -283,6 +275,14 @@ class ResourceManager:
     def get_web_interface(self):
         """Get the web interface instance."""
         return self._resources.get("web_interface")
+
+    def start_web_interface(self) -> None:
+        """Start the web interface."""
+        web = self._resources.get("web_interface")
+        if web:
+            web.start()
+        else:
+            logger.warning("Web interface resource not available")
 
 
 class RobotController:
