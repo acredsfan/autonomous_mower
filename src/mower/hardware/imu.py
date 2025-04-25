@@ -124,14 +124,14 @@ class BNO085Sensor:
         # No-op stub for singleton initialization
         pass
 
-    def __init__(self, serial_port_name=None, baudrate=115200):
+    def __init__(self, serial_port_name=None, baudrate=None):
         """
         Initialize the BNO085 sensor interface.
         Args:
             serial_port_name (str, optional): Serial port name. If None,
                 auto-discovery is attempted. Defaults to None.
             baudrate (int, optional): Baudrate for serial communication.
-                Defaults to 115200.
+                Defaults to None, which will use the IMU_BAUD_RATE env var.
 
         The initialization process:
         1. Sets up initial values and threading locks
@@ -142,7 +142,7 @@ class BNO085Sensor:
         """
         # Serial communication attributes
         self.serial_port_name = serial_port_name
-        self.baudrate = baudrate
+        self.baudrate = baudrate or IMU_BAUDRATE
         self.serial_port = None
         self.connected = False
         self.read_thread = None
@@ -213,7 +213,7 @@ class BNO085Sensor:
                 # Create and open the serial port
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
-                    baudrate=self.baudrate or IMU_BAUDRATE
+                    baudrate=self.baudrate
                     )
                 success = self.serial_port.start()
                 if not success:
@@ -225,7 +225,7 @@ class BNO085Sensor:
                 port_info = (
                     f"IMU serial port "
                     f"{self.serial_port_name or IMU_SERIAL_PORT} "
-                    f"opened at {self.baudrate or IMU_BAUDRATE} baud"
+                    f"opened at {self.baudrate} baud"
                     )
                 logger.info(port_info)
 
@@ -283,8 +283,9 @@ class BNO085Sensor:
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""
         try:
-            if self.sensor:
-                self.cleanup(self.sensor)
+            sensor_to_cleanup = getattr(self, 'sensor', None)
+            if sensor_to_cleanup:
+                self.cleanup(sensor_to_cleanup)
                 self.sensor = None
 
             if self.serial_port:
