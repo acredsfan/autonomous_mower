@@ -24,9 +24,9 @@ import threading
 import struct
 from enum import Enum
 
-import adafruit_bno08x  # type:ignore
-from adafruit_bno08x.uart import BNO08X_UART  # type:ignore
-from dotenv import load_dotenv  # type:ignore
+import adafruit_bno08x
+from adafruit_bno08x.uart import BNO08X_UART
+from dotenv import load_dotenv
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.hardware.serial_port import SerialPort
 
@@ -119,14 +119,14 @@ class BNO085Sensor:
             cls._instance._initialize()
         return cls._instance
 
-    def __init__(self, serial_port_name=None, baudrate=IMU_BAUDRATE):
+    def __init__(self, serial_port_name=None, baudrate=115200):
         """
         Initialize the BNO085 sensor interface.
         Args:
             serial_port_name (str, optional): Serial port name. If None,
                 auto-discovery is attempted. Defaults to None.
             baudrate (int, optional): Baudrate for serial communication.
-                Defaults to 3000000.
+                Defaults to 115200.
 
         The initialization process:
         1. Sets up initial values and threading locks
@@ -172,10 +172,6 @@ class BNO085Sensor:
         # Try to establish a connection immediately
         self.connect()
 
-    def _initialize(self):
-        """Initialize the IMU sensor."""
-        logger.info("IMU sensor initialized successfully.")
-
     def connect(self):
         """
         Establish connection to the IMU sensor.
@@ -212,7 +208,7 @@ class BNO085Sensor:
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
                     baudrate=self.baudrate or IMU_BAUDRATE
-                )
+                    )
                 success = self.serial_port.start()
                 if not success:
                     logger.error("Failed to start IMU serial port")
@@ -224,20 +220,8 @@ class BNO085Sensor:
                     f"IMU serial port "
                     f"{self.serial_port_name or IMU_SERIAL_PORT} "
                     f"opened at {self.baudrate or IMU_BAUDRATE} baud"
-                )
+                    )
                 logger.info(port_info)
-
-                # Enable debugging for the IMU sensor
-                self.debug = True
-
-                # Set a timeout for serial communication
-                self.serial_port.timeout = 2.0  # 2 seconds timeout
-
-                logger.info(
-                    f"IMU serial port {self.serial_port.port} opened at "
-                    f"{self.baudrate} baud with timeout "
-                    f"{self.serial_port.timeout}s"
-                )
 
                 # Try multiple times to initialize the sensor
                 max_retries = 5
@@ -249,14 +233,14 @@ class BNO085Sensor:
                         init_msg = (
                             f"BNO085 sensor successfully initialized "
                             f"on attempt {attempt}"
-                        )
+                            )
                         logger.info(init_msg)
                         return True
                     except Exception as e:
                         error_msg = (
                             f"Failed to initialize BNO085 sensor on "
                             f"attempt {attempt}: {e}"
-                        )
+                            )
                         logger.warning(error_msg)
                         if attempt < max_retries:
                             time.sleep(1)  # Wait before retrying
@@ -264,7 +248,7 @@ class BNO085Sensor:
                 final_error = (
                     f"Failed to initialize BNO085 sensor after "
                     f"{max_retries} attempts"
-                )
+                    )
                 logger.error(final_error)
                 # If we couldn't initialize the sensor, close the serial
                 # port
@@ -288,7 +272,7 @@ class BNO085Sensor:
         raise RuntimeError(
             f"Repeated IMU connection failures exceeded threshold "
             f"({max_connect_attempts} attempts)"
-        )
+            )
 
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""
@@ -473,7 +457,7 @@ class BNO085Sensor:
             - Check USB connections if using a USB-to-serial adapter
             - On Linux, verify user has permissions to access serial ports
         """
-        import serial.tools.list_ports  # type:ignore
+        import serial.tools.list_ports
 
         # Get list of available ports
         available_ports = list(serial.tools.list_ports.comports())
@@ -493,7 +477,7 @@ class BNO085Sensor:
                     baudrate=self.baudrate,
                     bytesize=serial.EIGHTBITS,
                     timeout=1
-                )
+                    )
 
                 # Try to establish communication
                 test_port.write(b'\x7E')  # Send any byte to wake up device
@@ -587,7 +571,7 @@ class BNO085Sensor:
                 SENSOR_REPORTID_ROTATION_VECTOR, 0x00,  # Report ID
                 0x05, 0x00,  # Set update rate to 20ms (50Hz)
                 0x00, 0x00   # Specific settings
-            ])
+                ])
             logger.debug("Rotation vector report enabled")
         except Exception as e:
             logger.error(f"Error enabling rotation vector: {e}")
@@ -958,7 +942,7 @@ class BNO085Sensor:
                 'impact_detected': False,
                 'acceleration_ok': True,
                 'messages': []
-            }
+                }
 
             # Check tilt angle
             if abs(
@@ -973,7 +957,7 @@ class BNO085Sensor:
             # Check for impacts/collisions
             accel_magnitude = math.sqrt(
                 sum(x * x for x in self.acceleration)
-            )
+                )
             # Convert G to m/s²
             if accel_magnitude > self.impact_threshold * 9.81:
                 current_time = time.time()
@@ -1012,19 +996,6 @@ class BNO085Sensor:
             and acceleration data
         """
         return self.check_safety_conditions()
-
-    def read(self):
-        """Read data from the BNO085 sensor."""
-        try:
-            return {
-                'quaternion': self.quaternion,
-                'roll': self.roll,
-                'pitch': self.pitch,
-                'yaw': self.yaw
-            }
-        except Exception as e:
-            logger.error(f"Error reading BNO085 sensor: {e}")
-            return {}
 
 
 # For backwards compatibility with static methods

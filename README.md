@@ -146,9 +146,10 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    - Test with: `gpsmon /dev/ttyAMA0`
 
 3. **IMU Sensor**
-   - Connect to I2C pins (GPIO 2/3)
-   - Enable I2C in raspi-config
-   - Test with: `i2cdetect -y 1`
+   - Connect to UART pins (GPIO 8/10, i.e., TXD0/RXD0 or as configured)
+   - Enable serial/UART in raspi-config
+   - Test with: `python3 -m mower.hardware.imu` (shows live IMU data if connected)
+   - Ensure your `.env` or environment variables specify the correct UART port (eg., `IMU_SERIAL_PORT=/dev/ttyAMA2`)
 
 4. **Emergency Stop Button**
    - Connect between GPIO7 and GND

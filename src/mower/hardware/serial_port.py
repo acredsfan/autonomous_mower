@@ -4,13 +4,13 @@ import threading
 import time
 from typing import Tuple
 
-import serial  # type:ignore
-import serial.tools.list_ports  # type:ignore
-from dotenv import load_dotenv  # type:ignore
+import serial
+import serial.tools.list_ports
+from dotenv import load_dotenv
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-)
+    )
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)
@@ -19,12 +19,10 @@ load_dotenv(dotenv_path)
 logger = LoggerConfig.get_logger(__name__)
 
 
-GPS_PORT = os.getenv('GPS_SERIAL_PORT', '/dev/ttyACM1')
+GPS_PORT = os.getenv('GPS_SERIAL_PORT')
 GPS_BAUDRATE = int(os.getenv('GPS_BAUD_RATE', '9600'))
-IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
+IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT')
 IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
-MM1_SERIAL_PORT = os.getenv('MM1_SERIAL_PORT', '/dev/ttyACM0')
-MM1_BAUDRATE = int(os.getenv('MM1_BAUD_RATE', '115200'))
 
 
 class SerialPort:
@@ -56,10 +54,6 @@ class SerialPort:
         self.charset = charset
         self.timeout = timeout
         self.ser = None
-
-    def _initialize(self):
-        """Initialize the serial port."""
-        logger.info("Serial port initialized successfully.")
 
     def start(self):
         logger.debug(f"Attempting to open serial port {self.port}...")
@@ -188,28 +182,6 @@ class SerialPort:
 
     def writeln(self, value: str):
         self.write(value + '\n')
-
-    def get_position(self):
-        """Get the current GPS position from the serial port."""
-        try:
-            success, data = self.readln()
-            if success:
-                # Parse GPS data (example format, adjust as needed)
-                return data.strip()
-            else:
-                logger.warning("No GPS data available.")
-                return None
-        except Exception as e:
-            logger.error(f"Error reading GPS position: {e}")
-            return None
-
-    def cleanup(self):
-        """Clean up resources used by the SerialPort."""
-        try:
-            # Add specific cleanup logic here
-            logger.info("SerialPort cleaned up successfully.")
-        except Exception as e:
-            logger.error(f"Error cleaning up SerialPort: {e}")
 
 
 class SerialLineReader:
