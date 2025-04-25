@@ -28,7 +28,7 @@ DEFAULT_CONFIG = {
         "log_level": "INFO",
         "debug_mode": False,
     },
-    
+
     # Hardware settings
     "hardware": {
         "use_simulation": False,
@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
         "gps_baud_rate": 115200,
         "gps_timeout": 1,
     },
-    
+
     # Camera settings
     "camera": {
         "use_camera": True,
@@ -46,7 +46,7 @@ DEFAULT_CONFIG = {
         "fps": 30,
         "index": 0,
     },
-    
+
     # Path planning settings
     "path_planning": {
         "default_speed": 0.5,
@@ -59,7 +59,7 @@ DEFAULT_CONFIG = {
         "angle": 0.0,
         "overlap": 0.1,
     },
-    
+
     # Safety settings
     "safety": {
         "emergency_stop_pin": 7,
@@ -70,7 +70,7 @@ DEFAULT_CONFIG = {
         "rain_sensor_enabled": True,
         "tilt_sensor_enabled": True,
     },
-    
+
     # Web UI settings
     "web_ui": {
         "enable": True,
@@ -82,7 +82,7 @@ DEFAULT_CONFIG = {
         "auth_username": "admin",
         "auth_password": "",
     },
-    
+
     # Google Maps settings
     "google_maps": {
         "api_key": "",

@@ -4,6 +4,10 @@ Shared fixtures for pytest.
 This file contains fixtures that can be used across all tests.
 """
 
+from mower.config_management import (
+    get_config_manager, get_config, set_config,
+    CONFIG_DIR, initialize_config_manager
+)
 import os
 import sys
 import pytest
@@ -14,10 +18,6 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import the modules we need to mock
-from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR, initialize_config_manager
-)
 
 
 @pytest.fixture
@@ -34,10 +34,10 @@ def config_manager():
             "dict_value": {"key": "value"}
         }
     }
-    
+
     # Initialize configuration manager
     initialize_config_manager(defaults=test_config)
-    
+
     # Get configuration manager
     return get_config_manager()
 
@@ -56,7 +56,7 @@ def mock_hardware():
     mock_camera = MagicMock()
     mock_gps_serial = MagicMock()
     mock_sensor_interface = MagicMock()
-    
+
     # Return a dictionary of mock objects
     return {
         "gpio": mock_gpio,
@@ -77,13 +77,15 @@ def mock_resource_manager(mock_hardware):
     """Fixture for a mocked ResourceManager."""
     # Create a mock ResourceManager
     mock_resource_manager = MagicMock()
-    
+
     # Configure the mock to return the mock hardware components
-    mock_resource_manager.get_resource.side_effect = lambda name: mock_hardware.get(name)
+    mock_resource_manager.get_resource.side_effect = lambda name: mock_hardware.get(
+        name)
     mock_resource_manager.get_path_planner.return_value = MagicMock()
     mock_resource_manager.get_navigation.return_value = MagicMock()
     mock_resource_manager.get_obstacle_detection.return_value = MagicMock()
-    mock_resource_manager.get_blade_controller.return_value = mock_hardware["blade_controller"]
+    mock_resource_manager.get_blade_controller.return_value = mock_hardware[
+        "blade_controller"]
     mock_resource_manager.get_bme280_sensor.return_value = mock_hardware["bme280"]
     mock_resource_manager.get_camera.return_value = mock_hardware["camera"]
     mock_resource_manager.get_robohat_driver.return_value = mock_hardware["motor_driver"]
@@ -91,8 +93,9 @@ def mock_resource_manager(mock_hardware):
     mock_resource_manager.get_imu_sensor.return_value = mock_hardware["imu"]
     mock_resource_manager.get_ina3221_sensor.return_value = mock_hardware["ina3221"]
     mock_resource_manager.get_tof_sensors.return_value = mock_hardware["tof"]
-    mock_resource_manager.get_sensor_interface.return_value = mock_hardware["sensor_interface"]
-    
+    mock_resource_manager.get_sensor_interface.return_value = mock_hardware[
+        "sensor_interface"]
+
     return mock_resource_manager
 
 
@@ -101,7 +104,7 @@ def temp_config_dir(tmpdir):
     """Fixture for a temporary configuration directory."""
     # Create a temporary directory for configuration files
     config_dir = tmpdir.mkdir("config")
-    
+
     # Patch the CONFIG_DIR constant
     with patch("mower.config_management.CONFIG_DIR", Path(config_dir)):
         yield config_dir

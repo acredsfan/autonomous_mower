@@ -185,7 +185,7 @@ class IMUCalibration:
                 'timestamp': time.time(),
                 'calibration_matrix': calibration_matrix,
                 'calibration_status': self.imu.get_calibration_status()
-                }
+            }
 
             # Save to file
             with open(self.calibration_file, 'w') as f:
@@ -248,7 +248,7 @@ class IMUCalibration:
             self.calibration_thread = threading.Thread(
                 target=self._calibration_process,
                 daemon=True
-                )
+            )
             self.calibration_thread.start()
 
             logging.info("IMU calibration started")
@@ -455,7 +455,7 @@ class IMUCalibration:
                 "Gyroscope",
                 f"Gyroscope calibration: Level {gyro_status} of 3",
                 30 + int(progress / 5)
-                )
+            )
 
             if gyro_status >= 3:
                 return True
@@ -479,7 +479,7 @@ class IMUCalibration:
             "Place mower upside down",
             "Place mower on its front",
             "Place mower on its back"
-            ]
+        ]
 
         for i, instruction in enumerate(orientations):
             progress = 50 + int((i / len(orientations)) * 20)
@@ -495,7 +495,7 @@ class IMUCalibration:
                 "Accelerometer",
                 f"Accelerometer calibration: Level {accel_status} of 3",
                 progress
-                )
+            )
 
             if accel_status >= 3:
                 return True
@@ -535,7 +535,7 @@ class IMUCalibration:
                 "Magnetometer",
                 f"Magnetometer calibration: Level {mag_status} of 3",
                 70 + int(progress / 5)
-                )
+            )
 
             if mag_status >= 3:
                 return True

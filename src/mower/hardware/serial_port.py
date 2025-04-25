@@ -10,7 +10,7 @@ from dotenv import load_dotenv  # type:ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 
 dotenv_path = '/home/pi/autonomous_mower/.env'
 load_dotenv(dotenv_path)

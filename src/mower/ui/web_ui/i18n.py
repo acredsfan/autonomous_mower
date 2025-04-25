@@ -11,6 +11,7 @@ from flask_babel import Babel
 # Initialize Babel
 babel = Babel()
 
+
 def init_babel(app: Flask) -> None:
     """Initialize Babel for the Flask application.
 
@@ -23,20 +24,21 @@ def init_babel(app: Flask) -> None:
     app.config['BABEL_TRANSLATION_DIRECTORIES'] = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), 'translations'
     )
-    
+
     # Locale selector function
     def get_locale():
         if 'language' in session:
             return session['language']
         codes = [lang['code'] for lang in get_supported_languages()]
         return request.accept_languages.best_match(codes)
-    
+
     # Initialize Babel with custom locale selector
     babel.init_app(app, locale_selector=get_locale)
 
+
 def get_supported_languages():
     """Get a list of supported languages.
-    
+
     Returns:
         A list of dictionaries with language code and name.
     """

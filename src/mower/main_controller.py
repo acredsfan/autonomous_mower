@@ -30,6 +30,30 @@ Configuration:
     - Supports runtime updates
 """
 
+from mower.utilities import load_config, save_config, cleanup_resources
+from mower.config_management import (
+    get_config_manager, get_config, set_config,
+    CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
+)
+from mower.utilities.logger_config import LoggerConfigInfo
+from mower.ui.web_ui import WebInterface
+from mower.obstacle_detection.avoidance_algorithm import (
+    AvoidanceAlgorithm, AvoidanceState
+)
+from mower.navigation.navigation import NavigationController, NavigationStatus
+from mower.navigation.path_planner import (
+    PathPlanner, PatternConfig, LearningConfig, PatternType
+)
+from mower.navigation.localization import Localization
+from mower.hardware.serial_port import SerialPort, GPS_BAUDRATE
+from mower.hardware.camera_instance import get_camera_instance
+from mower.hardware.blade_controller import BladeController
+from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.tof import VL53L0XSensors
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.hardware.bme280 import BME280Sensor
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.gpio_manager import GPIOManager
 import json
 import threading
 import time
@@ -45,30 +69,6 @@ import sys
 logging.getLogger('dotenv.main').setLevel(logging.ERROR)
 load_dotenv()
 
-from mower.hardware.gpio_manager import GPIOManager
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.bme280 import BME280Sensor
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.tof import VL53L0XSensors
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.blade_controller import BladeController
-from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.serial_port import SerialPort, GPS_BAUDRATE
-from mower.navigation.localization import Localization
-from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, LearningConfig, PatternType
-)
-from mower.navigation.navigation import NavigationController, NavigationStatus
-from mower.obstacle_detection.avoidance_algorithm import (
-    AvoidanceAlgorithm, AvoidanceState
-)
-from mower.ui.web_ui import WebInterface
-from mower.utilities.logger_config import LoggerConfigInfo
-from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR, HOME_LOCATION_PATH, PATTERN_PLANNER_PATH
-)
-from mower.utilities import load_config, save_config, cleanup_resources
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -111,7 +111,8 @@ class ResourceManager:
         """Initialize all hardware components."""
         # Skip hardware init on non-Linux (e.g., Windows) to allow testing without Pi
         if sys.platform != "linux":
-            logger.warning("Non-Linux platform detected. Skipping hardware initialization.")
+            logger.warning(
+                "Non-Linux platform detected. Skipping hardware initialization.")
             return
         try:
             # Initialize GPIO first
@@ -171,10 +172,14 @@ class ResourceManager:
             # Initialize pattern planner with learning capabilities
             # Get pattern configuration from the configuration manager
             pattern_config = PatternConfig(
-                pattern_type=PatternType[get_config('path_planning.pattern_type', 'PARALLEL')],
-                spacing=get_config('path_planning.spacing', 0.3),  # 30cm spacing between passes
-                angle=get_config('path_planning.angle', 0.0),  # Start with parallel to x-axis
-                overlap=get_config('path_planning.overlap', 0.1),  # 10% overlap between passes
+                pattern_type=PatternType[get_config(
+                    'path_planning.pattern_type', 'PARALLEL')],
+                # 30cm spacing between passes
+                spacing=get_config('path_planning.spacing', 0.3),
+                # Start with parallel to x-axis
+                angle=get_config('path_planning.angle', 0.0),
+                # 10% overlap between passes
+                overlap=get_config('path_planning.overlap', 0.1),
                 start_point=(0.0, 0.0),  # Will be updated with actual position
                 boundary_points=[]  # Will be loaded from config
             )
@@ -182,11 +187,14 @@ class ResourceManager:
             # Get learning configuration from the configuration manager
             learning_config = LearningConfig(
                 learning_rate=get_config('path_planning.learning_rate', 0.1),
-                discount_factor=get_config('path_planning.discount_factor', 0.9),
-                exploration_rate=get_config('path_planning.exploration_rate', 0.2),
+                discount_factor=get_config(
+                    'path_planning.discount_factor', 0.9),
+                exploration_rate=get_config(
+                    'path_planning.exploration_rate', 0.2),
                 memory_size=get_config('path_planning.memory_size', 1000),
                 batch_size=get_config('path_planning.batch_size', 32),
-                update_frequency=get_config('path_planning.update_frequency', 100),
+                update_frequency=get_config(
+                    'path_planning.update_frequency', 100),
                 model_path=str(PATTERN_PLANNER_PATH)
             )
 
@@ -233,7 +241,8 @@ class ResourceManager:
 
     def cleanup(self) -> None:
         """Clean up all resources."""
-        result = cleanup_resources(self._resources, self._initialized, self._lock)
+        result = cleanup_resources(
+            self._resources, self._initialized, self._lock)
         if result:
             self._initialized = False
         return result
@@ -507,7 +516,8 @@ class RobotController:
         elif avoidance_state == AvoidanceState.RECOVERY:
             recovery_attempts = self.avoidance_algorithm.recovery_attempts
             if recovery_attempts >= self.avoidance_algorithm.max_recovery_attempts:
-                logger.error("Failed to recover from obstacle after multiple attempts")
+                logger.error(
+                    "Failed to recover from obstacle after multiple attempts")
                 self.error_condition = "Failed to recover from obstacle"
                 self.current_state = SystemState.ERROR
 

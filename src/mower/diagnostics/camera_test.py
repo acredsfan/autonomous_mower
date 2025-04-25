@@ -40,7 +40,7 @@ logging = LoggerConfig.get_logger(__name__)
 def capture_test_image(
     resource_manager: ResourceManager,
     save_path: Optional[str] = None
-        ) -> Optional[np.ndarray]:
+) -> Optional[np.ndarray]:
     """
     Capture a test image from the camera.
 

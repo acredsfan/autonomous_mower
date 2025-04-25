@@ -28,11 +28,11 @@ from tests.benchmarks.utils import (
 def mock_resource_manager():
     """Fixture for a mock resource manager."""
     mock = MagicMock()
-    
+
     # Mock the necessary methods
     mock.get_camera.return_value = None
     mock.get_obstacle_detector.return_value = None
-    
+
     return mock
 
 
@@ -40,14 +40,14 @@ def mock_resource_manager():
 def mock_path_planner():
     """Fixture for a mock path planner."""
     mock = MagicMock()
-    
+
     # Mock the necessary methods
     mock.generate_path.return_value = [(0, 0), (5, 5), (10, 10)]
     mock.update_obstacle_map.return_value = None
     mock.get_current_goal.return_value = (10, 10)
     mock.coord_to_grid.return_value = (100, 100)
     mock.get_path.return_value = [(0, 0), (5, 5), (10, 10)]
-    
+
     return mock
 
 
@@ -59,11 +59,11 @@ def avoidance_algorithm(mock_resource_manager, mock_path_planner):
             resource_manager=mock_resource_manager,
             pattern_planner=mock_path_planner
         )
-    
+
     # Mock the necessary components
     algorithm.motor_controller = MagicMock()
     algorithm.sensor_interface = MagicMock()
-    
+
     return algorithm
 
 
@@ -75,11 +75,11 @@ def test_detect_obstacle_benchmark(benchmark, avoidance_algorithm):
         avoidance_algorithm.obstacle_right = False
         avoidance_algorithm.camera_obstacle_detected = False
         avoidance_algorithm.dropoff_detected = False
-    
+
     # Use pytest-benchmark to measure performance
     with patch.object(avoidance_algorithm, 'thread_lock'):
         result = benchmark(avoidance_algorithm._detect_obstacle)
-    
+
     # Verify that an obstacle was detected
     assert result is not None
     assert len(result) == 2
@@ -97,14 +97,14 @@ def test_start_avoidance_benchmark(benchmark, avoidance_algorithm):
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._start_avoidance)
-    
+
     # Verify that avoidance was started
     assert result is True
 
@@ -119,13 +119,13 @@ def test_continue_avoidance_benchmark(benchmark, avoidance_algorithm):
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_status.return_value = NavigationStatus.TARGET_REACHED
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._continue_avoidance)
-    
+
     # Verify that avoidance is complete
     assert result is True
 
@@ -140,15 +140,15 @@ def test_execute_recovery_benchmark(benchmark, avoidance_algorithm):
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     with patch.object(avoidance_algorithm, 'thread_lock'):
         result = benchmark(avoidance_algorithm._execute_recovery)
-    
+
     # Verify that recovery was executed
     assert result is True
 
@@ -158,10 +158,10 @@ def test_select_random_strategy_benchmark(benchmark, avoidance_algorithm):
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._select_random_strategy)
-    
+
     # Verify that a strategy was selected
     assert result is True
 
@@ -171,10 +171,10 @@ def test_turn_right_strategy_benchmark(benchmark, avoidance_algorithm):
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._turn_right_strategy, angle=45.0)
-    
+
     # Verify that the strategy was executed
     assert result is True
 
@@ -184,10 +184,10 @@ def test_turn_left_strategy_benchmark(benchmark, avoidance_algorithm):
     # Mock the motor controller
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._turn_left_strategy, angle=45.0)
-    
+
     # Verify that the strategy was executed
     assert result is True
 
@@ -198,11 +198,11 @@ def test_backup_strategy_benchmark(benchmark, avoidance_algorithm):
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
     avoidance_algorithm.motor_controller.move_distance.return_value = None
-    
+
     # Use pytest-benchmark to measure performance
     with patch('time.sleep'):  # Mock sleep to speed up the test
         result = benchmark(avoidance_algorithm._backup_strategy, distance=30.0)
-    
+
     # Verify that the strategy was executed
     assert result is True
 
@@ -210,18 +210,20 @@ def test_backup_strategy_benchmark(benchmark, avoidance_algorithm):
 def test_alternative_route_strategy_benchmark(benchmark, avoidance_algorithm):
     """Benchmark the _alternative_route_strategy method."""
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_position.return_value = (0.0, 0.0)
+    avoidance_algorithm.motor_controller.get_current_position.return_value = (
+        0.0, 0.0)
     avoidance_algorithm.motor_controller.navigate_to_location.return_value = None
-    
+
     # Mock the path planner
-    avoidance_algorithm.pattern_planner.get_current_goal.return_value = (10.0, 10.0)
+    avoidance_algorithm.pattern_planner.get_current_goal.return_value = (
+        10.0, 10.0)
     avoidance_algorithm.pattern_planner.coord_to_grid.return_value = (100, 100)
     avoidance_algorithm.pattern_planner.get_path.return_value = [
         {'lat': 1.0, 'lng': 1.0},
         {'lat': 5.0, 'lng': 5.0},
         {'lat': 10.0, 'lng': 10.0}
     ]
-    
+
     # Mock the _estimate_obstacle_position method
     avoidance_algorithm._estimate_obstacle_position = MagicMock(return_value={
         'position': (5.0, 5.0),
@@ -229,10 +231,10 @@ def test_alternative_route_strategy_benchmark(benchmark, avoidance_algorithm):
         'confidence': 0.8,
         'sensor': 'tof_left'
     })
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._alternative_route_strategy)
-    
+
     # Verify that the strategy was executed
     assert result is True
 
@@ -240,9 +242,10 @@ def test_alternative_route_strategy_benchmark(benchmark, avoidance_algorithm):
 def test_estimate_obstacle_position_benchmark(benchmark, avoidance_algorithm):
     """Benchmark the _estimate_obstacle_position method."""
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_position.return_value = (0.0, 0.0)
+    avoidance_algorithm.motor_controller.get_current_position.return_value = (
+        0.0, 0.0)
     avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
-    
+
     # Set up the obstacle data
     avoidance_algorithm.obstacle_data = {
         "left_sensor": True,
@@ -251,11 +254,11 @@ def test_estimate_obstacle_position_benchmark(benchmark, avoidance_algorithm):
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Use pytest-benchmark to measure performance
     with patch.object(avoidance_algorithm, 'thread_lock'):
         result = benchmark(avoidance_algorithm._estimate_obstacle_position)
-    
+
     # Verify that an obstacle position was estimated
     assert result is not None
     assert 'position' in result
@@ -271,13 +274,13 @@ def test_calculate_obstacle_coordinates_benchmark(benchmark, avoidance_algorithm
     heading_rad = 0.0
     distance = 50.0
     obstacle_angle = 0.0
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(
         avoidance_algorithm._calculate_obstacle_coordinates,
         current_position, heading_rad, distance, obstacle_angle
     )
-    
+
     # Verify that obstacle coordinates were calculated
     assert result is not None
     assert len(result) == 2
@@ -295,10 +298,11 @@ def test_determine_obstacle_parameters_benchmark(benchmark, avoidance_algorithm)
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Use pytest-benchmark to measure performance
-    result = benchmark(avoidance_algorithm._determine_obstacle_parameters, obstacle_data)
-    
+    result = benchmark(
+        avoidance_algorithm._determine_obstacle_parameters, obstacle_data)
+
     # Verify that obstacle parameters were determined
     assert result is not None
     assert len(result) == 3
@@ -311,14 +315,14 @@ def test_process_sensor_data_benchmark(benchmark, avoidance_algorithm):
     """Benchmark the _process_sensor_data method."""
     # Create test data
     sensor_data = [0.6, 0.2, 0.8, 0.1, 0.3, 0.7, 0.4, 0.9]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._process_sensor_data, sensor_data)
-    
+
     # Verify that sensor data was processed
     assert result is not None
     assert isinstance(result, list)
-    
+
     # Count how many readings are above the threshold (0.5)
     above_threshold = sum(1 for reading in sensor_data if reading > 0.5)
     assert len(result) == above_threshold
@@ -332,10 +336,11 @@ def test_find_obstacle_positions_benchmark(benchmark, avoidance_algorithm):
         Obstacle(position=(3, 3), size=1.0, confidence=0.8),
         Obstacle(position=(7, 7), size=1.0, confidence=0.8)
     ]
-    
+
     # Use pytest-benchmark to measure performance
-    result = benchmark(avoidance_algorithm._find_obstacle_positions, path, obstacles)
-    
+    result = benchmark(
+        avoidance_algorithm._find_obstacle_positions, path, obstacles)
+
     # Verify that obstacle positions were found
     assert result is not None
     assert isinstance(result, list)
@@ -347,10 +352,11 @@ def test_modify_path_benchmark(benchmark, avoidance_algorithm):
     # Create test data
     path = [(0, 0), (5, 5), (10, 10)]
     obstacle_indices = [1]  # Obstacle at (5, 5)
-    
+
     # Use pytest-benchmark to measure performance
-    result = benchmark(avoidance_algorithm._modify_path, path, obstacle_indices)
-    
+    result = benchmark(avoidance_algorithm._modify_path,
+                       path, obstacle_indices)
+
     # Verify that the path was modified
     assert result is not None
     assert isinstance(result, list)
@@ -362,10 +368,10 @@ def test_smooth_path_benchmark(benchmark, avoidance_algorithm):
     """Benchmark the _smooth_path method."""
     # Create test data
     path = [(0, 0), (5, 5), (10, 10)]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(avoidance_algorithm._smooth_path, path)
-    
+
     # Verify that the path was smoothed
     assert result is not None
     assert isinstance(result, list)
@@ -379,10 +385,11 @@ def test_complex_scenario_benchmark(benchmark):
         mock_resource_manager = MagicMock()
         mock_resource_manager.get_camera.return_value = None
         mock_resource_manager.get_obstacle_detector.return_value = None
-        
+
         # Create a mock path planner
         mock_path_planner = MagicMock()
-        mock_path_planner.generate_path.return_value = [(0, 0), (5, 5), (10, 10)]
+        mock_path_planner.generate_path.return_value = [
+            (0, 0), (5, 5), (10, 10)]
         mock_path_planner.update_obstacle_map.return_value = None
         mock_path_planner.get_current_goal.return_value = (10, 10)
         mock_path_planner.coord_to_grid.return_value = (100, 100)
@@ -391,25 +398,26 @@ def test_complex_scenario_benchmark(benchmark):
             {'lat': 5.0, 'lng': 5.0},
             {'lat': 10.0, 'lng': 10.0}
         ]
-        
+
         # Create an AvoidanceAlgorithm instance
         with patch('mower.obstacle_detection.avoidance_algorithm.os.environ.get', return_value='False'):
             algorithm = AvoidanceAlgorithm(
                 resource_manager=mock_resource_manager,
                 pattern_planner=mock_path_planner
             )
-        
+
         # Mock the necessary components
         algorithm.motor_controller = MagicMock()
-        algorithm.motor_controller.get_current_position.return_value = (0.0, 0.0)
+        algorithm.motor_controller.get_current_position.return_value = (
+            0.0, 0.0)
         algorithm.motor_controller.get_current_heading.return_value = 0.0
         algorithm.motor_controller.get_status.return_value = NavigationStatus.TARGET_REACHED
         algorithm.motor_controller.rotate_to_heading.return_value = None
         algorithm.motor_controller.move_distance.return_value = None
         algorithm.motor_controller.navigate_to_location.return_value = None
-        
+
         algorithm.sensor_interface = MagicMock()
-        
+
         # Set up the obstacle data
         algorithm.obstacle_data = {
             "left_sensor": True,
@@ -418,39 +426,40 @@ def test_complex_scenario_benchmark(benchmark):
             "dropoff_detected": False,
             "timestamp": time.time()
         }
-        
+
         # Detect an obstacle
         with patch.object(algorithm, 'thread_lock'):
             detected, obstacle_data = algorithm._detect_obstacle()
-        
+
         # Start avoidance
         avoidance_started = algorithm._start_avoidance()
-        
+
         # Continue avoidance
         avoidance_complete = algorithm._continue_avoidance()
-        
+
         # Estimate obstacle position
         with patch.object(algorithm, 'thread_lock'):
             obstacle_position = algorithm._estimate_obstacle_position()
-        
+
         # Process sensor data
         sensor_data = [0.6, 0.2, 0.8, 0.1, 0.3, 0.7, 0.4, 0.9]
         obstacles = algorithm._process_sensor_data(sensor_data)
-        
+
         # Find obstacle positions in path
         path = [(0, 0), (5, 5), (10, 10)]
         obstacle_objects = [
             Obstacle(position=(3, 3), size=1.0, confidence=0.8),
             Obstacle(position=(7, 7), size=1.0, confidence=0.8)
         ]
-        obstacle_indices = algorithm._find_obstacle_positions(path, obstacle_objects)
-        
+        obstacle_indices = algorithm._find_obstacle_positions(
+            path, obstacle_objects)
+
         # Modify path to avoid obstacles
         modified_path = algorithm._modify_path(path, obstacle_indices)
-        
+
         # Smooth the path
         smoothed_path = algorithm._smooth_path(modified_path)
-        
+
         return {
             "detected": detected,
             "avoidance_started": avoidance_started,
@@ -461,10 +470,10 @@ def test_complex_scenario_benchmark(benchmark):
             "modified_path": modified_path,
             "smoothed_path": smoothed_path
         }
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(complex_scenario)
-    
+
     # Verify that the scenario was executed
     assert result is not None
     assert "detected" in result
@@ -480,12 +489,12 @@ def test_complex_scenario_benchmark(benchmark):
 if __name__ == "__main__":
     # This allows running the benchmarks directly without pytest
     import sys
-    
+
     # Create a mock resource manager
     mock_resource_manager = MagicMock()
     mock_resource_manager.get_camera.return_value = None
     mock_resource_manager.get_obstacle_detector.return_value = None
-    
+
     # Create a mock path planner
     mock_path_planner = MagicMock()
     mock_path_planner.generate_path.return_value = [(0, 0), (5, 5), (10, 10)]
@@ -497,14 +506,14 @@ if __name__ == "__main__":
         {'lat': 5.0, 'lng': 5.0},
         {'lat': 10.0, 'lng': 10.0}
     ]
-    
+
     # Create an AvoidanceAlgorithm instance
     with patch('mower.obstacle_detection.avoidance_algorithm.os.environ.get', return_value='False'):
         algorithm = AvoidanceAlgorithm(
             resource_manager=mock_resource_manager,
             pattern_planner=mock_path_planner
         )
-    
+
     # Mock the necessary components
     algorithm.motor_controller = MagicMock()
     algorithm.motor_controller.get_current_position.return_value = (0.0, 0.0)
@@ -513,9 +522,9 @@ if __name__ == "__main__":
     algorithm.motor_controller.rotate_to_heading.return_value = None
     algorithm.motor_controller.move_distance.return_value = None
     algorithm.motor_controller.navigate_to_location.return_value = None
-    
+
     algorithm.sensor_interface = MagicMock()
-    
+
     # Set up the obstacle data
     algorithm.obstacle_data = {
         "left_sensor": True,
@@ -524,7 +533,7 @@ if __name__ == "__main__":
         "dropoff_detected": False,
         "timestamp": time.time()
     }
-    
+
     # Run benchmarks
     benchmarks = [
         ("detect_obstacle", lambda: algorithm._detect_obstacle()),
@@ -560,12 +569,12 @@ if __name__ == "__main__":
             [(0, 0), (5, 5), (10, 10)]
         )),
     ]
-    
+
     # Run each benchmark
     for name, func in benchmarks:
         times = []
         results = []
-        
+
         # Run the benchmark multiple times
         for _ in range(10):
             try:
@@ -575,7 +584,7 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"Error running benchmark {name}: {e}")
                 break
-        
+
         # Log the results
         if times:
             log_benchmark_results(name, times, results)

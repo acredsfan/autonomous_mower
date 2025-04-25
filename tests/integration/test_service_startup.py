@@ -13,7 +13,8 @@ def test_main_controller_startup(monkeypatch):
     and patches threading.Event.wait to raise KeyboardInterrupt after the first wait.
     """
     # Avoid starting the web interface
-    monkeypatch.setattr(ResourceManager, "start_web_interface", lambda self: None)
+    monkeypatch.setattr(
+        ResourceManager, "start_web_interface", lambda self: None)
 
     # Patch threading.Event.wait to trigger exit
     original_wait = threading.Event.wait

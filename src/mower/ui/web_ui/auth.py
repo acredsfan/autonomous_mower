@@ -81,7 +81,8 @@ def init_auth(app: Flask, config: dict) -> None:
                     ip_address = request.remote_addr
 
                     # Log successful login
-                    logger.info(f"User '{username}' logged in successfully from {ip_address}")
+                    logger.info(
+                        f"User '{username}' logged in successfully from {ip_address}")
 
                     # Audit log for successful login
                     audit_logger.log_login(username, ip_address, success=True)
@@ -96,7 +97,8 @@ def init_auth(app: Flask, config: dict) -> None:
                     ip_address = request.remote_addr
 
                     # Log failed login attempt
-                    logger.warning(f"Failed login attempt for user '{username}' from {ip_address}")
+                    logger.warning(
+                        f"Failed login attempt for user '{username}' from {ip_address}")
 
                     # Audit log for failed login
                     audit_logger.log_login(username, ip_address, success=False)
@@ -144,7 +146,8 @@ def authenticate(username: str, password: str, config: dict) -> bool:
 
     # If no password is set, authentication fails
     if not expected_password:
-        logger.warning("Authentication failed: No password set in configuration")
+        logger.warning(
+            "Authentication failed: No password set in configuration")
         return False
 
     # Check if username and password match

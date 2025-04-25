@@ -823,12 +823,14 @@ class AvoidanceAlgorithm:
         """
         current_position = self.motor_controller.get_current_position()
         if not current_position:
-            logger.warning("Couldn't get current position for obstacle estimation")
+            logger.warning(
+                "Couldn't get current position for obstacle estimation")
             return None, None
 
         heading = self.motor_controller.get_current_heading()
         if heading is None:
-            logger.warning("Couldn't get current heading for obstacle estimation")
+            logger.warning(
+                "Couldn't get current heading for obstacle estimation")
             return current_position, None
 
         heading_rad = math.radians(heading)
@@ -880,18 +882,19 @@ class AvoidanceAlgorithm:
             result['confidence'] = 0.9
 
         else:
-            logger.warning("Cannot determine obstacle direction from sensor data")
+            logger.warning(
+                "Cannot determine obstacle direction from sensor data")
             return None, 0.0, 0.0
 
         return result, distance, obstacle_angle
 
     def _calculate_obstacle_coordinates(
-            self, 
-            current_position: Tuple[float, float], 
-            heading_rad: float, 
-            distance: float, 
-            obstacle_angle: float
-        ) -> Tuple[float, float]:
+        self,
+        current_position: Tuple[float, float],
+        heading_rad: float,
+        distance: float,
+        obstacle_angle: float
+    ) -> Tuple[float, float]:
         """
         Calculate obstacle coordinates in world coordinate system.
 
@@ -911,8 +914,10 @@ class AvoidanceAlgorithm:
         meters_to_lat = 0.0000089
         meters_to_lng = 0.0000089 / math.cos(math.radians(current_lat))
 
-        obstacle_lat = current_lat + (distance * math.cos(obstacle_heading) * meters_to_lat)
-        obstacle_lng = current_lng + (distance * math.sin(obstacle_heading) * meters_to_lng)
+        obstacle_lat = current_lat + \
+            (distance * math.cos(obstacle_heading) * meters_to_lat)
+        obstacle_lng = current_lng + \
+            (distance * math.sin(obstacle_heading) * meters_to_lng)
 
         return (obstacle_lat, obstacle_lng)
 
@@ -945,11 +950,13 @@ class AvoidanceAlgorithm:
                 obstacle_data = self.obstacle_data
 
             if not obstacle_data:
-                logger.warning("No obstacle data available for position estimation")
+                logger.warning(
+                    "No obstacle data available for position estimation")
                 return {}
 
             # Determine obstacle parameters based on sensor data
-            result, distance, obstacle_angle = self._determine_obstacle_parameters(obstacle_data)
+            result, distance, obstacle_angle = self._determine_obstacle_parameters(
+                obstacle_data)
             if result is None:
                 return {}
 

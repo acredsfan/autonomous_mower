@@ -28,7 +28,10 @@ class SecureStorage:
     It uses Fernet symmetric encryption to encrypt the data.
     """
 
-    def __init__(self, storage_path: Union[str, Path], master_key_env_var: str = 'MOWER_MASTER_KEY'):
+    def __init__(self,
+                 storage_path: Union[str,
+                                     Path],
+                 master_key_env_var: str = 'MOWER_MASTER_KEY'):
         """Initialize the secure storage.
 
         Args:
@@ -39,13 +42,13 @@ class SecureStorage:
         self.master_key_env_var = master_key_env_var
         self._fernet = None
         self._data = {}
-        
+
         # Create the directory if it doesn't exist
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize the encryption key
         self._initialize_key()
-        
+
         # Load existing data if available
         self._load_data()
 
@@ -57,31 +60,33 @@ class SecureStorage:
         than hardcoding the key or storing it in plaintext.
         """
         master_key = os.environ.get(self.master_key_env_var)
-        
+
         if not master_key:
             # If no master key is found, generate one and store it
             key_file = self.storage_path.parent / '.master_key'
-            
+
             if key_file.exists():
                 # Read the key from the file
                 with open(key_file, 'rb') as f:
                     master_key = f.read().decode('utf-8')
             else:
                 # Generate a new key
-                master_key = base64.urlsafe_b64encode(os.urandom(32)).decode('utf-8')
-                
+                master_key = base64.urlsafe_b64encode(
+                    os.urandom(32)).decode('utf-8')
+
                 # Store the key in a file with restricted permissions
                 with open(key_file, 'wb') as f:
                     f.write(master_key.encode('utf-8'))
-                
+
                 # Set file permissions to be readable only by the owner
                 os.chmod(key_file, 0o600)
-                
-                logger.info(f"Generated new master key and stored it in {key_file}")
-            
+
+                logger.info(
+                    f"Generated new master key and stored it in {key_file}")
+
             # Set the environment variable for future use
             os.environ[self.master_key_env_var] = master_key
-        
+
         # Derive a key from the master key
         salt = b'autonomous_mower_salt'  # Fixed salt for consistency
         kdf = PBKDF2HMAC(
@@ -91,7 +96,7 @@ class SecureStorage:
             iterations=100000,
         )
         key = base64.urlsafe_b64encode(kdf.derive(master_key.encode('utf-8')))
-        
+
         # Create the Fernet cipher
         self._fernet = Fernet(key)
 
@@ -100,11 +105,11 @@ class SecureStorage:
         if not self.storage_path.exists():
             self._data = {}
             return
-            
+
         try:
             with open(self.storage_path, 'rb') as f:
                 encrypted_data = f.read()
-                
+
             if encrypted_data:
                 decrypted_data = self._fernet.decrypt(encrypted_data)
                 self._data = json.loads(decrypted_data.decode('utf-8'))
@@ -119,10 +124,10 @@ class SecureStorage:
         try:
             data_json = json.dumps(self._data)
             encrypted_data = self._fernet.encrypt(data_json.encode('utf-8'))
-            
+
             with open(self.storage_path, 'wb') as f:
                 f.write(encrypted_data)
-                
+
             # Set file permissions to be readable only by the owner
             os.chmod(self.storage_path, 0o600)
         except Exception as e:
@@ -178,7 +183,8 @@ class SecureStorage:
 _secure_storage_instance = None
 
 
-def get_secure_storage(storage_path: Optional[Union[str, Path]] = None) -> SecureStorage:
+def get_secure_storage(
+        storage_path: Optional[Union[str, Path]] = None) -> SecureStorage:
     """Get the secure storage instance.
 
     Args:
@@ -189,13 +195,13 @@ def get_secure_storage(storage_path: Optional[Union[str, Path]] = None) -> Secur
         The secure storage instance.
     """
     global _secure_storage_instance
-    
+
     if _secure_storage_instance is None:
         if storage_path is None:
             # Use default path
             config_dir = Path(os.environ.get('CONFIG_DIR', 'config'))
             storage_path = config_dir / 'secure_storage.enc'
-            
+
         _secure_storage_instance = SecureStorage(storage_path)
-        
+
     return _secure_storage_instance

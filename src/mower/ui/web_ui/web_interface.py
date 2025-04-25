@@ -51,7 +51,7 @@ class WebInterface:
             self._thread = threading.Thread(
                 target=self._run_server,
                 daemon=True
-                )
+            )
             self._thread.start()
 
             self._is_running = True
@@ -115,7 +115,8 @@ class WebInterface:
                     ssl_key = web_ui_config.get('ssl_key_path', '')
 
                     if ssl_cert and ssl_key and os.path.exists(ssl_cert) and os.path.exists(ssl_key):
-                        self.logger.info(f"Starting web server with SSL on port {port}")
+                        self.logger.info(
+                            f"Starting web server with SSL on port {port}")
                         ssl_context = (ssl_cert, ssl_key)
                     else:
                         self.logger.warning(

@@ -4,7 +4,7 @@ import adafruit_vl53l0x  # type:ignore
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)

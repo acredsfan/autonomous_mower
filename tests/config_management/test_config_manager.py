@@ -40,11 +40,11 @@ class TestConfigManager:
         # Test getting existing values
         assert get_config("test.string_value") == "test_string"
         assert get_config("test.int_value") == 42
-        
+
         # Test getting non-existent values with default
         assert get_config("non_existent_key", "default") == "default"
         assert get_config("test.non_existent_key", 100) == 100
-        
+
         # Test getting non-existent values without default
         assert get_config("non_existent_key") is None
 
@@ -53,11 +53,11 @@ class TestConfigManager:
         # Test setting new values
         set_config("test.new_value", "new_value")
         assert get_config("test.new_value") == "new_value"
-        
+
         # Test overwriting existing values
         set_config("test.string_value", "updated_string")
         assert get_config("test.string_value") == "updated_string"
-        
+
         # Test setting nested values
         set_config("test.nested.value", "nested_value")
         assert get_config("test.nested.value") == "nested_value"
@@ -70,27 +70,28 @@ class TestConfigManager:
         set_config("test.bool_value", "true")
         set_config("test.list_value", "[1, 2, 3]")
         set_config("test.dict_value", '{"key": "value"}')
-        
+
         # Test type-specific getters
         assert config_manager.get_int("test.int_value", 0) == 42
         assert config_manager.get_float("test.float_value", 0.0) == 3.14
         assert config_manager.get_bool("test.bool_value", False) is True
         assert config_manager.get_list("test.list_value", []) == [1, 2, 3]
-        assert config_manager.get_dict("test.dict_value", {}) == {"key": "value"}
-        
+        assert config_manager.get_dict("test.dict_value", {}) == {
+            "key": "value"}
+
         # Test type conversion with invalid values
         set_config("test.invalid_int", "not_an_int")
         assert config_manager.get_int("test.invalid_int", 0) == 0
-        
+
         set_config("test.invalid_float", "not_a_float")
         assert config_manager.get_float("test.invalid_float", 0.0) == 0.0
-        
+
         set_config("test.invalid_bool", "not_a_bool")
         assert config_manager.get_bool("test.invalid_bool", False) is False
-        
+
         set_config("test.invalid_list", "not_a_list")
         assert config_manager.get_list("test.invalid_list", []) == []
-        
+
         set_config("test.invalid_dict", "not_a_dict")
         assert config_manager.get_dict("test.invalid_dict", {}) == {}
 
@@ -98,15 +99,15 @@ class TestConfigManager:
         """Test hierarchical configuration keys."""
         # Set hierarchical values
         set_config("section.subsection.key", "value")
-        
+
         # Test getting hierarchical values
         assert get_config("section.subsection.key") == "value"
-        
+
         # Test getting sections
         section = config_manager.get_section("section")
         assert section is not None
         assert section.get("subsection.key") == "value"
-        
+
         subsection = config_manager.get_section("section.subsection")
         assert subsection is not None
         assert subsection.get("key") == "value"
@@ -122,20 +123,20 @@ class TestConfigManager:
         }
         initialize_config_manager(defaults=test_config)
         config_manager = get_config_manager()
-        
+
         # Set a new value
         set_config("test.new_value", "new_value")
-        
+
         # Save configuration to file
         test_config_path = Path(temp_config_dir) / "test_config.json"
         config_manager.save(str(test_config_path))
-        
+
         # Verify file was created
         assert test_config_path.exists()
-        
+
         # Load configuration from file
         loaded_config = config_manager.load(str(test_config_path))
-        
+
         # Verify loaded configuration
         assert loaded_config["test"]["string_value"] == "test_string"
         assert loaded_config["test"]["int_value"] == 42
@@ -146,11 +147,11 @@ class TestConfigManager:
         # Test loading non-existent file
         result = config_manager.load("non_existent_file.json")
         assert result is None
-        
+
         # Test saving to invalid path
         with pytest.raises(Exception):
             config_manager.save("/invalid/path/config.json")
-        
+
         # Test getting section that doesn't exist
         section = config_manager.get_section("non_existent_section")
         assert section is None

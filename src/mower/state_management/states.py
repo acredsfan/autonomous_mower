@@ -19,7 +19,7 @@ class StateCategory(Enum):
 class MowerState(Enum):
     """
     Unified state enum for the autonomous mower.
-    
+
     This enum combines all possible states from different components into
     a single, consistent enum that can be used throughout the codebase.
     """
@@ -31,18 +31,18 @@ class MowerState(Enum):
     AVOIDING = "avoiding"         # Mower is avoiding an obstacle
     RETURNING_HOME = "returning_home"  # Mower is returning to home location
     DOCKED = "docked"             # Mower is docked at charging station
-    
+
     # Error states
     ERROR = "error"               # Generic error state
     EMERGENCY_STOP = "emergency_stop"  # Emergency stop activated
     STUCK = "stuck"               # Mower is stuck and needs assistance
     LOW_BATTERY = "low_battery"   # Battery is critically low
-    
+
     # Special states
     INITIALIZING = "initializing"  # Mower is initializing
     SHUTTING_DOWN = "shutting_down"  # Mower is shutting down
     PAUSED = "paused"             # Mower operation is paused
-    
+
     @property
     def category(self) -> StateCategory:
         """Get the category of this state."""
@@ -52,17 +52,17 @@ class MowerState(Enum):
             return StateCategory.ERROR
         else:
             return StateCategory.SPECIAL
-    
+
     @property
     def display_name(self) -> str:
         """Get a human-readable display name for this state."""
         return _STATE_DISPLAY_NAMES.get(self, self.value.replace('_', ' ').title())
-    
+
     @property
     def description(self) -> str:
         """Get a description of this state."""
         return _STATE_DESCRIPTIONS.get(self, "")
-    
+
     @property
     def allowed_transitions(self) -> Set["MowerState"]:
         """Get the set of states that this state can transition to."""
@@ -235,10 +235,10 @@ def get_all_states() -> List[MowerState]:
 def get_states_by_category(category: StateCategory) -> List[MowerState]:
     """
     Get a list of states in the specified category.
-    
+
     Args:
         category: The category to get states for
-        
+
     Returns:
         List[MowerState]: List of states in the category
     """
@@ -248,18 +248,18 @@ def get_states_by_category(category: StateCategory) -> List[MowerState]:
 def is_valid_transition(from_state: MowerState, to_state: MowerState) -> bool:
     """
     Check if a transition from one state to another is valid.
-    
+
     Args:
         from_state: The state to transition from
         to_state: The state to transition to
-        
+
     Returns:
         bool: True if the transition is valid, False otherwise
     """
     # Emergency stop can be triggered from any state
     if to_state == MowerState.EMERGENCY_STOP:
         return True
-    
+
     # Check if the transition is allowed
     allowed = _STATE_TRANSITIONS.get(from_state, set())
     return to_state in allowed

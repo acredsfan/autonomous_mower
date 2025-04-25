@@ -47,10 +47,10 @@ def example_basic_error_handling():
 def read_sensor(sensor_id: str) -> float:
     """
     Example of using the with_error_handling decorator.
-    
+
     Args:
         sensor_id: ID of the sensor to read
-        
+
     Returns:
         float: Sensor reading
     """
@@ -87,7 +87,7 @@ def example_safe_call():
         if x == 0:
             raise ValueError("Cannot process zero")
         return 100 // x
-    
+
     # Call the function safely
     result = safe_call(
         might_fail,
@@ -95,7 +95,7 @@ def example_safe_call():
         error_code=ErrorCode.SOFTWARE_ALGORITHM_ERROR,
         default_value=-1
     )
-    
+
     print(f"Result: {result}")  # Will print -1
 
 
@@ -107,11 +107,11 @@ def example_custom_error_handler():
         print(f"Custom handler received error: {error}")
         if error.error_code and error.error_code.is_critical:
             print("This is a critical error!")
-    
+
     # Register the error handler
     reporter = get_error_reporter()
     reporter.register_error_handler("custom", custom_handler)
-    
+
     # Raise an error that will be handled by the custom handler
     try:
         raise HardwareError(
@@ -120,7 +120,7 @@ def example_custom_error_handler():
         )
     except MowerError as e:
         report_error(e)
-    
+
     # Unregister the handler when done
     reporter.unregister_error_handler("custom")
 
@@ -128,11 +128,11 @@ def example_custom_error_handler():
 # Example 6: Hardware component with error handling
 class SensorComponent:
     """Example of a hardware component with error handling."""
-    
+
     def __init__(self, sensor_id: str):
         """
         Initialize the sensor component.
-        
+
         Args:
             sensor_id: ID of the sensor
         """
@@ -140,12 +140,12 @@ class SensorComponent:
         self.last_reading: Optional[float] = None
         self.error_count = 0
         self.max_errors = 3
-    
+
     @with_error_handling(error_code=ErrorCode.HARDWARE_SENSOR_FAILURE)
     def initialize(self) -> bool:
         """
         Initialize the sensor.
-        
+
         Returns:
             bool: True if initialization was successful
         """
@@ -157,11 +157,11 @@ class SensorComponent:
                 error_code=ErrorCode.HARDWARE_INITIALIZATION_FAILED
             )
         return True
-    
+
     def read(self) -> Optional[float]:
         """
         Read the sensor value.
-        
+
         Returns:
             Optional[float]: Sensor reading or None if error
         """
@@ -179,7 +179,7 @@ class SensorComponent:
                             error_code=ErrorCode.HARDWARE_SENSOR_FAILURE
                         )
                     raise ValueError("Sensor reading failed")
-                
+
                 # Simulate successful reading
                 reading = 25.0 + (time.time() % 10)
                 self.last_reading = reading
@@ -187,11 +187,11 @@ class SensorComponent:
         except MowerError:
             # Already handled by error_context
             return None
-    
+
     def get_status(self) -> Dict[str, Any]:
         """
         Get the sensor status.
-        
+
         Returns:
             Dict[str, Any]: Sensor status
         """
@@ -206,18 +206,18 @@ class SensorComponent:
 # Example 7: Navigation component with error handling
 class NavigationComponent:
     """Example of a navigation component with error handling."""
-    
+
     def __init__(self):
         """Initialize the navigation component."""
         self.position = (0.0, 0.0)
         self.heading = 0.0
         self.waypoints: List[tuple] = []
-    
+
     @with_error_handling(error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST)
     def get_position(self) -> tuple:
         """
         Get the current position.
-        
+
         Returns:
             tuple: Current position (lat, lng)
         """
@@ -228,14 +228,14 @@ class NavigationComponent:
                 error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST
             )
         return self.position
-    
+
     def navigate_to(self, target: tuple) -> bool:
         """
         Navigate to a target position.
-        
+
         Args:
             target: Target position (lat, lng)
-            
+
         Returns:
             bool: True if navigation was successful
         """
@@ -246,17 +246,17 @@ class NavigationComponent:
             ):
                 # Get current position
                 current = self.get_position()
-                
+
                 # Calculate path
                 self.waypoints = [current, target]
-                
+
                 # Simulate navigation
                 if target[0] < 0 or target[1] < 0:
                     raise NavigationError(
                         "Path blocked by obstacle",
                         error_code=ErrorCode.NAVIGATION_PATH_BLOCKED
                     )
-                
+
                 # Update position
                 self.position = target
                 return True
@@ -268,49 +268,49 @@ class NavigationComponent:
 # Run the examples
 if __name__ == "__main__":
     print("Running error handling examples...")
-    
+
     print("\nExample 1: Basic error handling")
     example_basic_error_handling()
-    
+
     print("\nExample 2: Using decorators")
     try:
         temp = read_sensor("temperature")
         print(f"Temperature: {temp}°C")
-        
+
         # This will raise an error
         unknown = read_sensor("unknown")
     except MowerError as e:
         print(f"Caught error: {e}")
-    
+
     print("\nExample 3: Using context managers")
     example_context_manager()
-    
+
     print("\nExample 4: Safe function calls")
     example_safe_call()
-    
+
     print("\nExample 5: Custom error handlers")
     example_custom_error_handler()
-    
+
     print("\nExample 6: Hardware component with error handling")
     sensor = SensorComponent("temperature")
     sensor.initialize()
     reading = sensor.read()
     print(f"Sensor reading: {reading}")
     print(f"Sensor status: {sensor.get_status()}")
-    
+
     broken_sensor = SensorComponent("broken")
     try:
         broken_sensor.initialize()
     except MowerError as e:
         print(f"Caught error: {e}")
-    
+
     print("\nExample 7: Navigation component with error handling")
     nav = NavigationComponent()
     success = nav.navigate_to((1.0, 1.0))
     print(f"Navigation success: {success}")
-    
+
     # This will fail
     success = nav.navigate_to((-1.0, -1.0))
     print(f"Navigation success: {success}")
-    
+
     print("\nDone!")

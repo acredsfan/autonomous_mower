@@ -70,7 +70,8 @@ class BackupRestore:
         """
         self.backup_dir = backup_dir
         os.makedirs(self.backup_dir, exist_ok=True)
-        self.manifest_file = os.path.join(self.backup_dir, BACKUP_MANIFEST_FILE)
+        self.manifest_file = os.path.join(
+            self.backup_dir, BACKUP_MANIFEST_FILE)
         self._load_manifest()
 
     def _load_manifest(self) -> None:
@@ -80,7 +81,8 @@ class BackupRestore:
                 with open(self.manifest_file, 'r') as f:
                     self.manifest = json.load(f)
             except json.JSONDecodeError:
-                logger.error(f"Error parsing manifest file: {self.manifest_file}")
+                logger.error(
+                    f"Error parsing manifest file: {self.manifest_file}")
                 self.manifest = {"backups": []}
         else:
             self.manifest = {"backups": []}
@@ -252,7 +254,8 @@ class BackupRestore:
 
             # Skip if source directory doesn't exist
             if not os.path.exists(source_dir):
-                logger.warning(f"Source directory {source_dir} not found, skipping")
+                logger.warning(
+                    f"Source directory {source_dir} not found, skipping")
                 continue
 
             # Create tarball
@@ -448,11 +451,12 @@ class BackupRestore:
                 message: Information about the process or error message.
         """
         # Create a cron job to run the backup script
-        components_str = ",".join(components) if components else "config,data,logs"
+        components_str = ",".join(
+            components) if components else "config,data,logs"
         description_str = f'"{description}"' if description else '""'
-        
+
         cron_command = f"0 2 * * * python3 -m mower.utilities.backup_restore --backup {components_str} --description {description_str} > /dev/null 2>&1"
-        
+
         try:
             # Get existing crontab
             result = subprocess.run(
@@ -460,34 +464,34 @@ class BackupRestore:
                 capture_output=True,
                 text=True,
             )
-            
+
             # If crontab doesn't exist, start with an empty one
             if result.returncode != 0:
                 current_crontab = ""
             else:
                 current_crontab = result.stdout
-            
+
             # Check if the backup command already exists
             if "mower.utilities.backup_restore --backup" in current_crontab:
                 return False, "Scheduled backup already exists in crontab"
-            
+
             # Add the new cron job
             new_crontab = current_crontab + cron_command + "\n"
-            
+
             # Write the new crontab
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
                 temp_file.write(new_crontab)
                 temp_file_path = temp_file.name
-            
+
             subprocess.run(
                 ["crontab", temp_file_path],
                 check=True,
                 capture_output=True,
                 text=True,
             )
-            
+
             os.unlink(temp_file_path)
-            
+
             return True, "Scheduled backup set up successfully (daily at 2:00 AM)"
         except Exception as e:
             logger.error(f"Error setting up scheduled backup: {e}")
@@ -516,7 +520,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Backup and restore utility for the autonomous mower"
     )
-    
+
     # Create a mutually exclusive group for the main actions
     action_group = parser.add_mutually_exclusive_group(required=True)
     action_group.add_argument(
@@ -551,7 +555,7 @@ def main():
         metavar="COMPONENT",
         help="Set up a scheduled backup (specify components or 'full')",
     )
-    
+
     # Additional options
     parser.add_argument(
         "--components",
@@ -568,12 +572,12 @@ def main():
         default=BACKUP_DIR,
         help=f"Directory where backups will be stored (default: {BACKUP_DIR})",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Initialize the backup and restore utility
     backup_restore = BackupRestore(backup_dir=args.backup_dir)
-    
+
     # Process the command
     try:
         if args.backup is not None:
@@ -582,14 +586,14 @@ def main():
                 components = None
             else:
                 components = args.backup
-            
+
             success, message = backup_restore.create_backup(
                 components=components,
                 description=args.description,
             )
             print(message)
             return 0 if success else 1
-        
+
         elif args.restore:
             success, message = backup_restore.restore_backup(
                 backup_id=args.restore,
@@ -597,60 +601,63 @@ def main():
             )
             print(message)
             return 0 if success else 1
-        
+
         elif args.list:
             backups = backup_restore.list_backups()
             if not backups:
                 print("No backups found")
                 return 0
-            
+
             print(f"Found {len(backups)} backups:")
             for backup in backups:
-                created_at = datetime.fromisoformat(backup["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
+                created_at = datetime.fromisoformat(
+                    backup["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
                 print(f"ID: {backup['id']}")
                 print(f"  Created: {created_at}")
                 print(f"  Components: {', '.join(backup['components'])}")
                 print(f"  Description: {backup['description']}")
                 print()
             return 0
-        
+
         elif args.info:
             backup_info = backup_restore.get_backup_info(args.info)
             if backup_info is None:
                 print(f"Backup {args.info} not found")
                 return 1
-            
-            created_at = datetime.fromisoformat(backup_info["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
+
+            created_at = datetime.fromisoformat(
+                backup_info["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
             print(f"Backup ID: {backup_info['id']}")
             print(f"Created: {created_at}")
             print(f"Components: {', '.join(backup_info['components'])}")
             print(f"Description: {backup_info['description']}")
-            
+
             # Check if the backup is valid
             is_valid = backup_restore._verify_backup(args.info)
-            print(f"Status: {'Valid' if is_valid else 'Invalid or incomplete'}")
-            
+            print(
+                f"Status: {'Valid' if is_valid else 'Invalid or incomplete'}")
+
             return 0
-        
+
         elif args.delete:
             success, message = backup_restore.delete_backup(args.delete)
             print(message)
             return 0 if success else 1
-        
+
         elif args.schedule is not None:
             # Handle 'full' backup
             if len(args.schedule) == 1 and args.schedule[0] == "full":
                 components = None
             else:
                 components = args.schedule
-            
+
             success, message = backup_restore.create_scheduled_backup(
                 components=components,
                 description=args.description,
             )
             print(message)
             return 0 if success else 1
-    
+
     except Exception as e:
         print(f"Error: {e}")
         return 1

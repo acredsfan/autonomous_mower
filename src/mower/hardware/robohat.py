@@ -18,7 +18,7 @@ import serial  # type:ignore
 from mower.utilities.utils import Utils
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 
 
 logger = LoggerConfig.get_logger(__name__)
@@ -29,6 +29,8 @@ print("MM1 Serial Port:", MM1_SERIAL_PORT)
 print("MM1 Baud Rate:", MM1_BAUD_RATE)
 
 # Default RoboHAT configuration to support cfg references and avoid NameError
+
+
 class _RoboHATConfig:
     """Default configuration values for RoboHAT hardware."""
     AUTO_RECORD_ON_THROTTLE: bool = True
@@ -41,6 +43,7 @@ class _RoboHATConfig:
     MM1_STOPPED_PWM: int = 1500
     MM1_STEERING_MID: int = 1500
     MM1_SERIAL_TIMEOUT: int = 1
+
 
 # Global cfg instance for classes
 cfg = _RoboHATConfig()
@@ -85,12 +88,12 @@ class RoboHATController:
             logger.info(
                 f"Serial port {self.SERIAL_PORT} opened for controller "
                 "input."
-                )
+            )
         except serial.SerialException:
             logger.error(
                 "Serial port for controller input not found! "
                 "Please enable: sudo raspi-config"
-                )
+            )
             self.serial = None
         except serial.SerialTimeoutException:
             logger.error("Serial connection for controller input timed out!")
@@ -123,7 +126,7 @@ class RoboHATController:
             except serial.SerialException:
                 logger.error(
                     "Failed to close the controller serial connection."
-                    )
+                )
 
     def read_serial(self):
         '''
@@ -156,14 +159,14 @@ class RoboHATController:
                     logger.debug(
                         f"angle_pwm = {angle_pwm}, "
                         f"throttle_pwm= {throttle_pwm}"
-                        )
+                    )
 
                 if throttle_pwm >= self.STOPPED_PWM:
                     # Scale down the input PWM (1500 - 2000) to our max forward
                     throttle_pwm_mapped = Utils.map_range_float(
                         throttle_pwm, 1500, 2000,
                         self.STOPPED_PWM, self.MAX_FORWARD
-                        )
+                    )
                     # Go forward
                     self.throttle = Utils.map_range_float(throttle_pwm_mapped,
                                                           self.STOPPED_PWM,
@@ -173,7 +176,7 @@ class RoboHATController:
                     throttle_pwm_mapped = Utils.map_range_float(
                         throttle_pwm, 1000, 1500,
                         self.MAX_REVERSE, self.STOPPED_PWM
-                        )
+                    )
                     # Go backward
                     self.throttle = Utils.map_range_float(throttle_pwm_mapped,
                                                           self.MAX_REVERSE,
@@ -184,17 +187,17 @@ class RoboHATController:
                     # Turn left
                     self.angle = Utils.map_range_float(
                         angle_pwm, 2000, self.STEERING_MID, -1, 0
-                        )
+                    )
                 else:
                     # Turn right
                     self.angle = Utils.map_range_float(
                         angle_pwm, self.STEERING_MID, 1000, 0, 1
-                        )
+                    )
 
                 if self.debug:
                     logger.debug(
                         f"angle = {self.angle}, throttle = {self.throttle}"
-                        )
+                    )
 
                 if self.auto_record_on_throttle:
                     was_recording = self.recording
@@ -203,7 +206,7 @@ class RoboHATController:
                         self.recording_latch = self.recording
                         logger.debug(
                             f"Recording state changed to {self.recording}"
-                            )
+                        )
 
                 time.sleep(0.01)
 
@@ -246,7 +249,7 @@ class RoboHATController:
         if self.recording_latch is not None:
             logger.debug(
                 f"Setting recording from latch = {self.recording_latch}"
-                )
+            )
             self.recording = self.recording_latch
             self.recording_latch = None
 
@@ -275,12 +278,12 @@ class RoboHATDriver:
             self.pwm = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
             logger.info(
                 f"Serial port {MM1_SERIAL_PORT} opened for PWM output."
-                )
+            )
         except serial.SerialException:
             logger.error(
                 "Serial port for PWM output not found! "
                 "Please enable: sudo raspi-config"
-                )
+            )
             self.pwm = None
         except serial.SerialTimeoutException:
             logger.error("Serial connection for PWM output timed out!")
@@ -291,12 +294,12 @@ class RoboHATDriver:
         if value > 1:
             logger.warning(
                 f"MM1: Warning, value out of bound. Value = {value}"
-                )
+            )
             return 1.0
         elif value < -1:
             logger.warning(
                 f"MM1: Warning, value out of bound. Value = {value}"
-                )
+            )
             return -1.0
         else:
             return value

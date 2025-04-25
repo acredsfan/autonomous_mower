@@ -28,7 +28,8 @@ try:
             polygon_coordinates = polygon_data['polygon']
         else:
             # Handle legacy format or unexpected structure
-            polygon_coordinates = polygon_data if isinstance(polygon_data, list) else []
+            polygon_coordinates = polygon_data if isinstance(
+                polygon_data, list) else []
             logger.warning(
                 "User polygon data has unexpected structure. "
                 "Expected a dictionary with 'polygon' key."

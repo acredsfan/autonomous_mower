@@ -39,38 +39,38 @@ class TestMainResourceManager:
         """Test initialization of hardware components."""
         # Create a ResourceManager instance
         resource_manager = MainResourceManager()
-        
+
         # Call _initialize_hardware
         resource_manager._initialize_hardware()
-        
+
         # Verify that all hardware components were initialized
         mock_gpio.assert_called_once()
         mock_gpio.return_value._initialize.assert_called_once()
-        
+
         mock_imu.assert_called_once()
         mock_imu.return_value._initialize.assert_called_once()
-        
+
         mock_bme280.assert_called_once()
         mock_bme280.return_value._initialize.assert_called_once()
-        
+
         mock_ina3221.assert_called_once()
         mock_ina3221.return_value._initialize.assert_called_once()
-        
+
         mock_tof.assert_called_once()
         mock_tof.return_value._initialize.assert_called_once()
-        
+
         mock_robohat.assert_called_once()
         mock_robohat.return_value.__init__.assert_called_once()
-        
+
         mock_blade.assert_called_once()
         mock_blade.return_value.__init__.assert_called_once()
-        
+
         mock_camera.assert_called_once()
         mock_camera.return_value.__init__.assert_called_once()
-        
+
         mock_serial_port.assert_called_once()
         mock_serial_port.return_value._initialize.assert_called_once()
-        
+
         mock_sensor_interface.assert_called_once()
 
     @patch("mower.main_controller.Localization")
@@ -97,7 +97,7 @@ class TestMainResourceManager:
             'path_planning.batch_size': 32,
             'path_planning.update_frequency': 100,
         }.get(key, default)
-        
+
         # Create a ResourceManager instance with mocked hardware components
         resource_manager = MainResourceManager()
         resource_manager._resources = {
@@ -106,10 +106,10 @@ class TestMainResourceManager:
             "sensor_interface": MagicMock(),
             "path_planner": MagicMock(),
         }
-        
+
         # Call _initialize_software
         resource_manager._initialize_software()
-        
+
         # Verify that all software components were initialized
         mock_localization.assert_called_once()
         mock_path_planner.assert_called_once()
@@ -125,17 +125,17 @@ class TestMainResourceManager:
         resource_manager._resources = {
             "test_resource": MagicMock(),
         }
-        
+
         # Get a resource by name
         resource = resource_manager.get_resource("test_resource")
-        
+
         # Verify that the correct resource was returned
         assert resource is resource_manager._resources["test_resource"]
-        
+
         # Test getting a non-existent resource
         with pytest.raises(KeyError):
             resource_manager.get_resource("non_existent_resource")
-        
+
         # Test getting a resource when not initialized
         resource_manager._initialized = False
         with pytest.raises(RuntimeError):
@@ -146,27 +146,27 @@ class TestMainResourceManager:
         """Test cleanup of resources."""
         # Configure mock_cleanup_resources to return True
         mock_cleanup_resources.return_value = True
-        
+
         # Create a ResourceManager instance
         resource_manager = MainResourceManager()
         resource_manager._initialized = True
         resource_manager._resources = {
             "test_resource": MagicMock(),
         }
-        
+
         # Call cleanup
         result = resource_manager.cleanup()
-        
+
         # Verify that cleanup_resources was called with the correct arguments
         mock_cleanup_resources.assert_called_once_with(
             resource_manager._resources,
             True,
             resource_manager._lock
         )
-        
+
         # Verify that _initialized was set to False
         assert resource_manager._initialized is False
-        
+
         # Verify that cleanup returned True
         assert result is True
 
@@ -193,40 +193,40 @@ class TestMowerResourceManager:
         """Test initialization of hardware components."""
         # Create a ResourceManager instance
         resource_manager = MowerResourceManager()
-        
+
         # Call _initialize_hardware
         resource_manager._initialize_hardware()
-        
+
         # Verify that all hardware components were initialized
         mock_gpio.assert_called_once()
         mock_gpio.return_value._initialize.assert_called_once()
-        
+
         mock_imu.assert_called_once()
         mock_imu.return_value._initialize.assert_called_once()
-        
+
         mock_bme280.assert_called_once()
         mock_bme280.return_value._initialize.assert_called_once()
-        
+
         mock_ina3221.assert_called_once()
         mock_ina3221.return_value._initialize.assert_called_once()
-        
+
         mock_tof.assert_called_once()
         mock_tof.return_value._initialize.assert_called_once()
-        
+
         mock_robohat.assert_called_once()
         mock_robohat.return_value.__init__.assert_called_once()
-        
+
         mock_blade.assert_called_once()
         mock_blade.return_value.__init__.assert_called_once()
-        
+
         mock_blade_adapter.assert_called_once()
-        
+
         mock_camera.assert_called_once()
         mock_camera.return_value.__init__.assert_called_once()
-        
+
         mock_serial_port.assert_called_once()
         mock_serial_port.return_value._initialize.assert_called_once()
-        
+
         mock_sensor_interface.assert_called_once()
 
     @patch("mower.mower.Localization")
@@ -253,7 +253,7 @@ class TestMowerResourceManager:
             'path_planning.learning.update_frequency': 100,
             'path_planning.learning.model_path': 'path/to/model',
         }.get(key, default)
-        
+
         # Create a ResourceManager instance with mocked hardware components
         resource_manager = MowerResourceManager()
         resource_manager._resources = {
@@ -262,10 +262,10 @@ class TestMowerResourceManager:
             "sensor_interface": MagicMock(),
             "path_planner": MagicMock(),
         }
-        
+
         # Call _initialize_software
         resource_manager._initialize_software()
-        
+
         # Verify that all software components were initialized
         mock_localization.assert_called_once()
         mock_path_planner.assert_called_once()
@@ -278,16 +278,16 @@ class TestMowerResourceManager:
         # Configure mock_load_config to return a test configuration
         test_config = {"test_key": "test_value"}
         mock_load_config.return_value = test_config
-        
+
         # Create a ResourceManager instance
         resource_manager = MowerResourceManager()
-        
+
         # Call _load_config
         result = resource_manager._load_config("test_config.json")
-        
+
         # Verify that load_config was called with the correct arguments
         mock_load_config.assert_called_once_with("test_config.json")
-        
+
         # Verify that the correct configuration was returned
         assert result == test_config
 
@@ -296,16 +296,18 @@ class TestMowerResourceManager:
         """Test saving configuration."""
         # Configure mock_save_config to return True
         mock_save_config.return_value = True
-        
+
         # Create a ResourceManager instance
         resource_manager = MowerResourceManager()
-        
+
         # Call _save_config
-        result = resource_manager._save_config("test_config.json", {"test_key": "test_value"})
-        
+        result = resource_manager._save_config(
+            "test_config.json", {"test_key": "test_value"})
+
         # Verify that save_config was called with the correct arguments
-        mock_save_config.assert_called_once_with("test_config.json", {"test_key": "test_value"})
-        
+        mock_save_config.assert_called_once_with(
+            "test_config.json", {"test_key": "test_value"})
+
         # Verify that the correct result was returned
         assert result is True
 
@@ -314,23 +316,23 @@ class TestMowerResourceManager:
         """Test cleanup of resources."""
         # Configure mock_cleanup_resources to return True
         mock_cleanup_resources.return_value = True
-        
+
         # Create a ResourceManager instance
         resource_manager = MowerResourceManager()
         resource_manager._initialized = True
         resource_manager._resources = {
             "test_resource": MagicMock(),
         }
-        
+
         # Call cleanup
         result = resource_manager.cleanup()
-        
+
         # Verify that cleanup_resources was called with the correct arguments
         mock_cleanup_resources.assert_called_once_with(
             resource_manager._resources,
             resource_manager._initialized,
             resource_manager._lock
         )
-        
+
         # Verify that cleanup returned True
         assert result is True

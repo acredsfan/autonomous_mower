@@ -10,10 +10,10 @@ from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.gps import (
     GpsLatestPosition,
     GpsPosition
-    )
+)
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 
 
 logger = LoggerConfig.get_logger(__name__)
@@ -41,7 +41,7 @@ class NavigationController:
             robohat_driver: RoboHATDriver,
             sensor_interface,
             debug: bool = False
-            ):
+    ):
         """
         Initialize the navigation controller.
 
@@ -65,7 +65,7 @@ class NavigationController:
             'position_tolerance': 0.0001,  # GPS position tolerance
             'max_steering': 1.0,  # Maximum steering value
             'safety_timeout': 30.0  # Maximum time without position update
-            }
+        }
 
         self.status = NavigationStatus(
             is_moving=False,
@@ -75,14 +75,14 @@ class NavigationController:
             distance_to_target=0.0,
             heading_error=0.0,
             last_error=None
-            )
+        )
 
         self.last_position_update = time.time()
 
     def navigate_to_location(
             self,
             target_location: Tuple[float, float]
-            ) -> bool:
+    ) -> bool:
         """
         Navigate the robot to the specified target location.
 
@@ -133,14 +133,14 @@ class NavigationController:
         if self.has_reached_location(
                 current_position,
                 self.status.target_position
-                ):
+        ):
             self.status.target_reached = True
             return True
 
         steering, throttle = self.calculate_navigation_commands(
             current_position,
             self.status.target_position
-            )
+        )
 
         self.robohat_driver.run(steering, throttle)
         return True
@@ -165,7 +165,7 @@ class NavigationController:
                 northing,
                 zone_number,
                 zone_letter
-                )
+            )
             return (lat, lon)
 
         except Exception as e:
@@ -176,7 +176,7 @@ class NavigationController:
             self,
             current_position: Tuple[float, float],
             target_location: Tuple[float, float]
-            ) -> Tuple[float, float]:
+    ) -> Tuple[float, float]:
         """
         Calculate steering and throttle commands.
 
@@ -206,20 +206,20 @@ class NavigationController:
         throttle = min(
             self.control_params['throttle_kp'] * distance,
             self.control_params['max_throttle']
-            )
+        )
 
         # Apply safety limits
         steering = self._clamp_value(
             steering,
             -self.control_params['max_steering'],
             self.control_params['max_steering']
-            )
+        )
 
         throttle = self._clamp_value(
             throttle,
             self.control_params['min_throttle'],
             self.control_params['max_throttle']
-            )
+        )
 
         return steering, throttle
 
@@ -227,7 +227,7 @@ class NavigationController:
     def calculate_bearing(
             current_position: Tuple[float, float],
             target_location: Tuple[float, float]
-            ) -> float:
+    ) -> float:
         """
         Calculate bearing between two points.
 
@@ -256,7 +256,7 @@ class NavigationController:
     def calculate_distance(
             current_position: Tuple[float, float],
             target_location: Tuple[float, float]
-            ) -> float:
+    ) -> float:
         """
         Calculate Haversine distance between two points.
 
@@ -285,7 +285,7 @@ class NavigationController:
             current_position: Tuple[float, float],
             target_location: Tuple[float, float],
             tolerance: float = None
-            ) -> bool:
+    ) -> bool:
         """
         Check if target location has been reached.
 
@@ -377,7 +377,7 @@ class NavigationController:
             'distance_to_target': self.status.distance_to_target,
             'heading_error': self.status.heading_error,
             'last_error': self.status.last_error
-            }
+        }
 
     def cleanup(self):
         """Clean up resources used by the navigation controller."""
@@ -394,12 +394,12 @@ def initialize_navigation():
         gps_position_instance = GpsPosition(
             serial_port='/dev/ttyACM0',
             debug=True
-            )
+        )
         gps_position_instance.start()
 
         gps_latest_position = GpsLatestPosition(
             gps_position_instance=gps_position_instance
-            )
+        )
         robohat_driver = RoboHATDriver()
 
         return gps_latest_position, robohat_driver
@@ -419,7 +419,7 @@ if __name__ == "__main__":
             robohat_driver,
             sensor_interface,
             debug=True
-            )
+        )
 
         # Example target location (latitude, longitude)
         target = (39.123, -84.512)

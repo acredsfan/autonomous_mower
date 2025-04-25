@@ -5,6 +5,11 @@ This module demonstrates how to use the simulation capabilities for testing
 the autonomous mower system without requiring physical hardware.
 """
 
+from mower.config_management import get_config, set_config
+from mower.robot_di import Robot as RobotDI
+from mower.main_controller import MainController
+from mower.simulation.world_model import get_world_instance, Vector2D, reset_world
+from mower.simulation import enable_simulation, is_simulation_enabled
 import os
 import time
 import pytest
@@ -16,13 +21,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Import simulation modules
-from mower.simulation import enable_simulation, is_simulation_enabled
-from mower.simulation.world_model import get_world_instance, Vector2D, reset_world
 
 # Import mower modules
-from mower.main_controller import MainController
-from mower.robot_di import Robot as RobotDI
-from mower.config_management import get_config, set_config
 
 
 @pytest.fixture
@@ -37,12 +37,16 @@ def simulation_environment():
     world = get_world_instance()
 
     # Set up a simple virtual world with obstacles
-    world.set_robot_position(Vector2D(10.0, 10.0), 0.0)  # Start at (10, 10) facing east
+    # Start at (10, 10) facing east
+    world.set_robot_position(Vector2D(10.0, 10.0), 0.0)
 
     # Add some obstacles
-    world.add_obstacle(Vector2D(15.0, 10.0), 1.0, obstacle_type="rock")  # Rock at (15, 10)
-    world.add_obstacle(Vector2D(10.0, 15.0), 0.5, obstacle_type="small_rock")  # Small rock at (10, 15)
-    world.add_obstacle(Vector2D(5.0, 5.0), 2.0, obstacle_type="tree")  # Tree at (5, 5)
+    world.add_obstacle(Vector2D(15.0, 10.0), 1.0,
+                       obstacle_type="rock")  # Rock at (15, 10)
+    world.add_obstacle(Vector2D(10.0, 15.0), 0.5,
+                       obstacle_type="small_rock")  # Small rock at (10, 15)
+    world.add_obstacle(Vector2D(5.0, 5.0), 2.0,
+                       obstacle_type="tree")  # Tree at (5, 5)
 
     # Configure the mower for simulation
     set_config('use_simulation', True)
@@ -67,7 +71,8 @@ def test_obstacle_detection(simulation_environment):
 
     # Check for obstacles in front of the robot
     direction = Vector2D(1.0, 0.0)  # East
-    distance, obstacle = world.get_distance_to_nearest_obstacle(position, direction, max_range=10.0)
+    distance, obstacle = world.get_distance_to_nearest_obstacle(
+        position, direction, max_range=10.0)
 
     # We should detect the rock at (15, 10)
     assert obstacle is not None, "Should detect an obstacle"
@@ -102,7 +107,8 @@ def test_robot_movement(simulation_environment):
     # Calculate distance moved
     distance_moved = initial_position.distance_to(new_position)
 
-    logger.info(f"Robot moved to position {new_position}, distance moved: {distance_moved}m")
+    logger.info(
+        f"Robot moved to position {new_position}, distance moved: {distance_moved}m")
 
     # We should have moved forward
     assert distance_moved > 0.5, f"Robot should have moved, only moved {distance_moved}m"
@@ -116,7 +122,8 @@ def test_collision_handling(simulation_environment):
     world = simulation_environment
 
     # Position the robot near an obstacle
-    world.set_robot_position(Vector2D(14.0, 10.0), 0.0)  # Near the rock at (15, 10)
+    # Near the rock at (15, 10)
+    world.set_robot_position(Vector2D(14.0, 10.0), 0.0)
 
     # Get initial position
     initial_state = world.get_robot_state()

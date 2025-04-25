@@ -36,15 +36,17 @@ class ObstacleMapper:
 
         # Handle empty or invalid polygon_coordinates
         if not polygon_coordinates or not isinstance(polygon_coordinates, list):
-            logger.warning("Invalid polygon_coordinates. Using default boundary.")
+            logger.warning(
+                "Invalid polygon_coordinates. Using default boundary.")
             # Return a default small polygon around (0,0)
-            return Polygon([(0.001, 0.001), (0.001, -0.001), 
+            return Polygon([(0.001, 0.001), (0.001, -0.001),
                            (-0.001, -0.001), (-0.001, 0.001)])
 
         # Process each coordinate, handling both 'lng'/'lat' and 'lon'/'lat' formats
         for coord in polygon_coordinates:
             if not isinstance(coord, dict):
-                logger.warning(f"Invalid coordinate format: {coord}. Skipping.")
+                logger.warning(
+                    f"Invalid coordinate format: {coord}. Skipping.")
                 continue
 
             # Try to get longitude (either 'lng' or 'lon')
@@ -63,8 +65,9 @@ class ObstacleMapper:
 
         # If no valid points were found, use default
         if not points:
-            logger.warning("No valid points found in polygon_coordinates. Using default boundary.")
-            return Polygon([(0.001, 0.001), (0.001, -0.001), 
+            logger.warning(
+                "No valid points found in polygon_coordinates. Using default boundary.")
+            return Polygon([(0.001, 0.001), (0.001, -0.001),
                            (-0.001, -0.001), (-0.001, 0.001)])
 
         return Polygon(points)

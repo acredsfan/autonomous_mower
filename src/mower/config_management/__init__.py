@@ -50,6 +50,8 @@ from mower.config_management.constants import (
 )
 
 # Initialize the configuration manager with default values
+
+
 def init_config():
     """
     Initialize the configuration manager with default values.
@@ -66,6 +68,7 @@ def init_config():
         config_file=DEFAULT_CONFIG_FILE,
         env_file=DEFAULT_ENV_FILE
     )
+
 
 # Initialize the configuration manager
 init_config()

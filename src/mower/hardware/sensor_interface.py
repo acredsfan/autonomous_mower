@@ -12,6 +12,7 @@ try:
 except (ImportError, NotImplementedError):
     # Stub board and busio for non-Raspberry Pi platforms
     board = types.SimpleNamespace(SCL=None, SDA=None)
+
     class _DummyI2C:
         def __init__(self, scl, sda):
             pass
@@ -19,15 +20,15 @@ except (ImportError, NotImplementedError):
 
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import (
     INA3221Sensor
-    )
+)
 from mower.hardware.tof import (
     VL53L0XSensors
-    )
+)
 
 logger = LoggerConfig.get_logger(__name__)
 
@@ -137,7 +138,7 @@ class EnhancedSensorInterface:
                 'temperature': data.get('temperature_f'),
                 'humidity': data.get('humidity'),
                 'pressure': data.get('pressure')
-                }
+            }
         except Exception as e:
             self._handle_sensor_error('bme280', e)
             return {}
@@ -154,7 +155,7 @@ class EnhancedSensorInterface:
             speed = BNO085Sensor.calculate_speed(self._sensors['bno085'])
             compass = BNO085Sensor.read_bno085_magnetometer(
                 self._sensors['bno085']
-                )
+            )
             # Get safety status
             safety_status = self._sensors['bno085'].get_safety_status()
 
@@ -165,7 +166,7 @@ class EnhancedSensorInterface:
                 'speed': speed,
                 'compass': compass,
                 'safety_status': safety_status
-                }
+            }
         except Exception as e:
             self._handle_sensor_error('bno085', e)
             return {}
@@ -178,17 +179,17 @@ class EnhancedSensorInterface:
         try:
             solar_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 1
-                )
+            )
             battery_data = INA3221Sensor.read_ina3221(
                 self._sensors['ina3221'], 3
-                )
+            )
             return {
                 'solar_voltage': solar_data.get('bus_voltage'),
                 'solar_current': solar_data.get('current'),
                 'battery_voltage': battery_data.get('bus_voltage'),
                 'battery_current': battery_data.get('current'),
                 'battery_level': battery_data.get('charge_level')
-                }
+            }
         except Exception as e:
             self._handle_sensor_error('ina3221', e)
             return {}
@@ -203,7 +204,7 @@ class EnhancedSensorInterface:
             return {
                 'left_distance': VL53L0XSensors.read_vl53l0x(left),
                 'right_distance': VL53L0XSensors.read_vl53l0x(right)
-                }
+            }
         except Exception as e:
             self._handle_sensor_error('vl53l0x', e)
             return {}
@@ -213,13 +214,13 @@ class EnhancedSensorInterface:
         self._monitoring_thread = threading.Thread(
             target=self._monitor_sensors,
             daemon=True
-            )
+        )
         self._monitoring_thread.start()
 
         self._update_thread = threading.Thread(
             target=self._update_sensor_data,
             daemon=True
-            )
+        )
         self._update_thread.start()
 
     def _monitor_sensors(self):
@@ -331,7 +332,7 @@ class EnhancedSensorInterface:
             return all(
                 self._sensor_status[sensor].working
                 for sensor in critical_sensors
-                )
+            )
 
     def _init_sensor_with_retry(self, sensor_name, initializer):
         """Initialize a sensor with retry logic."""
@@ -340,7 +341,8 @@ class EnhancedSensorInterface:
 
         while retry_count < max_retries:
             try:
-                logger.info(f"Initializing {sensor_name} (attempt {retry_count + 1}/{max_retries})")
+                logger.info(
+                    f"Initializing {sensor_name} (attempt {retry_count + 1}/{max_retries})")
                 sensor = initializer()
                 if sensor:
                     with self._locks['status']:
@@ -356,10 +358,12 @@ class EnhancedSensorInterface:
                     self._sensor_status[sensor_name].working = False
                     self._sensor_status[sensor_name].error_count += 1
                     self._sensor_status[sensor_name].last_error = str(e)
-                logger.error(f"Failed to initialize {sensor_name} (attempt {retry_count}/{max_retries}): {e}")
+                logger.error(
+                    f"Failed to initialize {sensor_name} (attempt {retry_count}/{max_retries}): {e}")
                 time.sleep(1)  # Wait before retrying
 
-        logger.error(f"Failed to initialize {sensor_name} after {max_retries} attempts")
+        logger.error(
+            f"Failed to initialize {sensor_name} after {max_retries} attempts")
         return False
 
     def start(self):
@@ -386,13 +390,15 @@ class EnhancedSensorInterface:
                 if self._monitoring_thread.is_alive():
                     self._monitoring_thread.join(timeout=5.0)
                     if self._monitoring_thread.is_alive():
-                        logger.warning("Monitoring thread did not terminate within timeout")
+                        logger.warning(
+                            "Monitoring thread did not terminate within timeout")
 
             if hasattr(self, '_update_thread') and self._update_thread is not None:
                 if self._update_thread.is_alive():
                     self._update_thread.join(timeout=5.0)
                     if self._update_thread.is_alive():
-                        logger.warning("Update thread did not terminate within timeout")
+                        logger.warning(
+                            "Update thread did not terminate within timeout")
 
             # Clean up sensor resources
             self._cleanup_sensors()
@@ -408,9 +414,9 @@ def _check_proximity_violation(sensor_data: Dict) -> bool:
     return any(
         sensor_data.get(
             f'{direction}_distance', float('inf')
-            ) < min_safe_distance
+        ) < min_safe_distance
         for direction in ['left', 'right', 'front']
-        )
+    )
 
 
 def _check_tilt_violation(sensor_data: Dict) -> bool:
@@ -432,7 +438,7 @@ class SafetyMonitor:
         self.monitoring_thread = threading.Thread(
             target=self._monitor_safety,
             daemon=True
-            )
+        )
         self.monitoring_thread.start()
 
     def _monitor_safety(self):
@@ -474,7 +480,7 @@ class SafetyMonitor:
             'violations': self.safety_violations.copy(),
             'is_safe': len(self.safety_violations) == 0,
             'sensors_ok': self.sensor_interface.is_safe_to_operate()
-            }
+        }
 
     def clear_violations(self):
         """Clear safety violations after they've been addressed."""
@@ -488,6 +494,7 @@ class SafetyMonitor:
 
 # Singleton accessor for testing
 _sensor_interface_instance: Optional[EnhancedSensorInterface] = None
+
 
 def get_sensor_interface() -> EnhancedSensorInterface:
     """Get the singleton EnhancedSensorInterface."""

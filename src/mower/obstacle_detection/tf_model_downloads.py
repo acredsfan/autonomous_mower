@@ -14,7 +14,7 @@ def download_model():
     # Download the model using kagglehub
     model_path = kagglehub.model_download(
         "google/mobilenet-v2/tensorFlow2/100-224-classification"
-        )
+    )
     logging.info(f"Model downloaded to {model_path}")
     return model_path
 
@@ -43,7 +43,7 @@ def main(output_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Download and convert model to TFLite.'
-        )
+    )
     parser.add_argument('--output_path', type=str, required=True,
                         help='The output path for the converted TFLite model.')
     args = parser.parse_args()

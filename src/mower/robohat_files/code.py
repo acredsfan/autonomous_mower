@@ -90,13 +90,14 @@ encoder.pull = digitalio.Pull.DOWN
 
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 
-## cannot have DEBUG and USB_SERIAL
+# cannot have DEBUG and USB_SERIAL
 if USB_SERIAL:
     DEBUG = False
 
-## functions
+# functions
 
-def servo_duty_cycle(pulse_ms, frequency = 60):
+
+def servo_duty_cycle(pulse_ms, frequency=60):
     """
     Formula for working out the servo duty_cycle at 16 bit input
     """
@@ -113,7 +114,7 @@ def state_changed(control):
     for i in range(0, len(control.channel)):
         val = control.channel[i]
         # prevent ranges outside of control space
-        if(val < 1000 or val > 2000):
+        if (val < 1000 or val > 2000):
             continue
         # set new value
         control.value = (control.value + val) / 2
@@ -155,6 +156,7 @@ throttle = Control("Throttle", throttle_pwm, throttle_channel, 1500)
 
 last_update = time.monotonic()
 
+
 def main():
     global last_update
     last_toggle_time = time.monotonic()
@@ -165,10 +167,9 @@ def main():
     steering_val = steering.value
     throttle_val = throttle.value
     led_state = False
-    color=(0, 0, 255)
+    color = (0, 0, 255)
     position = 0
     last_state = encoder.value
-
 
     while True:
         current_time = time.monotonic()
@@ -189,23 +190,24 @@ def main():
             led_state = not led_state
             last_toggle_time = current_time
         # only update every smoothing interval (to avoid jumping)
-        if(last_update + SMOOTHING_INTERVAL_IN_S > current_time):
+        if (last_update + SMOOTHING_INTERVAL_IN_S > current_time):
             continue
         last_update = time.monotonic()
 
         # check for new RC values (channel will contain data)
-        if(len(throttle.channel) != 0):
+        if (len(throttle.channel) != 0):
             state_changed(throttle)
 
-        if(len(steering.channel) != 0):
+        if (len(steering.channel) != 0):
             state_changed(steering)
 
-        if(USB_SERIAL):
+        if (USB_SERIAL):
             # simulator USB
             print("%i, %i" % (int(steering.value), int(throttle.value)))
         else:
             # write the RC values to the RPi Serial
-            uart.write(b"%i, %i\r\n" % (int(steering.value), int(throttle.value)))
+            uart.write(b"%i, %i\r\n" %
+                       (int(steering.value), int(throttle.value)))
             print(int(steering.value), int(throttle.value))
 
         while True:
@@ -213,12 +215,12 @@ def main():
             byte = uart.read(1)
 
             # if no data, break and continue with RC control
-            if(byte is None):
+            if (byte is None):
                 break
             last_input = time.monotonic()
 
             # if data is received, check if it is the end of a stream
-            if(byte == b'\r'):
+            if (byte == b'\r'):
                 data = bytearray()
                 break
 
@@ -228,7 +230,7 @@ def main():
             datastr = ''.join([chr(c) for c in data]).strip()
 
         # if we make it here, there is serial data from the previous step
-        if(len(datastr) >= 10):
+        if (len(datastr) >= 10):
             steering_val = steering.value
             throttle_val = throttle.value
             try:
@@ -240,9 +242,10 @@ def main():
             data = bytearray()
             datastr = ''
             last_input = time.monotonic()
-            print("Set: steering=%i, throttle=%i" % (steering_val, throttle_val))
+            print("Set: steering=%i, throttle=%i" %
+                  (steering_val, throttle_val))
 
-        if(last_input + 10 < time.monotonic()):
+        if (last_input + 10 < time.monotonic()):
             # set the servo for RC control
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)

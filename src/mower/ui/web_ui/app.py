@@ -58,7 +58,7 @@ def create_app(mower):
 
     # Initialize Socket.IO with more restrictive CORS settings
     socketio = SocketIO(
-        app, 
+        app,
         cors_allowed_origins=allowed_origins,
         cookie=True
     )
@@ -215,7 +215,8 @@ def create_app(mower):
             if 'spacing' in mowing:
                 try:
                     spacing = float(mowing['spacing'])
-                    is_valid, error_msg = validate_numeric_range(spacing, 0.1, 2.0, "Spacing")
+                    is_valid, error_msg = validate_numeric_range(
+                        spacing, 0.1, 2.0, "Spacing")
                     if not is_valid:
                         return jsonify({'success': False, 'error': error_msg}), 400
 
@@ -226,7 +227,8 @@ def create_app(mower):
             if 'angle' in mowing:
                 try:
                     angle = float(mowing['angle'])
-                    is_valid, error_msg = validate_numeric_range(angle, 0.0, 359.0, "Angle")
+                    is_valid, error_msg = validate_numeric_range(
+                        angle, 0.0, 359.0, "Angle")
                     if not is_valid:
                         return jsonify({'success': False, 'error': error_msg}), 400
 
@@ -237,7 +239,8 @@ def create_app(mower):
             if 'overlap' in mowing:
                 try:
                     overlap = float(mowing['overlap'])
-                    is_valid, error_msg = validate_numeric_range(overlap, 0.0, 0.5, "Overlap")
+                    is_valid, error_msg = validate_numeric_range(
+                        overlap, 0.0, 0.5, "Overlap")
                     if not is_valid:
                         return jsonify({'success': False, 'error': error_msg}), 400
 
@@ -276,7 +279,8 @@ def create_app(mower):
                 # Save boundary if provided
                 if area.get('boundary'):
                     mower.save_boundary(area['boundary'])
-                    logger.info(f"Saved boundary with {len(area['boundary'])} points")
+                    logger.info(
+                        f"Saved boundary with {len(area['boundary'])} points")
 
                 # Save home location if provided
                 if area.get('home'):
@@ -319,15 +323,18 @@ def create_app(mower):
                 if 'pattern' in mowing:
                     try:
                         path_planner.pattern_config.pattern_type = PatternType[mowing['pattern']]
-                        logger.info(f"Set mowing pattern to {mowing['pattern']}")
+                        logger.info(
+                            f"Set mowing pattern to {mowing['pattern']}")
                     except (KeyError, ValueError) as e:
-                        logger.warning(f"Invalid pattern type: {mowing['pattern']}, error: {e}")
+                        logger.warning(
+                            f"Invalid pattern type: {mowing['pattern']}, error: {e}")
 
                 # Update other mowing settings
                 if 'cutHeight' in mowing:
                     # Store in configuration
                     config_manager = get_config_manager()
-                    config_manager.set_config_value('mowing', 'blade_height', mowing['cutHeight'])
+                    config_manager.set_config_value(
+                        'mowing', 'blade_height', mowing['cutHeight'])
                     logger.info(f"Set blade height to {mowing['cutHeight']}mm")
 
                 if 'overlap' in mowing:
@@ -341,31 +348,32 @@ def create_app(mower):
 
                 # Update mower name
                 if 'name' in system and system['name']:
-                    config_manager.set_config_value('mower', 'name', system['name'])
+                    config_manager.set_config_value(
+                        'mower', 'name', system['name'])
                     logger.info(f"Set mower name to {system['name']}")
 
                 # Update safety settings
                 if 'obstacleDetection' in system:
-                    config_manager.set_config_value('safety', 'obstacle_detection_enabled', 
-                                                   system['obstacleDetection'])
+                    config_manager.set_config_value('safety', 'obstacle_detection_enabled',
+                                                    system['obstacleDetection'])
 
                 if 'rainSensor' in system:
-                    config_manager.set_config_value('safety', 'rain_sensor_enabled', 
-                                                   system['rainSensor'])
+                    config_manager.set_config_value('safety', 'rain_sensor_enabled',
+                                                    system['rainSensor'])
 
                 if 'childLock' in system:
-                    config_manager.set_config_value('safety', 'child_lock_enabled', 
-                                                   system['childLock'])
+                    config_manager.set_config_value('safety', 'child_lock_enabled',
+                                                    system['childLock'])
 
                 # Update notification settings
                 if 'notifications' in system:
                     notifications = system['notifications']
-                    config_manager.set_config_value('notifications', 'notify_start', 
-                                                   notifications.get('notifyStart', True))
-                    config_manager.set_config_value('notifications', 'notify_complete', 
-                                                   notifications.get('notifyComplete', True))
-                    config_manager.set_config_value('notifications', 'notify_errors', 
-                                                   notifications.get('notifyErrors', True))
+                    config_manager.set_config_value('notifications', 'notify_start',
+                                                    notifications.get('notifyStart', True))
+                    config_manager.set_config_value('notifications', 'notify_complete',
+                                                    notifications.get('notifyComplete', True))
+                    config_manager.set_config_value('notifications', 'notify_errors',
+                                                    notifications.get('notifyErrors', True))
 
             # Log the successful wizard completion
             logger.info("Setup wizard completed successfully")
@@ -418,7 +426,8 @@ def create_app(mower):
             path_planner.pattern_config.boundary_points = coordinates
 
             # Log the successful area update
-            logger.info(f"Mowing area updated with {len(coordinates)} boundary points")
+            logger.info(
+                f"Mowing area updated with {len(coordinates)} boundary points")
             return jsonify({'success': True})
         except Exception as e:
             logger.error(f"Failed to save mowing area: {e}")
@@ -587,9 +596,10 @@ def create_app(mower):
             for i, zone in enumerate(zones):
                 is_valid, error_msg = validate_coordinates(zone)
                 if not is_valid:
-                    logger.warning(f"Invalid coordinates in zone {i+1}: {error_msg}")
+                    logger.warning(
+                        f"Invalid coordinates in zone {i+1}: {error_msg}")
                     return jsonify({
-                        'success': False, 
+                        'success': False,
                         'error': f"Invalid coordinates in zone {i+1}: {error_msg}"
                     }), 400
 
@@ -809,7 +819,8 @@ def create_app(mower):
             # Save updated rules
             config_manager.set_config_value('automation', 'rules', rules)
 
-            logger.info(f"Deleted automation rule: {deleted_rule.get('name', 'Unknown')}")
+            logger.info(
+                f"Deleted automation rule: {deleted_rule.get('name', 'Unknown')}")
             return jsonify({'success': True})
         except Exception as e:
             logger.error(f"Failed to delete automation rule: {e}")
@@ -906,7 +917,8 @@ def create_app(mower):
                 time_point = datetime.now() - timedelta(hours=24-i)
                 timestamps.append(time_point.strftime('%H:%M'))
                 cpu_data.append(max(10, min(90, cpu_usage + (i % 10) - 5)))
-                memory_data.append(max(20, min(80, memory.percent + (i % 15) - 7)))
+                memory_data.append(
+                    max(20, min(80, memory.percent + (i % 15) - 7)))
                 if cpu_temp:
                     temp_data.append(max(30, min(70, cpu_temp + (i % 8) - 4)))
                 else:
@@ -964,7 +976,8 @@ def create_app(mower):
 
             # Save thresholds to configuration
             config_manager = get_config_manager()
-            config_manager.set_config_value('monitoring', 'alert_thresholds', thresholds)
+            config_manager.set_config_value(
+                'monitoring', 'alert_thresholds', thresholds)
 
             logger.info(f"Alert thresholds updated: {thresholds}")
             return jsonify({'success': True})

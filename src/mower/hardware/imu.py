@@ -212,7 +212,7 @@ class BNO085Sensor:
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
                     baudrate=self.baudrate or IMU_BAUDRATE
-                    )
+                )
                 success = self.serial_port.start()
                 if not success:
                     logger.error("Failed to start IMU serial port")
@@ -224,7 +224,7 @@ class BNO085Sensor:
                     f"IMU serial port "
                     f"{self.serial_port_name or IMU_SERIAL_PORT} "
                     f"opened at {self.baudrate or IMU_BAUDRATE} baud"
-                    )
+                )
                 logger.info(port_info)
 
                 # Enable debugging for the IMU sensor
@@ -249,14 +249,14 @@ class BNO085Sensor:
                         init_msg = (
                             f"BNO085 sensor successfully initialized "
                             f"on attempt {attempt}"
-                            )
+                        )
                         logger.info(init_msg)
                         return True
                     except Exception as e:
                         error_msg = (
                             f"Failed to initialize BNO085 sensor on "
                             f"attempt {attempt}: {e}"
-                            )
+                        )
                         logger.warning(error_msg)
                         if attempt < max_retries:
                             time.sleep(1)  # Wait before retrying
@@ -264,7 +264,7 @@ class BNO085Sensor:
                 final_error = (
                     f"Failed to initialize BNO085 sensor after "
                     f"{max_retries} attempts"
-                    )
+                )
                 logger.error(final_error)
                 # If we couldn't initialize the sensor, close the serial
                 # port
@@ -288,7 +288,7 @@ class BNO085Sensor:
         raise RuntimeError(
             f"Repeated IMU connection failures exceeded threshold "
             f"({max_connect_attempts} attempts)"
-            )
+        )
 
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""
@@ -493,7 +493,7 @@ class BNO085Sensor:
                     baudrate=self.baudrate,
                     bytesize=serial.EIGHTBITS,
                     timeout=1
-                    )
+                )
 
                 # Try to establish communication
                 test_port.write(b'\x7E')  # Send any byte to wake up device
@@ -587,7 +587,7 @@ class BNO085Sensor:
                 SENSOR_REPORTID_ROTATION_VECTOR, 0x00,  # Report ID
                 0x05, 0x00,  # Set update rate to 20ms (50Hz)
                 0x00, 0x00   # Specific settings
-                ])
+            ])
             logger.debug("Rotation vector report enabled")
         except Exception as e:
             logger.error(f"Error enabling rotation vector: {e}")
@@ -958,7 +958,7 @@ class BNO085Sensor:
                 'impact_detected': False,
                 'acceleration_ok': True,
                 'messages': []
-                }
+            }
 
             # Check tilt angle
             if abs(
@@ -973,7 +973,7 @@ class BNO085Sensor:
             # Check for impacts/collisions
             accel_magnitude = math.sqrt(
                 sum(x * x for x in self.acceleration)
-                )
+            )
             # Convert G to m/s²
             if accel_magnitude > self.impact_threshold * 9.81:
                 current_time = time.time()

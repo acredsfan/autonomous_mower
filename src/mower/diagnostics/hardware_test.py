@@ -500,7 +500,7 @@ class HardwareTestSuite:
                 ("stop", 0, 0),
                 ("turn right", 0.5, -0.5),
                 ("stop", 0, 0)
-                ]
+            ]
 
             for move, left, right in moves:
                 print(f"Motor test: {move}")
@@ -549,7 +549,7 @@ class HardwareTestSuite:
                 ("medium speed (50%)", 0.5),
                 ("high speed (75%)", 0.75),
                 ("stop", 0)
-                ]
+            ]
 
             for description, speed in speeds:
                 print(f"Blade test: {description}")

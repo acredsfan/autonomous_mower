@@ -97,7 +97,8 @@ class AutoUpdater:
             os.chdir(self.repo_path)
 
             # Fetch the latest changes
-            logger.info(f"Fetching latest changes from {self.repo_url}, branch {self.branch}")
+            logger.info(
+                f"Fetching latest changes from {self.repo_url}, branch {self.branch}")
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -125,7 +126,8 @@ class AutoUpdater:
             if current_commit != remote_commit:
                 # Get the number of commits behind
                 commits_behind = subprocess.run(
-                    ["git", "rev-list", "--count", f"HEAD..origin/{self.branch}"],
+                    ["git", "rev-list", "--count",
+                        f"HEAD..origin/{self.branch}"],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -133,7 +135,8 @@ class AutoUpdater:
 
                 # Get the commit messages
                 commit_messages = subprocess.run(
-                    ["git", "log", "--pretty=format:%h %s", f"HEAD..origin/{self.branch}"],
+                    ["git", "log", "--pretty=format:%h %s",
+                        f"HEAD..origin/{self.branch}"],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -193,7 +196,8 @@ class AutoUpdater:
             ]
             for config_file in config_files:
                 if os.path.exists(config_file):
-                    dst = os.path.join(CONFIG_BACKUP_DIR, os.path.basename(config_file) + f".{timestamp}")
+                    dst = os.path.join(CONFIG_BACKUP_DIR, os.path.basename(
+                        config_file) + f".{timestamp}")
                     shutil.copy2(config_file, dst)
                     logger.info(f"Backed up {config_file} to {dst}")
 
@@ -324,7 +328,8 @@ class AutoUpdater:
                     return False
                 return True
             else:
-                logger.info("Service was not running before update, not starting")
+                logger.info(
+                    "Service was not running before update, not starting")
                 return True
         except subprocess.CalledProcessError as e:
             logger.error(f"Error starting services: {e.stderr}")
@@ -355,7 +360,8 @@ class AutoUpdater:
                 with open(UPDATE_LOCK_FILE, "r") as f:
                     pid = int(f.read().strip())
                 try:
-                    os.kill(pid, 0)  # This will raise an exception if the process is not running
+                    # This will raise an exception if the process is not running
+                    os.kill(pid, 0)
                     return False, f"Update already in progress (PID: {pid})"
                 except OSError:
                     # Process is not running, remove the lock file
@@ -408,7 +414,8 @@ class AutoUpdater:
                 # Install any new dependencies
                 logger.info("Installing dependencies")
                 subprocess.run(
-                    ["sudo", "python3", "-m", "pip", "install", "--break-system-packages", "--no-cache-dir", "-e", "."],
+                    ["sudo", "python3", "-m", "pip", "install",
+                        "--break-system-packages", "--no-cache-dir", "-e", "."],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -416,7 +423,8 @@ class AutoUpdater:
 
                 # Start services
                 if not self.start_services():
-                    logger.error("Failed to start services after update, rolling back")
+                    logger.error(
+                        "Failed to start services after update, rolling back")
                     self.restore_from_backup()
                     self.start_services()  # Try to start services from backup
                     self.update_in_progress = False

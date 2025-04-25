@@ -34,7 +34,7 @@ from mower.hardware.tof import VL53L0XSensors
 # Navigation imports
 from mower.navigation.gps import (
     GpsNmeaPositions, GpsLatestPosition, GpsPosition
-    )
+)
 from mower.navigation.localization import Localization
 from mower.navigation.path_planning import PathPlanner  # type:ignore
 from mower.navigation.navigation import NavigationController
@@ -46,7 +46,7 @@ from mower.navigation.path_planner import (
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from mower.obstacle_detection.local_obstacle_detection import (  # type:ignore
     detect_obstacle, detect_drop, stream_frame_with_overlays
-    )
+)
 
 # UI and utilities imports
 from mower.ui.web_ui.web_interface import WebInterface
@@ -177,22 +177,35 @@ class ResourceManager:
 
             # Initialize pattern planner with learning capabilities
             pattern_config = PatternConfig(
-                pattern_type=PatternType[get_config('path_planning.pattern_type', 'PARALLEL')],
-                spacing=get_config('path_planning.spacing', 0.3),  # 30cm spacing between passes
-                angle=get_config('path_planning.angle', 0.0),  # Start with parallel to x-axis
-                overlap=get_config('path_planning.overlap', 0.1),  # 10% overlap between passes
-                start_point=get_config('path_planning.start_point', (0.0, 0.0)),  # Will be updated with actual position
-                boundary_points=get_config('path_planning.boundary_points', [])  # Will be loaded from config
+                pattern_type=PatternType[get_config(
+                    'path_planning.pattern_type', 'PARALLEL')],
+                # 30cm spacing between passes
+                spacing=get_config('path_planning.spacing', 0.3),
+                # Start with parallel to x-axis
+                angle=get_config('path_planning.angle', 0.0),
+                # 10% overlap between passes
+                overlap=get_config('path_planning.overlap', 0.1),
+                # Will be updated with actual position
+                start_point=get_config(
+                    'path_planning.start_point', (0.0, 0.0)),
+                # Will be loaded from config
+                boundary_points=get_config('path_planning.boundary_points', [])
             )
 
             learning_config = LearningConfig(
-                learning_rate=get_config('path_planning.learning.learning_rate', 0.1),
-                discount_factor=get_config('path_planning.learning.discount_factor', 0.9),
-                exploration_rate=get_config('path_planning.learning.exploration_rate', 0.2),
-                memory_size=get_config('path_planning.learning.memory_size', 1000),
+                learning_rate=get_config(
+                    'path_planning.learning.learning_rate', 0.1),
+                discount_factor=get_config(
+                    'path_planning.learning.discount_factor', 0.9),
+                exploration_rate=get_config(
+                    'path_planning.learning.exploration_rate', 0.2),
+                memory_size=get_config(
+                    'path_planning.learning.memory_size', 1000),
                 batch_size=get_config('path_planning.learning.batch_size', 32),
-                update_frequency=get_config('path_planning.learning.update_frequency', 100),
-                model_path=get_config('path_planning.learning.model_path', str(PATTERN_PLANNER_PATH))
+                update_frequency=get_config(
+                    'path_planning.learning.update_frequency', 100),
+                model_path=get_config(
+                    'path_planning.learning.model_path', str(PATTERN_PLANNER_PATH))
             )
 
             self._resources["path_planner"] = NewPathPlanner(
@@ -234,7 +247,8 @@ class ResourceManager:
 
     def cleanup(self):
         """Clean up all resources."""
-        result = cleanup_resources(self._resources, self._initialized, self._lock)
+        result = cleanup_resources(
+            self._resources, self._initialized, self._lock)
         if result:
             self._initialized = False
         return result
@@ -336,7 +350,8 @@ class Mower:
 
         # Load home location from configuration
         try:
-            home_config = self.resource_manager._load_config("home_location.json")
+            home_config = self.resource_manager._load_config(
+                "home_location.json")
             if home_config and 'location' in home_config:
                 self.home_location = home_config['location']
                 self.logger.info(f"Loaded home location: {self.home_location}")
@@ -446,12 +461,14 @@ class Mower:
             # Check obstacle detection
             obstacle_detection = self.resource_manager.get_obstacle_detection()
             if obstacle_detection:
-                safety_status["obstacles_detected"] = obstacle_detection.check_obstacles()
+                safety_status["obstacles_detected"] = obstacle_detection.check_obstacles(
+                )
 
             # Check battery level
             battery_level = self.get_battery_level()
             if battery_level is not None:
-                safety_status["battery_low"] = battery_level < 11.0  # Threshold for low battery
+                # Threshold for low battery
+                safety_status["battery_low"] = battery_level < 11.0
 
             return safety_status
         except Exception as e:
@@ -512,7 +529,8 @@ class Mower:
         self.home_location = location
 
         # Save to configuration file
-        result = self.resource_manager._save_config("home_location.json", {"location": location})
+        result = self.resource_manager._save_config(
+            "home_location.json", {"location": location})
         if result:
             self.logger.info(f"Saved home location: {location}")
         return result
@@ -535,7 +553,8 @@ class Mower:
             path_planner.pattern_config.boundary_points = boundary
 
         # Save to configuration file
-        result = self.resource_manager._save_config("boundary.json", {"boundary": boundary})
+        result = self.resource_manager._save_config(
+            "boundary.json", {"boundary": boundary})
         if result:
             self.logger.info("Saved boundary configuration")
         return result
@@ -545,7 +564,8 @@ class Mower:
         self.no_go_zones = zones
 
         # Save to configuration file
-        result = self.resource_manager._save_config("no_go_zones.json", {"zones": zones})
+        result = self.resource_manager._save_config(
+            "no_go_zones.json", {"zones": zones})
         if result:
             self.logger.info("Saved no-go zones configuration")
         return result
@@ -559,7 +579,8 @@ class Mower:
         self.mowing_schedule = schedule
 
         # Save to configuration file
-        result = self.resource_manager._save_config("schedule.json", {"schedule": schedule})
+        result = self.resource_manager._save_config(
+            "schedule.json", {"schedule": schedule})
         if result:
             self.logger.info("Saved mowing schedule")
         return result

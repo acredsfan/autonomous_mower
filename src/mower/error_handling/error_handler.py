@@ -30,13 +30,13 @@ def handle_error(
 ) -> Callable[[F], F]:
     """
     Decorator to handle exceptions in a consistent way.
-    
+
     Args:
         error_code: Error code to use for the error
         reraise: Whether to reraise the exception after handling
         log_level: Logging level to use
         context: Additional context information
-        
+
     Returns:
         Callable: Decorator function
     """
@@ -56,19 +56,19 @@ def handle_error(
                         error_code=error_code,
                         context=context
                     )
-                
+
                 # Report the error
                 report_error(error, log_level=log_level)
-                
+
                 # Reraise if requested
                 if reraise:
                     raise error from e
-                
+
                 # Return None if not reraising
                 return None
-        
+
         return cast(F, wrapper)
-    
+
     return decorator
 
 
@@ -81,13 +81,13 @@ def error_context(
 ):
     """
     Context manager for consistent error handling.
-    
+
     Args:
         error_code: Error code to use for the error
         reraise: Whether to reraise the exception after handling
         log_level: Logging level to use
         context: Additional context information
-        
+
     Yields:
         None
     """
@@ -104,10 +104,10 @@ def error_context(
                 error_code=error_code,
                 context=context
             )
-        
+
         # Report the error
         report_error(error, log_level=log_level)
-        
+
         # Reraise if requested
         if reraise:
             raise error from e
@@ -123,17 +123,17 @@ def with_error_handling(
 ) -> Any:
     """
     Decorator to handle exceptions in a consistent way.
-    
+
     This is a more flexible version of handle_error that can be used with
     or without arguments.
-    
+
     Args:
         func: Function to decorate
         error_code: Error code to use for the error
         reraise: Whether to reraise the exception after handling
         log_level: Logging level to use
         context: Additional context information
-        
+
     Returns:
         Any: Decorated function or decorator function
     """
@@ -144,7 +144,7 @@ def with_error_handling(
             log_level=log_level,
             context=context
         )
-    
+
     return handle_error(
         error_code=error_code,
         reraise=reraise,
@@ -164,7 +164,7 @@ def safe_call(
 ) -> Optional[T]:
     """
     Call a function with error handling.
-    
+
     Args:
         func: Function to call
         *args: Arguments to pass to the function
@@ -173,7 +173,7 @@ def safe_call(
         log_level: Logging level to use
         context: Additional context information
         **kwargs: Keyword arguments to pass to the function
-        
+
     Returns:
         Optional[T]: Result of the function call or default value
     """
@@ -190,10 +190,10 @@ def safe_call(
                 error_code=error_code,
                 context=context
             )
-        
+
         # Report the error
         report_error(error, log_level=log_level)
-        
+
         # Return default value
         return default_value
 
@@ -201,7 +201,7 @@ def safe_call(
 def install_global_exception_handler():
     """
     Install a global exception handler to catch unhandled exceptions.
-    
+
     This function installs a global exception handler that will report
     unhandled exceptions to the error reporter before the program exits.
     """
@@ -214,7 +214,7 @@ def install_global_exception_handler():
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
-        
+
         # Convert to MowerError
         if isinstance(exc_value, Exception):
             error = convert_exception(
@@ -222,13 +222,13 @@ def install_global_exception_handler():
                 error_code=ErrorCode.SOFTWARE_GENERIC,
                 context={"unhandled": True}
             )
-            
+
             # Report the error
             report_error(error, log_level=logging.CRITICAL)
-        
+
         # Call the original exception handler
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
-    
+
     # Install the global exception handler
     sys.excepthook = global_exception_handler
 

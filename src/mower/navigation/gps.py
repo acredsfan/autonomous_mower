@@ -10,7 +10,7 @@ import utm
 from mower.utilities.text_writer import CsvLogger
 from mower.utilities.logger_config import (
     LoggerConfigInfo as LoggerConfig
-    )
+)
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
@@ -188,7 +188,7 @@ class GpsPlayer(metaclass=SingletonMeta):
                         if within_time:
                             nmea_sentences.append(
                                 (next_nmea_time, next_nmea[1])
-                                )
+                            )
                             self.index += 1
         return nmea_sentences
 
@@ -234,7 +234,7 @@ def parse_gps_position(line, debug=False):
             logger.info(
                 f"NMEA checksum does not match: {nmea_checksum} != "
                 f"{calculated_checksum}"
-                )
+            )
             return None
 
         if debug:
@@ -248,7 +248,7 @@ def parse_gps_position(line, debug=False):
             logger.info(
                 "GPS receiver warning; position not valid. "
                 "Ignoring invalid position."
-                )
+            )
             return None
 
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
@@ -276,7 +276,7 @@ def parse_gps_position(line, debug=False):
             float(utm_position[1]),
             utm_position[2],
             utm_position[3]
-            )
+        )
 
     else:
         pass

@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional
 
 class EventType(Enum):
     """Types of events in the system."""
-    
+
     # Hardware events
     HARDWARE_SENSOR_DATA = auto()
     HARDWARE_MOTOR_STATUS = auto()
@@ -23,39 +23,39 @@ class EventType(Enum):
     HARDWARE_GPS_DATA = auto()
     HARDWARE_IMU_DATA = auto()
     HARDWARE_CAMERA_DATA = auto()
-    
+
     # Navigation events
     NAVIGATION_POSITION_UPDATED = auto()
     NAVIGATION_PATH_UPDATED = auto()
     NAVIGATION_WAYPOINT_REACHED = auto()
     NAVIGATION_DESTINATION_REACHED = auto()
-    
+
     # Obstacle detection events
     OBSTACLE_DETECTED = auto()
     OBSTACLE_CLEARED = auto()
     DROP_DETECTED = auto()
-    
+
     # State events
     STATE_CHANGED = auto()
     ERROR_OCCURRED = auto()
     WARNING_OCCURRED = auto()
-    
+
     # User interface events
     UI_COMMAND_RECEIVED = auto()
     UI_STATUS_UPDATED = auto()
-    
+
     # System events
     SYSTEM_STARTUP = auto()
     SYSTEM_SHUTDOWN = auto()
     SYSTEM_HEARTBEAT = auto()
-    
+
     # Custom event type for extensibility
     CUSTOM = auto()
 
 
 class EventPriority(Enum):
     """Priority levels for events."""
-    
+
     LOW = 0
     NORMAL = 1
     HIGH = 2
@@ -65,10 +65,10 @@ class EventPriority(Enum):
 class Event:
     """
     Base class for all events in the system.
-    
+
     Events are used for inter-component communication in the autonomous mower.
     They contain a type, data, and metadata such as timestamp and source.
-    
+
     Attributes:
         event_type: The type of the event
         data: The data associated with the event
@@ -77,7 +77,7 @@ class Event:
         source: The component that created the event
         event_id: Unique identifier for the event
     """
-    
+
     def __init__(
         self,
         event_type: EventType,
@@ -87,7 +87,7 @@ class Event:
     ):
         """
         Initialize an event.
-        
+
         Args:
             event_type: The type of the event
             data: The data associated with the event
@@ -100,7 +100,7 @@ class Event:
         self.timestamp = time.time()
         self.source = source
         self.event_id = str(uuid.uuid4())
-    
+
     def __str__(self) -> str:
         """Get a string representation of the event."""
         return (
@@ -109,11 +109,11 @@ class Event:
             f"source={self.source}, "
             f"data={self.data})"
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """
         Convert the event to a dictionary.
-        
+
         Returns:
             Dict[str, Any]: Dictionary representation of the event
         """
@@ -125,15 +125,15 @@ class Event:
             "timestamp": self.timestamp,
             "source": self.source,
         }
-    
+
     @classmethod
     def from_dict(cls, event_dict: Dict[str, Any]) -> 'Event':
         """
         Create an event from a dictionary.
-        
+
         Args:
             event_dict: Dictionary representation of the event
-            
+
         Returns:
             Event: The created event
         """
@@ -157,13 +157,13 @@ def create_event(
 ) -> Event:
     """
     Create an event.
-    
+
     Args:
         event_type: The type of the event
         data: The data associated with the event
         priority: The priority of the event
         source: The component that created the event
-        
+
     Returns:
         Event: The created event
     """

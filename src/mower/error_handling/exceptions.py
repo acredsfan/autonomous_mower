@@ -13,11 +13,11 @@ from typing import Optional, Any, Dict, Type
 class MowerError(Exception):
     """
     Base class for all mower-specific exceptions.
-    
+
     This class provides additional context for errors, including an error code,
     a human-readable message, and the original exception if applicable.
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -27,7 +27,7 @@ class MowerError(Exception):
     ):
         """
         Initialize a MowerError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Error code from ErrorCode enum
@@ -39,10 +39,10 @@ class MowerError(Exception):
         self.original_exception = original_exception
         self.context = context or {}
         self.traceback = traceback.format_exc() if original_exception else None
-        
+
         # Call the base class constructor with the message
         super().__init__(message)
-    
+
     @classmethod
     def from_exception(
         cls,
@@ -52,12 +52,12 @@ class MowerError(Exception):
     ) -> 'MowerError':
         """
         Create a MowerError from another exception.
-        
+
         Args:
             exception: Original exception
             error_code: Error code from ErrorCode enum
             context: Additional context information
-            
+
         Returns:
             MowerError: A new MowerError instance
         """
@@ -67,23 +67,24 @@ class MowerError(Exception):
             original_exception=exception,
             context=context
         )
-    
+
     def __str__(self) -> str:
         """
         Get a string representation of the error.
-        
+
         Returns:
             str: String representation
         """
         parts = [self.message]
-        
+
         if self.error_code:
             parts.append(f"Error code: {self.error_code}")
-        
+
         if self.context:
-            context_str = ", ".join(f"{k}={v}" for k, v in self.context.items())
+            context_str = ", ".join(
+                f"{k}={v}" for k, v in self.context.items())
             parts.append(f"Context: {context_str}")
-        
+
         return " | ".join(parts)
 
 
@@ -143,17 +144,17 @@ def convert_exception(
 ) -> MowerError:
     """
     Convert a standard Python exception to a MowerError.
-    
+
     Args:
         exception: Original exception
         error_code: Error code from ErrorCode enum
         context: Additional context information
-        
+
     Returns:
         MowerError: A new MowerError instance
     """
     exception_type = type(exception)
-    
+
     # Find the most specific matching exception type
     for exc_type, mower_error_class in EXCEPTION_MAP.items():
         if isinstance(exception, exc_type):
@@ -162,7 +163,7 @@ def convert_exception(
                 error_code=error_code,
                 context=context
             )
-    
+
     # Default to base MowerError if no specific match
     return MowerError.from_exception(
         exception,

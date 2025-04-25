@@ -58,7 +58,7 @@ def test_generate_path_benchmark(benchmark, path_planner):
     """Benchmark the generate_path method."""
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner.generate_path)
-    
+
     # Verify that a path was generated
     assert result is not None
     assert len(result) > 0
@@ -69,13 +69,13 @@ def test_pattern_generation_benchmark(benchmark, pattern_config, learning_config
     """Benchmark different pattern generation methods."""
     # Set the pattern type
     pattern_config.pattern_type = pattern_type
-    
+
     # Create a PathPlanner instance
     path_planner = PathPlanner(pattern_config, learning_config)
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner.generate_path)
-    
+
     # Skip empty paths (which might be valid for some configurations)
     if result:
         assert len(result) > 0
@@ -87,10 +87,11 @@ def test_find_boundary_intersections_benchmark(benchmark, path_planner):
     boundary = np.array(path_planner.pattern_config.boundary_points)
     start = np.array([0.0, 5.0])
     end = np.array([10.0, 5.0])
-    
+
     # Use pytest-benchmark to measure performance
-    result = benchmark(path_planner._find_boundary_intersections, start, end, boundary)
-    
+    result = benchmark(
+        path_planner._find_boundary_intersections, start, end, boundary)
+
     # Verify that intersections were found
     assert result is not None
 
@@ -102,10 +103,10 @@ def test_line_intersection_benchmark(benchmark, path_planner):
     p2 = np.array([10.0, 10.0])
     p3 = np.array([0.0, 10.0])
     p4 = np.array([10.0, 0.0])
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._line_intersection, p1, p2, p3, p4)
-    
+
     # Verify that an intersection was found
     assert result is not None
 
@@ -115,10 +116,10 @@ def test_point_in_polygon_benchmark(benchmark, path_planner):
     # Create test data
     polygon = np.array(path_planner.pattern_config.boundary_points)
     point = np.array([5.0, 5.0])
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._point_in_polygon, point, polygon)
-    
+
     # Verify that the result is a boolean
     assert isinstance(result, bool)
 
@@ -127,10 +128,10 @@ def test_calculate_reward_benchmark(benchmark, path_planner):
     """Benchmark the _calculate_reward method."""
     # Create a test path
     path = [(0, 0), (5, 5), (10, 10)]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._calculate_reward, path)
-    
+
     # Verify that a reward was calculated
     assert 0.0 <= result <= 1.0
 
@@ -139,10 +140,10 @@ def test_calculate_path_distance_benchmark(benchmark, path_planner):
     """Benchmark the _calculate_path_distance method."""
     # Create a test path
     path = [(0, 0), (5, 5), (10, 10)]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._calculate_path_distance, path)
-    
+
     # Verify that a distance was calculated
     assert result > 0.0
 
@@ -151,10 +152,10 @@ def test_calculate_coverage_benchmark(benchmark, path_planner):
     """Benchmark the _calculate_coverage method."""
     # Create a test path
     path = [(0, 0), (5, 5), (10, 10), (10, 0), (0, 10)]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._calculate_coverage, path)
-    
+
     # Verify that coverage was calculated
     assert 0.0 <= result <= 1.0
 
@@ -163,10 +164,10 @@ def test_calculate_smoothness_benchmark(benchmark, path_planner):
     """Benchmark the _calculate_smoothness method."""
     # Create a test path
     path = [(0, 0), (5, 5), (10, 10)]
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(path_planner._calculate_smoothness, path)
-    
+
     # Verify that smoothness was calculated
     assert 0.0 <= result <= 1.0
 
@@ -177,7 +178,7 @@ def test_update_q_table_benchmark(benchmark, path_planner):
     state = "test_state"
     action = PatternType.PARALLEL
     reward = 0.5
-    
+
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._update_q_table, state, action, reward)
 
@@ -188,7 +189,7 @@ def test_store_experience_benchmark(benchmark, path_planner):
     state = "test_state"
     action = PatternType.PARALLEL
     reward = 0.5
-    
+
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._store_experience, state, action, reward)
 
@@ -198,7 +199,7 @@ def test_update_model_benchmark(benchmark, path_planner):
     # Add some experiences to the memory
     for i in range(100):
         path_planner._store_experience(f"state_{i}", PatternType.PARALLEL, 0.5)
-    
+
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._update_model)
 
@@ -211,7 +212,7 @@ def test_save_model_benchmark(benchmark, path_planner):
         PatternType.SPIRAL: 0.3,
         PatternType.ZIGZAG: 0.2
     }
-    
+
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._save_model)
 
@@ -225,7 +226,7 @@ def test_load_model_benchmark(benchmark, path_planner):
         PatternType.ZIGZAG: 0.2
     }
     path_planner._save_model()
-    
+
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._load_model)
 
@@ -235,7 +236,7 @@ def test_complex_scenario_benchmark(benchmark):
     def complex_scenario():
         # Generate random boundary
         boundary = generate_random_boundary(num_points=10, radius=100.0)
-        
+
         # Create pattern config
         pattern_config = PatternConfig(
             pattern_type=PatternType.PARALLEL,
@@ -245,32 +246,33 @@ def test_complex_scenario_benchmark(benchmark):
             start_point=(0.0, 0.0),
             boundary_points=boundary
         )
-        
+
         # Create learning config
         learning_config = LearningConfig()
-        
+
         # Create path planner
         path_planner = PathPlanner(pattern_config, learning_config)
-        
+
         # Generate path
         path = path_planner.generate_path()
-        
+
         # Add obstacles
-        obstacles = generate_random_obstacles(num_obstacles=10, boundary=boundary)
+        obstacles = generate_random_obstacles(
+            num_obstacles=10, boundary=boundary)
         obstacle_positions = [pos for pos, _ in obstacles]
         path_planner.update_obstacle_map(obstacle_positions)
-        
+
         # Generate path again with obstacles
         path_with_obstacles = path_planner.generate_path()
-        
+
         # Calculate reward
         reward = path_planner._calculate_reward(path_with_obstacles)
-        
+
         return path_with_obstacles, reward
-    
+
     # Use pytest-benchmark to measure performance
     result = benchmark(complex_scenario)
-    
+
     # Verify that a path was generated
     assert result is not None
     assert len(result) == 2
@@ -281,7 +283,7 @@ def test_complex_scenario_benchmark(benchmark):
 if __name__ == "__main__":
     # This allows running the benchmarks directly without pytest
     import sys
-    
+
     # Create a pattern config
     boundary = [(0, 0), (10, 0), (10, 10), (0, 10)]
     pattern_config = PatternConfig(
@@ -292,13 +294,13 @@ if __name__ == "__main__":
         start_point=(0.0, 0.0),
         boundary_points=boundary
     )
-    
+
     # Create a learning config
     learning_config = LearningConfig()
-    
+
     # Create a path planner
     path_planner = PathPlanner(pattern_config, learning_config)
-    
+
     # Run benchmarks
     benchmarks = [
         ("generate_path", lambda: path_planner.generate_path()),
@@ -325,17 +327,17 @@ if __name__ == "__main__":
             [(0, 0), (5, 5), (10, 10)]
         )),
     ]
-    
+
     # Run each benchmark
     for name, func in benchmarks:
         times = []
         results = []
-        
+
         # Run the benchmark multiple times
         for _ in range(10):
             result, execution_time = time_function(func)
             times.append(execution_time)
             results.append(result)
-        
+
         # Log the results
         log_benchmark_results(name, times, results)
