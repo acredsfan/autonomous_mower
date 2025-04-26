@@ -34,19 +34,19 @@ class Vector2D:
         self.x = float(x)
         self.y = float(y)
 
-    def __add__(self, other: 'Vector2D') -> 'Vector2D':
+    def __add__(self, other: "Vector2D") -> "Vector2D":
         """Add two vectors."""
         return Vector2D(self.x + other.x, self.y + other.y)
 
-    def __sub__(self, other: 'Vector2D') -> 'Vector2D':
+    def __sub__(self, other: "Vector2D") -> "Vector2D":
         """Subtract two vectors."""
         return Vector2D(self.x - other.x, self.y - other.y)
 
-    def __mul__(self, scalar: float) -> 'Vector2D':
+    def __mul__(self, scalar: float) -> "Vector2D":
         """Multiply vector by scalar."""
         return Vector2D(self.x * scalar, self.y * scalar)
 
-    def __truediv__(self, scalar: float) -> 'Vector2D':
+    def __truediv__(self, scalar: float) -> "Vector2D":
         """Divide vector by scalar."""
         return Vector2D(self.x / scalar, self.y / scalar)
 
@@ -58,18 +58,18 @@ class Vector2D:
         """Get the magnitude (length) of the vector."""
         return math.sqrt(self.x * self.x + self.y * self.y)
 
-    def normalize(self) -> 'Vector2D':
+    def normalize(self) -> "Vector2D":
         """Get a normalized (unit) vector in the same direction."""
         mag = self.magnitude()
         if mag == 0:
             return Vector2D(0, 0)
         return Vector2D(self.x / mag, self.y / mag)
 
-    def dot(self, other: 'Vector2D') -> float:
+    def dot(self, other: "Vector2D") -> float:
         """Calculate the dot product with another vector."""
         return self.x * other.x + self.y * other.y
 
-    def distance_to(self, other: 'Vector2D') -> float:
+    def distance_to(self, other: "Vector2D") -> float:
         """Calculate the distance to another vector."""
         return (other - self).magnitude()
 
@@ -77,7 +77,7 @@ class Vector2D:
         """Get the angle of the vector in radians."""
         return math.atan2(self.y, self.x)
 
-    def rotate(self, angle_rad: float) -> 'Vector2D':
+    def rotate(self, angle_rad: float) -> "Vector2D":
         """
         Rotate the vector by the given angle in radians.
 
@@ -91,7 +91,7 @@ class Vector2D:
         sin_angle = math.sin(angle_rad)
         return Vector2D(
             self.x * cos_angle - self.y * sin_angle,
-            self.x * sin_angle + self.y * cos_angle
+            self.x * sin_angle + self.y * cos_angle,
         )
 
     def to_tuple(self) -> Tuple[float, float]:
@@ -104,7 +104,13 @@ class Obstacle:
     Representation of an obstacle in the virtual world.
     """
 
-    def __init__(self, position: Vector2D, radius: float, height: float = 0.0, obstacle_type: str = "generic"):
+    def __init__(
+        self,
+        position: Vector2D,
+        radius: float,
+        height: float = 0.0,
+        obstacle_type: str = "generic",
+    ):
         """
         Initialize an obstacle.
 
@@ -176,7 +182,8 @@ class Terrain:
 
         # Initialize terrain type map (grass by default)
         self.type_map = np.zeros(
-            (self.grid_width, self.grid_height), dtype=np.int32)
+            (self.grid_width, self.grid_height), dtype=np.int32
+        )
 
     def get_height(self, position: Vector2D) -> float:
         """
@@ -218,14 +225,14 @@ class Terrain:
 
         # Calculate slope in x and y directions
         slope_x = math.atan2(
-            self.height_map[grid_x + 1, grid_y] -
-            self.height_map[grid_x, grid_y],
-            self.resolution
+            self.height_map[grid_x + 1, grid_y]
+            - self.height_map[grid_x, grid_y],
+            self.resolution,
         )
         slope_y = math.atan2(
-            self.height_map[grid_x, grid_y + 1] -
-            self.height_map[grid_x, grid_y],
-            self.resolution
+            self.height_map[grid_x, grid_y + 1]
+            - self.height_map[grid_x, grid_y],
+            self.resolution,
         )
 
         return (slope_x, slope_y)
@@ -292,7 +299,9 @@ class Robot:
     Representation of the robot in the virtual world.
     """
 
-    def __init__(self, position: Vector2D = Vector2D(0, 0), heading: float = 0.0):
+    def __init__(
+        self, position: Vector2D = Vector2D(0, 0), heading: float = 0.0
+    ):
         """
         Initialize the robot.
 
@@ -378,14 +387,20 @@ class Robot:
         # - If both motors are the same speed, the robot moves straight
         # - If the motors are different speeds, the robot turns
         linear_speed = (
-            self.motor_speeds[0] + self.motor_speeds[1]) / 2.0 * self.max_speed
+            (self.motor_speeds[0] + self.motor_speeds[1])
+            / 2.0
+            * self.max_speed
+        )
         angular_speed = (
-            self.motor_speeds[1] - self.motor_speeds[0]) / self.width * self.max_speed
+            (self.motor_speeds[1] - self.motor_speeds[0])
+            / self.width
+            * self.max_speed
+        )
 
         # Set velocity based on heading and linear speed
         self.velocity = Vector2D(
             linear_speed * math.cos(self.heading),
-            linear_speed * math.sin(self.heading)
+            linear_speed * math.sin(self.heading),
         )
 
         # Set angular velocity
@@ -456,20 +471,30 @@ class VirtualWorld:
             # If robot is colliding with obstacle, move it out
             if distance < 0:
                 # Calculate direction from obstacle to robot
-                direction = (self.robot.position -
-                             obstacle.position).normalize()
+                direction = (
+                    self.robot.position - obstacle.position
+                ).normalize()
 
                 # Move robot out of obstacle
-                self.robot.position = obstacle.position + \
-                    direction * (obstacle.radius + 0.01)
+                self.robot.position = obstacle.position + direction * (
+                    obstacle.radius + 0.01
+                )
 
                 # Stop robot's movement in the collision direction
                 dot_product = self.robot.velocity.dot(direction)
                 if dot_product < 0:
                     # Robot is moving toward obstacle, stop it
-                    self.robot.velocity = self.robot.velocity - direction * dot_product
+                    self.robot.velocity = (
+                        self.robot.velocity - direction * dot_product
+                    )
 
-    def add_obstacle(self, position: Vector2D, radius: float, height: float = 0.0, obstacle_type: str = "generic") -> None:
+    def add_obstacle(
+        self,
+        position: Vector2D,
+        radius: float,
+        height: float = 0.0,
+        obstacle_type: str = "generic",
+    ) -> None:
         """
         Add an obstacle to the world.
 
@@ -481,14 +506,17 @@ class VirtualWorld:
         """
         with self._lock:
             self.obstacles.append(
-                Obstacle(position, radius, height, obstacle_type))
+                Obstacle(position, radius, height, obstacle_type)
+            )
 
     def clear_obstacles(self) -> None:
         """Clear all obstacles from the world."""
         with self._lock:
             self.obstacles.clear()
 
-    def get_obstacles_in_range(self, position: Vector2D, max_range: float) -> List[Obstacle]:
+    def get_obstacles_in_range(
+        self, position: Vector2D, max_range: float
+    ) -> List[Obstacle]:
         """
         Get all obstacles within the given range of the position.
 
@@ -501,11 +529,18 @@ class VirtualWorld:
         """
         with self._lock:
             return [
-                obstacle for obstacle in self.obstacles
-                if position.distance_to(obstacle.position) <= max_range + obstacle.radius
+                obstacle
+                for obstacle in self.obstacles
+                if position.distance_to(obstacle.position)
+                <= max_range + obstacle.radius
             ]
 
-    def get_distance_to_nearest_obstacle(self, position: Vector2D, direction: Vector2D, max_range: float = float('inf')) -> Tuple[float, Optional[Obstacle]]:
+    def get_distance_to_nearest_obstacle(
+        self,
+        position: Vector2D,
+        direction: Vector2D,
+        max_range: float = float("inf"),
+    ) -> Tuple[float, Optional[Obstacle]]:
         """
         Get the distance to the nearest obstacle in the given direction.
 
@@ -537,16 +572,18 @@ class VirtualWorld:
                     continue
 
                 # Calculate perpendicular distance
-                perpendicular = (to_obstacle - direction *
-                                 projection).magnitude()
+                perpendicular = (
+                    to_obstacle - direction * projection
+                ).magnitude()
 
                 # Skip if obstacle is too far to the side
                 if perpendicular > obstacle.radius:
                     continue
 
                 # Calculate distance to edge of obstacle
-                distance = projection - \
-                    math.sqrt(obstacle.radius**2 - perpendicular**2)
+                distance = projection - math.sqrt(
+                    obstacle.radius**2 - perpendicular**2
+                )
 
                 # Update if this is the nearest obstacle
                 if distance < min_distance:
@@ -572,10 +609,12 @@ class VirtualWorld:
                 "blade_speed": self.robot.blade_speed,
                 "battery_voltage": self.robot.battery_voltage,
                 "battery_current": self.robot.battery_current,
-                "motor_speeds": self.robot.motor_speeds.copy()
+                "motor_speeds": self.robot.motor_speeds.copy(),
             }
 
-    def set_robot_position(self, position: Vector2D, heading: float = None) -> None:
+    def set_robot_position(
+        self, position: Vector2D, heading: float = None
+    ) -> None:
         """
         Set the robot's position and optionally heading.
 
@@ -599,7 +638,9 @@ class VirtualWorld:
         with self._lock:
             self.robot.set_motor_speeds(left, right)
 
-    def set_robot_blade_state(self, running: bool, speed: float = 1.0) -> None:
+    def set_robot_blade_state(
+        self, running: bool, speed: float = 1.0
+    ) -> None:
         """
         Set the robot's blade state.
 

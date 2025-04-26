@@ -8,9 +8,18 @@ maintainability.
 
 from typing import Optional
 
-from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
-from mower.interfaces.hardware import BladeControllerInterface, MotorDriverInterface
-from mower.interfaces.navigation import GpsInterface, LocalizationInterface, PathPlannerInterface
+from mower.hardware.adapters.blade_controller_adapter import (
+    BladeControllerAdapter,
+)
+from mower.interfaces.hardware import (
+    BladeControllerInterface,
+    MotorDriverInterface,
+)
+from mower.interfaces.navigation import (
+    GpsInterface,
+    LocalizationInterface,
+    PathPlannerInterface,
+)
 from mower.interfaces.obstacle_detection import AvoidanceAlgorithmInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -30,7 +39,7 @@ class Robot:
         localization: LocalizationInterface,
         avoidance_algorithm: AvoidanceAlgorithmInterface,
         gps: GpsInterface,
-        path_planner: PathPlannerInterface
+        path_planner: PathPlannerInterface,
     ):
         """
         Initialize the robot with all required components.
@@ -72,7 +81,11 @@ class Robot:
         Mow the yard autonomously.
         """
         # Start all components
-        self.motor_driver.start() if hasattr(self.motor_driver, 'start') else None
+        (
+            self.motor_driver.start()
+            if hasattr(self.motor_driver, "start")
+            else None
+        )
         self.blade_controller.enable()
         self.path_planner.start()
         self.avoidance_algorithm.start()
@@ -89,7 +102,7 @@ def create_robot(
     localization: Optional[LocalizationInterface] = None,
     avoidance_algorithm: Optional[AvoidanceAlgorithmInterface] = None,
     gps: Optional[GpsInterface] = None,
-    path_planner: Optional[PathPlannerInterface] = None
+    path_planner: Optional[PathPlannerInterface] = None,
 ) -> Robot:
     """
     Create a Robot instance with all dependencies.
@@ -131,7 +144,7 @@ def create_robot(
         localization=localization,
         avoidance_algorithm=avoidance_algorithm,
         gps=gps,
-        path_planner=path_planner
+        path_planner=path_planner,
     )
 
 

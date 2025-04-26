@@ -39,9 +39,7 @@ class ErrorReporter:
         self.lock = threading.RLock()
 
     def report_error(
-        self,
-        error: MowerError,
-        log_level: int = logging.ERROR
+        self, error: MowerError, log_level: int = logging.ERROR
     ) -> None:
         """
         Report an error.
@@ -61,14 +59,14 @@ class ErrorReporter:
                 "message": str(error),
                 "error_code": error.error_code,
                 "context": error.context,
-                "traceback": error.traceback
+                "traceback": error.traceback,
             }
 
             self.error_history.append(error_entry)
 
             # Trim history if needed
             if len(self.error_history) > self.max_history:
-                self.error_history = self.error_history[-self.max_history:]
+                self.error_history = self.error_history[-self.max_history :]
 
             # Check if this is a critical error
             if error.error_code and error.error_code.is_critical:
@@ -84,9 +82,7 @@ class ErrorReporter:
                     )
 
     def register_error_handler(
-        self,
-        name: str,
-        handler: Callable[[MowerError], None]
+        self, name: str, handler: Callable[[MowerError], None]
     ) -> None:
         """
         Register an error handler.
@@ -174,10 +170,7 @@ def get_error_reporter() -> ErrorReporter:
     return _error_reporter
 
 
-def report_error(
-    error: MowerError,
-    log_level: int = logging.ERROR
-) -> None:
+def report_error(error: MowerError, log_level: int = logging.ERROR) -> None:
     """
     Report an error using the singleton ErrorReporter.
 

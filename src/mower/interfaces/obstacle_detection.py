@@ -143,7 +143,9 @@ class ObstacleMapperInterface(ABC):
         pass
 
     @abstractmethod
-    def load_obstacle_map(self, filename: str = "obstacle_map.json") -> List[Dict[str, float]]:
+    def load_obstacle_map(
+        self, filename: str = "obstacle_map.json"
+    ) -> List[Dict[str, float]]:
         """
         Load the obstacle map from a JSON file.
 

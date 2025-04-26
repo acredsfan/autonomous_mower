@@ -45,7 +45,8 @@ class ConnectionPool:
             self._create_connection()
 
         logger.info(
-            f"Connection pool initialized with {max_connections} connections to {db_path}")
+            f"Connection pool initialized with {max_connections} connections to {db_path}"
+        )
 
     def _create_connection(self):
         """Create a new database connection and add it to the pool."""
@@ -63,7 +64,8 @@ class ConnectionPool:
                 self.active_connections += 1
 
             logger.debug(
-                f"Created new database connection (total: {self.active_connections})")
+                f"Created new database connection (total: {self.active_connections})"
+            )
         except Exception as e:
             logger.error(f"Error creating database connection: {e}")
 
@@ -87,7 +89,8 @@ class ConnectionPool:
             else:
                 # If we've reached the maximum number of connections, wait for one to become available
                 logger.warning(
-                    "Connection pool exhausted, waiting for a connection")
+                    "Connection pool exhausted, waiting for a connection"
+                )
                 return self.connections.get()
 
     def return_connection(self, conn: sqlite3.Connection):
@@ -147,7 +150,12 @@ class BatchProcessor:
     to reduce the overhead of multiple individual operations.
     """
 
-    def __init__(self, connection_pool: ConnectionPool, batch_size: int = 100, auto_commit: bool = True):
+    def __init__(
+        self,
+        connection_pool: ConnectionPool,
+        batch_size: int = 100,
+        auto_commit: bool = True,
+    ):
         """
         Initialize the batch processor.
 
@@ -165,7 +173,8 @@ class BatchProcessor:
         self.lock = threading.Lock()
 
         logger.info(
-            f"Batch processor initialized with batch size {batch_size}")
+            f"Batch processor initialized with batch size {batch_size}"
+        )
 
     def add_insert(self, table: str, data: Dict[str, Any]):
         """
@@ -185,7 +194,9 @@ class BatchProcessor:
             if len(self.insert_batches[table]) >= self.batch_size:
                 self._process_insert_batch(table)
 
-    def add_update(self, table: str, data: Dict[str, Any], condition: str, params: Tuple):
+    def add_update(
+        self, table: str, data: Dict[str, Any], condition: str, params: Tuple
+    ):
         """
         Add an update operation to the batch.
 
@@ -252,7 +263,8 @@ class BatchProcessor:
         self._execute_batch(query, params)
 
         logger.debug(
-            f"Processed batch of {len(batch)} inserts for table {table}")
+            f"Processed batch of {len(batch)} inserts for table {table}"
+        )
 
     def _process_update_batch(self, table: str):
         """
@@ -291,7 +303,8 @@ class BatchProcessor:
                 conn.commit()
 
             logger.debug(
-                f"Processed batch of {len(batch)} updates for table {table}")
+                f"Processed batch of {len(batch)} updates for table {table}"
+            )
         except Exception as e:
             logger.error(f"Error processing update batch: {e}")
             conn.rollback()
@@ -330,7 +343,8 @@ class BatchProcessor:
                 conn.commit()
 
             logger.debug(
-                f"Processed batch of {len(batch)} deletes for table {table}")
+                f"Processed batch of {len(batch)} deletes for table {table}"
+            )
         except Exception as e:
             logger.error(f"Error processing delete batch: {e}")
             conn.rollback()
@@ -428,7 +442,12 @@ class QueryOptimizer:
 
         return optimized_query
 
-    def execute_query(self, query: str, params: Optional[Tuple] = None, use_cache: bool = True) -> List[Tuple]:
+    def execute_query(
+        self,
+        query: str,
+        params: Optional[Tuple] = None,
+        use_cache: bool = True,
+    ) -> List[Tuple]:
         """
         Execute a SQL query with optimization.
 
@@ -474,14 +493,14 @@ class QueryOptimizer:
                     self.query_stats[query]["count"] += 1
                     self.query_stats[query]["total_time"] += execution_time
                     self.query_stats[query]["avg_time"] = (
-                        self.query_stats[query]["total_time"] /
-                        self.query_stats[query]["count"]
+                        self.query_stats[query]["total_time"]
+                        / self.query_stats[query]["count"]
                     )
                 else:
                     self.query_stats[query] = {
                         "count": 1,
                         "total_time": execution_time,
-                        "avg_time": execution_time
+                        "avg_time": execution_time,
                     }
 
             # Cache the result if caching is enabled
@@ -495,7 +514,8 @@ class QueryOptimizer:
                     self.query_cache[cache_key] = results
 
             logger.debug(
-                f"Executed query in {execution_time:.4f} seconds: {optimized_query}")
+                f"Executed query in {execution_time:.4f} seconds: {optimized_query}"
+            )
 
             return results
         except Exception as e:
@@ -505,7 +525,9 @@ class QueryOptimizer:
             # Return the connection to the pool
             self.connection_pool.return_connection(conn)
 
-    def get_slow_queries(self, threshold: float = 0.1) -> Dict[str, Dict[str, float]]:
+    def get_slow_queries(
+        self, threshold: float = 0.1
+    ) -> Dict[str, Dict[str, float]]:
         """
         Get statistics for slow queries.
 
@@ -540,7 +562,9 @@ class DatabaseOptimizer:
     by implementing connection pooling, batching, and query optimization.
     """
 
-    def __init__(self, db_path: str, max_connections: int = 5, batch_size: int = 100):
+    def __init__(
+        self, db_path: str, max_connections: int = 5, batch_size: int = 100
+    ):
         """
         Initialize the database optimizer.
 
@@ -551,7 +575,9 @@ class DatabaseOptimizer:
         """
         self.db_path = db_path
         self.connection_pool = ConnectionPool(db_path, max_connections)
-        self.batch_processor = BatchProcessor(self.connection_pool, batch_size)
+        self.batch_processor = BatchProcessor(
+            self.connection_pool, batch_size
+        )
         self.query_optimizer = QueryOptimizer(self.connection_pool)
 
         logger.info(f"Database optimizer initialized for {db_path}")
@@ -642,7 +668,9 @@ class DatabaseOptimizer:
             columns = list(data.keys())
             placeholders = ", ".join(["?"] * len(columns))
             column_str = ", ".join(columns)
-            query = f"INSERT INTO {table} ({column_str}) VALUES ({placeholders})"
+            query = (
+                f"INSERT INTO {table} ({column_str}) VALUES ({placeholders})"
+            )
             params = tuple(data.values())
 
             # Get a connection
@@ -659,7 +687,14 @@ class DatabaseOptimizer:
                 # Return the connection to the pool
                 self.connection_pool.return_connection(conn)
 
-    def update(self, table: str, data: Dict[str, Any], condition: str, params: Tuple, batch: bool = True):
+    def update(
+        self,
+        table: str,
+        data: Dict[str, Any],
+        condition: str,
+        params: Tuple,
+        batch: bool = True,
+    ):
         """
         Update data in a table.
 
@@ -693,7 +728,9 @@ class DatabaseOptimizer:
                 # Return the connection to the pool
                 self.connection_pool.return_connection(conn)
 
-    def delete(self, table: str, condition: str, params: Tuple, batch: bool = True):
+    def delete(
+        self, table: str, condition: str, params: Tuple, batch: bool = True
+    ):
         """
         Delete data from a table.
 
@@ -724,7 +761,12 @@ class DatabaseOptimizer:
                 # Return the connection to the pool
                 self.connection_pool.return_connection(conn)
 
-    def query(self, query: str, params: Optional[Tuple] = None, use_cache: bool = True) -> List[Tuple]:
+    def query(
+        self,
+        query: str,
+        params: Optional[Tuple] = None,
+        use_cache: bool = True,
+    ) -> List[Tuple]:
         """
         Execute a SQL query.
 
@@ -746,7 +788,9 @@ class DatabaseOptimizer:
         """Clear the query cache."""
         self.query_optimizer.clear_cache()
 
-    def get_slow_queries(self, threshold: float = 0.1) -> Dict[str, Dict[str, float]]:
+    def get_slow_queries(
+        self, threshold: float = 0.1
+    ) -> Dict[str, Dict[str, float]]:
         """
         Get statistics for slow queries.
 
@@ -775,7 +819,9 @@ class DatabaseOptimizer:
 _database_optimizer = None
 
 
-def get_database_optimizer(db_path: str = "mower.db", max_connections: int = 5, batch_size: int = 100) -> DatabaseOptimizer:
+def get_database_optimizer(
+    db_path: str = "mower.db", max_connections: int = 5, batch_size: int = 100
+) -> DatabaseOptimizer:
     """
     Get or create the singleton database optimizer instance.
 
@@ -791,7 +837,8 @@ def get_database_optimizer(db_path: str = "mower.db", max_connections: int = 5, 
 
     if _database_optimizer is None:
         _database_optimizer = DatabaseOptimizer(
-            db_path, max_connections, batch_size)
+            db_path, max_connections, batch_size
+        )
 
     return _database_optimizer
 

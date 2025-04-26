@@ -13,8 +13,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
 from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR
+    get_config_manager,
+    get_config,
+    set_config,
+    CONFIG_DIR,
 )
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -86,7 +88,9 @@ def save_config(filename: str, data: Dict[str, Any]) -> bool:
         return False
 
 
-def cleanup_resources(resources: Dict[str, Any], initialized: bool, lock: threading.Lock) -> bool:
+def cleanup_resources(
+    resources: Dict[str, Any], initialized: bool, lock: threading.Lock
+) -> bool:
     """
     Clean up all resources.
 
@@ -106,9 +110,9 @@ def cleanup_resources(resources: Dict[str, Any], initialized: bool, lock: thread
             # Clean up hardware in reverse order
             for name, resource in reversed(list(resources.items())):
                 try:
-                    if hasattr(resource, 'cleanup'):
+                    if hasattr(resource, "cleanup"):
                         resource.cleanup()
-                    elif hasattr(resource, 'shutdown'):
+                    elif hasattr(resource, "shutdown"):
                         resource.shutdown()
                 except Exception as e:
                     logger.error(f"Error cleaning up {name}: {e}")

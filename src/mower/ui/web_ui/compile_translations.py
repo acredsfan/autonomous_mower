@@ -15,7 +15,7 @@ def compile_translations():
     script_dir = Path(__file__).parent
 
     # Path to the translations directory
-    translations_dir = script_dir / 'translations'
+    translations_dir = script_dir / "translations"
 
     # Check if the translations directory exists
     if not translations_dir.exists():
@@ -25,21 +25,32 @@ def compile_translations():
     # Compile all .po files to .mo files
     for lang_dir in translations_dir.iterdir():
         if lang_dir.is_dir():
-            lc_messages_dir = lang_dir / 'LC_MESSAGES'
+            lc_messages_dir = lang_dir / "LC_MESSAGES"
             if lc_messages_dir.exists():
-                po_file = lc_messages_dir / 'messages.po'
+                po_file = lc_messages_dir / "messages.po"
                 if po_file.exists():
-                    mo_file = lc_messages_dir / 'messages.mo'
+                    mo_file = lc_messages_dir / "messages.mo"
                     try:
                         # Use pybabel to compile the .po file to .mo
                         subprocess.run(
-                            ['pybabel', 'compile', '-f', '-i', str(po_file), '-o', str(mo_file)], check=True)
+                            [
+                                "pybabel",
+                                "compile",
+                                "-f",
+                                "-i",
+                                str(po_file),
+                                "-o",
+                                str(mo_file),
+                            ],
+                            check=True,
+                        )
                         print(f"Compiled {po_file} to {mo_file}")
                     except subprocess.CalledProcessError as e:
                         print(f"Error compiling {po_file}: {e}")
                     except FileNotFoundError:
                         print(
-                            "pybabel command not found. Make sure Flask-Babel is installed.")
+                            "pybabel command not found. Make sure Flask-Babel is installed."
+                        )
                 else:
                     print(f"No messages.po file found in {lc_messages_dir}")
             else:

@@ -105,12 +105,14 @@ class SimpleObstacleDetectorPlugin(DetectionPlugin):
             self._initialized = True
 
             logger.info(
-                "Simple obstacle detector plugin initialized successfully")
+                "Simple obstacle detector plugin initialized successfully"
+            )
             return True
 
         except Exception as e:
             logger.error(
-                f"Error initializing simple obstacle detector plugin: {e}")
+                f"Error initializing simple obstacle detector plugin: {e}"
+            )
             return False
 
     def detect(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -139,31 +141,37 @@ class SimpleObstacleDetectorPlugin(DetectionPlugin):
             obstacles = []
 
             if left_distance < self._distance_threshold:
-                obstacles.append({
-                    "type": "obstacle",
-                    "position": "left",
-                    "distance": left_distance,
-                    "confidence": 0.8,
-                    "timestamp": time.time()
-                })
+                obstacles.append(
+                    {
+                        "type": "obstacle",
+                        "position": "left",
+                        "distance": left_distance,
+                        "confidence": 0.8,
+                        "timestamp": time.time(),
+                    }
+                )
 
             if right_distance < self._distance_threshold:
-                obstacles.append({
-                    "type": "obstacle",
-                    "position": "right",
-                    "distance": right_distance,
-                    "confidence": 0.8,
-                    "timestamp": time.time()
-                })
+                obstacles.append(
+                    {
+                        "type": "obstacle",
+                        "position": "right",
+                        "distance": right_distance,
+                        "confidence": 0.8,
+                        "timestamp": time.time(),
+                    }
+                )
 
             if front_distance < self._distance_threshold:
-                obstacles.append({
-                    "type": "obstacle",
-                    "position": "front",
-                    "distance": front_distance,
-                    "confidence": 0.9,
-                    "timestamp": time.time()
-                })
+                obstacles.append(
+                    {
+                        "type": "obstacle",
+                        "position": "front",
+                        "distance": front_distance,
+                        "confidence": 0.9,
+                        "timestamp": time.time(),
+                    }
+                )
 
             return obstacles
 
@@ -181,11 +189,13 @@ class SimpleObstacleDetectorPlugin(DetectionPlugin):
             self._initialized = False
 
             logger.info(
-                "Simple obstacle detector plugin cleaned up successfully")
+                "Simple obstacle detector plugin cleaned up successfully"
+            )
 
         except Exception as e:
             logger.error(
-                f"Error cleaning up simple obstacle detector plugin: {e}")
+                f"Error cleaning up simple obstacle detector plugin: {e}"
+            )
 
 
 # Example usage
@@ -198,7 +208,7 @@ if __name__ == "__main__":
     sample_data = {
         "left_distance": 20.0,
         "right_distance": 50.0,
-        "front_distance": 15.0
+        "front_distance": 15.0,
     }
 
     # Detect obstacles
@@ -208,7 +218,8 @@ if __name__ == "__main__":
     print(f"Detected {len(obstacles)} obstacles:")
     for obstacle in obstacles:
         print(
-            f"  Position: {obstacle['position']}, Distance: {obstacle['distance']} cm")
+            f"  Position: {obstacle['position']}, Distance: {obstacle['distance']} cm"
+        )
 
     # Clean up the plugin
     plugin.cleanup()

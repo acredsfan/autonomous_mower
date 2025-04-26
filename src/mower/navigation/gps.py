@@ -8,9 +8,7 @@ import pynmea2
 import utm
 
 from mower.utilities.text_writer import CsvLogger
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-)
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 logger_config = LoggerConfig()
 logger = logger_config.get_logger(__name__)
@@ -20,6 +18,7 @@ class SingletonMeta(type):
     """
     A thread-safe implementation of Singleton with per-class locks.
     """
+
     _instances = {}
 
     def __init__(cls, name, bases, dict):
@@ -60,6 +59,7 @@ class GpsPosition(metaclass=SingletonMeta):
 
     def __init__(self, serial_port, debug=False):
         from mower.hardware.serial_port import SerialLineReader
+
         self.line_reader = SerialLineReader(serial_port)
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
@@ -211,11 +211,11 @@ def parse_gps_position(line, debug=False):
     if not line:
         return None
 
-    if '$' != line[0]:
+    if "$" != line[0]:
         logger.info("NMEA Missing line start")
         return None
 
-    if '*' != line[-3]:
+    if "*" != line[-3]:
         logger.info("NMEA Missing checksum")
         return None
 
@@ -241,10 +241,10 @@ def parse_gps_position(line, debug=False):
             try:
                 pynmea2.parse(line)
             except pynmea2.ParseError as e:
-                logger.error(f'NMEA parse error detected: {e}')
+                logger.error(f"NMEA parse error detected: {e}")
                 return None
 
-        if nmea_parts[2] == 'V':
+        if nmea_parts[2] == "V":
             logger.info(
                 "GPS receiver warning; position not valid. "
                 "Ignoring invalid position."
@@ -275,7 +275,7 @@ def parse_gps_position(line, debug=False):
             float(utm_position[0]),
             float(utm_position[1]),
             utm_position[2],
-            utm_position[3]
+            utm_position[3],
         )
 
     else:
@@ -308,11 +308,11 @@ def nmea_to_degrees(gps_str, direction):
     degrees = float(degrees_str) if degrees_str else 0.0
     minutes = float(minutes_str) / 60 if minutes_str else 0.0
 
-    return (degrees + minutes) * (-1 if direction in ['W', 'S'] else 1)
+    return (degrees + minutes) * (-1 if direction in ["W", "S"] else 1)
 
 
-''' The __main__ self test can log position
-or optionally record a set of waypoints'''
+""" The __main__ self test can log position
+or optionally record a set of waypoints"""
 
 if __name__ == "__main__":
     import math
@@ -342,7 +342,7 @@ if __name__ == "__main__":
         sum_errors_squared = 0
         for x in data:
             error = x - mean
-            sum_errors_squared += (error * error)
+            sum_errors_squared += error * error
         std_deviation = math.sqrt(sum_errors_squared / count)
         return Stats(count, sum, min, max, mean, std_deviation)
 
@@ -403,7 +403,9 @@ if __name__ == "__main__":
 
             # calculate the ellipsoid at the
             # given multiple of the standard deviation.
-            self.theta = np.degrees(np.arctan2(*self.eigenvectors[:, 0][::-1]))
+            self.theta = np.degrees(
+                np.arctan2(*self.eigenvectors[:, 0][::-1])
+            )
             self.width, self.height = 2 * nstd * np.sqrt(self.eigenvalues)
 
         def is_inside(self, x, y):
@@ -430,10 +432,14 @@ if __name__ == "__main__":
             # coordinate system of the ellipse (it's center)
             # and then rotate the point and do a normal ellipse test
             #
-            part1 = ((cos_theta * x_translated + sin_theta * y_translated)
-                     / self.width)**2
-            part2 = ((sin_theta * x_translated - cos_theta * y_translated)
-                     / self.height)**2
+            part1 = (
+                (cos_theta * x_translated + sin_theta * y_translated)
+                / self.width
+            ) ** 2
+            part2 = (
+                (sin_theta * x_translated - cos_theta * y_translated)
+                / self.height
+            ) ** 2
             return (part1 + part2) <= 1
 
         def is_in_range(self, x, y):
@@ -441,10 +447,12 @@ if __name__ == "__main__":
             Determine if the given (x,y) point is within the
             range of the collected waypoint samples
             """
-            return (x >= self.x_stats.min) and \
-                   (x <= self.x_stats.max) and \
-                   (y >= self.y_stats.min) and \
-                   (y <= self.y_stats.max)
+            return (
+                (x >= self.x_stats.min)
+                and (x <= self.x_stats.max)
+                and (y >= self.y_stats.min)
+                and (y <= self.y_stats.max)
+            )
 
         def is_in_std(self, x, y, std_multiple=1.0):
             """
@@ -454,16 +462,19 @@ if __name__ == "__main__":
             """
             x_std = self.x_stats.std_deviation * std_multiple
             y_std = self.y_stats.std_deviation * std_multiple
-            return (x >= (self.x_stats.mean - x_std)) and \
-                   (x <= (self.x_stats.mean + x_std)) and \
-                   (y >= (self.y_stats.mean - y_std)) and \
-                   (y <= (self.y_stats.mean + y_std))
+            return (
+                (x >= (self.x_stats.mean - x_std))
+                and (x <= (self.x_stats.mean + x_std))
+                and (y >= (self.y_stats.mean - y_std))
+                and (y <= (self.y_stats.mean + y_std))
+            )
 
         def show(self):
             """
             Draw the waypoint ellipsoid
             """
             import matplotlib.pyplot as plt
+
             self.plot()
             plt.show()
 
@@ -475,14 +486,19 @@ if __name__ == "__main__":
             from matplotlib.patches import Ellipse, Rectangle
 
             # define Matplotlib figure and axis
-            ax = plt.subplot(111, aspect='equal')
+            ax = plt.subplot(111, aspect="equal")
 
             # plot the collected readings
             plt.scatter(self.x, self.y)
 
             # plot the centroid
-            plt.plot(self.x_stats.mean, self.y_stats.mean, marker="+",
-                     markeredgecolor="green", markerfacecolor="green")
+            plt.plot(
+                self.x_stats.mean,
+                self.y_stats.mean,
+                marker="+",
+                markeredgecolor="green",
+                markerfacecolor="green",
+            )
 
             # plot the range
             bounds = Rectangle(
@@ -490,17 +506,21 @@ if __name__ == "__main__":
                 self.x_stats.max - self.x_stats.min,
                 self.y_stats.max - self.y_stats.min,
                 alpha=0.5,
-                edgecolor='red',
+                edgecolor="red",
                 fill=False,
-                visible=True)
+                visible=True,
+            )
             ax.add_artist(bounds)
 
             # plot the ellipsoid
-            ellipse = Ellipse(xy=(self.x_stats.mean, self.y_stats.mean),
-                              width=self.width, height=self.height,
-                              angle=self.theta)
+            ellipse = Ellipse(
+                xy=(self.x_stats.mean, self.y_stats.mean),
+                width=self.width,
+                height=self.height,
+                angle=self.theta,
+            )
             ellipse.set_alpha(0.25)
-            ellipse.set_facecolor('green')
+            ellipse.set_facecolor("green")
             ax.add_artist(ellipse)
 
     def is_in_waypoint_range(waypoints, x, y):
@@ -532,35 +552,69 @@ if __name__ == "__main__":
         Draw the waypoint ellipsoid
         """
         import matplotlib.pyplot as plt
+
         for waypoint in waypoints:
             waypoint.plot()
         plt.show()
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-s", "--serial", type=str,
-                        required=True, help="Serial port address,"
-                        "like '/dev/tty.usbmodem1411'")
-    parser.add_argument("-b", "--baudrate", type=int,
-                        default=9600, help="Serial port baud rate.")
-    parser.add_argument("-t", "--timeout", type=float,
-                        default=0.5, help="Serial port timeout in seconds.")
-    parser.add_argument("-sp", '--samples', type=int,
-                        default=5, help="Number of samples per waypoint.")
-    parser.add_argument("-wp", "--waypoints", type=int, default=0,
-                        help="Number of waypoints to collect; > 0 to collect"
-                        "waypoints, 0 to just log position")
-    parser.add_argument("-nstd", "--nstd", type=float, default=1.0,
-                        help="multiple of standard deviation for ellipse.")
-    parser.add_argument("-th", "--threaded", action='store_true',
-                        help="run in threaded mode.")
-    parser.add_argument("-db", "--debug", action='store_true',
-                        help="Enable extra logging")
+    parser.add_argument(
+        "-s",
+        "--serial",
+        type=str,
+        required=True,
+        help="Serial port address," "like '/dev/tty.usbmodem1411'",
+    )
+    parser.add_argument(
+        "-b",
+        "--baudrate",
+        type=int,
+        default=9600,
+        help="Serial port baud rate.",
+    )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        type=float,
+        default=0.5,
+        help="Serial port timeout in seconds.",
+    )
+    parser.add_argument(
+        "-sp",
+        "--samples",
+        type=int,
+        default=5,
+        help="Number of samples per waypoint.",
+    )
+    parser.add_argument(
+        "-wp",
+        "--waypoints",
+        type=int,
+        default=0,
+        help="Number of waypoints to collect; > 0 to collect"
+        "waypoints, 0 to just log position",
+    )
+    parser.add_argument(
+        "-nstd",
+        "--nstd",
+        type=float,
+        default=1.0,
+        help="multiple of standard deviation for ellipse.",
+    )
+    parser.add_argument(
+        "-th", "--threaded", action="store_true", help="run in threaded mode."
+    )
+    parser.add_argument(
+        "-db", "--debug", action="store_true", help="Enable extra logging"
+    )
     args = parser.parse_args()
 
     if args.waypoints < 0:
-        print("Use waypoints > 0 to collect waypoints"
-              "use 0 waypoints to just log position")
+        print(
+            "Use waypoints > 0 to collect waypoints"
+            "use 0 waypoints to just log position"
+        )
         parser.print_help()
         sys.exit(0)
 
@@ -582,7 +636,7 @@ if __name__ == "__main__":
     update_thread = None
     line_reader = None
 
-    waypoint_count = args.waypoints      # number of paypoints in the path
+    waypoint_count = args.waypoints  # number of paypoints in the path
     samples_per_waypoint = args.samples  # number of readings per waypoint
     waypoints = []
     waypoint_samples = []
@@ -590,26 +644,33 @@ if __name__ == "__main__":
     from mower.hardware.serial_port import SerialLineReader
 
     try:
-        serial_port = SerialPort(args.serial, baudrate=args.baudrate,
-                                 timeout=args.timeout)
-        line_reader = SerialLineReader(serial_port, max_lines=args.samples,
-                                       debug=args.debug)
+        serial_port = SerialPort(
+            args.serial, baudrate=args.baudrate, timeout=args.timeout
+        )
+        line_reader = SerialLineReader(
+            serial_port, max_lines=args.samples, debug=args.debug
+        )
         position_reader = GpsNmeaPositions(args.debug)
 
         # start the threaded part
         # and a threaded window to show plot
 
         if args.threaded:
+
             def start_thread():
-                update_thread = threading.Thread(target=line_reader.update,
-                                                 args=())
+                update_thread = threading.Thread(
+                    target=line_reader.update, args=()
+                )
                 update_thread.start()
+
             start_thread()
 
         def read_gps():
-            lines = (line_reader.run_threaded()
-                     if args.threaded
-                     else line_reader.run())
+            lines = (
+                line_reader.run_threaded()
+                if args.threaded
+                else line_reader.run()
+            )
             positions = position_reader.run(lines)
             return positions
 
@@ -620,13 +681,15 @@ if __name__ == "__main__":
             if readings:
                 print("")
                 if state == "prompt":
-                    print(f"Move to waypoint #{len(waypoints) + 1} and"
-                          f"press the space barand enter to start sampling"
-                          f"or any other key to just start logging.")
+                    print(
+                        f"Move to waypoint #{len(waypoints) + 1} and"
+                        f"press the space barand enter to start sampling"
+                        f"or any other key to just start logging."
+                    )
                     state = "move"
                 elif state == "move":
                     key_press = readchar.readchar()  # sys.stdin.read(1)
-                    if key_press == ' ':
+                    if key_press == " ":
                         waypoint_samples = []
                         line_reader.clear()  # throw away buffered readings
                         state = "sampling"
@@ -637,8 +700,10 @@ if __name__ == "__main__":
                     count = len(waypoint_samples)
                     print(f"Collected {count} so far...")
                     if count > samples_per_waypoint:
-                        print(f"...done.  Collected {count} samples"
-                              f"for waypoint #{len(waypoints) + 1}")
+                        print(
+                            f"...done.  Collected {count} samples"
+                            f"for waypoint #{len(waypoints) + 1}"
+                        )
                         #
                         # model a waypoint as a rotated ellipsoid
                         # that represents a 95% confidence interval
@@ -653,22 +718,29 @@ if __name__ == "__main__":
                             if args.debug:
                                 plot(waypoints)
                 elif state == "test_prompt":
-                    print("Waypoints are recorded."
-                          "Now walk around and see when in a waypoint.")
+                    print(
+                        "Waypoints are recorded."
+                        "Now walk around and see when in a waypoint."
+                    )
                     state = "test"
                 elif state == "test":
                     for ts, x, y in readings:
                         print(f"Your position is ({x}, {y})")
                         hit, index = is_in_waypoint_range(waypoints, x, y)
                         if hit:
-                            print(f"You are within the sample"
-                                  f"range of waypoint #{index + 1}")
+                            print(
+                                f"You are within the sample"
+                                f"range of waypoint #{index + 1}"
+                            )
                         std_deviation = 1.0
-                        hit, index = is_in_waypoint_std(waypoints, x, y,
-                                                        std_deviation)
+                        hit, index = is_in_waypoint_std(
+                            waypoints, x, y, std_deviation
+                        )
                         if hit:
-                            print(f"You are within {std_deviation} std devs"
-                                  f"of the center of waypoint #{index + 1}")
+                            print(
+                                f"You are within {std_deviation} std devs"
+                                f"of the center of waypoint #{index + 1}"
+                            )
                         hit, index = is_in_waypoint(waypoints, x, y)
                         if hit:
                             print(f"You are at waypoint ellipse #{index + 1}")

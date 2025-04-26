@@ -44,8 +44,8 @@ logger = LoggerConfig.get_logger(__name__)
 # Load environment variables
 load_dotenv()
 # Get the UART port from the environment variables
-IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT', '/dev/ttyAMA2')
-IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
+IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA2")
+IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
 
 
 class IMUStatus(Enum):
@@ -62,6 +62,7 @@ class IMUStatus(Enum):
         ERROR: Sensor has encountered an error
         RECOVERING: Sensor is attempting to recover from an error
     """
+
     INITIALIZING = 0
     CALIBRATING = 1
     READY = 2
@@ -156,8 +157,8 @@ class BNO085Sensor:
         self.roll = 0.0
         self.pitch = 0.0
         self.yaw = 0.0
-        self.acceleration = [0, 0, 0]   # x, y, z
-        self.gyro = [0, 0, 0]           # x, y, z
+        self.acceleration = [0, 0, 0]  # x, y, z
+        self.gyro = [0, 0, 0]  # x, y, z
         self.calibration_status = 0
 
         # Connection management
@@ -166,10 +167,8 @@ class BNO085Sensor:
         self.reconnection_delay = 2  # seconds
 
         # Safety monitoring attributes
-        self.impact_threshold = float(
-            os.getenv('IMPACT_THRESHOLD_G', '2.0'))
-        self.tilt_threshold = float(
-            os.getenv('TILT_THRESHOLD_DEG', '45.0'))
+        self.impact_threshold = float(os.getenv("IMPACT_THRESHOLD_G", "2.0"))
+        self.tilt_threshold = float(os.getenv("TILT_THRESHOLD_DEG", "45.0"))
         self.last_impact_time = 0
         self.impact_cooldown = 1.0  # seconds between impact detections
         self.safety_callbacks = []
@@ -206,15 +205,15 @@ class BNO085Sensor:
         failure_count = 0
         # Define max retry attempts before raising error
         max_connect_attempts = 3
-        reconnection_delay = 2    # Seconds to wait between retry attempts
+        reconnection_delay = 2  # Seconds to wait between retry attempts
 
         while failure_count < max_connect_attempts:
             try:
                 # Create and open the serial port
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
-                    baudrate=self.baudrate
-                    )
+                    baudrate=self.baudrate,
+                )
                 success = self.serial_port.start()
                 if not success:
                     logger.error("Failed to start IMU serial port")
@@ -226,7 +225,7 @@ class BNO085Sensor:
                     f"IMU serial port "
                     f"{self.serial_port_name or IMU_SERIAL_PORT} "
                     f"opened at {self.baudrate} baud"
-                    )
+                )
                 logger.info(port_info)
 
                 # Try multiple times to initialize the sensor
@@ -239,14 +238,14 @@ class BNO085Sensor:
                         init_msg = (
                             f"BNO085 sensor successfully initialized "
                             f"on attempt {attempt}"
-                            )
+                        )
                         logger.info(init_msg)
                         return True
                     except Exception as e:
                         error_msg = (
                             f"Failed to initialize BNO085 sensor on "
                             f"attempt {attempt}: {e}"
-                            )
+                        )
                         logger.warning(error_msg)
                         if attempt < max_retries:
                             time.sleep(1)  # Wait before retrying
@@ -254,7 +253,7 @@ class BNO085Sensor:
                 final_error = (
                     f"Failed to initialize BNO085 sensor after "
                     f"{max_retries} attempts"
-                    )
+                )
                 logger.error(final_error)
                 # If we couldn't initialize the sensor, close the serial
                 # port
@@ -266,7 +265,8 @@ class BNO085Sensor:
 
             except Exception as e:
                 logger.error(
-                    f"Error during BNO085 sensor initialization: {e}")
+                    f"Error during BNO085 sensor initialization: {e}"
+                )
                 # Ensure port is closed if initialization fails
                 if self.serial_port:
                     self.serial_port.stop()
@@ -278,12 +278,12 @@ class BNO085Sensor:
         raise RuntimeError(
             f"Repeated IMU connection failures exceeded threshold "
             f"({max_connect_attempts} attempts)"
-            )
+        )
 
     def disconnect(self):
         """Disconnect from the BNO085 sensor"""
         try:
-            sensor_to_cleanup = getattr(self, 'sensor', None)
+            sensor_to_cleanup = getattr(self, "sensor", None)
             if sensor_to_cleanup:
                 self.cleanup(sensor_to_cleanup)
                 self.sensor = None
@@ -305,8 +305,7 @@ class BNO085Sensor:
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
             sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
-            sensor.enable_feature(
-                adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
+            sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
             logger.info("BNO085 features enabled.")
         except Exception as e:
             logger.error(f"Error enabling features on BNO085: {e}")
@@ -315,13 +314,12 @@ class BNO085Sensor:
     def read_bno085_accel(self):
         """Read BNO085 accelerometer data."""
         if not self.connected or not self.sensor:
-            logger.warning(
-                "Cannot read accelerometer: BNO085 not connected")
+            logger.warning("Cannot read accelerometer: BNO085 not connected")
             return {}
 
         try:
             accel_x, accel_y, accel_z = self.sensor.acceleration
-            return {'x': accel_x, 'y': accel_y, 'z': accel_z}
+            return {"x": accel_x, "y": accel_y, "z": accel_z}
         except Exception as e:
             logger.error(f"Error reading BNO085 accelerometer: {e}")
             return {}
@@ -334,7 +332,7 @@ class BNO085Sensor:
 
         try:
             gyro_x, gyro_y, gyro_z = self.sensor.gyro
-            return {'x': gyro_x, 'y': gyro_y, 'z': gyro_z}
+            return {"x": gyro_x, "y": gyro_y, "z": gyro_z}
         except Exception as e:
             logger.error(f"Error reading BNO085 gyroscope: {e}")
             return {}
@@ -342,13 +340,12 @@ class BNO085Sensor:
     def read_bno085_magnetometer(self):
         """Read BNO085 magnetometer data."""
         if not self.connected or not self.sensor:
-            logger.warning(
-                "Cannot read magnetometer: BNO085 not connected")
+            logger.warning("Cannot read magnetometer: BNO085 not connected")
             return {}
 
         try:
             mag_x, mag_y, mag_z = self.sensor.magnetic
-            return {'x': mag_x, 'y': mag_y, 'z': mag_z}
+            return {"x": mag_x, "y": mag_y, "z": mag_z}
         except Exception as e:
             logger.error(f"Error reading BNO085 magnetometer: {e}")
             return {}
@@ -357,12 +354,13 @@ class BNO085Sensor:
         """Calculate Quaternion based on BNO085 rotation vector data."""
         if not self.connected or not self.sensor:
             logger.warning(
-                "Cannot calculate quaternion: BNO085 not connected")
+                "Cannot calculate quaternion: BNO085 not connected"
+            )
             return {}
 
         try:
             q0, q1, q2, q3 = self.sensor.quaternion
-            return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
+            return {"q0": q0, "q1": q1, "q2": q2, "q3": q3}
         except Exception as e:
             logger.error(f"Error calculating Quaternion: {e}")
             return {}
@@ -370,8 +368,7 @@ class BNO085Sensor:
     def calculate_heading(self):
         """Calculate heading from BNO085 sensor data."""
         if not self.connected or not self.sensor:
-            logger.warning(
-                "Cannot calculate heading: BNO085 not connected")
+            logger.warning("Cannot calculate heading: BNO085 not connected")
             return -1
 
         try:
@@ -469,7 +466,8 @@ class BNO085Sensor:
         # Get list of available ports
         available_ports = list(serial.tools.list_ports.comports())
         logger.info(
-            f"Available ports: {[port.device for port in available_ports]}")
+            f"Available ports: {[port.device for port in available_ports]}"
+        )
 
         for port_info in available_ports:
             port_name = port_info.device
@@ -483,11 +481,11 @@ class BNO085Sensor:
                     port=port_name,
                     baudrate=self.baudrate,
                     bytesize=serial.EIGHTBITS,
-                    timeout=1
-                    )
+                    timeout=1,
+                )
 
                 # Try to establish communication
-                test_port.write(b'\x7E')  # Send any byte to wake up device
+                test_port.write(b"\x7E")  # Send any byte to wake up device
                 time.sleep(0.1)
 
                 # Read response (if any)
@@ -532,8 +530,8 @@ class BNO085Sensor:
 
             # Request product ID to verify communication
             self._send_command(
-                CHANNEL_COMMAND,
-                [SHTP_REPORT_PRODUCT_ID_REQUEST])
+                CHANNEL_COMMAND, [SHTP_REPORT_PRODUCT_ID_REQUEST]
+            )
             time.sleep(0.1)
 
             # Flush any pending data
@@ -551,8 +549,7 @@ class BNO085Sensor:
                 logger.info("IMU initialization successful")
                 return True
             else:
-                logger.error(
-                    "IMU initialization failed - no data received")
+                logger.error("IMU initialization failed - no data received")
                 return False
 
         except Exception as e:
@@ -573,12 +570,19 @@ class BNO085Sensor:
         """
         try:
             # FRS write to enable rotation vector
-            self._send_command(CHANNEL_CONTROL, [
-                0x15, 0x00,  # Set feature report
-                SENSOR_REPORTID_ROTATION_VECTOR, 0x00,  # Report ID
-                0x05, 0x00,  # Set update rate to 20ms (50Hz)
-                0x00, 0x00   # Specific settings
-                ])
+            self._send_command(
+                CHANNEL_CONTROL,
+                [
+                    0x15,
+                    0x00,  # Set feature report
+                    SENSOR_REPORTID_ROTATION_VECTOR,
+                    0x00,  # Report ID
+                    0x05,
+                    0x00,  # Set update rate to 20ms (50Hz)
+                    0x00,
+                    0x00,  # Specific settings
+                ],
+            )
             logger.debug("Rotation vector report enabled")
         except Exception as e:
             logger.error(f"Error enabling rotation vector: {e}")
@@ -640,37 +644,41 @@ class BNO085Sensor:
                     # Try to reconnect
                     if self.connect_attempts < self.max_connect_attempts:
                         logger.info(
-                            "IMU disconnected. Attempting to reconnect...")
+                            "IMU disconnected. Attempting to reconnect..."
+                        )
                         time.sleep(self.reconnection_delay)
                         self.connect()
                     else:
                         logger.error(
                             "Failed to reconnect to IMU after "
-                            f"{self.max_connect_attempts} attempts")
+                            f"{self.max_connect_attempts} attempts"
+                        )
                         time.sleep(5)  # Wait before trying again
-                        self.connect_attempts = 0  # Reset counter to try again
+                        self.connect_attempts = (
+                            0  # Reset counter to try again
+                        )
                     continue
 
                 # Read available data
                 if self.serial_port and self.serial_port.is_open:
                     if self.serial_port.in_waiting > 0:
                         chunk = self.serial_port.read(
-                            self.serial_port.in_waiting)
+                            self.serial_port.in_waiting
+                        )
                         buffer.extend(chunk)
 
                         # Process complete packets
-                        while len(
-                                buffer) >= 4:  # Min packet size is 4 bytes
+                        while len(buffer) >= 4:  # Min packet size is 4 bytes
                             # Check for packet start
                             length = buffer[0] | (buffer[1] << 8)
                             channel = buffer[2]
 
                             # Check if we have the full packet
                             if len(buffer) >= length + 4:
-                                packet = buffer[4:length + 4]
+                                packet = buffer[4 : length + 4]
                                 self._process_packet(channel, packet)
                                 # Remove processed packet
-                                buffer = buffer[length + 4:]
+                                buffer = buffer[length + 4 :]
                             else:
                                 break  # Wait for more data
                     else:
@@ -707,17 +715,19 @@ class BNO085Sensor:
         report_id = packet[0]
 
         # Process based on channel and report type
-        if (channel == CHANNEL_REPORTS and
-                report_id == SENSOR_REPORTID_ROTATION_VECTOR):
+        if (
+            channel == CHANNEL_REPORTS
+            and report_id == SENSOR_REPORTID_ROTATION_VECTOR
+        ):
             # Parse rotation vector (quaternion)
             if len(packet) >= 17:
                 with self.lock:
                     # Extract quaternion components (i, j, k, real) - BNO085
                     # specific format
-                    i = struct.unpack('<h', packet[2:4])[0] / 16384.0
-                    j = struct.unpack('<h', packet[4:6])[0] / 16384.0
-                    k = struct.unpack('<h', packet[6:8])[0] / 16384.0
-                    real = struct.unpack('<h', packet[8:10])[0] / 16384.0
+                    i = struct.unpack("<h", packet[2:4])[0] / 16384.0
+                    j = struct.unpack("<h", packet[4:6])[0] / 16384.0
+                    k = struct.unpack("<h", packet[6:8])[0] / 16384.0
+                    real = struct.unpack("<h", packet[8:10])[0] / 16384.0
 
                     # BNO085 uses different quaternion order, rearrange to w,
                     # x, y, z
@@ -728,19 +738,21 @@ class BNO085Sensor:
 
                     # Extract accuracy estimate if available
                     if len(packet) >= 18:
-                        accuracy = struct.unpack(
-                            '<h', packet[10:12])[0] / 16.0
+                        accuracy = (
+                            struct.unpack("<h", packet[10:12])[0] / 16.0
+                        )
                         self.calibration_status = min(
-                            3, int(accuracy / 30))  # Convert to 0-3 scale
+                            3, int(accuracy / 30)
+                        )  # Convert to 0-3 scale
 
         # Accelerometer report
         elif channel == CHANNEL_REPORTS and report_id == 0x14:
             # Parse accelerometer data if needed
             if len(packet) >= 10:
                 with self.lock:
-                    x = struct.unpack('<h', packet[2:4])[0] / 100.0  # m/s²
-                    y = struct.unpack('<h', packet[4:6])[0] / 100.0
-                    z = struct.unpack('<h', packet[6:8])[0] / 100.0
+                    x = struct.unpack("<h", packet[2:4])[0] / 100.0  # m/s²
+                    y = struct.unpack("<h", packet[4:6])[0] / 100.0
+                    z = struct.unpack("<h", packet[6:8])[0] / 100.0
                     self.acceleration = [x, y, z]
 
         # Gyroscope report
@@ -748,17 +760,18 @@ class BNO085Sensor:
             # Parse gyroscope data if needed
             if len(packet) >= 10:
                 with self.lock:
-                    x = struct.unpack('<h', packet[2:4])[0] / 16.0  # rad/s
-                    y = struct.unpack('<h', packet[4:6])[0] / 16.0
-                    z = struct.unpack('<h', packet[6:8])[0] / 16.0
+                    x = struct.unpack("<h", packet[2:4])[0] / 16.0  # rad/s
+                    y = struct.unpack("<h", packet[4:6])[0] / 16.0
+                    z = struct.unpack("<h", packet[6:8])[0] / 16.0
                     self.gyro = [x, y, z]
 
         # After processing any packet, check safety conditions
         safety_status = self.check_safety_conditions()
-        if not safety_status['is_safe']:
+        if not safety_status["is_safe"]:
             logger.warning(
                 "Unsafe condition detected: "
-                f"{', '.join(safety_status['messages'])}")
+                f"{', '.join(safety_status['messages'])}"
+            )
 
     def _update_euler_angles(self):
         """
@@ -944,48 +957,50 @@ class BNO085Sensor:
         """
         with self.lock:
             status = {
-                'is_safe': True,
-                'tilt_ok': True,
-                'impact_detected': False,
-                'acceleration_ok': True,
-                'messages': []
-                }
+                "is_safe": True,
+                "tilt_ok": True,
+                "impact_detected": False,
+                "acceleration_ok": True,
+                "messages": [],
+            }
 
             # Check tilt angle
-            if abs(
-                    self.roll) > self.tilt_threshold or abs(
-                    self.pitch) > self.tilt_threshold:
-                status['is_safe'] = False
-                status['tilt_ok'] = False
-                status['messages'].append(
+            if (
+                abs(self.roll) > self.tilt_threshold
+                or abs(self.pitch) > self.tilt_threshold
+            ):
+                status["is_safe"] = False
+                status["tilt_ok"] = False
+                status["messages"].append(
                     "Dangerous tilt angle detected: "
-                    f"Roll={self.roll:.1f}°, Pitch={self.pitch:.1f}°")
+                    f"Roll={self.roll:.1f}°, Pitch={self.pitch:.1f}°"
+                )
 
             # Check for impacts/collisions
-            accel_magnitude = math.sqrt(
-                sum(x * x for x in self.acceleration)
-                )
+            accel_magnitude = math.sqrt(sum(x * x for x in self.acceleration))
             # Convert G to m/s²
             if accel_magnitude > self.impact_threshold * 9.81:
                 current_time = time.time()
-                if current_time - self.last_impact_time > self.impact_cooldown:
-                    status['is_safe'] = False
-                    status['impact_detected'] = True
-                    status['messages'].append(
+                if (
+                    current_time - self.last_impact_time
+                    > self.impact_cooldown
+                ):
+                    status["is_safe"] = False
+                    status["impact_detected"] = True
+                    status["messages"].append(
                         "Impact detected! Acceleration: "
-                        f"{accel_magnitude:.1f} m/s²")
+                        f"{accel_magnitude:.1f} m/s²"
+                    )
                     self.last_impact_time = current_time
 
             # Check for abnormal acceleration
-            if any(
-                    abs(a) > 20.0 for a in self.acceleration):  # 20 m/s²
-                status['is_safe'] = False
-                status['acceleration_ok'] = False
-                status['messages'].append(
-                    "Abnormal acceleration detected!")
+            if any(abs(a) > 20.0 for a in self.acceleration):  # 20 m/s²
+                status["is_safe"] = False
+                status["acceleration_ok"] = False
+                status["messages"].append("Abnormal acceleration detected!")
 
             # Notify callbacks if unsafe condition detected
-            if not status['is_safe']:
+            if not status["is_safe"]:
                 for callback in self.safety_callbacks:
                     try:
                         callback(status)
@@ -1009,7 +1024,7 @@ class BNO085Sensor:
 def read_bno085_accel(sensor):
     try:
         accel_x, accel_y, accel_z = sensor.acceleration
-        return {'x': accel_x, 'y': accel_y, 'z': accel_z}
+        return {"x": accel_x, "y": accel_y, "z": accel_z}
     except Exception as e:
         logger.error(f"Error reading BNO085 accelerometer: {e}")
         return {}
@@ -1018,7 +1033,7 @@ def read_bno085_accel(sensor):
 def read_bno085_gyro(sensor):
     try:
         gyro_x, gyro_y, gyro_z = sensor.gyro
-        return {'x': gyro_x, 'y': gyro_y, 'z': gyro_z}
+        return {"x": gyro_x, "y": gyro_y, "z": gyro_z}
     except Exception as e:
         logger.error(f"Error reading BNO085 gyroscope: {e}")
         return {}
@@ -1027,7 +1042,7 @@ def read_bno085_gyro(sensor):
 def read_bno085_magnetometer(sensor):
     try:
         mag_x, mag_y, mag_z = sensor.magnetic
-        return {'x': mag_x, 'y': mag_y, 'z': mag_z}
+        return {"x": mag_x, "y": mag_y, "z": mag_z}
     except Exception as e:
         logger.error(f"Error reading BNO085 magnetometer: {e}")
         return {}
@@ -1036,7 +1051,7 @@ def read_bno085_magnetometer(sensor):
 def calculate_quaternion(sensor):
     try:
         q0, q1, q2, q3 = sensor.quaternion
-        return {'q0': q0, 'q1': q1, 'q2': q2, 'q3': q3}
+        return {"q0": q0, "q1": q1, "q2": q2, "q3": q3}
     except Exception as e:
         logger.error(f"Error calculating Quaternion: {e}")
         return {}
@@ -1097,7 +1112,7 @@ def enable_features(sensor):
         logger.error(f"Error enabling features on BNO085: {e}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         # Use the singleton BNO085Sensor instance
         imu = BNO085Sensor()
@@ -1131,6 +1146,6 @@ if __name__ == '__main__':
     except Exception as e:
         logger.exception(f"Error in IMU test: {e}")
     finally:
-        if 'imu' in locals():
+        if "imu" in locals():
             imu.disconnect()
         logger.info("IMU test completed.")

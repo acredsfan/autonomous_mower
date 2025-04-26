@@ -35,12 +35,12 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
 
         # Initialize sensor data
         self.state = {
-            "left_distance": float('inf'),  # Distance in cm
-            "right_distance": float('inf'),  # Distance in cm
+            "left_distance": float("inf"),  # Distance in cm
+            "right_distance": float("inf"),  # Distance in cm
             "sensor_status": {
                 "left": True,  # True if sensor is working
-                "right": True  # True if sensor is working
-            }
+                "right": True,  # True if sensor is working
+            },
         }
 
         # Initialize sensor parameters
@@ -53,12 +53,14 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
         # These values should match the physical placement of sensors on the robot
         self.sensor_positions = {
             "left": Vector2D(0.2, 0.15),  # 20cm forward, 15cm left of center
-            "right": Vector2D(0.2, -0.15)  # 20cm forward, 15cm right of center
+            "right": Vector2D(
+                0.2, -0.15
+            ),  # 20cm forward, 15cm right of center
         }
 
         self.sensor_orientations = {
             "left": math.radians(30),  # 30 degrees left of forward
-            "right": math.radians(-30)  # 30 degrees right of forward
+            "right": math.radians(-30),  # 30 degrees right of forward
         }
 
         # Get the virtual world instance
@@ -91,11 +93,11 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             sensor_position = robot_position + sensor_rel_pos
 
             # Calculate sensor direction in world coordinates
-            sensor_orientation = robot_heading + \
-                self.sensor_orientations[sensor_name]
+            sensor_orientation = (
+                robot_heading + self.sensor_orientations[sensor_name]
+            )
             sensor_direction = Vector2D(
-                math.cos(sensor_orientation),
-                math.sin(sensor_orientation)
+                math.cos(sensor_orientation), math.sin(sensor_orientation)
             )
 
             # Get distance to nearest obstacle in sensor direction
@@ -107,7 +109,9 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             distance_cm = distance * 100.0
 
             # Clamp to sensor range
-            distance_cm = max(self.min_range, min(self.max_range, distance_cm))
+            distance_cm = max(
+                self.min_range, min(self.max_range, distance_cm)
+            )
 
             # Add noise to distance
             distance_cm = self.add_noise(distance_cm)
@@ -140,7 +144,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             float: Distance in cm, or inf if no obstacle detected
         """
         self.get_data()  # Ensure data is up to date
-        return self.state.get(f"{sensor_name}_distance", float('inf'))
+        return self.state.get(f"{sensor_name}_distance", float("inf"))
 
     def get_left_distance(self) -> float:
         """Get the distance reading from the left sensor."""

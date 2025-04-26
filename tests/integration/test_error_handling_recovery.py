@@ -9,9 +9,20 @@ import pytest
 import time
 from unittest.mock import MagicMock, patch, call
 
-from mower.hardware.sensor_interface import EnhancedSensorInterface, SensorStatus
-from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm, AvoidanceState
-from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType, LearningConfig
+from mower.hardware.sensor_interface import (
+    EnhancedSensorInterface,
+    SensorStatus,
+)
+from mower.obstacle_detection.avoidance_algorithm import (
+    AvoidanceAlgorithm,
+    AvoidanceState,
+)
+from mower.navigation.path_planner import (
+    PathPlanner,
+    PatternConfig,
+    PatternType,
+    LearningConfig,
+)
 from mower.mower import ResourceManager, Mower, MowerMode
 
 
@@ -36,22 +47,36 @@ class TestErrorHandlingRecovery:
         mock_sensor_interface = MagicMock()
 
         # Configure the resource manager to return the mock components
-        mock_resource_manager.get_blade_controller.return_value = mock_blade_controller
-        mock_resource_manager.get_robohat_driver.return_value = mock_motor_driver
+        mock_resource_manager.get_blade_controller.return_value = (
+            mock_blade_controller
+        )
+        mock_resource_manager.get_robohat_driver.return_value = (
+            mock_motor_driver
+        )
         mock_resource_manager.get_imu_sensor.return_value = mock_imu_sensor
-        mock_resource_manager.get_bme280_sensor.return_value = mock_bme280_sensor
-        mock_resource_manager.get_ina3221_sensor.return_value = mock_ina3221_sensor
+        mock_resource_manager.get_bme280_sensor.return_value = (
+            mock_bme280_sensor
+        )
+        mock_resource_manager.get_ina3221_sensor.return_value = (
+            mock_ina3221_sensor
+        )
         mock_resource_manager.get_tof_sensors.return_value = mock_tof_sensors
         mock_resource_manager.get_camera.return_value = mock_camera
         mock_resource_manager.get_gps_serial.return_value = mock_gps_serial
-        mock_resource_manager.get_sensor_interface.return_value = mock_sensor_interface
+        mock_resource_manager.get_sensor_interface.return_value = (
+            mock_sensor_interface
+        )
 
         # Create a Mower instance with the mock resource manager
-        with patch("mower.mower.ResourceManager", return_value=mock_resource_manager):
+        with patch(
+            "mower.mower.ResourceManager", return_value=mock_resource_manager
+        ):
             mower = Mower()
 
             # Configure the mock components for specific tests
-            mock_ina3221_sensor.get_battery_voltage.return_value = 12.5  # Normal battery voltage
+            mock_ina3221_sensor.get_battery_voltage.return_value = (
+                12.5  # Normal battery voltage
+            )
 
             return {
                 "mower": mower,
@@ -64,7 +89,7 @@ class TestErrorHandlingRecovery:
                 "tof_sensors": mock_tof_sensors,
                 "camera": mock_camera,
                 "gps_serial": mock_gps_serial,
-                "sensor_interface": mock_sensor_interface
+                "sensor_interface": mock_sensor_interface,
             }
 
     def test_emergency_stop_recovery(self, setup_error_recovery_components):
@@ -139,7 +164,9 @@ class TestErrorHandlingRecovery:
         sensor_interface = setup_error_recovery_components["sensor_interface"]
 
         # Create a mock EnhancedSensorInterface
-        with patch("mower.hardware.sensor_interface.EnhancedSensorInterface") as MockSensorInterface:
+        with patch(
+            "mower.hardware.sensor_interface.EnhancedSensorInterface"
+        ) as MockSensorInterface:
             # Configure the mock to return a mock sensor interface
             mock_sensor_interface = MagicMock()
             MockSensorInterface.return_value = mock_sensor_interface
@@ -147,10 +174,18 @@ class TestErrorHandlingRecovery:
             # Configure the mock sensor interface
             mock_sensor_interface.is_safe_to_operate.return_value = True
             mock_sensor_interface._sensor_status = {
-                "bme280": MagicMock(working=True, error_count=0, last_error=None),
-                "bno085": MagicMock(working=True, error_count=0, last_error=None),
-                "ina3221": MagicMock(working=True, error_count=0, last_error=None),
-                "vl53l0x": MagicMock(working=True, error_count=0, last_error=None)
+                "bme280": MagicMock(
+                    working=True, error_count=0, last_error=None
+                ),
+                "bno085": MagicMock(
+                    working=True, error_count=0, last_error=None
+                ),
+                "ina3221": MagicMock(
+                    working=True, error_count=0, last_error=None
+                ),
+                "vl53l0x": MagicMock(
+                    working=True, error_count=0, last_error=None
+                ),
             }
 
             # Create a new EnhancedSensorInterface instance
@@ -162,14 +197,17 @@ class TestErrorHandlingRecovery:
             # Simulate a sensor failure
             mock_sensor_interface._sensor_status["bno085"].working = False
             mock_sensor_interface._sensor_status["bno085"].error_count = 3
-            mock_sensor_interface._sensor_status["bno085"].last_error = "Sensor not responding"
+            mock_sensor_interface._sensor_status["bno085"].last_error = (
+                "Sensor not responding"
+            )
 
             # Verify that it's not safe to operate
             assert sensor_interface.is_safe_to_operate() is False
 
             # Simulate sensor recovery
             mock_sensor_interface._init_sensor_with_retry = MagicMock(
-                return_value=True)
+                return_value=True
+            )
 
             # Call the recovery method
             sensor_interface._attempt_sensor_recovery("bno085")
@@ -185,14 +223,17 @@ class TestErrorHandlingRecovery:
             # Verify that it's safe to operate again
             assert sensor_interface.is_safe_to_operate() is True
 
-    def test_obstacle_avoidance_failure_recovery(self, setup_error_recovery_components):
+    def test_obstacle_avoidance_failure_recovery(
+        self, setup_error_recovery_components
+    ):
         """Test that the system can recover from obstacle avoidance failures."""
         # Create a mock pattern planner
         mock_pattern_planner = MagicMock()
 
         # Create an AvoidanceAlgorithm instance
         avoidance_algorithm = AvoidanceAlgorithm(
-            pattern_planner=mock_pattern_planner)
+            pattern_planner=mock_pattern_planner
+        )
 
         # Mock the motor controller
         motor_controller = MagicMock()
@@ -207,7 +248,9 @@ class TestErrorHandlingRecovery:
         avoidance_algorithm.obstacle_right = True
 
         # Detect the obstacle
-        obstacle_detected, obstacle_data = avoidance_algorithm._detect_obstacle()
+        obstacle_detected, obstacle_data = (
+            avoidance_algorithm._detect_obstacle()
+        )
 
         # Verify that an obstacle was detected
         assert obstacle_detected is True
@@ -218,7 +261,10 @@ class TestErrorHandlingRecovery:
 
         # Verify that the motor controller was called to execute the avoidance maneuver
         assert motor_controller.get_current_heading.called
-        assert motor_controller.rotate_to_heading.called or motor_controller.move_distance.called
+        assert (
+            motor_controller.rotate_to_heading.called
+            or motor_controller.move_distance.called
+        )
 
         # Simulate failed avoidance (obstacle still detected)
         motor_controller.get_status.return_value = "TARGET_REACHED"
@@ -246,7 +292,10 @@ class TestErrorHandlingRecovery:
 
         # Verify that the motor controller was called to execute the recovery maneuver
         assert motor_controller.get_current_heading.called
-        assert motor_controller.rotate_to_heading.called or motor_controller.move_distance.called
+        assert (
+            motor_controller.rotate_to_heading.called
+            or motor_controller.move_distance.called
+        )
 
         # Simulate successful recovery (obstacle no longer detected)
         avoidance_algorithm.obstacle_left = False
@@ -284,7 +333,9 @@ class TestErrorHandlingRecovery:
 
         # Simulate recovery from the navigation error
         mock_navigation.get_status.return_value = {
-            "position": (0.0, 0.0), "heading": 0.0}
+            "position": (0.0, 0.0),
+            "heading": 0.0,
+        }
 
         # Get the mower status again
         status = mower.get_status()

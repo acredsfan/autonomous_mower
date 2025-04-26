@@ -54,8 +54,7 @@ class EventBus:
 
             self._running = True
             self._processing_thread = threading.Thread(
-                target=self._process_events,
-                daemon=True
+                target=self._process_events, daemon=True
             )
             self._processing_thread.start()
             logger.info("Event bus started")
@@ -73,7 +72,9 @@ class EventBus:
             if self._processing_thread and self._processing_thread.is_alive():
                 self._processing_thread.join(timeout=5.0)
                 if self._processing_thread.is_alive():
-                    logger.warning("Event processing thread did not terminate")
+                    logger.warning(
+                        "Event processing thread did not terminate"
+                    )
 
             self._processing_thread = None
             logger.info("Event bus stopped")
@@ -81,7 +82,7 @@ class EventBus:
     def subscribe(
         self,
         callback: Callable[[Event], None],
-        event_type: Optional[EventType] = None
+        event_type: Optional[EventType] = None,
     ):
         """
         Subscribe to events.
@@ -94,7 +95,9 @@ class EventBus:
             if event_type is None:
                 # Subscribe to all events
                 self._wildcard_subscribers.append(callback)
-                logger.debug(f"Added wildcard subscriber: {callback.__name__}")
+                logger.debug(
+                    f"Added wildcard subscriber: {callback.__name__}"
+                )
             else:
                 # Subscribe to specific event type
                 if event_type not in self._subscribers:
@@ -108,7 +111,7 @@ class EventBus:
     def unsubscribe(
         self,
         callback: Callable[[Event], None],
-        event_type: Optional[EventType] = None
+        event_type: Optional[EventType] = None,
     ):
         """
         Unsubscribe from events.
@@ -136,8 +139,10 @@ class EventBus:
                         )
             else:
                 # Unsubscribe from specific event type
-                if (event_type in self._subscribers and
-                        callback in self._subscribers[event_type]):
+                if (
+                    event_type in self._subscribers
+                    and callback in self._subscribers[event_type]
+                ):
                     self._subscribers[event_type].remove(callback)
                     logger.debug(
                         f"Removed subscriber for {event_type.name}: "
@@ -156,7 +161,9 @@ class EventBus:
         with self._lock:
             self._event_history.append(event)
             if len(self._event_history) > self._max_history_size:
-                self._event_history = self._event_history[-self._max_history_size:]
+                self._event_history = self._event_history[
+                    -self._max_history_size :
+                ]
 
         if synchronous:
             # Process the event synchronously
@@ -198,7 +205,8 @@ class EventBus:
                 # Add specific subscribers
                 if event.event_type in self._subscribers:
                     event_subscribers.extend(
-                        self._subscribers[event.event_type])
+                        self._subscribers[event.event_type]
+                    )
 
                 # Add wildcard subscribers
                 event_subscribers.extend(self._wildcard_subscribers)

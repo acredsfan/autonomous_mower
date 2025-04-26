@@ -48,15 +48,15 @@ class SimulatedBNO085Sensor(SimulatedSensor):
                 "system": 3,
                 "gyro": 3,
                 "accel": 3,
-                "mag": 3
+                "mag": 3,
             },
             "safety_status": {
                 "tilt_warning": False,
                 "tilt_error": False,
                 "vibration_warning": False,
                 "vibration_error": False,
-                "impact_detected": False
-            }
+                "impact_detected": False,
+            },
         }
 
         # Initialize sensor parameters
@@ -127,7 +127,10 @@ class SimulatedBNO085Sensor(SimulatedSensor):
 
         # Update acceleration
         self.state["acceleration"] = (
-            accel_robot_x, accel_robot_y, accel_robot_z)
+            accel_robot_x,
+            accel_robot_y,
+            accel_robot_z,
+        )
 
         # Update gyro (angular velocity)
         # In a real system, this would be in the robot's coordinate system
@@ -186,7 +189,7 @@ class SimulatedBNO085Sensor(SimulatedSensor):
         self.state["heading"] = heading
 
         # Update speed
-        speed = math.sqrt(velocity[0]**2 + velocity[1]**2)
+        speed = math.sqrt(velocity[0] ** 2 + velocity[1] ** 2)
         self.state["speed"] = speed
 
         # Check safety conditions
@@ -206,8 +209,9 @@ class SimulatedBNO085Sensor(SimulatedSensor):
         tilt_angle = math.sqrt(roll**2 + pitch**2)
 
         # Calculate vibration level (magnitude of acceleration)
-        vibration_level = math.sqrt(
-            accel_x**2 + accel_y**2 + accel_z**2) - 9.81
+        vibration_level = (
+            math.sqrt(accel_x**2 + accel_y**2 + accel_z**2) - 9.81
+        )
 
         # Check tilt warning
         tilt_warning = tilt_angle > self.tilt_warning_threshold
@@ -230,7 +234,7 @@ class SimulatedBNO085Sensor(SimulatedSensor):
             "tilt_error": tilt_error,
             "vibration_warning": vibration_warning,
             "vibration_error": vibration_error,
-            "impact_detected": impact_detected
+            "impact_detected": impact_detected,
         }
 
         # Call safety callback if registered
@@ -323,7 +327,9 @@ class SimulatedBNO085Sensor(SimulatedSensor):
         self.get_data()  # Ensure data is up to date
         return self.state["safety_status"]
 
-    def register_safety_callback(self, callback: Callable[[Dict[str, bool]], None]) -> None:
+    def register_safety_callback(
+        self, callback: Callable[[Dict[str, bool]], None]
+    ) -> None:
         """Register a callback for safety status changes."""
         self.safety_callback = callback
 

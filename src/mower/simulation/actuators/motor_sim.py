@@ -43,7 +43,7 @@ class SimulatedRoboHATDriver(SimulatedActuator):
             "steering": 0.0,  # -1.0 to 1.0
             "throttle": 0.0,  # -1.0 to 1.0
             "running": False,
-            "debug": debug
+            "debug": debug,
         }
 
         # Initialize actuator parameters
@@ -76,8 +76,7 @@ class SimulatedRoboHATDriver(SimulatedActuator):
         # If the key is left_speed or right_speed, update the robot's motor speeds
         if key in ["left_speed", "right_speed"]:
             self.world.set_robot_motor_speeds(
-                self.state["left_speed"],
-                self.state["right_speed"]
+                self.state["left_speed"], self.state["right_speed"]
             )
 
     # RoboHATDriver interface methods
@@ -146,9 +145,12 @@ class SimulatedRoboHATDriver(SimulatedActuator):
             throttle: Throttle value (-1.0 to 1.0)
         """
         # Check if values are valid
-        if not self.is_valid_pwm_value(steering) or not self.is_valid_pwm_value(throttle):
+        if not self.is_valid_pwm_value(
+            steering
+        ) or not self.is_valid_pwm_value(throttle):
             logger.warning(
-                f"Invalid PWM values: steering={steering}, throttle={throttle}")
+                f"Invalid PWM values: steering={steering}, throttle={throttle}"
+            )
             return
 
         # Set pulse
@@ -183,7 +185,9 @@ class SimulatedRoboHATDriver(SimulatedActuator):
 
         # Log if debug is enabled
         if self.state["debug"]:
-            logger.debug(f"Set motors: left={left_speed}, right={right_speed}")
+            logger.debug(
+                f"Set motors: left={left_speed}, right={right_speed}"
+            )
 
     def forward(self, speed: float = 1.0) -> None:
         """

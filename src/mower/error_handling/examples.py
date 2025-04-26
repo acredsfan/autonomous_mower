@@ -19,7 +19,7 @@ from mower.error_handling import (
     with_error_handling,
     error_context,
     safe_call,
-    get_error_reporter
+    get_error_reporter,
 )
 
 
@@ -34,7 +34,7 @@ def example_basic_error_handling():
         error = MowerError.from_exception(
             e,
             ErrorCode.SOFTWARE_ALGORITHM_ERROR,
-            context={"operation": "division"}
+            context={"operation": "division"},
         )
         # Report the error
         report_error(error)
@@ -70,7 +70,7 @@ def example_context_manager():
     try:
         with error_context(
             error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST,
-            context={"source": "example"}
+            context={"source": "example"},
         ):
             # Simulate a GPS error
             raise TimeoutError("GPS timeout")
@@ -82,6 +82,7 @@ def example_context_manager():
 # Example 4: Safe function calls
 def example_safe_call():
     """Example of using the safe_call function."""
+
     # Define a function that might raise an exception
     def might_fail(x: int) -> int:
         if x == 0:
@@ -93,7 +94,7 @@ def example_safe_call():
         might_fail,
         0,  # This will cause an error
         error_code=ErrorCode.SOFTWARE_ALGORITHM_ERROR,
-        default_value=-1
+        default_value=-1,
     )
 
     print(f"Result: {result}")  # Will print -1
@@ -102,6 +103,7 @@ def example_safe_call():
 # Example 5: Custom error handlers
 def example_custom_error_handler():
     """Example of using custom error handlers."""
+
     # Define a custom error handler
     def custom_handler(error: MowerError):
         print(f"Custom handler received error: {error}")
@@ -116,7 +118,7 @@ def example_custom_error_handler():
     try:
         raise HardwareError(
             "Battery critically low",
-            error_code=ErrorCode.HARDWARE_BATTERY_CRITICAL
+            error_code=ErrorCode.HARDWARE_BATTERY_CRITICAL,
         )
     except MowerError as e:
         report_error(e)
@@ -154,7 +156,7 @@ class SensorComponent:
         if self.sensor_id == "broken":
             raise HardwareError(
                 f"Failed to initialize sensor {self.sensor_id}",
-                error_code=ErrorCode.HARDWARE_INITIALIZATION_FAILED
+                error_code=ErrorCode.HARDWARE_INITIALIZATION_FAILED,
             )
         return True
 
@@ -168,7 +170,7 @@ class SensorComponent:
         try:
             with error_context(
                 error_code=ErrorCode.HARDWARE_SENSOR_FAILURE,
-                context={"sensor_id": self.sensor_id}
+                context={"sensor_id": self.sensor_id},
             ):
                 # Simulate reading
                 if self.sensor_id == "broken":
@@ -176,7 +178,7 @@ class SensorComponent:
                     if self.error_count > self.max_errors:
                         raise HardwareError(
                             f"Sensor {self.sensor_id} failed too many times",
-                            error_code=ErrorCode.HARDWARE_SENSOR_FAILURE
+                            error_code=ErrorCode.HARDWARE_SENSOR_FAILURE,
                         )
                     raise ValueError("Sensor reading failed")
 
@@ -199,7 +201,7 @@ class SensorComponent:
             "sensor_id": self.sensor_id,
             "last_reading": self.last_reading,
             "error_count": self.error_count,
-            "status": "error" if self.error_count > 0 else "ok"
+            "status": "error" if self.error_count > 0 else "ok",
         }
 
 
@@ -225,7 +227,7 @@ class NavigationComponent:
         if time.time() % 30 < 5:  # Simulate occasional GPS loss
             raise NavigationError(
                 "GPS signal lost",
-                error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST
+                error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST,
             )
         return self.position
 
@@ -242,7 +244,7 @@ class NavigationComponent:
         try:
             with error_context(
                 error_code=ErrorCode.NAVIGATION_PATH_BLOCKED,
-                context={"target": target}
+                context={"target": target},
             ):
                 # Get current position
                 current = self.get_position()
@@ -254,7 +256,7 @@ class NavigationComponent:
                 if target[0] < 0 or target[1] < 0:
                     raise NavigationError(
                         "Path blocked by obstacle",
-                        error_code=ErrorCode.NAVIGATION_PATH_BLOCKED
+                        error_code=ErrorCode.NAVIGATION_PATH_BLOCKED,
                     )
 
                 # Update position

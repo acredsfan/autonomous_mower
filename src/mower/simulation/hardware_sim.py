@@ -57,18 +57,21 @@ class SimulatedHardwareComponent(ABC):
         with self._lock:
             if self.initialized:
                 logger.warning(
-                    f"Simulated {self.component_name} already initialized")
+                    f"Simulated {self.component_name} already initialized"
+                )
                 return True
 
             try:
                 self._initialize_sim(*args, **kwargs)
                 self.initialized = True
                 logger.info(
-                    f"Simulated {self.component_name} initialized successfully")
+                    f"Simulated {self.component_name} initialized successfully"
+                )
                 return True
             except Exception as e:
                 logger.error(
-                    f"Error initializing simulated {self.component_name}: {e}")
+                    f"Error initializing simulated {self.component_name}: {e}"
+                )
                 return False
 
     @abstractmethod
@@ -98,18 +101,21 @@ class SimulatedHardwareComponent(ABC):
         with self._lock:
             if not self.initialized:
                 logger.warning(
-                    f"Simulated {self.component_name} not initialized, nothing to clean up")
+                    f"Simulated {self.component_name} not initialized, nothing to clean up"
+                )
                 return True
 
             try:
                 self._cleanup_sim()
                 self.initialized = False
                 logger.info(
-                    f"Simulated {self.component_name} cleaned up successfully")
+                    f"Simulated {self.component_name} cleaned up successfully"
+                )
                 return True
             except Exception as e:
                 logger.error(
-                    f"Error cleaning up simulated {self.component_name}: {e}")
+                    f"Error cleaning up simulated {self.component_name}: {e}"
+                )
                 return False
 
     @abstractmethod
@@ -209,7 +215,9 @@ class SimulatedSensor(SimulatedHardwareComponent):
         """
         pass
 
-    def add_noise(self, value: float, noise_level: Optional[float] = None) -> float:
+    def add_noise(
+        self, value: float, noise_level: Optional[float] = None
+    ) -> float:
         """
         Add random noise to a sensor value.
 
@@ -274,7 +282,8 @@ class SimulatedActuator(SimulatedHardwareComponent):
                 return True
             except Exception as e:
                 logger.error(
-                    f"Error setting value for simulated {self.component_name}: {e}")
+                    f"Error setting value for simulated {self.component_name}: {e}"
+                )
                 return False
 
     @abstractmethod
@@ -319,7 +328,12 @@ class SimulatedActuator(SimulatedHardwareComponent):
         """
         # Default implementation for numeric values
         for key, target_value in self.target_state.items():
-            if key in self.state and isinstance(self.state[key], (int, float)) and isinstance(target_value, (int, float)):
+            if (
+                key in self.state
+                and isinstance(self.state[key], (int, float))
+                and isinstance(target_value, (int, float))
+            ):
                 current_value = self.state[key]
-                self.state[key] = current_value + \
-                    (target_value - current_value) * progress
+                self.state[key] = (
+                    current_value + (target_value - current_value) * progress
+                )

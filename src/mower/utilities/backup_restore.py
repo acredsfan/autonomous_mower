@@ -71,18 +71,20 @@ class BackupRestore:
         self.backup_dir = backup_dir
         os.makedirs(self.backup_dir, exist_ok=True)
         self.manifest_file = os.path.join(
-            self.backup_dir, BACKUP_MANIFEST_FILE)
+            self.backup_dir, BACKUP_MANIFEST_FILE
+        )
         self._load_manifest()
 
     def _load_manifest(self) -> None:
         """Load the backup manifest file."""
         if os.path.exists(self.manifest_file):
             try:
-                with open(self.manifest_file, 'r') as f:
+                with open(self.manifest_file, "r") as f:
                     self.manifest = json.load(f)
             except json.JSONDecodeError:
                 logger.error(
-                    f"Error parsing manifest file: {self.manifest_file}")
+                    f"Error parsing manifest file: {self.manifest_file}"
+                )
                 self.manifest = {"backups": []}
         else:
             self.manifest = {"backups": []}
@@ -90,7 +92,7 @@ class BackupRestore:
     def _save_manifest(self) -> None:
         """Save the backup manifest file."""
         try:
-            with open(self.manifest_file, 'w') as f:
+            with open(self.manifest_file, "w") as f:
                 json.dump(self.manifest, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving manifest file: {e}")
@@ -119,7 +121,9 @@ class BackupRestore:
         os.makedirs(backup_path, exist_ok=True)
         return backup_path
 
-    def _create_tarball(self, source_dir: str, target_file: str, compress: bool = True) -> bool:
+    def _create_tarball(
+        self, source_dir: str, target_file: str, compress: bool = True
+    ) -> bool:
         """
         Create a tarball of a directory.
 
@@ -204,16 +208,19 @@ class BackupRestore:
 
         # Sort backups by creation time (oldest first)
         sorted_backups = sorted(
-            self.manifest["backups"],
-            key=lambda x: x["created_at"]
+            self.manifest["backups"], key=lambda x: x["created_at"]
         )
 
         # Remove oldest backups
-        backups_to_remove = sorted_backups[:len(sorted_backups) - MAX_BACKUPS]
+        backups_to_remove = sorted_backups[
+            : len(sorted_backups) - MAX_BACKUPS
+        ]
         for backup in backups_to_remove:
             self.delete_backup(backup["id"])
 
-    def create_backup(self, components: List[str] = None, description: str = None) -> Tuple[bool, str]:
+    def create_backup(
+        self, components: List[str] = None, description: str = None
+    ) -> Tuple[bool, str]:
         """
         Create a backup of the specified components.
 
@@ -234,7 +241,10 @@ class BackupRestore:
         valid_components = ["config", "data", "logs"]
         for component in components:
             if component not in valid_components:
-                return False, f"Invalid component: {component}. Valid components: {valid_components}"
+                return (
+                    False,
+                    f"Invalid component: {component}. Valid components: {valid_components}",
+                )
 
         # Generate backup ID and create directory
         backup_id = self._generate_backup_id()
@@ -255,7 +265,8 @@ class BackupRestore:
             # Skip if source directory doesn't exist
             if not os.path.exists(source_dir):
                 logger.warning(
-                    f"Source directory {source_dir} not found, skipping")
+                    f"Source directory {source_dir} not found, skipping"
+                )
                 continue
 
             # Create tarball
@@ -275,7 +286,8 @@ class BackupRestore:
             "id": backup_id,
             "created_at": datetime.now().isoformat(),
             "components": successful_components,
-            "description": description or "Backup created by backup_restore.py",
+            "description": description
+            or "Backup created by backup_restore.py",
         }
         self.manifest["backups"].append(backup_info)
         self._save_manifest()
@@ -283,9 +295,14 @@ class BackupRestore:
         # Rotate backups
         self._rotate_backups()
 
-        return True, f"Backup {backup_id} created successfully with components: {successful_components}"
+        return (
+            True,
+            f"Backup {backup_id} created successfully with components: {successful_components}",
+        )
 
-    def restore_backup(self, backup_id: str, components: List[str] = None) -> Tuple[bool, str]:
+    def restore_backup(
+        self, backup_id: str, components: List[str] = None
+    ) -> Tuple[bool, str]:
         """
         Restore from a backup.
 
@@ -320,7 +337,10 @@ class BackupRestore:
             # Validate components
             for component in components:
                 if component not in backup_info["components"]:
-                    return False, f"Component {component} not found in backup {backup_id}"
+                    return (
+                        False,
+                        f"Component {component} not found in backup {backup_id}",
+                    )
 
         # Stop services before restoring
         logger.info("Stopping autonomous-mower service")
@@ -367,12 +387,18 @@ class BackupRestore:
             )
         except subprocess.CalledProcessError as e:
             logger.error(f"Error starting service: {e.stderr}")
-            return False, f"Restore partially successful, but failed to start service: {e.stderr}"
+            return (
+                False,
+                f"Restore partially successful, but failed to start service: {e.stderr}",
+            )
 
         if not successful_components:
             return False, "No components were restored successfully"
 
-        return True, f"Restore from backup {backup_id} completed successfully with components: {successful_components}"
+        return (
+            True,
+            f"Restore from backup {backup_id} completed successfully with components: {successful_components}",
+        )
 
     def list_backups(self) -> List[Dict[str, Any]]:
         """
@@ -436,7 +462,9 @@ class BackupRestore:
 
         return True, f"Backup {backup_id} deleted successfully"
 
-    def create_scheduled_backup(self, components: List[str] = None, description: str = None) -> Tuple[bool, str]:
+    def create_scheduled_backup(
+        self, components: List[str] = None, description: str = None
+    ) -> Tuple[bool, str]:
         """
         Create a scheduled backup using cron.
 
@@ -451,8 +479,9 @@ class BackupRestore:
                 message: Information about the process or error message.
         """
         # Create a cron job to run the backup script
-        components_str = ",".join(
-            components) if components else "config,data,logs"
+        components_str = (
+            ",".join(components) if components else "config,data,logs"
+        )
         description_str = f'"{description}"' if description else '""'
 
         cron_command = f"0 2 * * * python3 -m mower.utilities.backup_restore --backup {components_str} --description {description_str} > /dev/null 2>&1"
@@ -479,7 +508,9 @@ class BackupRestore:
             new_crontab = current_crontab + cron_command + "\n"
 
             # Write the new crontab
-            with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False
+            ) as temp_file:
                 temp_file.write(new_crontab)
                 temp_file_path = temp_file.name
 
@@ -492,7 +523,10 @@ class BackupRestore:
 
             os.unlink(temp_file_path)
 
-            return True, "Scheduled backup set up successfully (daily at 2:00 AM)"
+            return (
+                True,
+                "Scheduled backup set up successfully (daily at 2:00 AM)",
+            )
         except Exception as e:
             logger.error(f"Error setting up scheduled backup: {e}")
             return False, f"Error setting up scheduled backup: {e}"
@@ -611,7 +645,8 @@ def main():
             print(f"Found {len(backups)} backups:")
             for backup in backups:
                 created_at = datetime.fromisoformat(
-                    backup["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
+                    backup["created_at"]
+                ).strftime("%Y-%m-%d %H:%M:%S")
                 print(f"ID: {backup['id']}")
                 print(f"  Created: {created_at}")
                 print(f"  Components: {', '.join(backup['components'])}")
@@ -626,7 +661,8 @@ def main():
                 return 1
 
             created_at = datetime.fromisoformat(
-                backup_info["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
+                backup_info["created_at"]
+            ).strftime("%Y-%m-%d %H:%M:%S")
             print(f"Backup ID: {backup_info['id']}")
             print(f"Created: {created_at}")
             print(f"Components: {', '.join(backup_info['components'])}")
@@ -635,7 +671,8 @@ def main():
             # Check if the backup is valid
             is_valid = backup_restore._verify_backup(args.info)
             print(
-                f"Status: {'Valid' if is_valid else 'Invalid or incomplete'}")
+                f"Status: {'Valid' if is_valid else 'Invalid or incomplete'}"
+            )
 
             return 0
 

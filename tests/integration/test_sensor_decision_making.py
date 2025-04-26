@@ -10,9 +10,20 @@ import pytest
 import time
 from unittest.mock import MagicMock, patch
 
-from mower.hardware.sensor_interface import EnhancedSensorInterface, SensorStatus
-from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm, AvoidanceState
-from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType, LearningConfig
+from mower.hardware.sensor_interface import (
+    EnhancedSensorInterface,
+    SensorStatus,
+)
+from mower.obstacle_detection.avoidance_algorithm import (
+    AvoidanceAlgorithm,
+    AvoidanceState,
+)
+from mower.navigation.path_planner import (
+    PathPlanner,
+    PatternConfig,
+    PatternType,
+    LearningConfig,
+)
 
 
 class TestSensorDecisionMaking:
@@ -33,7 +44,7 @@ class TestSensorDecisionMaking:
                 angle=0.0,
                 overlap=0.0,
                 start_point=(0.0, 0.0),
-                boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+                boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
             )
 
             learning_config = LearningConfig(
@@ -43,7 +54,7 @@ class TestSensorDecisionMaking:
                 memory_size=1000,
                 batch_size=32,
                 update_frequency=100,
-                model_path="test_model_path"
+                model_path="test_model_path",
             )
 
             # Create a PathPlanner instance
@@ -51,7 +62,8 @@ class TestSensorDecisionMaking:
 
             # Create an AvoidanceAlgorithm instance
             avoidance_algorithm = AvoidanceAlgorithm(
-                pattern_planner=path_planner)
+                pattern_planner=path_planner
+            )
 
             # Mock the motor controller
             motor_controller = MagicMock()
@@ -72,7 +84,7 @@ class TestSensorDecisionMaking:
                 "left_distance": 100.0,
                 "right_distance": 100.0,
                 "battery_voltage": 12.5,
-                "battery_current": 1.0
+                "battery_current": 1.0,
             }
 
             # Mock the sensor status
@@ -85,14 +97,20 @@ class TestSensorDecisionMaking:
                 "sensor_interface": sensor_interface,
                 "path_planner": path_planner,
                 "avoidance_algorithm": avoidance_algorithm,
-                "motor_controller": motor_controller
+                "motor_controller": motor_controller,
             }
 
-    def test_obstacle_detection_from_sensor_data(self, setup_sensor_decision_components):
+    def test_obstacle_detection_from_sensor_data(
+        self, setup_sensor_decision_components
+    ):
         """Test that obstacles are detected correctly from sensor data."""
         # Get the components
-        sensor_interface = setup_sensor_decision_components["sensor_interface"]
-        avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
+        sensor_interface = setup_sensor_decision_components[
+            "sensor_interface"
+        ]
+        avoidance_algorithm = setup_sensor_decision_components[
+            "avoidance_algorithm"
+        ]
 
         # Set up the avoidance algorithm to use the sensor interface
         avoidance_algorithm.sensor_interface = sensor_interface
@@ -149,10 +167,14 @@ class TestSensorDecisionMaking:
         assert avoidance_algorithm.obstacle_left is False
         assert avoidance_algorithm.obstacle_right is False
 
-    def test_safety_checks_from_sensor_data(self, setup_sensor_decision_components):
+    def test_safety_checks_from_sensor_data(
+        self, setup_sensor_decision_components
+    ):
         """Test that safety checks are performed correctly based on sensor data."""
         # Get the components
-        sensor_interface = setup_sensor_decision_components["sensor_interface"]
+        sensor_interface = setup_sensor_decision_components[
+            "sensor_interface"
+        ]
 
         # Initially, it's safe to operate
         assert sensor_interface.is_safe_to_operate() is True
@@ -181,12 +203,20 @@ class TestSensorDecisionMaking:
         # Restore the battery voltage
         sensor_interface._data["battery_voltage"] = original_battery_voltage
 
-    def test_decision_making_based_on_sensor_data(self, setup_sensor_decision_components):
+    def test_decision_making_based_on_sensor_data(
+        self, setup_sensor_decision_components
+    ):
         """Test that decisions are made correctly based on sensor data."""
         # Get the components
-        sensor_interface = setup_sensor_decision_components["sensor_interface"]
-        avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
-        motor_controller = setup_sensor_decision_components["motor_controller"]
+        sensor_interface = setup_sensor_decision_components[
+            "sensor_interface"
+        ]
+        avoidance_algorithm = setup_sensor_decision_components[
+            "avoidance_algorithm"
+        ]
+        motor_controller = setup_sensor_decision_components[
+            "motor_controller"
+        ]
 
         # Set up the avoidance algorithm to use the sensor interface
         avoidance_algorithm.sensor_interface = sensor_interface
@@ -199,7 +229,9 @@ class TestSensorDecisionMaking:
         avoidance_algorithm._update_sensor_obstacle_status()
 
         # Detect the obstacle
-        obstacle_detected, obstacle_data = avoidance_algorithm._detect_obstacle()
+        obstacle_detected, obstacle_data = (
+            avoidance_algorithm._detect_obstacle()
+        )
 
         # Verify that an obstacle was detected
         assert obstacle_detected is True
@@ -221,13 +253,21 @@ class TestSensorDecisionMaking:
         assert heading_calls >= 1
         assert rotate_calls >= 1
 
-    def test_sensor_data_integration_with_navigation(self, setup_sensor_decision_components):
+    def test_sensor_data_integration_with_navigation(
+        self, setup_sensor_decision_components
+    ):
         """Test that sensor data is integrated correctly with navigation."""
         # Get the components
-        sensor_interface = setup_sensor_decision_components["sensor_interface"]
-        avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
+        sensor_interface = setup_sensor_decision_components[
+            "sensor_interface"
+        ]
+        avoidance_algorithm = setup_sensor_decision_components[
+            "avoidance_algorithm"
+        ]
         path_planner = setup_sensor_decision_components["path_planner"]
-        motor_controller = setup_sensor_decision_components["motor_controller"]
+        motor_controller = setup_sensor_decision_components[
+            "motor_controller"
+        ]
 
         # Set up the avoidance algorithm to use the sensor interface
         avoidance_algorithm.sensor_interface = sensor_interface
@@ -278,7 +318,9 @@ class TestSensorDecisionMaking:
                 avoidance_algorithm._update_sensor_obstacle_status()
 
                 # Detect the obstacle
-                obstacle_detected, obstacle_data = avoidance_algorithm._detect_obstacle()
+                obstacle_detected, obstacle_data = (
+                    avoidance_algorithm._detect_obstacle()
+                )
 
                 # Verify that an obstacle was detected
                 assert obstacle_detected is True
@@ -289,7 +331,10 @@ class TestSensorDecisionMaking:
 
                 # Verify that the motor controller was called to execute the avoidance maneuver
                 assert motor_controller.get_current_heading.called
-                assert motor_controller.rotate_to_heading.called or motor_controller.move_distance.called
+                assert (
+                    motor_controller.rotate_to_heading.called
+                    or motor_controller.move_distance.called
+                )
 
                 # Clear the obstacle for the next iteration
                 sensor_interface._data["left_distance"] = 100.0

@@ -14,8 +14,8 @@ from pathlib import Path
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -29,8 +29,8 @@ class RemoteAccessSetup:
             config: Dictionary containing configuration values from .env file
         """
         self.config = config
-        self.access_type = config.get('REMOTE_ACCESS_TYPE', 'port_forward')
-        self.web_port = config.get('WEB_UI_PORT', 8080)
+        self.access_type = config.get("REMOTE_ACCESS_TYPE", "port_forward")
+        self.web_port = config.get("WEB_UI_PORT", 8080)
 
     def setup(self) -> bool:
         """Configure the selected remote access method.
@@ -39,15 +39,17 @@ class RemoteAccessSetup:
             bool: True if setup was successful, False otherwise
         """
         setup_methods = {
-            'port_forward': self._setup_port_forward,
-            'ddns': self._setup_ddns,
-            'cloudflare': self._setup_cloudflare,
-            'custom_domain': self._setup_custom_domain,
-            'ngrok': self._setup_ngrok
-            }
+            "port_forward": self._setup_port_forward,
+            "ddns": self._setup_ddns,
+            "cloudflare": self._setup_cloudflare,
+            "custom_domain": self._setup_custom_domain,
+            "ngrok": self._setup_ngrok,
+        }
 
         if self.access_type not in setup_methods:
-            logger.error(f"Unsupported remote access type: {self.access_type}")
+            logger.error(
+                f"Unsupported remote access type: {self.access_type}"
+            )
             return False
 
         try:
@@ -66,7 +68,7 @@ class RemoteAccessSetup:
         logger.info(
             f"Please configure your router to forward port {self.web_port} "
             "to your mower's IP address"
-            )
+        )
         return True
 
     def _setup_ddns(self) -> bool:
@@ -75,17 +77,17 @@ class RemoteAccessSetup:
         Returns:
             bool: True if setup was successful
         """
-        provider = self.config.get('DDNS_PROVIDER')
-        domain = self.config.get('DDNS_DOMAIN')
-        token = self.config.get('DDNS_TOKEN')
+        provider = self.config.get("DDNS_PROVIDER")
+        domain = self.config.get("DDNS_DOMAIN")
+        token = self.config.get("DDNS_TOKEN")
 
         if not all([provider, domain, token]):
             logger.error("Missing required DDNS configuration")
             return False
 
-        if provider == 'duckdns':
+        if provider == "duckdns":
             return self._setup_duckdns(domain, token)
-        elif provider == 'noip':
+        elif provider == "noip":
             return self._setup_noip(domain, token)
         else:
             logger.error(f"Unsupported DDNS provider: {provider}")
@@ -103,7 +105,7 @@ class RemoteAccessSetup:
         """
         try:
             # Create DuckDNS update script
-            script_path = Path('/usr/local/bin/update_duckdns.sh')
+            script_path = Path("/usr/local/bin/update_duckdns.sh")
             script_content = f"""#!/bin/bash
 curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
 """
@@ -111,12 +113,8 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
             script_path.chmod(0o755)
 
             # Add to crontab
-            subprocess.run([
-                'crontab', '-l'
-                ], capture_output=True, text=True)
-            subprocess.run([
-                'crontab', '-l'
-                ], capture_output=True, text=True)
+            subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+            subprocess.run(["crontab", "-l"], capture_output=True, text=True)
 
             logger.info("DuckDNS setup completed successfully")
             return True
@@ -136,10 +134,10 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         """
         try:
             # Install No-IP client
-            subprocess.run(['sudo', 'apt-get', 'install', 'noip2'])
+            subprocess.run(["sudo", "apt-get", "install", "noip2"])
 
             # Configure No-IP client
-            subprocess.run(['sudo', 'noip2', '-C'])
+            subprocess.run(["sudo", "noip2", "-C"])
 
             logger.info("No-IP setup completed successfully")
             return True
@@ -153,9 +151,11 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         Returns:
             bool: True if setup was successful
         """
-        token = self.config.get('CLOUDFLARE_TOKEN')
-        zone_id = self.config.get('CLOUDFLARE_ZONE_ID')
-        tunnel_name = self.config.get('CLOUDFLARE_TUNNEL_NAME', 'mower-tunnel')
+        token = self.config.get("CLOUDFLARE_TOKEN")
+        zone_id = self.config.get("CLOUDFLARE_ZONE_ID")
+        tunnel_name = self.config.get(
+            "CLOUDFLARE_TUNNEL_NAME", "mower-tunnel"
+        )
 
         if not all([token, zone_id]):
             logger.error("Missing required Cloudflare configuration")
@@ -163,10 +163,10 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
 
         try:
             # Install cloudflared
-            subprocess.run(['sudo', 'apt-get', 'install', 'cloudflared'])
+            subprocess.run(["sudo", "apt-get", "install", "cloudflared"])
 
             # Configure tunnel
-            subprocess.run(['cloudflared', 'tunnel', 'create', tunnel_name])
+            subprocess.run(["cloudflared", "tunnel", "create", tunnel_name])
 
             logger.info("Cloudflare Tunnel setup completed successfully")
             return True
@@ -180,8 +180,8 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         Returns:
             bool: True if setup was successful
         """
-        domain = self.config.get('CUSTOM_DOMAIN')
-        email = self.config.get('SSL_EMAIL')
+        domain = self.config.get("CUSTOM_DOMAIN")
+        email = self.config.get("SSL_EMAIL")
 
         if not all([domain, email]):
             logger.error("Missing required custom domain configuration")
@@ -189,16 +189,30 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
 
         try:
             # Install certbot
-            subprocess.run([
-                'sudo', 'apt-get', 'install',
-                'certbot', 'python3-certbot-nginx'
-                ])
+            subprocess.run(
+                [
+                    "sudo",
+                    "apt-get",
+                    "install",
+                    "certbot",
+                    "python3-certbot-nginx",
+                ]
+            )
 
             # Obtain SSL certificate
-            subprocess.run([
-                'sudo', 'certbot', 'certonly', '--standalone',
-                '-d', domain, '--email', email, '--agree-tos'
-                ])
+            subprocess.run(
+                [
+                    "sudo",
+                    "certbot",
+                    "certonly",
+                    "--standalone",
+                    "-d",
+                    domain,
+                    "--email",
+                    email,
+                    "--agree-tos",
+                ]
+            )
 
             logger.info(f"Custom domain setup completed for {domain}")
             return True
@@ -212,7 +226,7 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         Returns:
             bool: True if setup was successful
         """
-        token = self.config.get('NGROK_AUTH_TOKEN')
+        token = self.config.get("NGROK_AUTH_TOKEN")
 
         if not token:
             logger.error("Missing required NGROK configuration")
@@ -220,10 +234,10 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
 
         try:
             # Install NGROK
-            subprocess.run(['sudo', 'apt-get', 'install', 'ngrok'])
+            subprocess.run(["sudo", "apt-get", "install", "ngrok"])
 
             # Configure NGROK
-            subprocess.run(['ngrok', 'config', 'add-authtoken', token])
+            subprocess.run(["ngrok", "config", "add-authtoken", token])
 
             logger.info("NGROK setup completed successfully")
             return True
@@ -237,6 +251,7 @@ def main():
     try:
         # Load configuration from .env file
         from dotenv import load_dotenv
+
         load_dotenv()
 
         config = dict(os.environ)
@@ -253,5 +268,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

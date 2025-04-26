@@ -4,7 +4,6 @@ Blade controller module.
 This module provides control over the mower's blade motor.
 """
 
-
 from mower.hardware.gpio_manager import GPIOManager
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
@@ -132,5 +131,5 @@ class BladeController:
             "enabled": self._enabled,
             "direction": self._direction,
             "enable_pin": BLADE_ENABLE_PIN,
-            "direction_pin": BLADE_DIRECTION_PIN
-            }
+            "direction_pin": BLADE_DIRECTION_PIN,
+        }

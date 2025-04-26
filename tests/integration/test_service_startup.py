@@ -1,6 +1,7 @@
 """
 Integration test for service startup and main control loop
 """
+
 import threading
 import pytest
 from mower.main_controller import main, ResourceManager
@@ -14,7 +15,8 @@ def test_main_controller_startup(monkeypatch):
     """
     # Avoid starting the web interface
     monkeypatch.setattr(
-        ResourceManager, "start_web_interface", lambda self: None)
+        ResourceManager, "start_web_interface", lambda self: None
+    )
 
     # Patch threading.Event.wait to trigger exit
     original_wait = threading.Event.wait

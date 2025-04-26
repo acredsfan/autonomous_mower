@@ -12,6 +12,7 @@ from typing import Optional, Dict, Any
 # Try to import RPi.GPIO, but don't fail if not available
 try:
     import RPi.GPIO as GPIO
+
     RPI_GPIO_AVAILABLE = True
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
     GPIO.setwarnings(False)  # Disable warnings
@@ -43,8 +44,9 @@ class GPIOManager:
             logging.info("Running GPIO in simulation mode")
             self._simulated_values: Dict[int, int] = {}
 
-    def setup_pin(self, pin: int, direction: str = "out",
-                  initial: Optional[int] = None) -> bool:
+    def setup_pin(
+        self, pin: int, direction: str = "out", initial: Optional[int] = None
+    ) -> bool:
         """
         Set up a GPIO pin for use.
 
@@ -138,7 +140,8 @@ class GPIOManager:
             else:
                 # Use f-string correctly
                 logging.warning(
-                    f"Cannot set simulated pin {pin}, not set up as output.")
+                    f"Cannot set simulated pin {pin}, not set up as output."
+                )
                 return False
 
         try:
@@ -146,7 +149,9 @@ class GPIOManager:
                 GPIO.output(pin, gpio_value)
                 return True
             else:
-                logging.warning(f"Cannot set pin {pin}, not set up as output.")
+                logging.warning(
+                    f"Cannot set pin {pin}, not set up as output."
+                )
                 return False
         except Exception as e:
             logging.error(f"Error setting GPIO pin {pin}: {e}")
@@ -167,7 +172,9 @@ class GPIOManager:
                 return self._simulated_values.get(pin, 0)
             else:
                 # Correct indentation and formatting
-                logging.warning(f"Cannot get simulated pin {pin}, not set up.")
+                logging.warning(
+                    f"Cannot get simulated pin {pin}, not set up."
+                )
                 return None
 
         try:
@@ -187,10 +194,7 @@ class GPIOManager:
         Returns:
             Dict[str, Any]: Dictionary containing GPIO state information
         """
-        state = {
-            "simulation_mode": self._simulation_mode,
-            "pins": {}
-            }
+        state = {"simulation_mode": self._simulation_mode, "pins": {}}
 
         if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
@@ -199,8 +203,8 @@ class GPIOManager:
                 try:
                     state["pins"][pin] = {
                         "value": self.get_pin(pin),
-                        "direction": self._pins_setup.get(pin)
-                        }
+                        "direction": self._pins_setup.get(pin),
+                    }
                 except Exception as e:
                     logging.error(f"Error getting state for pin {pin}: {e}")
 

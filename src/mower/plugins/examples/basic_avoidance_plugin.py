@@ -103,7 +103,11 @@ class BasicAvoidancePlugin(AvoidancePlugin):
             logger.error(f"Error initializing basic avoidance plugin: {e}")
             return False
 
-    def avoid(self, obstacles: List[Dict[str, Any]], current_path: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def avoid(
+        self,
+        obstacles: List[Dict[str, Any]],
+        current_path: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
         """
         Generate a new path to avoid the detected obstacles.
 
@@ -150,7 +154,8 @@ class BasicAvoidancePlugin(AvoidancePlugin):
                 if is_near_obstacle:
                     # Generate a detour around the obstacle
                     detour_points = self._generate_detour(
-                        current_point, obstacles)
+                        current_point, obstacles
+                    )
                     new_path.extend(detour_points)
                 else:
                     # Add the current point to the new path
@@ -162,7 +167,9 @@ class BasicAvoidancePlugin(AvoidancePlugin):
             logger.error(f"Error generating avoidance path: {e}")
             return current_path
 
-    def _is_point_near_obstacle(self, point: Dict[str, Any], obstacle: Dict[str, Any]) -> bool:
+    def _is_point_near_obstacle(
+        self, point: Dict[str, Any], obstacle: Dict[str, Any]
+    ) -> bool:
         """
         Check if a point is near an obstacle.
 
@@ -196,7 +203,9 @@ class BasicAvoidancePlugin(AvoidancePlugin):
 
         return False
 
-    def _generate_detour(self, point: Dict[str, Any], obstacles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _generate_detour(
+        self, point: Dict[str, Any], obstacles: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
         Generate a detour around obstacles.
 
@@ -228,32 +237,32 @@ class BasicAvoidancePlugin(AvoidancePlugin):
 
         if detour_direction == "right":
             # Generate a detour to the right
-            detour_points.append({
-                "lat": point_lat,
-                "lng": point_lng + self._safety_margin
-            })
-            detour_points.append({
-                "lat": point_lat + self._safety_margin,
-                "lng": point_lng + self._safety_margin
-            })
-            detour_points.append({
-                "lat": point_lat + self._safety_margin,
-                "lng": point_lng
-            })
+            detour_points.append(
+                {"lat": point_lat, "lng": point_lng + self._safety_margin}
+            )
+            detour_points.append(
+                {
+                    "lat": point_lat + self._safety_margin,
+                    "lng": point_lng + self._safety_margin,
+                }
+            )
+            detour_points.append(
+                {"lat": point_lat + self._safety_margin, "lng": point_lng}
+            )
         else:
             # Generate a detour to the left
-            detour_points.append({
-                "lat": point_lat,
-                "lng": point_lng - self._safety_margin
-            })
-            detour_points.append({
-                "lat": point_lat + self._safety_margin,
-                "lng": point_lng - self._safety_margin
-            })
-            detour_points.append({
-                "lat": point_lat + self._safety_margin,
-                "lng": point_lng
-            })
+            detour_points.append(
+                {"lat": point_lat, "lng": point_lng - self._safety_margin}
+            )
+            detour_points.append(
+                {
+                    "lat": point_lat + self._safety_margin,
+                    "lng": point_lng - self._safety_margin,
+                }
+            )
+            detour_points.append(
+                {"lat": point_lat + self._safety_margin, "lng": point_lng}
+            )
 
         return detour_points
 
@@ -285,7 +294,7 @@ if __name__ == "__main__":
             "position": "front",
             "distance": 15.0,
             "confidence": 0.9,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
     ]
 
@@ -293,7 +302,7 @@ if __name__ == "__main__":
         {"lat": 0.0, "lng": 0.0},
         {"lat": 1.0, "lng": 0.0},
         {"lat": 2.0, "lng": 0.0},
-        {"lat": 3.0, "lng": 0.0}
+        {"lat": 3.0, "lng": 0.0},
     ]
 
     # Generate avoidance path

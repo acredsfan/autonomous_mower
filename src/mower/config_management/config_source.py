@@ -210,7 +210,7 @@ class EnvironmentConfigurationSource(ConfigurationSource):
                 continue
 
             # Remove prefix from key
-            config_key = key[len(self.prefix):] if self.prefix else key
+            config_key = key[len(self.prefix) :] if self.prefix else key
 
             # Convert value to appropriate type
             if value.lower() in ["true", "yes", "y", "1"]:

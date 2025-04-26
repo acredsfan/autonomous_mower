@@ -12,11 +12,16 @@ from typing import List, Tuple, Dict, Any
 import time
 
 from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, LearningConfig, PatternType
+    PathPlanner,
+    PatternConfig,
+    LearningConfig,
+    PatternType,
 )
 from tests.benchmarks.utils import (
-    generate_random_boundary, generate_random_obstacles,
-    time_function, log_benchmark_results
+    generate_random_boundary,
+    generate_random_obstacles,
+    time_function,
+    log_benchmark_results,
 )
 
 
@@ -30,7 +35,7 @@ def pattern_config():
         angle=0.0,
         overlap=0.1,
         start_point=(0.0, 0.0),
-        boundary_points=boundary
+        boundary_points=boundary,
     )
 
 
@@ -44,7 +49,7 @@ def learning_config():
         memory_size=1000,
         batch_size=32,
         update_frequency=100,
-        model_path="test_model_path"
+        model_path="test_model_path",
     )
 
 
@@ -65,7 +70,9 @@ def test_generate_path_benchmark(benchmark, path_planner):
 
 
 @pytest.mark.parametrize("pattern_type", list(PatternType))
-def test_pattern_generation_benchmark(benchmark, pattern_config, learning_config, pattern_type):
+def test_pattern_generation_benchmark(
+    benchmark, pattern_config, learning_config, pattern_type
+):
     """Benchmark different pattern generation methods."""
     # Set the pattern type
     pattern_config.pattern_type = pattern_type
@@ -90,7 +97,8 @@ def test_find_boundary_intersections_benchmark(benchmark, path_planner):
 
     # Use pytest-benchmark to measure performance
     result = benchmark(
-        path_planner._find_boundary_intersections, start, end, boundary)
+        path_planner._find_boundary_intersections, start, end, boundary
+    )
 
     # Verify that intersections were found
     assert result is not None
@@ -198,7 +206,9 @@ def test_update_model_benchmark(benchmark, path_planner):
     """Benchmark the _update_model method."""
     # Add some experiences to the memory
     for i in range(100):
-        path_planner._store_experience(f"state_{i}", PatternType.PARALLEL, 0.5)
+        path_planner._store_experience(
+            f"state_{i}", PatternType.PARALLEL, 0.5
+        )
 
     # Use pytest-benchmark to measure performance
     benchmark(path_planner._update_model)
@@ -210,7 +220,7 @@ def test_save_model_benchmark(benchmark, path_planner):
     path_planner.q_table["test_state"] = {
         PatternType.PARALLEL: 0.5,
         PatternType.SPIRAL: 0.3,
-        PatternType.ZIGZAG: 0.2
+        PatternType.ZIGZAG: 0.2,
     }
 
     # Use pytest-benchmark to measure performance
@@ -223,7 +233,7 @@ def test_load_model_benchmark(benchmark, path_planner):
     path_planner.q_table["test_state"] = {
         PatternType.PARALLEL: 0.5,
         PatternType.SPIRAL: 0.3,
-        PatternType.ZIGZAG: 0.2
+        PatternType.ZIGZAG: 0.2,
     }
     path_planner._save_model()
 
@@ -233,6 +243,7 @@ def test_load_model_benchmark(benchmark, path_planner):
 
 def test_complex_scenario_benchmark(benchmark):
     """Benchmark a complex scenario with multiple operations."""
+
     def complex_scenario():
         # Generate random boundary
         boundary = generate_random_boundary(num_points=10, radius=100.0)
@@ -244,7 +255,7 @@ def test_complex_scenario_benchmark(benchmark):
             angle=45.0,
             overlap=0.2,
             start_point=(0.0, 0.0),
-            boundary_points=boundary
+            boundary_points=boundary,
         )
 
         # Create learning config
@@ -258,7 +269,8 @@ def test_complex_scenario_benchmark(benchmark):
 
         # Add obstacles
         obstacles = generate_random_obstacles(
-            num_obstacles=10, boundary=boundary)
+            num_obstacles=10, boundary=boundary
+        )
         obstacle_positions = [pos for pos, _ in obstacles]
         path_planner.update_obstacle_map(obstacle_positions)
 
@@ -292,7 +304,7 @@ if __name__ == "__main__":
         angle=0.0,
         overlap=0.1,
         start_point=(0.0, 0.0),
-        boundary_points=boundary
+        boundary_points=boundary,
     )
 
     # Create a learning config
@@ -304,28 +316,53 @@ if __name__ == "__main__":
     # Run benchmarks
     benchmarks = [
         ("generate_path", lambda: path_planner.generate_path()),
-        ("find_boundary_intersections", lambda: path_planner._find_boundary_intersections(
-            np.array([0.0, 5.0]), np.array([10.0, 5.0]), np.array(boundary)
-        )),
-        ("line_intersection", lambda: path_planner._line_intersection(
-            np.array([0.0, 0.0]), np.array([10.0, 10.0]),
-            np.array([0.0, 10.0]), np.array([10.0, 0.0])
-        )),
-        ("point_in_polygon", lambda: path_planner._point_in_polygon(
-            np.array([5.0, 5.0]), np.array(boundary)
-        )),
-        ("calculate_reward", lambda: path_planner._calculate_reward(
-            [(0, 0), (5, 5), (10, 10)]
-        )),
-        ("calculate_path_distance", lambda: path_planner._calculate_path_distance(
-            [(0, 0), (5, 5), (10, 10)]
-        )),
-        ("calculate_coverage", lambda: path_planner._calculate_coverage(
-            [(0, 0), (5, 5), (10, 10), (10, 0), (0, 10)]
-        )),
-        ("calculate_smoothness", lambda: path_planner._calculate_smoothness(
-            [(0, 0), (5, 5), (10, 10)]
-        )),
+        (
+            "find_boundary_intersections",
+            lambda: path_planner._find_boundary_intersections(
+                np.array([0.0, 5.0]),
+                np.array([10.0, 5.0]),
+                np.array(boundary),
+            ),
+        ),
+        (
+            "line_intersection",
+            lambda: path_planner._line_intersection(
+                np.array([0.0, 0.0]),
+                np.array([10.0, 10.0]),
+                np.array([0.0, 10.0]),
+                np.array([10.0, 0.0]),
+            ),
+        ),
+        (
+            "point_in_polygon",
+            lambda: path_planner._point_in_polygon(
+                np.array([5.0, 5.0]), np.array(boundary)
+            ),
+        ),
+        (
+            "calculate_reward",
+            lambda: path_planner._calculate_reward(
+                [(0, 0), (5, 5), (10, 10)]
+            ),
+        ),
+        (
+            "calculate_path_distance",
+            lambda: path_planner._calculate_path_distance(
+                [(0, 0), (5, 5), (10, 10)]
+            ),
+        ),
+        (
+            "calculate_coverage",
+            lambda: path_planner._calculate_coverage(
+                [(0, 0), (5, 5), (10, 10), (10, 0), (0, 10)]
+            ),
+        ),
+        (
+            "calculate_smoothness",
+            lambda: path_planner._calculate_smoothness(
+                [(0, 0), (5, 5), (10, 10)]
+            ),
+        ),
     ]
 
     # Run each benchmark

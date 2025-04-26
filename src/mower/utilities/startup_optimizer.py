@@ -41,7 +41,8 @@ class LazyLoader:
         self.loaded = False
 
         logger.debug(
-            f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}")
+            f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}"
+        )
 
     def __call__(self, *args, **kwargs):
         """
@@ -72,7 +73,8 @@ class LazyLoader:
         self.loaded = True
         load_time = time.time() - start_time
         logger.debug(
-            f"Lazy loaded {self.module_path} in {load_time:.4f} seconds")
+            f"Lazy loaded {self.module_path} in {load_time:.4f} seconds"
+        )
 
 
 class StartupOptimizer:
@@ -96,7 +98,9 @@ class StartupOptimizer:
 
         logger.info("Startup optimizer initialized")
 
-    def register_lazy_loader(self, name: str, module_path: str, class_name: Optional[str] = None) -> LazyLoader:
+    def register_lazy_loader(
+        self, name: str, module_path: str, class_name: Optional[str] = None
+    ) -> LazyLoader:
         """
         Register a lazy loader for a module or component.
 
@@ -113,7 +117,9 @@ class StartupOptimizer:
         logger.debug(f"Registered lazy loader for {name}")
         return loader
 
-    def register_component_dependency(self, component: str, depends_on: List[str]):
+    def register_component_dependency(
+        self, component: str, depends_on: List[str]
+    ):
         """
         Register dependencies between components.
 
@@ -172,7 +178,9 @@ class StartupOptimizer:
         logger.info(f"Optimized initialization order: {order}")
         return order
 
-    def initialize_components(self, components: Optional[List[str]] = None, parallel: bool = True) -> Dict[str, Any]:
+    def initialize_components(
+        self, components: Optional[List[str]] = None, parallel: bool = True
+    ) -> Dict[str, Any]:
         """
         Initialize components in optimized order.
 
@@ -196,10 +204,14 @@ class StartupOptimizer:
 
         if parallel:
             # Initialize components in parallel
-            with ThreadPoolExecutor(max_workers=self.thread_pool_size) as executor:
+            with ThreadPoolExecutor(
+                max_workers=self.thread_pool_size
+            ) as executor:
                 # Submit initialization tasks
                 future_to_component = {
-                    executor.submit(self._initialize_component, component): component
+                    executor.submit(
+                        self._initialize_component, component
+                    ): component
                     for component in components
                 }
 
@@ -240,7 +252,8 @@ class StartupOptimizer:
         for dependency in self.component_dependencies.get(component, []):
             if dependency not in self.initialized_components:
                 logger.debug(
-                    f"Initializing dependency {dependency} for {component}")
+                    f"Initializing dependency {dependency} for {component}"
+                )
                 self._initialize_component(dependency)
 
         # Initialize the component
@@ -252,7 +265,8 @@ class StartupOptimizer:
         self.initialized_components.add(component)
 
         logger.info(
-            f"Initialized {component} in {initialization_time:.4f} seconds")
+            f"Initialized {component} in {initialization_time:.4f} seconds"
+        )
         return instance
 
     def get_initialization_times(self) -> Dict[str, float]:
@@ -275,12 +289,13 @@ class StartupOptimizer:
         for component, time_taken in sorted(
             self.initialization_times.items(),
             key=lambda x: x[1],
-            reverse=True
+            reverse=True,
         ):
             logger.info(f"  {component}: {time_taken:.4f} seconds")
             total_time += time_taken
 
         logger.info(f"Total initialization time: {total_time:.4f} seconds")
+
 
 # Decorator for lazy loading
 
@@ -296,6 +311,7 @@ def lazy_load(module_path: str, class_name: Optional[str] = None):
     Returns:
         Decorator function
     """
+
     def decorator(func):
         loader = LazyLoader(module_path, class_name)
 
@@ -343,48 +359,42 @@ def optimize_startup():
     optimizer.register_lazy_loader(
         "config_manager",
         "mower.config_management.config_manager",
-        "ConfigManager"
+        "ConfigManager",
     )
 
     optimizer.register_lazy_loader(
         "resource_optimizer",
         "mower.utilities.resource_optimizer",
-        "ResourceOptimizer"
+        "ResourceOptimizer",
     )
 
     optimizer.register_lazy_loader(
-        "path_planner",
-        "mower.navigation.path_planner",
-        "PathPlanner"
+        "path_planner", "mower.navigation.path_planner", "PathPlanner"
     )
 
     optimizer.register_lazy_loader(
         "obstacle_detector",
         "mower.obstacle_detection.obstacle_detector",
-        "ObstacleDetector"
+        "ObstacleDetector",
     )
 
     optimizer.register_lazy_loader(
         "navigation_controller",
         "mower.navigation.navigation",
-        "NavigationController"
+        "NavigationController",
     )
 
     optimizer.register_lazy_loader(
-        "web_ui",
-        "mower.ui.web_ui.server",
-        "WebServer"
+        "web_ui", "mower.ui.web_ui.server", "WebServer"
     )
 
     # Register component dependencies
     optimizer.register_component_dependency(
-        "navigation_controller",
-        ["path_planner", "obstacle_detector"]
+        "navigation_controller", ["path_planner", "obstacle_detector"]
     )
 
     optimizer.register_component_dependency(
-        "web_ui",
-        ["navigation_controller", "config_manager"]
+        "web_ui", ["navigation_controller", "config_manager"]
     )
 
     # Optimize initialization order
@@ -409,7 +419,7 @@ def initialize_critical_components():
         "config_manager",
         "resource_optimizer",
         "path_planner",
-        "obstacle_detector"
+        "obstacle_detector",
     ]
 
     # Initialize critical components
@@ -442,7 +452,8 @@ def measure_startup_time(func: Callable):
     execution_time = time.time() - start_time
 
     logger.info(
-        f"Function {func.__name__} executed in {execution_time:.4f} seconds")
+        f"Function {func.__name__} executed in {execution_time:.4f} seconds"
+    )
 
     return result, execution_time
 
@@ -459,8 +470,14 @@ def compare_startup_times():
     # Measure unoptimized startup time
     def unoptimized_startup():
         from mower.config_management.config_manager import ConfigManager
-        from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
-        from mower.obstacle_detection.obstacle_detector import ObstacleDetector
+        from mower.navigation.path_planner import (
+            PathPlanner,
+            PatternConfig,
+            PatternType,
+        )
+        from mower.obstacle_detection.obstacle_detector import (
+            ObstacleDetector,
+        )
         from mower.navigation.navigation import NavigationController
 
         config_manager = ConfigManager()
@@ -471,22 +488,21 @@ def compare_startup_times():
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
         path_planner = PathPlanner(config)
 
         obstacle_detector = ObstacleDetector()
 
         navigation_controller = NavigationController(
-            path_planner=path_planner,
-            obstacle_detector=obstacle_detector
+            path_planner=path_planner, obstacle_detector=obstacle_detector
         )
 
         return {
             "config_manager": config_manager,
             "path_planner": path_planner,
             "obstacle_detector": obstacle_detector,
-            "navigation_controller": navigation_controller
+            "navigation_controller": navigation_controller,
         }
 
     # Measure optimized startup time
@@ -504,7 +520,7 @@ def compare_startup_times():
     results = {
         "unoptimized_time": unoptimized_time,
         "optimized_time": optimized_time,
-        "improvement_percent": improvement
+        "improvement_percent": improvement,
     }
 
     logger.info(f"Startup time comparison:")

@@ -14,9 +14,10 @@ class LoggerConfigInfo:
     """
     Logger configuration class that provides consistent logging setup.
     """
+
     _instance = None
     _initialized = False
-    _log_dir = os.getenv('MOWER_LOG_DIR', '/var/log/autonomous-mower')
+    _log_dir = os.getenv("MOWER_LOG_DIR", "/var/log/autonomous-mower")
 
     @classmethod
     def configure_logging(cls) -> None:
@@ -27,7 +28,7 @@ class LoggerConfigInfo:
         try:
             # Set up root logger
             root_logger = logging.getLogger()
-            root_logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
+            root_logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
             # Remove any existing handlers to avoid duplicates
             for handler in root_logger.handlers[:]:
@@ -35,7 +36,7 @@ class LoggerConfigInfo:
 
             # Create formatters
             detailed_formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
 
             # Set up console handler first
@@ -45,11 +46,9 @@ class LoggerConfigInfo:
 
             # Set up rotating file handler for main log if directory exists
             if os.path.isdir(cls._log_dir):
-                main_log = os.path.join(cls._log_dir, 'mower.log')
+                main_log = os.path.join(cls._log_dir, "mower.log")
                 file_handler = logging.handlers.RotatingFileHandler(
-                    main_log,
-                    maxBytes=1024 * 1024,  # 1MB
-                    backupCount=5
+                    main_log, maxBytes=1024 * 1024, backupCount=5  # 1MB
                 )
                 file_handler.setFormatter(detailed_formatter)
                 root_logger.addHandler(file_handler)

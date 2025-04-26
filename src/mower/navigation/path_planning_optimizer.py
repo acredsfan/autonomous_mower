@@ -10,7 +10,11 @@ import functools
 import numpy as np
 from typing import List, Tuple, Dict, Any, Optional, Callable
 
-from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
+from mower.navigation.path_planner import (
+    PathPlanner,
+    PatternConfig,
+    PatternType,
+)
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -75,7 +79,9 @@ class PathPlanningOptimizer:
             # Cache the path
             self.path_cache[cache_key] = path
 
-            logger.debug(f"Path generation took {generation_time:.4f} seconds")
+            logger.debug(
+                f"Path generation took {generation_time:.4f} seconds"
+            )
             return path
 
         # Replace the original method with the cached version
@@ -105,13 +111,18 @@ class PathPlanningOptimizer:
     def _cache_boundary_calculations(self):
         """Cache boundary calculations."""
         # Cache the _find_boundary_intersections method
-        original_find_intersections = self.path_planner._find_boundary_intersections
+        original_find_intersections = (
+            self.path_planner._find_boundary_intersections
+        )
 
         @functools.wraps(original_find_intersections)
         def cached_find_intersections(start, end, boundary):
             # Create a cache key
-            cache_key = (tuple(start), tuple(end),
-                         hash(tuple(map(tuple, boundary))))
+            cache_key = (
+                tuple(start),
+                tuple(end),
+                hash(tuple(map(tuple, boundary))),
+            )
 
             # Check if the intersections are already cached
             if cache_key in self.intersection_cache:
@@ -126,18 +137,22 @@ class PathPlanningOptimizer:
             return intersections
 
         # Replace the original method with the cached version
-        self.path_planner._find_boundary_intersections = cached_find_intersections
+        self.path_planner._find_boundary_intersections = (
+            cached_find_intersections
+        )
 
     def _apply_vectorization(self):
         """Apply vectorization to performance-critical methods."""
         # Optimize the _calculate_path_distance method
-        original_calculate_distance = self.path_planner._calculate_path_distance
+        original_calculate_distance = (
+            self.path_planner._calculate_path_distance
+        )
 
         @functools.wraps(original_calculate_distance)
         def vectorized_calculate_distance(path):
             try:
                 if len(path) < 2:
-                    return float('inf')
+                    return float("inf")
 
                 # Convert to numpy array for vectorized operations
                 path_array = np.array(path)
@@ -156,7 +171,9 @@ class PathPlanningOptimizer:
                 return original_calculate_distance(path)
 
         # Replace the original method with the vectorized version
-        self.path_planner._calculate_path_distance = vectorized_calculate_distance
+        self.path_planner._calculate_path_distance = (
+            vectorized_calculate_distance
+        )
 
         # Optimize the _point_in_polygon method
         original_point_in_polygon = self.path_planner._point_in_polygon
@@ -176,15 +193,21 @@ class PathPlanningOptimizer:
                 j = n - 1
                 for i in range(n):
                     # Check if the ray from point crosses this edge
-                    if ((polygon_y[i] > y) != (polygon_y[j] > y)) and \
-                       (x < (polygon_x[j] - polygon_x[i]) * (y - polygon_y[i]) /
-                            (polygon_y[j] - polygon_y[i]) + polygon_x[i]):
+                    if ((polygon_y[i] > y) != (polygon_y[j] > y)) and (
+                        x
+                        < (polygon_x[j] - polygon_x[i])
+                        * (y - polygon_y[i])
+                        / (polygon_y[j] - polygon_y[i])
+                        + polygon_x[i]
+                    ):
                         inside = not inside
                     j = i
 
                 return inside
             except Exception as e:
-                logger.error(f"Error in vectorized point-in-polygon test: {e}")
+                logger.error(
+                    f"Error in vectorized point-in-polygon test: {e}"
+                )
                 # Fall back to original method
                 return original_point_in_polygon(point, polygon)
 
@@ -230,7 +253,9 @@ def optimize_path_planner(path_planner: PathPlanner) -> PathPlanner:
     return path_planner
 
 
-def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Dict[str, Any]:
+def benchmark_path_planner(
+    path_planner: PathPlanner, iterations: int = 5
+) -> Dict[str, Any]:
     """
     Benchmark a path planner's performance.
 
@@ -258,12 +283,12 @@ def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Di
     max_time = np.max(generate_times)
 
     results = {
-        'generate_path': {
-            'avg_time': avg_time,
-            'std_time': std_time,
-            'min_time': min_time,
-            'max_time': max_time,
-            'times': generate_times
+        "generate_path": {
+            "avg_time": avg_time,
+            "std_time": std_time,
+            "min_time": min_time,
+            "max_time": max_time,
+            "times": generate_times,
         }
     }
 
@@ -278,7 +303,7 @@ def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Di
 def compare_path_planners(
     original_planner: PathPlanner,
     optimized_planner: PathPlanner,
-    iterations: int = 5
+    iterations: int = 5,
 ) -> Dict[str, Any]:
     """
     Compare the performance of two path planners.
@@ -300,14 +325,14 @@ def compare_path_planners(
     optimized_results = benchmark_path_planner(optimized_planner, iterations)
 
     # Calculate improvement
-    original_avg = original_results['generate_path']['avg_time']
-    optimized_avg = optimized_results['generate_path']['avg_time']
+    original_avg = original_results["generate_path"]["avg_time"]
+    optimized_avg = optimized_results["generate_path"]["avg_time"]
     improvement = (original_avg - optimized_avg) / original_avg * 100
 
     comparison = {
-        'original': original_results,
-        'optimized': optimized_results,
-        'improvement_percent': improvement
+        "original": original_results,
+        "optimized": optimized_results,
+        "improvement_percent": improvement,
     }
 
     logger.info(f"Performance comparison results:")
@@ -332,7 +357,7 @@ def run_optimization_benchmark():
         angle=0.0,
         overlap=0.1,
         start_point=(0.0, 0.0),
-        boundary_points=boundary_points
+        boundary_points=boundary_points,
     )
 
     # Create original path planner

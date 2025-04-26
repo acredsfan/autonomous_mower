@@ -32,13 +32,8 @@ from dataclasses import dataclass
 
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.hardware.sensor_interface import get_sensor_interface
-from mower.constants import (
-    AVOIDANCE_DELAY,
-    MIN_DISTANCE_THRESHOLD
-)
-from mower.navigation.path_planner import (
-    PathPlanner
-)
+from mower.constants import AVOIDANCE_DELAY, MIN_DISTANCE_THRESHOLD
+from mower.navigation.path_planner import PathPlanner
 
 
 # Initialize logger
@@ -58,6 +53,7 @@ class NavigationStatus(Enum):
         TARGET_REACHED: Successfully reached target
         ERROR: Error occurred during navigation
     """
+
     IDLE = 0
     MOVING = 1
     TARGET_REACHED = 2
@@ -77,6 +73,7 @@ class AvoidanceState(Enum):
         AVOIDING: Currently executing an avoidance maneuver
         RECOVERY: Unable to avoid obstacle, attempting recovery procedure
     """
+
     NORMAL = auto()
     OBSTACLE_DETECTED = auto()
     AVOIDING = auto()
@@ -86,6 +83,7 @@ class AvoidanceState(Enum):
 @dataclass
 class Obstacle:
     """Data class for detected obstacles."""
+
     position: Tuple[float, float]
     size: float
     confidence: float
@@ -129,8 +127,8 @@ class AvoidanceAlgorithm:
     """
 
     def __init__(
-            self, resource_manager=None,
-            pattern_planner: PathPlanner = None):
+        self, resource_manager=None, pattern_planner: PathPlanner = None
+    ):
         """
         Initialize the avoidance algorithm.
 
@@ -144,13 +142,14 @@ class AvoidanceAlgorithm:
 
         if resource_manager is None:
             from mower.main_controller import ResourceManager
+
             resource_manager = ResourceManager()
 
         self._resource_manager = resource_manager
 
         # Camera-related settings
         self.use_camera = bool(
-            os.environ.get('USE_CAMERA', 'True').lower() == 'true'
+            os.environ.get("USE_CAMERA", "True").lower() == "true"
         )
         self.camera = None
         self.obstacle_detector = None
@@ -164,15 +163,14 @@ class AvoidanceAlgorithm:
                 self.logger.info("Camera and obstacle detector initialized")
             except Exception as e:
                 self.logger.error(
-                    "Failed to initialize camera components: "
-                    f"{e}")
+                    "Failed to initialize camera components: " f"{e}"
+                )
                 self.use_camera = False
 
         self.reset_state()
         if pattern_planner is None:
-            from mower.navigation.path_planner import (
-                PathPlanner
-            )
+            from mower.navigation.path_planner import PathPlanner
+
             pattern_planner = PathPlanner()
 
         self.pattern_planner = pattern_planner
@@ -204,7 +202,7 @@ class AvoidanceAlgorithm:
             self._turn_right_strategy,
             self._turn_left_strategy,
             self._backup_strategy,
-            self._alternative_route_strategy
+            self._alternative_route_strategy,
         ]
 
         logger.info("Avoidance algorithm initialized")
@@ -230,15 +228,15 @@ class AvoidanceAlgorithm:
 
             if detected_objects:
                 for obj in detected_objects:
-                    if obj['class_name'] in self._objects_to_avoid():
-                        score = obj['score']
+                    if obj["class_name"] in self._objects_to_avoid():
+                        score = obj["score"]
                         # Format is [ymin, xmin, ymax, xmax]
-                        box = obj['box']
+                        box = obj["box"]
 
                         box_area = (box[2] - box[0]) * (box[3] - box[1])
                         if score > 0.5 and box_area > 0.1:
                             has_obstacle = True
-                            class_name = obj['class_name']
+                            class_name = obj["class_name"]
                             msg = (
                                 f"Camera detected obstacle: {class_name} "
                                 f"(conf: {score:.2f})"
@@ -256,8 +254,14 @@ class AvoidanceAlgorithm:
     def _objects_to_avoid(self):
         """Return list of object classes to treat as obstacles."""
         return [
-            'person', 'animal', 'vehicle', 'obstacle', 'fence',
-            'wall', 'tree', 'bush'
+            "person",
+            "animal",
+            "vehicle",
+            "obstacle",
+            "fence",
+            "wall",
+            "tree",
+            "bush",
         ]
 
     def start(self) -> None:
@@ -270,19 +274,29 @@ class AvoidanceAlgorithm:
         try:
             if self.sensor_interface is None:
                 self.sensor_interface = get_sensor_interface()
-                logger.info("Initialized sensor interface for avoidance algorithm")
-            
+                logger.info(
+                    "Initialized sensor interface for avoidance algorithm"
+                )
+
             # Initialize path planner if not already done
             if self.path_planner is None and self._resource_manager:
                 self.path_planner = self._resource_manager.get_path_planner()
-                logger.info("Initialized path planner for avoidance algorithm")
-            
+                logger.info(
+                    "Initialized path planner for avoidance algorithm"
+                )
+
             # Initialize motor controller if not already done
             if self.motor_controller is None and self._resource_manager:
-                self.motor_controller = self._resource_manager.get_robohat_driver()
-                logger.info("Initialized motor controller for avoidance algorithm")
+                self.motor_controller = (
+                    self._resource_manager.get_robohat_driver()
+                )
+                logger.info(
+                    "Initialized motor controller for avoidance algorithm"
+                )
         except Exception as e:
-            logger.error(f"Failed to initialize avoidance algorithm components: {e}")
+            logger.error(
+                f"Failed to initialize avoidance algorithm components: {e}"
+            )
             return
 
         with self.thread_lock:
@@ -291,8 +305,7 @@ class AvoidanceAlgorithm:
             self.current_state = AvoidanceState.NORMAL
 
         self.avoidance_thread = threading.Thread(
-            target=self._avoidance_loop,
-            daemon=True
+            target=self._avoidance_loop, daemon=True
         )
         self.avoidance_thread.start()
         logger.info("Avoidance algorithm started")
@@ -333,12 +346,12 @@ class AvoidanceAlgorithm:
             if self.sensor_interface is None:
                 logger.error("Sensor interface not initialized")
                 return
-                
+
             left_distance = self.sensor_interface._read_vl53l0x(
-                'left_distance', float('inf')
+                "left_distance", float("inf")
             )
             right_distance = self.sensor_interface._read_vl53l0x(
-                'right_distance', float('inf')
+                "right_distance", float("inf")
             )
 
             with self.thread_lock:
@@ -374,7 +387,8 @@ class AvoidanceAlgorithm:
                         logger.info("Obstacle detected, initiating avoidance")
                         with self.thread_lock:
                             self.current_state = (
-                                AvoidanceState.OBSTACLE_DETECTED)
+                                AvoidanceState.OBSTACLE_DETECTED
+                            )
                             self.obstacle_data = obstacle_data
 
                 elif current_state == AvoidanceState.OBSTACLE_DETECTED:
@@ -425,8 +439,10 @@ class AvoidanceAlgorithm:
                                     "trying again"
                                 )
                                 self.recovery_attempts += 1
-                                if (self.recovery_attempts >=
-                                        self.max_recovery_attempts):
+                                if (
+                                    self.recovery_attempts
+                                    >= self.max_recovery_attempts
+                                ):
                                     logger.error(
                                         "Max recovery attempts reached, "
                                         "cannot avoid obstacle"
@@ -465,8 +481,7 @@ class AvoidanceAlgorithm:
             dropoff = self.dropoff_detected
 
             obstacle_detected = (
-                obstacle_left or obstacle_right or
-                camera_obstacle or dropoff
+                obstacle_left or obstacle_right or camera_obstacle or dropoff
             )
 
             if not obstacle_detected:
@@ -477,7 +492,7 @@ class AvoidanceAlgorithm:
                 "right_sensor": obstacle_right,
                 "camera_detected": camera_obstacle,
                 "dropoff_detected": dropoff,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             obstacle_position = self._estimate_obstacle_position()
@@ -515,19 +530,22 @@ class AvoidanceAlgorithm:
                 logger.info("Dropoff detected, backing up")
                 return self._backup_strategy(distance=50.0)
 
-            elif (obstacle_data.get("left_sensor", False) and
-                  not obstacle_data.get("right_sensor", False)):
+            elif obstacle_data.get(
+                "left_sensor", False
+            ) and not obstacle_data.get("right_sensor", False):
                 logger.info("Obstacle on left side, turning right")
                 return self._turn_right_strategy(angle=45.0)
 
-            elif (obstacle_data.get("right_sensor", False) and
-                  not obstacle_data.get("left_sensor", False)):
+            elif obstacle_data.get(
+                "right_sensor", False
+            ) and not obstacle_data.get("left_sensor", False):
                 logger.info("Obstacle on right side, turning left")
                 return self._turn_left_strategy(angle=45.0)
 
-            elif (obstacle_data.get("camera_detected", False) or
-                  (obstacle_data.get("left_sensor", False) and
-                   obstacle_data.get("right_sensor", False))):
+            elif obstacle_data.get("camera_detected", False) or (
+                obstacle_data.get("left_sensor", False)
+                and obstacle_data.get("right_sensor", False)
+            ):
                 logger.info("Obstacle detected ahead, backing up")
                 backup_success = self._backup_strategy(distance=40.0)
                 if not backup_success:
@@ -634,7 +652,9 @@ class AvoidanceAlgorithm:
                     return self._turn_left_strategy(angle=turn_angle)
 
             elif attempt == 1:
-                logger.info(f"Recovery attempt {attempt + 1}: extended backup")
+                logger.info(
+                    f"Recovery attempt {attempt + 1}: extended backup"
+                )
                 return self._backup_strategy(distance=80.0)
 
             else:
@@ -662,7 +682,7 @@ class AvoidanceAlgorithm:
             strategies = [
                 self._turn_right_strategy,
                 self._turn_left_strategy,
-                self._backup_strategy
+                self._backup_strategy,
             ]
 
             strategy = random.choice(strategies)
@@ -671,8 +691,8 @@ class AvoidanceAlgorithm:
             logger.info(f"Selected random strategy: {strategy_name}")
             # Check if strategy is a turn strategy
             if strategy in (
-                    self._turn_right_strategy,
-                    self._turn_left_strategy
+                self._turn_right_strategy,
+                self._turn_left_strategy,
             ):
                 angle = random.uniform(30.0, 60.0)
                 return strategy(angle=angle)
@@ -789,11 +809,11 @@ class AvoidanceAlgorithm:
                 return False
 
             obstacle_position = self._estimate_obstacle_position()
-            if not obstacle_position or not obstacle_position.get('position'):
+            if not obstacle_position or not obstacle_position.get("position"):
                 logger.error("Unable to estimate obstacle position")
                 return False
 
-            obstacle_coords = obstacle_position['position']
+            obstacle_coords = obstacle_position["position"]
 
             logger.info(f"Adding obstacle at position {obstacle_coords}")
             self.pattern_planner.update_obstacle_map([obstacle_coords])
@@ -820,7 +840,7 @@ class AvoidanceAlgorithm:
 
             first_waypoint = new_path[0]
             self.motor_controller.navigate_to_location(
-                (first_waypoint['lat'], first_waypoint['lng'])
+                (first_waypoint["lat"], first_waypoint["lng"])
             )
 
             return True
@@ -854,7 +874,10 @@ class AvoidanceAlgorithm:
                 )
                 return {}
 
-            current_lat, current_lng = current_position[0], current_position[1]
+            current_lat, current_lng = (
+                current_position[0],
+                current_position[1],
+            )
 
             heading = self.motor_controller.get_current_heading()
             if heading is None:
@@ -876,36 +899,37 @@ class AvoidanceAlgorithm:
                 return {}
 
             result = {
-                'position': None,
-                'type': 'static',
-                'confidence': 0.8,
-                'sensor': 'unknown'
+                "position": None,
+                "type": "static",
+                "confidence": 0.8,
+                "sensor": "unknown",
             }
 
             distance = 0.0
             obstacle_angle = 0.0
 
-            if (obstacle_data.get('left_sensor', False) and
-                    obstacle_data.get('right_sensor', False)):
+            if obstacle_data.get("left_sensor", False) and obstacle_data.get(
+                "right_sensor", False
+            ):
                 distance = self.obstacle_threshold
                 obstacle_angle = 0.0
-                result['sensor'] = 'tof_both'
+                result["sensor"] = "tof_both"
 
-            elif obstacle_data.get('left_sensor', False):
+            elif obstacle_data.get("left_sensor", False):
                 distance = self.obstacle_threshold
                 obstacle_angle = math.radians(30.0)
-                result['sensor'] = 'tof_left'
+                result["sensor"] = "tof_left"
 
-            elif obstacle_data.get('right_sensor', False):
+            elif obstacle_data.get("right_sensor", False):
                 distance = self.obstacle_threshold
                 obstacle_angle = math.radians(-30.0)
-                result['sensor'] = 'tof_right'
+                result["sensor"] = "tof_right"
 
-            elif obstacle_data.get('camera_detected', False):
+            elif obstacle_data.get("camera_detected", False):
                 distance = self.obstacle_threshold * 1.5
                 obstacle_angle = 0.0
-                result['sensor'] = 'camera'
-                result['confidence'] = 0.9
+                result["sensor"] = "camera"
+                result["confidence"] = 0.9
 
             else:
                 logger.warning(
@@ -916,9 +940,7 @@ class AvoidanceAlgorithm:
             obstacle_heading = (heading_rad + obstacle_angle) % (2 * math.pi)
 
             meters_to_lat = 0.0000089
-            meters_to_lng = (
-                0.0000089 / math.cos(math.radians(current_lat))
-            )
+            meters_to_lng = 0.0000089 / math.cos(math.radians(current_lat))
 
             obstacle_lat = current_lat + (
                 distance * math.cos(obstacle_heading) * meters_to_lat
@@ -927,7 +949,7 @@ class AvoidanceAlgorithm:
                 distance * math.sin(obstacle_heading) * meters_to_lng
             )
 
-            result['position'] = (obstacle_lat, obstacle_lng)
+            result["position"] = (obstacle_lat, obstacle_lng)
 
             logger.debug(f"Estimated obstacle position: {result['position']}")
 
@@ -1058,8 +1080,7 @@ class AvoidanceAlgorithm:
             return []
 
     def _process_sensor_data(
-        self,
-        sensor_data: List[float]
+        self, sensor_data: List[float]
     ) -> List[Obstacle]:
         """Process sensor data to detect obstacles."""
         try:
@@ -1074,14 +1095,14 @@ class AvoidanceAlgorithm:
 
                     position = (
                         distance * np.cos(angle),
-                        distance * np.sin(angle)
+                        distance * np.sin(angle),
                     )
 
                     # Create obstacle object
                     obstacle = Obstacle(
                         position=position,
                         size=0.2,  # Default size in meters
-                        confidence=min(1.0, reading)
+                        confidence=min(1.0, reading),
                     )
 
                     obstacles.append(obstacle)
@@ -1093,9 +1114,7 @@ class AvoidanceAlgorithm:
             return []
 
     def _find_obstacle_positions(
-        self,
-        path: List[Tuple[float, float]],
-        obstacles: List[Obstacle]
+        self, path: List[Tuple[float, float]], obstacles: List[Obstacle]
     ) -> List[int]:
         """Find indices of path points near obstacles."""
         try:
@@ -1118,9 +1137,7 @@ class AvoidanceAlgorithm:
             return []
 
     def _modify_path(
-        self,
-        path: List[Tuple[float, float]],
-        obstacle_indices: List[int]
+        self, path: List[Tuple[float, float]], obstacle_indices: List[int]
     ) -> List[Tuple[float, float]]:
         """Modify path to avoid obstacles."""
         try:
@@ -1129,7 +1146,8 @@ class AvoidanceAlgorithm:
 
             # Create new path by removing points near obstacles
             new_path = [
-                point for i, point in enumerate(path)
+                point
+                for i, point in enumerate(path)
                 if i not in obstacle_indices
             ]
 
@@ -1143,8 +1161,7 @@ class AvoidanceAlgorithm:
             return []
 
     def _smooth_path(
-        self,
-        path: List[Tuple[float, float]]
+        self, path: List[Tuple[float, float]]
     ) -> List[Tuple[float, float]]:
         """Smooth the path by adding intermediate points."""
         try:

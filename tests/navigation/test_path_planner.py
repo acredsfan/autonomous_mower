@@ -14,7 +14,10 @@ import numpy as np
 from unittest.mock import MagicMock, patch, call
 
 from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, LearningConfig, PatternType
+    PathPlanner,
+    PatternConfig,
+    LearningConfig,
+    PatternType,
 )
 
 
@@ -30,7 +33,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -40,7 +43,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -65,7 +68,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.0,  # No overlap for easier testing
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -75,7 +78,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -103,13 +106,20 @@ class TestPathPlanner:
         # should have x-coordinates that are either increasing or decreasing
         y_values = sorted(set(y_coords))
         for y in y_values:
-            points_at_y = [(x, y_idx) for x_idx, (x, y_idx)
-                           in enumerate(path) if y_idx == y]
+            points_at_y = [
+                (x, y_idx)
+                for x_idx, (x, y_idx) in enumerate(path)
+                if y_idx == y
+            ]
             x_values = [x for x, _ in points_at_y]
             # Check if x values are monotonically increasing or decreasing
-            assert all(x_values[i] <= x_values[i+1] for i in range(len(x_values)-1)) or \
-                all(x_values[i] >= x_values[i+1]
-                    for i in range(len(x_values)-1))
+            assert all(
+                x_values[i] <= x_values[i + 1]
+                for i in range(len(x_values) - 1)
+            ) or all(
+                x_values[i] >= x_values[i + 1]
+                for i in range(len(x_values) - 1)
+            )
 
     def test_generate_spiral_path(self):
         """Test generating a spiral path."""
@@ -120,7 +130,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.0,  # No overlap for easier testing
             start_point=(5.0, 5.0),  # Start in the center
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -130,7 +140,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -157,12 +167,16 @@ class TestPathPlanner:
         # Verify that the path follows a spiral pattern
         # For a spiral pattern, the distance from the center should generally increase
         center = (5.0, 5.0)
-        distances = [((x - center[0])**2 + (y - center[1])**2)
-                     ** 0.5 for x, y in path]
+        distances = [
+            ((x - center[0]) ** 2 + (y - center[1]) ** 2) ** 0.5
+            for x, y in path
+        ]
         # Check if distances are generally increasing
         # We allow some fluctuations, so we check if the trend is increasing
-        increasing_count = sum(distances[i] <= distances[i+1]
-                               for i in range(len(distances)-1))
+        increasing_count = sum(
+            distances[i] <= distances[i + 1]
+            for i in range(len(distances) - 1)
+        )
         # At least 70% should be increasing
         assert increasing_count >= len(distances) * 0.7
 
@@ -175,7 +189,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -185,7 +199,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -216,7 +230,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -226,7 +240,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -267,7 +281,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -277,15 +291,26 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
         path_planner = PathPlanner(pattern_config, learning_config)
 
         # Create a path with unnecessary detours
-        path = [(0, 0), (1, 1), (2, 2), (3, 3), (4, 4), (5, 5),
-                (6, 6), (7, 7), (8, 8), (9, 9), (10, 10)]
+        path = [
+            (0, 0),
+            (1, 1),
+            (2, 2),
+            (3, 3),
+            (4, 4),
+            (5, 5),
+            (6, 6),
+            (7, 7),
+            (8, 8),
+            (9, 9),
+            (10, 10),
+        ]
 
         # Optimize the path
         optimized_path = path_planner.optimize_path(path)
@@ -306,7 +331,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -316,7 +341,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -340,7 +365,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -350,7 +375,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance
@@ -379,7 +404,7 @@ class TestPathPlanner:
             angle=0.0,
             overlap=0.1,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
 
         learning_config = LearningConfig(
@@ -389,7 +414,7 @@ class TestPathPlanner:
             memory_size=1000,
             batch_size=32,
             update_frequency=100,
-            model_path="test_model_path"
+            model_path="test_model_path",
         )
 
         # Create a PathPlanner instance

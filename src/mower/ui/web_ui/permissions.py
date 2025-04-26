@@ -20,7 +20,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 audit_logger = get_audit_logger()
 
 # Type variable for route functions
-F = TypeVar('F', bound=Callable[..., Response])
+F = TypeVar("F", bound=Callable[..., Response])
 
 
 class Permission(Enum):
@@ -91,7 +91,7 @@ DEFAULT_ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.SYSTEM_MAINTENANCE,
         Permission.VIEW_LOGS,
         Permission.EDIT_SECURITY_SETTINGS,
-    }
+    },
 }
 
 
@@ -176,14 +176,15 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
     Returns:
         A decorator that checks if the user has the required permission.
     """
+
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             # Check if the user is authenticated
-            if not session.get('authenticated'):
+            if not session.get("authenticated"):
                 return abort(401)  # Unauthorized
 
-            username = session.get('username', '')
+            username = session.get("username", "")
 
             # Check if the user has the required permission
             permission_manager = get_permission_manager()
@@ -202,7 +203,7 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
                     username,
                     ip_address,
                     request.path,
-                    f"Missing permission: {permission.name}"
+                    f"Missing permission: {permission.name}",
                 )
 
                 return abort(403)  # Forbidden
@@ -225,17 +226,17 @@ def init_permissions(app: Flask, config: dict) -> None:
     permission_manager = get_permission_manager()
 
     # Set up default admin user
-    admin_username = config.get('auth_username', 'admin')
+    admin_username = config.get("auth_username", "admin")
     permission_manager.set_user_role(admin_username, Role.ADMIN)
 
     # Add context processor to make permissions available in templates
     @app.context_processor
     def inject_permissions():
         """Inject permissions into templates."""
-        if not session.get('authenticated'):
-            return {'has_permission': lambda p: False}
+        if not session.get("authenticated"):
+            return {"has_permission": lambda p: False}
 
-        username = session.get('username', '')
+        username = session.get("username", "")
 
         def has_permission(permission_name: str) -> bool:
             """Check if the current user has a specific permission.
@@ -253,4 +254,4 @@ def init_permissions(app: Flask, config: dict) -> None:
                 logger.error(f"Invalid permission name: {permission_name}")
                 return False
 
-        return {'has_permission': has_permission}
+        return {"has_permission": has_permission}

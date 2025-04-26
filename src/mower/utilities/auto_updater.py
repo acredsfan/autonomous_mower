@@ -98,7 +98,8 @@ class AutoUpdater:
 
             # Fetch the latest changes
             logger.info(
-                f"Fetching latest changes from {self.repo_url}, branch {self.branch}")
+                f"Fetching latest changes from {self.repo_url}, branch {self.branch}"
+            )
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -126,8 +127,12 @@ class AutoUpdater:
             if current_commit != remote_commit:
                 # Get the number of commits behind
                 commits_behind = subprocess.run(
-                    ["git", "rev-list", "--count",
-                        f"HEAD..origin/{self.branch}"],
+                    [
+                        "git",
+                        "rev-list",
+                        "--count",
+                        f"HEAD..origin/{self.branch}",
+                    ],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -135,8 +140,12 @@ class AutoUpdater:
 
                 # Get the commit messages
                 commit_messages = subprocess.run(
-                    ["git", "log", "--pretty=format:%h %s",
-                        f"HEAD..origin/{self.branch}"],
+                    [
+                        "git",
+                        "log",
+                        "--pretty=format:%h %s",
+                        f"HEAD..origin/{self.branch}",
+                    ],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -148,7 +157,10 @@ class AutoUpdater:
                 )
                 return True, message
             else:
-                return False, "No updates available. Already at the latest version."
+                return (
+                    False,
+                    "No updates available. Already at the latest version.",
+                )
         except subprocess.CalledProcessError as e:
             error_msg = f"Error checking for updates: {e.stderr}"
             logger.error(error_msg)
@@ -181,7 +193,11 @@ class AutoUpdater:
             # Backup the repository (excluding .git directory)
             logger.info(f"Creating backup of repository to {backup_path}")
             for item in os.listdir(self.repo_path):
-                if item != ".git" and item != "venv" and item != "__pycache__":
+                if (
+                    item != ".git"
+                    and item != "venv"
+                    and item != "__pycache__"
+                ):
                     src = os.path.join(self.repo_path, item)
                     dst = os.path.join(backup_path, item)
                     if os.path.isdir(src):
@@ -196,8 +212,10 @@ class AutoUpdater:
             ]
             for config_file in config_files:
                 if os.path.exists(config_file):
-                    dst = os.path.join(CONFIG_BACKUP_DIR, os.path.basename(
-                        config_file) + f".{timestamp}")
+                    dst = os.path.join(
+                        CONFIG_BACKUP_DIR,
+                        os.path.basename(config_file) + f".{timestamp}",
+                    )
                     shutil.copy2(config_file, dst)
                     logger.info(f"Backed up {config_file} to {dst}")
 
@@ -244,7 +262,8 @@ class AutoUpdater:
             for config_file in config_files:
                 backup_file = os.path.join(
                     CONFIG_BACKUP_DIR,
-                    os.path.basename(config_file) + f".{self.backup_timestamp}"
+                    os.path.basename(config_file)
+                    + f".{self.backup_timestamp}",
                 )
                 if os.path.exists(backup_file):
                     shutil.copy2(backup_file, config_file)
@@ -310,7 +329,12 @@ class AutoUpdater:
                     text=True,
                 )
                 subprocess.run(
-                    ["sudo", "systemctl", "start", "autonomous-mower.service"],
+                    [
+                        "sudo",
+                        "systemctl",
+                        "start",
+                        "autonomous-mower.service",
+                    ],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -329,7 +353,8 @@ class AutoUpdater:
                 return True
             else:
                 logger.info(
-                    "Service was not running before update, not starting")
+                    "Service was not running before update, not starting"
+                )
                 return True
         except subprocess.CalledProcessError as e:
             logger.error(f"Error starting services: {e.stderr}")
@@ -414,8 +439,17 @@ class AutoUpdater:
                 # Install any new dependencies
                 logger.info("Installing dependencies")
                 subprocess.run(
-                    ["sudo", "python3", "-m", "pip", "install",
-                        "--break-system-packages", "--no-cache-dir", "-e", "."],
+                    [
+                        "sudo",
+                        "python3",
+                        "-m",
+                        "pip",
+                        "install",
+                        "--break-system-packages",
+                        "--no-cache-dir",
+                        "-e",
+                        ".",
+                    ],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -424,12 +458,16 @@ class AutoUpdater:
                 # Start services
                 if not self.start_services():
                     logger.error(
-                        "Failed to start services after update, rolling back")
+                        "Failed to start services after update, rolling back"
+                    )
                     self.restore_from_backup()
                     self.start_services()  # Try to start services from backup
                     self.update_in_progress = False
                     os.remove(UPDATE_LOCK_FILE)
-                    return False, "Failed to start services after update, rolled back to previous version"
+                    return (
+                        False,
+                        "Failed to start services after update, rolled back to previous version",
+                    )
 
                 # Update successful
                 logger.info("Update completed successfully")
@@ -444,7 +482,10 @@ class AutoUpdater:
                 self.start_services()  # Try to start services from backup
                 self.update_in_progress = False
                 os.remove(UPDATE_LOCK_FILE)
-                return False, f"Error applying updates: {e.stderr}. Rolled back to previous version."
+                return (
+                    False,
+                    f"Error applying updates: {e.stderr}. Rolled back to previous version.",
+                )
             except Exception as e:
                 logger.error(f"Error applying updates: {str(e)}")
                 # Roll back to the backup
@@ -453,7 +494,10 @@ class AutoUpdater:
                 self.start_services()  # Try to start services from backup
                 self.update_in_progress = False
                 os.remove(UPDATE_LOCK_FILE)
-                return False, f"Error applying updates: {str(e)}. Rolled back to previous version."
+                return (
+                    False,
+                    f"Error applying updates: {str(e)}. Rolled back to previous version.",
+                )
         except Exception as e:
             logger.error(f"Error in update process: {str(e)}")
             self.update_in_progress = False

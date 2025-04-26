@@ -82,7 +82,7 @@ class MaintenanceInterval:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'MaintenanceInterval':
+    def from_dict(cls, data: Dict[str, Any]) -> "MaintenanceInterval":
         """Create from dictionary after deserialization."""
         return cls(
             hours=data.get("hours"),
@@ -134,7 +134,9 @@ class MaintenanceTask:
         }
         self.completion_history: List[Dict[str, Any]] = []
 
-    def is_due(self, current_metrics: Dict[str, float], current_time: datetime) -> bool:
+    def is_due(
+        self, current_metrics: Dict[str, float], current_time: datetime
+    ) -> bool:
         """
         Check if the task is due for maintenance.
 
@@ -151,33 +153,45 @@ class MaintenanceTask:
 
         # Check time-based intervals
         if self.interval.hours is not None:
-            hours_since_last = current_metrics["hours"] - \
-                self.last_completed_metrics["hours"]
+            hours_since_last = (
+                current_metrics["hours"]
+                - self.last_completed_metrics["hours"]
+            )
             if hours_since_last >= self.interval.hours:
                 return True
 
         if self.interval.days is not None:
             days_since_last = (
-                current_time - self.last_completed).total_seconds() / (24 * 3600)
+                current_time - self.last_completed
+            ).total_seconds() / (24 * 3600)
             if days_since_last >= self.interval.days:
                 return True
 
         # Check usage-based intervals
         if self.interval.distance_km is not None:
-            distance_since_last = current_metrics["distance_km"] - \
-                self.last_completed_metrics["distance_km"]
+            distance_since_last = (
+                current_metrics["distance_km"]
+                - self.last_completed_metrics["distance_km"]
+            )
             if distance_since_last >= self.interval.distance_km:
                 return True
 
         if self.interval.mowing_cycles is not None:
-            cycles_since_last = current_metrics["mowing_cycles"] - \
-                self.last_completed_metrics["mowing_cycles"]
+            cycles_since_last = (
+                current_metrics["mowing_cycles"]
+                - self.last_completed_metrics["mowing_cycles"]
+            )
             if cycles_since_last >= self.interval.mowing_cycles:
                 return True
 
         return False
 
-    def complete(self, current_metrics: Dict[str, float], current_time: datetime, notes: Optional[str] = None) -> None:
+    def complete(
+        self,
+        current_metrics: Dict[str, float],
+        current_time: datetime,
+        notes: Optional[str] = None,
+    ) -> None:
         """
         Mark the task as completed.
 
@@ -199,7 +213,9 @@ class MaintenanceTask:
 
         logger.info(f"Maintenance task '{self.task_id}' completed")
 
-    def get_next_due(self, current_metrics: Dict[str, float], current_time: datetime) -> Dict[str, Any]:
+    def get_next_due(
+        self, current_metrics: Dict[str, float], current_time: datetime
+    ) -> Dict[str, Any]:
         """
         Get information about when the task will next be due.
 
@@ -223,43 +239,60 @@ class MaintenanceTask:
 
         # Check time-based intervals
         if self.interval.hours is not None:
-            hours_since_last = current_metrics["hours"] - \
-                self.last_completed_metrics["hours"]
+            hours_since_last = (
+                current_metrics["hours"]
+                - self.last_completed_metrics["hours"]
+            )
             hours_remaining = max(0, self.interval.hours - hours_since_last)
             result["remaining"]["hours"] = hours_remaining
             if hours_remaining <= 0:
                 result["due_now"] = True
-                result["reason"] = f"Operating hours exceeded ({hours_since_last:.1f} > {self.interval.hours:.1f})"
+                result["reason"] = (
+                    f"Operating hours exceeded ({hours_since_last:.1f} > {self.interval.hours:.1f})"
+                )
 
         if self.interval.days is not None:
             days_since_last = (
-                current_time - self.last_completed).total_seconds() / (24 * 3600)
+                current_time - self.last_completed
+            ).total_seconds() / (24 * 3600)
             days_remaining = max(0, self.interval.days - days_since_last)
             result["remaining"]["days"] = days_remaining
             if days_remaining <= 0 and not result["due_now"]:
                 result["due_now"] = True
-                result["reason"] = f"Days exceeded ({days_since_last:.1f} > {self.interval.days})"
+                result["reason"] = (
+                    f"Days exceeded ({days_since_last:.1f} > {self.interval.days})"
+                )
 
         # Check usage-based intervals
         if self.interval.distance_km is not None:
-            distance_since_last = current_metrics["distance_km"] - \
-                self.last_completed_metrics["distance_km"]
+            distance_since_last = (
+                current_metrics["distance_km"]
+                - self.last_completed_metrics["distance_km"]
+            )
             distance_remaining = max(
-                0, self.interval.distance_km - distance_since_last)
+                0, self.interval.distance_km - distance_since_last
+            )
             result["remaining"]["distance_km"] = distance_remaining
             if distance_remaining <= 0 and not result["due_now"]:
                 result["due_now"] = True
-                result["reason"] = f"Distance exceeded ({distance_since_last:.1f} > {self.interval.distance_km:.1f})"
+                result["reason"] = (
+                    f"Distance exceeded ({distance_since_last:.1f} > {self.interval.distance_km:.1f})"
+                )
 
         if self.interval.mowing_cycles is not None:
-            cycles_since_last = current_metrics["mowing_cycles"] - \
-                self.last_completed_metrics["mowing_cycles"]
+            cycles_since_last = (
+                current_metrics["mowing_cycles"]
+                - self.last_completed_metrics["mowing_cycles"]
+            )
             cycles_remaining = max(
-                0, self.interval.mowing_cycles - cycles_since_last)
+                0, self.interval.mowing_cycles - cycles_since_last
+            )
             result["remaining"]["mowing_cycles"] = cycles_remaining
             if cycles_remaining <= 0 and not result["due_now"]:
                 result["due_now"] = True
-                result["reason"] = f"Mowing cycles exceeded ({cycles_since_last} > {self.interval.mowing_cycles})"
+                result["reason"] = (
+                    f"Mowing cycles exceeded ({cycles_since_last} > {self.interval.mowing_cycles})"
+                )
 
         return result
 
@@ -273,13 +306,17 @@ class MaintenanceTask:
             "requires_parts": self.requires_parts,
             "estimated_duration_minutes": self.estimated_duration_minutes,
             "instructions": self.instructions,
-            "last_completed": self.last_completed.isoformat() if self.last_completed else None,
+            "last_completed": (
+                self.last_completed.isoformat()
+                if self.last_completed
+                else None
+            ),
             "last_completed_metrics": self.last_completed_metrics,
             "completion_history": self.completion_history,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'MaintenanceTask':
+    def from_dict(cls, data: Dict[str, Any]) -> "MaintenanceTask":
         """Create from dictionary after deserialization."""
         task = cls(
             task_id=data["task_id"],
@@ -288,19 +325,24 @@ class MaintenanceTask:
             priority=data.get("priority", 1),
             requires_parts=data.get("requires_parts", False),
             estimated_duration_minutes=data.get(
-                "estimated_duration_minutes", 30),
+                "estimated_duration_minutes", 30
+            ),
             instructions=data.get("instructions"),
         )
 
         # Restore history
         if data.get("last_completed"):
             task.last_completed = datetime.fromisoformat(
-                data["last_completed"])
-        task.last_completed_metrics = data.get("last_completed_metrics", {
-            "hours": 0.0,
-            "distance_km": 0.0,
-            "mowing_cycles": 0,
-        })
+                data["last_completed"]
+            )
+        task.last_completed_metrics = data.get(
+            "last_completed_metrics",
+            {
+                "hours": 0.0,
+                "distance_km": 0.0,
+                "mowing_cycles": 0,
+            },
+        )
         task.completion_history = data.get("completion_history", [])
 
         return task
@@ -324,7 +366,8 @@ class MaintenanceScheduler:
                 If None, a default path will be used.
         """
         self.data_file = data_file or os.path.expanduser(
-            "~/.mower/maintenance.json")
+            "~/.mower/maintenance.json"
+        )
         self.tasks: Dict[str, MaintenanceTask] = {}
         self.current_metrics = {
             "hours": 0.0,
@@ -354,10 +397,10 @@ class MaintenanceScheduler:
             requires_parts=True,
             estimated_duration_minutes=15,
             instructions="1. Turn off the mower and disconnect the battery\n"
-                        "2. Flip the mower over carefully\n"
-                        "3. Remove the old blade using a wrench\n"
-                        "4. Install the new blade and tighten securely\n"
-                        "5. Reconnect the battery and test",
+            "2. Flip the mower over carefully\n"
+            "3. Remove the old blade using a wrench\n"
+            "4. Install the new blade and tighten securely\n"
+            "5. Reconnect the battery and test",
         )
 
         # Blade sharpening (every 25 hours or 125 km)
@@ -369,10 +412,10 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=20,
             instructions="1. Turn off the mower and disconnect the battery\n"
-                        "2. Remove the blade\n"
-                        "3. Sharpen the blade using a file or grinder\n"
-                        "4. Balance the blade\n"
-                        "5. Reinstall the blade and tighten securely",
+            "2. Remove the blade\n"
+            "3. Sharpen the blade using a file or grinder\n"
+            "4. Balance the blade\n"
+            "5. Reinstall the blade and tighten securely",
         )
 
         # Battery check (every 100 hours or 30 days)
@@ -384,10 +427,10 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=10,
             instructions="1. Turn off the mower\n"
-                        "2. Check battery terminals for corrosion\n"
-                        "3. Clean terminals if necessary\n"
-                        "4. Check battery voltage under load\n"
-                        "5. Ensure all connections are secure",
+            "2. Check battery terminals for corrosion\n"
+            "3. Clean terminals if necessary\n"
+            "4. Check battery voltage under load\n"
+            "5. Ensure all connections are secure",
         )
 
         # General cleaning (every 20 hours or 14 days)
@@ -399,10 +442,10 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=30,
             instructions="1. Turn off the mower and disconnect the battery\n"
-                        "2. Remove debris from the mower deck\n"
-                        "3. Clean the wheels and remove any tangled grass\n"
-                        "4. Clean all sensors with a soft cloth\n"
-                        "5. Check for any loose parts or damage",
+            "2. Remove debris from the mower deck\n"
+            "3. Clean the wheels and remove any tangled grass\n"
+            "4. Clean all sensors with a soft cloth\n"
+            "5. Check for any loose parts or damage",
         )
 
         # Wheel check (every 100 hours or 500 km)
@@ -414,10 +457,10 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=15,
             instructions="1. Turn off the mower\n"
-                        "2. Check wheels for wear and damage\n"
-                        "3. Check wheel alignment\n"
-                        "4. Tighten wheel bolts if necessary\n"
-                        "5. Lubricate wheel bearings if needed",
+            "2. Check wheels for wear and damage\n"
+            "3. Check wheel alignment\n"
+            "4. Tighten wheel bolts if necessary\n"
+            "5. Lubricate wheel bearings if needed",
         )
 
         # Software update (every 30 days)
@@ -429,10 +472,10 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=20,
             instructions="1. Connect the mower to Wi-Fi\n"
-                        "2. Check for available updates\n"
-                        "3. Install updates if available\n"
-                        "4. Restart the mower\n"
-                        "5. Verify that all systems are functioning correctly",
+            "2. Check for available updates\n"
+            "3. Install updates if available\n"
+            "4. Restart the mower\n"
+            "5. Verify that all systems are functioning correctly",
         )
 
         # Full inspection (every 200 hours or 90 days)
@@ -444,11 +487,11 @@ class MaintenanceScheduler:
             requires_parts=False,
             estimated_duration_minutes=60,
             instructions="1. Turn off the mower and disconnect the battery\n"
-                        "2. Check all mechanical components for wear\n"
-                        "3. Inspect all electrical connections\n"
-                        "4. Test all sensors and motors\n"
-                        "5. Update firmware if needed\n"
-                        "6. Clean all components thoroughly",
+            "2. Check all mechanical components for wear\n"
+            "3. Inspect all electrical connections\n"
+            "4. Test all sensors and motors\n"
+            "5. Update firmware if needed\n"
+            "6. Clean all components thoroughly",
         )
 
     def add_task(
@@ -569,23 +612,28 @@ class MaintenanceScheduler:
         for task_id, task in self.tasks.items():
             if task.is_due(self.current_metrics, current_time):
                 next_due = task.get_next_due(
-                    self.current_metrics, current_time)
-                due_tasks.append({
-                    "task_id": task_id,
-                    "description": task.description,
-                    "priority": task.priority,
-                    "requires_parts": task.requires_parts,
-                    "estimated_duration_minutes": task.estimated_duration_minutes,
-                    "instructions": task.instructions,
-                    "reason": next_due.get("reason", "Maintenance due"),
-                })
+                    self.current_metrics, current_time
+                )
+                due_tasks.append(
+                    {
+                        "task_id": task_id,
+                        "description": task.description,
+                        "priority": task.priority,
+                        "requires_parts": task.requires_parts,
+                        "estimated_duration_minutes": task.estimated_duration_minutes,
+                        "instructions": task.instructions,
+                        "reason": next_due.get("reason", "Maintenance due"),
+                    }
+                )
 
         # Sort by priority (lowest number first)
         due_tasks.sort(key=lambda x: x["priority"])
 
         return due_tasks
 
-    def get_upcoming_tasks(self, days_ahead: int = 30) -> List[Dict[str, Any]]:
+    def get_upcoming_tasks(
+        self, days_ahead: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get tasks that will be due in the near future.
 
@@ -614,9 +662,12 @@ class MaintenanceScheduler:
 
         # Estimate future metrics
         future_metrics = {
-            "hours": self.current_metrics["hours"] + (daily_hours * days_ahead),
-            "distance_km": self.current_metrics["distance_km"] + (daily_distance * days_ahead),
-            "mowing_cycles": self.current_metrics["mowing_cycles"] + int(daily_cycles * days_ahead),
+            "hours": self.current_metrics["hours"]
+            + (daily_hours * days_ahead),
+            "distance_km": self.current_metrics["distance_km"]
+            + (daily_distance * days_ahead),
+            "mowing_cycles": self.current_metrics["mowing_cycles"]
+            + int(daily_cycles * days_ahead),
         }
 
         upcoming_tasks = []
@@ -629,7 +680,8 @@ class MaintenanceScheduler:
             # Check if the task will be due in the future
             if task.is_due(future_metrics, future_time):
                 next_due = task.get_next_due(
-                    self.current_metrics, current_time)
+                    self.current_metrics, current_time
+                )
 
                 # Estimate days until due
                 days_until_due = None
@@ -637,32 +689,47 @@ class MaintenanceScheduler:
                 if "days" in next_due.get("remaining", {}):
                     days_until_due = next_due["remaining"]["days"]
                 elif "hours" in next_due.get("remaining", {}):
-                    days_until_due = next_due["remaining"]["hours"] / \
-                        daily_hours if daily_hours > 0 else None
+                    days_until_due = (
+                        next_due["remaining"]["hours"] / daily_hours
+                        if daily_hours > 0
+                        else None
+                    )
                 elif "distance_km" in next_due.get("remaining", {}):
-                    days_until_due = next_due["remaining"]["distance_km"] / \
-                        daily_distance if daily_distance > 0 else None
+                    days_until_due = (
+                        next_due["remaining"]["distance_km"] / daily_distance
+                        if daily_distance > 0
+                        else None
+                    )
                 elif "mowing_cycles" in next_due.get("remaining", {}):
-                    days_until_due = next_due["remaining"]["mowing_cycles"] / \
-                        daily_cycles if daily_cycles > 0 else None
+                    days_until_due = (
+                        next_due["remaining"]["mowing_cycles"] / daily_cycles
+                        if daily_cycles > 0
+                        else None
+                    )
 
-                upcoming_tasks.append({
-                    "task_id": task_id,
-                    "description": task.description,
-                    "priority": task.priority,
-                    "requires_parts": task.requires_parts,
-                    "estimated_duration_minutes": task.estimated_duration_minutes,
-                    "days_until_due": days_until_due,
-                    "remaining": next_due.get("remaining", {}),
-                })
+                upcoming_tasks.append(
+                    {
+                        "task_id": task_id,
+                        "description": task.description,
+                        "priority": task.priority,
+                        "requires_parts": task.requires_parts,
+                        "estimated_duration_minutes": task.estimated_duration_minutes,
+                        "days_until_due": days_until_due,
+                        "remaining": next_due.get("remaining", {}),
+                    }
+                )
 
         # Sort by days until due
-        upcoming_tasks.sort(key=lambda x: x.get(
-            "days_until_due", float('inf')) or float('inf'))
+        upcoming_tasks.sort(
+            key=lambda x: x.get("days_until_due", float("inf"))
+            or float("inf")
+        )
 
         return upcoming_tasks
 
-    def complete_task(self, task_id: str, notes: Optional[str] = None) -> bool:
+    def complete_task(
+        self, task_id: str, notes: Optional[str] = None
+    ) -> bool:
         """
         Mark a task as completed.
 
@@ -675,7 +742,8 @@ class MaintenanceScheduler:
         """
         if task_id in self.tasks:
             self.tasks[task_id].complete(
-                self.current_metrics, datetime.now(), notes)
+                self.current_metrics, datetime.now(), notes
+            )
             self.save()
             return True
         return False
@@ -716,7 +784,11 @@ class MaintenanceScheduler:
                 "requires_parts": task.requires_parts,
                 "estimated_duration_minutes": task.estimated_duration_minutes,
                 "instructions": task.instructions,
-                "last_completed": task.last_completed.isoformat() if task.last_completed else None,
+                "last_completed": (
+                    task.last_completed.isoformat()
+                    if task.last_completed
+                    else None
+                ),
                 "is_due": next_due.get("due_now", False),
                 "next_due": next_due,
             }
@@ -727,11 +799,14 @@ class MaintenanceScheduler:
         """Save maintenance data to file."""
         data = {
             "metrics": self.current_metrics,
-            "tasks": {task_id: task.to_dict() for task_id, task in self.tasks.items()},
+            "tasks": {
+                task_id: task.to_dict()
+                for task_id, task in self.tasks.items()
+            },
         }
 
         try:
-            with open(self.data_file, 'w') as f:
+            with open(self.data_file, "w") as f:
                 json.dump(data, f, indent=2)
             logger.debug(f"Saved maintenance data to {self.data_file}")
         except Exception as e:
@@ -749,15 +824,18 @@ class MaintenanceScheduler:
             return False
 
         try:
-            with open(self.data_file, 'r') as f:
+            with open(self.data_file, "r") as f:
                 data = json.load(f)
 
             # Load metrics
-            self.current_metrics = data.get("metrics", {
-                "hours": 0.0,
-                "distance_km": 0.0,
-                "mowing_cycles": 0,
-            })
+            self.current_metrics = data.get(
+                "metrics",
+                {
+                    "hours": 0.0,
+                    "distance_km": 0.0,
+                    "mowing_cycles": 0,
+                },
+            )
 
             # Load tasks
             self.tasks = {}
@@ -785,21 +863,28 @@ class MaintenanceScheduler:
         upcoming_tasks = self.get_upcoming_tasks()
 
         if format_type == "json":
-            return json.dumps({
-                "current_metrics": self.current_metrics,
-                "due_tasks": due_tasks,
-                "upcoming_tasks": upcoming_tasks,
-                "all_tasks": self.get_all_tasks(),
-            }, indent=2)
+            return json.dumps(
+                {
+                    "current_metrics": self.current_metrics,
+                    "due_tasks": due_tasks,
+                    "upcoming_tasks": upcoming_tasks,
+                    "all_tasks": self.get_all_tasks(),
+                },
+                indent=2,
+            )
 
         elif format_type == "html":
-            html = "<html><head><title>Maintenance Schedule</title></head><body>"
+            html = (
+                "<html><head><title>Maintenance Schedule</title></head><body>"
+            )
             html += f"<h1>Maintenance Schedule</h1>"
             html += f"<p>Generated on {current_time.strftime('%Y-%m-%d %H:%M')}</p>"
 
             html += "<h2>Current Metrics</h2>"
             html += "<ul>"
-            html += f"<li>Runtime: {self.current_metrics['hours']:.1f} hours</li>"
+            html += (
+                f"<li>Runtime: {self.current_metrics['hours']:.1f} hours</li>"
+            )
             html += f"<li>Distance: {self.current_metrics['distance_km']:.1f} km</li>"
             html += f"<li>Mowing Cycles: {self.current_metrics['mowing_cycles']}</li>"
             html += "</ul>"
@@ -813,7 +898,9 @@ class MaintenanceScheduler:
                     html += f"<td>{task['priority']}</td>"
                     html += f"<td>{task['description']}</td>"
                     html += f"<td>{task['reason']}</td>"
-                    html += f"<td>{task['estimated_duration_minutes']} min</td>"
+                    html += (
+                        f"<td>{task['estimated_duration_minutes']} min</td>"
+                    )
                     html += f"<td>{'Yes' if task['requires_parts'] else 'No'}</td>"
                     html += f"</tr>"
                 html += "</table>"
@@ -827,12 +914,16 @@ class MaintenanceScheduler:
                 html += "<tr><th>Priority</th><th>Task</th><th>Days Until Due</th><th>Est. Time</th><th>Parts Required</th></tr>"
                 for task in upcoming_tasks:
                     days = task.get("days_until_due")
-                    days_str = f"{days:.1f}" if days is not None else "Unknown"
+                    days_str = (
+                        f"{days:.1f}" if days is not None else "Unknown"
+                    )
                     html += f"<tr>"
                     html += f"<td>{task['priority']}</td>"
                     html += f"<td>{task['description']}</td>"
                     html += f"<td>{days_str}</td>"
-                    html += f"<td>{task['estimated_duration_minutes']} min</td>"
+                    html += (
+                        f"<td>{task['estimated_duration_minutes']} min</td>"
+                    )
                     html += f"<td>{'Yes' if task['requires_parts'] else 'No'}</td>"
                     html += f"</tr>"
                 html += "</table>"
@@ -846,13 +937,19 @@ class MaintenanceScheduler:
         else:  # text format
             text = "MAINTENANCE SCHEDULE\n"
             text += "=" * 80 + "\n"
-            text += f"Generated on {current_time.strftime('%Y-%m-%d %H:%M')}\n\n"
+            text += (
+                f"Generated on {current_time.strftime('%Y-%m-%d %H:%M')}\n\n"
+            )
 
             text += "CURRENT METRICS\n"
             text += "-" * 80 + "\n"
             text += f"Runtime: {self.current_metrics['hours']:.1f} hours\n"
-            text += f"Distance: {self.current_metrics['distance_km']:.1f} km\n"
-            text += f"Mowing Cycles: {self.current_metrics['mowing_cycles']}\n\n"
+            text += (
+                f"Distance: {self.current_metrics['distance_km']:.1f} km\n"
+            )
+            text += (
+                f"Mowing Cycles: {self.current_metrics['mowing_cycles']}\n\n"
+            )
 
             text += "DUE TASKS\n"
             text += "-" * 80 + "\n"
@@ -862,9 +959,12 @@ class MaintenanceScheduler:
                     text += f"  Reason: {task['reason']}\n"
                     text += f"  Estimated Time: {task['estimated_duration_minutes']} minutes\n"
                     text += f"  Parts Required: {'Yes' if task['requires_parts'] else 'No'}\n"
-                    if task.get('instructions'):
-                        text += f"  Instructions:\n    " + \
-                            task['instructions'].replace('\n', '\n    ') + "\n"
+                    if task.get("instructions"):
+                        text += (
+                            f"  Instructions:\n    "
+                            + task["instructions"].replace("\n", "\n    ")
+                            + "\n"
+                        )
                     text += "\n"
             else:
                 text += "No tasks currently due.\n\n"
@@ -874,7 +974,9 @@ class MaintenanceScheduler:
             if upcoming_tasks:
                 for task in upcoming_tasks:
                     days = task.get("days_until_due")
-                    days_str = f"{days:.1f}" if days is not None else "Unknown"
+                    days_str = (
+                        f"{days:.1f}" if days is not None else "Unknown"
+                    )
                     text += f"Priority {task['priority']}: {task['description']}\n"
                     text += f"  Days Until Due: {days_str}\n"
                     text += f"  Estimated Time: {task['estimated_duration_minutes']} minutes\n"

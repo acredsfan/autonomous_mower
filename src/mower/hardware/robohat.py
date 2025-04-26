@@ -15,30 +15,32 @@ import time
 
 import serial
 from mower.utilities.utils import Utils
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
-from mower.constants import (MM1_MAX_FORWARD, MM1_MAX_REVERSE,
-                             MM1_STEERING_MID, MM1_STOPPED_PWM)
+from mower.constants import (
+    MM1_MAX_FORWARD,
+    MM1_MAX_REVERSE,
+    MM1_STEERING_MID,
+    MM1_STOPPED_PWM,
+)
 
 
 logger = LoggerConfig.get_logger(__name__)
 
 
 class RoboHATController:
-    '''
+    """
     Controller to read signals from the RC controller via serial
     and convert into steering and throttle outputs.
     Input signal range: 1000 to 2000
     Output range: -1.00 to 1.00
-    '''
+    """
 
     def __init__(self, cfg, debug=False):
         # Standard variables
         self.angle = 0.0
         self.throttle = 0.0
-        self.mode = 'user'
+        self.mode = "user"
         self.recording = False
         self.recording_latch = None
         self.auto_record_on_throttle = cfg.AUTO_RECORD_ON_THROTTLE
@@ -49,20 +51,22 @@ class RoboHATController:
         self.SHOW_STEERING_VALUE = cfg.MM1_SHOW_STEERING_VALUE
         self.DEAD_ZONE = cfg.JOYSTICK_DEADZONE
         self.debug = debug
-        self.control_mode = 'serial'  # Set default control mode to 'serial'
+        self.control_mode = "serial"  # Set default control mode to 'serial'
 
         # Initialize serial port for reading RC inputs
         try:
-            self.serial = serial.Serial(cfg.MM1_SERIAL_PORT, 115200, timeout=1)
+            self.serial = serial.Serial(
+                cfg.MM1_SERIAL_PORT, 115200, timeout=1
+            )
             logger.info(
                 f"Serial port {cfg.MM1_SERIAL_PORT} opened for controller "
                 "input."
-                )
+            )
         except serial.SerialException:
             logger.error(
                 "Serial port for controller input not found! "
                 "Please enable: sudo raspi-config"
-                )
+            )
             self.serial = None
         except serial.SerialTimeoutException:
             logger.error("Serial connection for controller input timed out!")
@@ -76,21 +80,21 @@ class RoboHATController:
             except serial.SerialException:
                 logger.error(
                     "Failed to close the controller serial connection."
-                    )
+                )
 
     def read_serial(self):
-        '''
+        """
         Read the RC controller value from serial port. Map the value into
         steering and throttle.
 
         Expected format: '####,####\r', where the first number is steering
         and the second is throttle.
-        '''
+        """
         if not self.serial or not self.serial.is_open:
             logger.warning("Controller serial port is not open.")
             return
 
-        line = self.serial.readline().decode().strip('\n').strip('\r')
+        line = self.serial.readline().decode().strip("\n").strip("\r")
 
         output = line.split(", ")
         if len(output) == 2:
@@ -105,45 +109,57 @@ class RoboHATController:
                     logger.debug(
                         f"angle_pwm = {angle_pwm}, "
                         f"throttle_pwm= {throttle_pwm}"
-                        )
+                    )
 
                 if throttle_pwm >= self.STOPPED_PWM:
                     # Scale down the input PWM (1500 - 2000) to our max forward
                     throttle_pwm_mapped = Utils.map_range_float(
-                        throttle_pwm, 1500, 2000,
-                        self.STOPPED_PWM, self.MAX_FORWARD
-                        )
+                        throttle_pwm,
+                        1500,
+                        2000,
+                        self.STOPPED_PWM,
+                        self.MAX_FORWARD,
+                    )
                     # Go forward
-                    self.throttle = Utils.map_range_float(throttle_pwm_mapped,
-                                                          self.STOPPED_PWM,
-                                                          self.MAX_FORWARD,
-                                                          0, 1.0)
+                    self.throttle = Utils.map_range_float(
+                        throttle_pwm_mapped,
+                        self.STOPPED_PWM,
+                        self.MAX_FORWARD,
+                        0,
+                        1.0,
+                    )
                 else:
                     throttle_pwm_mapped = Utils.map_range_float(
-                        throttle_pwm, 1000, 1500,
-                        self.MAX_REVERSE, self.STOPPED_PWM
-                        )
+                        throttle_pwm,
+                        1000,
+                        1500,
+                        self.MAX_REVERSE,
+                        self.STOPPED_PWM,
+                    )
                     # Go backward
-                    self.throttle = Utils.map_range_float(throttle_pwm_mapped,
-                                                          self.MAX_REVERSE,
-                                                          self.STOPPED_PWM,
-                                                          -1.0, 0)
+                    self.throttle = Utils.map_range_float(
+                        throttle_pwm_mapped,
+                        self.MAX_REVERSE,
+                        self.STOPPED_PWM,
+                        -1.0,
+                        0,
+                    )
 
                 if angle_pwm >= self.STEERING_MID:
                     # Turn left
                     self.angle = Utils.map_range_float(
                         angle_pwm, 2000, self.STEERING_MID, -1, 0
-                        )
+                    )
                 else:
                     # Turn right
                     self.angle = Utils.map_range_float(
                         angle_pwm, self.STEERING_MID, 1000, 0, 1
-                        )
+                    )
 
                 if self.debug:
                     logger.debug(
                         f"angle = {self.angle}, throttle = {self.throttle}"
-                        )
+                    )
 
                 if self.auto_record_on_throttle:
                     was_recording = self.recording
@@ -152,7 +168,7 @@ class RoboHATController:
                         self.recording_latch = self.recording
                         logger.debug(
                             f"Recording state changed to {self.recording}"
-                            )
+                        )
 
                 time.sleep(0.01)
 
@@ -164,7 +180,7 @@ class RoboHATController:
         while True:
             try:
                 # Only process RC input if enabled
-                if self.control_mode == 'rc':
+                if self.control_mode == "rc":
                     self.read_serial()
             except Exception as e:
                 logger.error(f"MM1: Error reading serial input: {e}")
@@ -195,7 +211,7 @@ class RoboHATController:
         if self.recording_latch is not None:
             logger.debug(
                 f"Setting recording from latch = {self.recording_latch}"
-                )
+            )
             self.recording = self.recording_latch
             self.recording_latch = None
 
@@ -223,12 +239,12 @@ class RoboHATDriver:
             self.pwm = serial.Serial(MM1_SERIAL_PORT, 115200, timeout=1)
             logger.info(
                 f"Serial port {MM1_SERIAL_PORT} opened for PWM output."
-                )
+            )
         except serial.SerialException:
             logger.error(
                 "Serial port for PWM output not found! "
                 "Please enable: sudo raspi-config"
-                )
+            )
             self.pwm = None
         except serial.SerialTimeoutException:
             logger.error("Serial connection for PWM output timed out!")
@@ -239,12 +255,12 @@ class RoboHATDriver:
         if value > 1:
             logger.warning(
                 f"MM1: Warning, value out of bound. Value = {value}"
-                )
+            )
             return 1.0
         elif value < -1:
             logger.warning(
                 f"MM1: Warning, value out of bound. Value = {value}"
-                )
+            )
             return -1.0
         else:
             return value
@@ -257,47 +273,46 @@ class RoboHATDriver:
             if throttle > 0:
                 output_throttle = Utils.map_range(
                     throttle, 0, 1.0, self.STOPPED_PWM, self.MAX_FORWARD
-                    )
+                )
             else:
                 output_throttle = Utils.map_range(
                     throttle, -1, 0, self.MAX_REVERSE, self.STOPPED_PWM
-                    )
+                )
 
             if steering > 0:
                 output_steering = Utils.map_range(
                     steering, 0, 1.0, self.STEERING_MID, 1000
-                    )
+                )
             else:
-                output_steering = Utils.map_range(steering,
-                                                  -1, 0,
-                                                  2000, self.STEERING_MID)
+                output_steering = Utils.map_range(
+                    steering, -1, 0, 2000, self.STEERING_MID
+                )
 
             # Ensure PWM values are integers
             output_steering = int(output_steering)
             output_throttle = int(output_throttle)
 
-            if self.is_valid_pwm_value(output_steering) and \
-               self.is_valid_pwm_value(output_throttle):
+            if self.is_valid_pwm_value(
+                output_steering
+            ) and self.is_valid_pwm_value(output_throttle):
                 if self.debug:
                     logger.debug(
                         f"output_steering={output_steering}, "
                         f"output_throttle={output_throttle}"
-                        )
+                    )
                 self.write_pwm(output_steering, output_throttle)
             else:
                 logger.warning(
                     f"Invalid PWM values: steering = {output_steering}, "
                     f"throttle = {output_throttle}"
-                    )
-                logger.warning(
-                    "Not sending PWM value to MM1"
-                    )
+                )
+                logger.warning("Not sending PWM value to MM1")
 
         except OSError as err:
             logger.error(
                 f"Unexpected issue setting PWM "
                 f"(check wires to motor board): {err}"
-                )
+            )
 
     def is_valid_pwm_value(self, value):
         """Check if the PWM value is within valid range (1000 to 2000)"""
@@ -314,7 +329,7 @@ class RoboHATDriver:
         else:
             logger.error(
                 "Cannot write PWM command. PWM serial port is not open."
-                )
+            )
 
     def run(self, steering, throttle):
         self.set_pulse(steering, throttle)

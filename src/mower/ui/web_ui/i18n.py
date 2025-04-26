@@ -19,17 +19,17 @@ def init_babel(app: Flask) -> None:
         app: The Flask application instance.
     """
     # Configure Babel
-    app.config['BABEL_DEFAULT_LOCALE'] = 'en'
-    app.config['BABEL_DEFAULT_TIMEZONE'] = 'UTC'
-    app.config['BABEL_TRANSLATION_DIRECTORIES'] = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'translations'
+    app.config["BABEL_DEFAULT_LOCALE"] = "en"
+    app.config["BABEL_DEFAULT_TIMEZONE"] = "UTC"
+    app.config["BABEL_TRANSLATION_DIRECTORIES"] = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "translations"
     )
 
     # Locale selector function
     def get_locale():
-        if 'language' in session:
-            return session['language']
-        codes = [lang['code'] for lang in get_supported_languages()]
+        if "language" in session:
+            return session["language"]
+        codes = [lang["code"] for lang in get_supported_languages()]
         return request.accept_languages.best_match(codes)
 
     # Initialize Babel with custom locale selector
@@ -43,9 +43,9 @@ def get_supported_languages():
         A list of dictionaries with language code and name.
     """
     return [
-        {'code': 'en', 'name': 'English'},
-        {'code': 'es', 'name': 'Español'},
-        {'code': 'fr', 'name': 'Français'},
-        {'code': 'de', 'name': 'Deutsch'},
-        {'code': 'zh', 'name': '中文'}
+        {"code": "en", "name": "English"},
+        {"code": "es", "name": "Español"},
+        {"code": "fr", "name": "Français"},
+        {"code": "de", "name": "Deutsch"},
+        {"code": "zh", "name": "中文"},
     ]

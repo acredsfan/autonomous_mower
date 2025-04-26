@@ -12,13 +12,17 @@ import logging
 from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
 # Check if simulation mode is enabled via environment variable
-SIMULATION_ENABLED = os.environ.get(
-    'USE_SIMULATION', 'False').lower() in ('true', '1', 'yes')
+SIMULATION_ENABLED = os.environ.get("USE_SIMULATION", "False").lower() in (
+    "true",
+    "1",
+    "yes",
+)
 
 # Get the simulation mode from configuration if available
 try:
     from mower.config_management import get_config
-    SIMULATION_ENABLED = get_config('use_simulation', SIMULATION_ENABLED)
+
+    SIMULATION_ENABLED = get_config("use_simulation", SIMULATION_ENABLED)
 except ImportError:
     # If config_management is not available, use the environment variable
     pass
@@ -36,7 +40,8 @@ def enable_simulation():
     # Update configuration if available
     try:
         from mower.config_management import set_config
-        set_config('use_simulation', True)
+
+        set_config("use_simulation", True)
     except ImportError:
         pass
 
@@ -50,7 +55,8 @@ def disable_simulation():
     # Update configuration if available
     try:
         from mower.config_management import set_config
-        set_config('use_simulation', False)
+
+        set_config("use_simulation", False)
     except ImportError:
         pass
 

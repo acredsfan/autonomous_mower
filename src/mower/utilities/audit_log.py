@@ -92,8 +92,8 @@ class AuditLogger:
 
         # Create a formatter for the audit log
         formatter = logging.Formatter(
-            '%(asctime)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
+            "%(asctime)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler.setFormatter(formatter)
 
@@ -106,12 +106,14 @@ class AuditLogger:
         # Get standard logger for internal errors
         self.error_logger = LoggerConfigInfo.get_logger(__name__)
 
-    def log_event(self,
-                  event_type: AuditEventType,
-                  user: str = None,
-                  ip_address: str = None,
-                  details: Dict[str, Any] = None,
-                  success: bool = True) -> None:
+    def log_event(
+        self,
+        event_type: AuditEventType,
+        user: str = None,
+        ip_address: str = None,
+        details: Dict[str, Any] = None,
+        success: bool = True,
+    ) -> None:
         """Log a security audit event.
 
         Args:
@@ -128,7 +130,7 @@ class AuditLogger:
                 "event_type": event_type.value,
                 "hostname": self.hostname,
                 "process_id": os.getpid(),
-                "success": success
+                "success": success,
             }
 
             # Add optional fields if provided
@@ -152,7 +154,11 @@ class AuditLogger:
             ip_address: IP address of the client.
             success: Whether the login was successful.
         """
-        event_type = AuditEventType.LOGIN_SUCCESS if success else AuditEventType.LOGIN_FAILURE
+        event_type = (
+            AuditEventType.LOGIN_SUCCESS
+            if success
+            else AuditEventType.LOGIN_FAILURE
+        )
         self.log_event(event_type, user, ip_address, success=success)
 
     def log_logout(self, user: str, ip_address: str) -> None:
@@ -164,13 +170,15 @@ class AuditLogger:
         """
         self.log_event(AuditEventType.LOGOUT, user, ip_address)
 
-    def log_config_change(self,
-                          user: str,
-                          ip_address: str,
-                          config_section: str,
-                          old_value: Any,
-                          new_value: Any,
-                          success: bool = True) -> None:
+    def log_config_change(
+        self,
+        user: str,
+        ip_address: str,
+        config_section: str,
+        old_value: Any,
+        new_value: Any,
+        success: bool = True,
+    ) -> None:
         """Log a configuration change event.
 
         Args:
@@ -184,18 +192,21 @@ class AuditLogger:
         details = {
             "config_section": config_section,
             "old_value": old_value,
-            "new_value": new_value
+            "new_value": new_value,
         }
-        self.log_event(AuditEventType.CONFIG_CHANGE,
-                       user, ip_address, details, success)
+        self.log_event(
+            AuditEventType.CONFIG_CHANGE, user, ip_address, details, success
+        )
 
-    def log_security_setting_change(self,
-                                    user: str,
-                                    ip_address: str,
-                                    setting_name: str,
-                                    old_value: Any,
-                                    new_value: Any,
-                                    success: bool = True) -> None:
+    def log_security_setting_change(
+        self,
+        user: str,
+        ip_address: str,
+        setting_name: str,
+        old_value: Any,
+        new_value: Any,
+        success: bool = True,
+    ) -> None:
         """Log a security setting change event.
 
         Args:
@@ -209,16 +220,19 @@ class AuditLogger:
         details = {
             "setting_name": setting_name,
             "old_value": old_value,
-            "new_value": new_value
+            "new_value": new_value,
         }
-        self.log_event(AuditEventType.SECURITY_SETTING_CHANGE,
-                       user, ip_address, details, success)
+        self.log_event(
+            AuditEventType.SECURITY_SETTING_CHANGE,
+            user,
+            ip_address,
+            details,
+            success,
+        )
 
-    def log_access_denied(self,
-                          user: str,
-                          ip_address: str,
-                          resource: str,
-                          reason: str) -> None:
+    def log_access_denied(
+        self, user: str, ip_address: str, resource: str, reason: str
+    ) -> None:
         """Log an access denied event.
 
         Args:
@@ -227,17 +241,18 @@ class AuditLogger:
             resource: Resource that the user attempted to access.
             reason: Reason why access was denied.
         """
-        details = {
-            "resource": resource,
-            "reason": reason
-        }
-        self.log_event(AuditEventType.ACCESS_DENIED, user,
-                       ip_address, details, success=False)
+        details = {"resource": resource, "reason": reason}
+        self.log_event(
+            AuditEventType.ACCESS_DENIED,
+            user,
+            ip_address,
+            details,
+            success=False,
+        )
 
-    def log_suspicious_activity(self,
-                                ip_address: str,
-                                activity: str,
-                                details: Dict[str, Any] = None) -> None:
+    def log_suspicious_activity(
+        self, ip_address: str, activity: str, details: Dict[str, Any] = None
+    ) -> None:
         """Log a suspicious activity event.
 
         Args:
@@ -248,13 +263,16 @@ class AuditLogger:
         if details is None:
             details = {}
         details["activity"] = activity
-        self.log_event(AuditEventType.SUSPICIOUS_ACTIVITY,
-                       ip_address=ip_address, details=details, success=False)
+        self.log_event(
+            AuditEventType.SUSPICIOUS_ACTIVITY,
+            ip_address=ip_address,
+            details=details,
+            success=False,
+        )
 
-    def log_rate_limit_exceeded(self,
-                                ip_address: str,
-                                endpoint: str,
-                                limit: str) -> None:
+    def log_rate_limit_exceeded(
+        self, ip_address: str, endpoint: str, limit: str
+    ) -> None:
         """Log a rate limit exceeded event.
 
         Args:
@@ -262,19 +280,22 @@ class AuditLogger:
             endpoint: API endpoint that was rate limited.
             limit: Rate limit that was exceeded.
         """
-        details = {
-            "endpoint": endpoint,
-            "limit": limit
-        }
-        self.log_event(AuditEventType.RATE_LIMIT_EXCEEDED,
-                       ip_address=ip_address, details=details, success=False)
+        details = {"endpoint": endpoint, "limit": limit}
+        self.log_event(
+            AuditEventType.RATE_LIMIT_EXCEEDED,
+            ip_address=ip_address,
+            details=details,
+            success=False,
+        )
 
 
 # Singleton instance
 _audit_logger_instance = None
 
 
-def get_audit_logger(log_dir: Optional[Union[str, Path]] = None) -> AuditLogger:
+def get_audit_logger(
+    log_dir: Optional[Union[str, Path]] = None
+) -> AuditLogger:
     """Get the audit logger instance.
 
     Args:

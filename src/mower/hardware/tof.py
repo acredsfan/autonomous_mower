@@ -2,9 +2,7 @@ import time
 
 import adafruit_vl53l0x
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -20,7 +18,8 @@ class VL53L0XSensors:
             return sensor
         except Exception as e:
             logging.error(
-                f"Error initializing VL53L0X at address {hex(address)}: {e}")
+                f"Error initializing VL53L0X at address {hex(address)}: {e}"
+            )
             return None
 
     @staticmethod

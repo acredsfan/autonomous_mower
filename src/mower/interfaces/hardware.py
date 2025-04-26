@@ -281,7 +281,9 @@ class GPIOInterface(ABC):
     """
 
     @abstractmethod
-    def setup_pin(self, pin: int, mode: str, initial: Optional[int] = None) -> None:
+    def setup_pin(
+        self, pin: int, mode: str, initial: Optional[int] = None
+    ) -> None:
         """
         Set up a GPIO pin.
 

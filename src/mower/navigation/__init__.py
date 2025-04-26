@@ -7,10 +7,10 @@ from .localization import Localization
 from .navigation import NavigationController
 
 __all__ = [
-    'GpsNmeaPositions',
-    'GpsLatestPosition',
-    'GpsPosition',
-    'GpsPlayer',
-    'Localization',
-    'NavigationController'
+    "GpsNmeaPositions",
+    "GpsLatestPosition",
+    "GpsPosition",
+    "GpsPlayer",
+    "Localization",
+    "NavigationController",
 ]

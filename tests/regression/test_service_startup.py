@@ -43,10 +43,12 @@ class TestServiceStartupIssues:
         # Remove the temporary directory
         shutil.rmtree(self.temp_dir)
 
-    @patch('os.path.exists')
-    @patch('os.makedirs')
-    @patch('os.chmod')
-    def test_log_directory_creation(self, mock_chmod, mock_makedirs, mock_exists):
+    @patch("os.path.exists")
+    @patch("os.makedirs")
+    @patch("os.chmod")
+    def test_log_directory_creation(
+        self, mock_chmod, mock_makedirs, mock_exists
+    ):
         """
         Test that the log directory is created if it doesn't exist.
 
@@ -57,12 +59,15 @@ class TestServiceStartupIssues:
         mock_exists.return_value = False
 
         # Create a RobotController instance
-        with patch('mower.main_controller.ResourceManager', return_value=self.mock_resource_manager):
-            with patch('mower.main_controller.RobotController._load_config'):
+        with patch(
+            "mower.main_controller.ResourceManager",
+            return_value=self.mock_resource_manager,
+        ):
+            with patch("mower.main_controller.RobotController._load_config"):
                 controller = RobotController()
 
                 # Call the method that would create the log directory
-                with patch('mower.main_controller.LOG_DIR', self.log_dir):
+                with patch("mower.main_controller.LOG_DIR", self.log_dir):
                     controller._initialize_logging()
 
         # Verify that os.makedirs was called to create the log directory
@@ -71,8 +76,8 @@ class TestServiceStartupIssues:
         # Verify that os.chmod was called to set the permissions
         mock_chmod.assert_called()
 
-    @patch('os.path.exists')
-    @patch('os.access')
+    @patch("os.path.exists")
+    @patch("os.access")
     def test_log_directory_permissions(self, mock_access, mock_exists):
         """
         Test that the log directory permissions are checked and fixed if needed.
@@ -87,19 +92,22 @@ class TestServiceStartupIssues:
         mock_access.return_value = False
 
         # Create a RobotController instance
-        with patch('mower.main_controller.ResourceManager', return_value=self.mock_resource_manager):
-            with patch('mower.main_controller.RobotController._load_config'):
+        with patch(
+            "mower.main_controller.ResourceManager",
+            return_value=self.mock_resource_manager,
+        ):
+            with patch("mower.main_controller.RobotController._load_config"):
                 controller = RobotController()
 
                 # Call the method that would check and fix the log directory permissions
-                with patch('mower.main_controller.LOG_DIR', self.log_dir):
-                    with patch('os.chmod') as mock_chmod:
+                with patch("mower.main_controller.LOG_DIR", self.log_dir):
+                    with patch("os.chmod") as mock_chmod:
                         controller._initialize_logging()
 
         # Verify that os.access was called to check the permissions
         mock_access.assert_called_with(self.log_dir, os.W_OK)
 
-    @patch('logging.FileHandler')
+    @patch("logging.FileHandler")
     def test_log_file_creation(self, mock_file_handler):
         """
         Test that log files are created successfully.
@@ -108,18 +116,23 @@ class TestServiceStartupIssues:
         "Service Won't Start" - "Check service logs"
         """
         # Create a RobotController instance
-        with patch('mower.main_controller.ResourceManager', return_value=self.mock_resource_manager):
-            with patch('mower.main_controller.RobotController._load_config'):
+        with patch(
+            "mower.main_controller.ResourceManager",
+            return_value=self.mock_resource_manager,
+        ):
+            with patch("mower.main_controller.RobotController._load_config"):
                 controller = RobotController()
 
                 # Call the method that would create the log files
-                with patch('mower.main_controller.LOG_DIR', self.log_dir):
+                with patch("mower.main_controller.LOG_DIR", self.log_dir):
                     controller._initialize_logging()
 
         # Verify that FileHandler was called to create the log files
-        assert mock_file_handler.call_count > 0, "FileHandler should be called to create log files"
+        assert (
+            mock_file_handler.call_count > 0
+        ), "FileHandler should be called to create log files"
 
-    @patch('importlib.import_module')
+    @patch("importlib.import_module")
     def test_python_environment(self, mock_import_module):
         """
         Test that the Python environment is correctly set up.
@@ -132,8 +145,12 @@ class TestServiceStartupIssues:
         mock_import_module.return_value = mock_module
 
         # Create a ResourceManager instance
-        with patch('mower.main_controller.ResourceManager._initialize_hardware'):
-            with patch('mower.main_controller.ResourceManager._initialize_software'):
+        with patch(
+            "mower.main_controller.ResourceManager._initialize_hardware"
+        ):
+            with patch(
+                "mower.main_controller.ResourceManager._initialize_software"
+            ):
                 resource_manager = ResourceManager()
 
                 # Call the method that would import modules

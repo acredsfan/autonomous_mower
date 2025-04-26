@@ -318,7 +318,9 @@ class SensorFusionInterface(ABC):
     """
 
     @abstractmethod
-    def register_sensor(self, sensor_type: str, sensor: SensorInterface) -> None:
+    def register_sensor(
+        self, sensor_type: str, sensor: SensorInterface
+    ) -> None:
         """
         Register a sensor with the fusion system.
 
@@ -329,7 +331,9 @@ class SensorFusionInterface(ABC):
         pass
 
     @abstractmethod
-    def unregister_sensor(self, sensor_type: str, sensor: SensorInterface) -> None:
+    def unregister_sensor(
+        self, sensor_type: str, sensor: SensorInterface
+    ) -> None:
         """
         Unregister a sensor from the fusion system.
 

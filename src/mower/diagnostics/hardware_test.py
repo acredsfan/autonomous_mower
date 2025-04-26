@@ -30,6 +30,7 @@ import logging as logging_levels
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+
 logging = LoggerConfig.get_logger(__name__)
 
 try:
@@ -134,13 +135,15 @@ class HardwareTestSuite:
 
         # Find all test methods
         test_methods = [
-            method_name for method_name in dir(self)
-            if method_name.startswith('test_') and
-            callable(getattr(self, method_name))]
+            method_name
+            for method_name in dir(self)
+            if method_name.startswith("test_")
+            and callable(getattr(self, method_name))
+        ]
 
         for method_name in test_methods:
             # Remove 'test_' prefix and replace underscores
-            test_name = method_name[5:].replace('_', ' ')
+            test_name = method_name[5:].replace("_", " ")
 
             if interactive:
                 print("\n" + "=" * 50)
@@ -183,7 +186,8 @@ class HardwareTestSuite:
         # Calculate total and passed tests
         total_tests = len(self.test_results)
         passed_tests = sum(
-            1 for result in self.test_results.values() if result)
+            1 for result in self.test_results.values() if result
+        )
 
         print("\n" + "=" * 50)
         print(f"SUMMARY: {passed_tests}/{total_tests} tests passed")
@@ -195,8 +199,9 @@ class HardwareTestSuite:
             print(f"{test}: {status}")
         print("=" * 50)
 
-    def _check_sensor_ranges(self, sensor_name: str,
-                             reading: Dict[str, Any]) -> bool:
+    def _check_sensor_ranges(
+        self, sensor_name: str, reading: Dict[str, Any]
+    ) -> bool:
         """
         Check if a given sensor reading is within plausible limits.
 
@@ -216,62 +221,76 @@ class HardwareTestSuite:
         """
         # Here we do some minimal bounds checks to ensure the sensor is
         # returning data
-        if sensor_name.lower() == 'imu':
+        if sensor_name.lower() == "imu":
             # If IMU reading includes heading, pitch, roll
-            if 'heading' in reading:
-                if reading['heading'] < 0 or reading['heading'] > 360:
+            if "heading" in reading:
+                if reading["heading"] < 0 or reading["heading"] > 360:
                     logging.warning(
-                        f"IMU heading out of range: {reading['heading']}")
+                        f"IMU heading out of range: {reading['heading']}"
+                    )
                     return False
-            if 'pitch' in reading:
-                if reading['pitch'] < -90 or reading['pitch'] > 90:
+            if "pitch" in reading:
+                if reading["pitch"] < -90 or reading["pitch"] > 90:
                     logging.warning(
-                        f"IMU pitch out of range: {reading['pitch']}")
+                        f"IMU pitch out of range: {reading['pitch']}"
+                    )
                     return False
-            if 'roll' in reading:
-                if reading['roll'] < -180 or reading['roll'] > 180:
+            if "roll" in reading:
+                if reading["roll"] < -180 or reading["roll"] > 180:
                     logging.warning(
-                        f"IMU roll out of range: {reading['roll']}")
+                        f"IMU roll out of range: {reading['roll']}"
+                    )
                     return False
-        elif sensor_name.lower() == 'bme280':
+        elif sensor_name.lower() == "bme280":
             # Check for typical atmosphere
-            if 'temperature' in reading and (
-                    reading['temperature'] < -40 or 
-                    reading['temperature'] > 85):
+            if "temperature" in reading and (
+                reading["temperature"] < -40 or reading["temperature"] > 85
+            ):
                 logging.warning(
                     "BME280 temperature out of range: "
-                    f"{reading['temperature']}")
+                    f"{reading['temperature']}"
+                )
                 return False
-            if 'humidity' in reading and (
-                    reading['humidity'] < 0 or reading['humidity'] > 100):
+            if "humidity" in reading and (
+                reading["humidity"] < 0 or reading["humidity"] > 100
+            ):
                 logging.warning(
-                    f"BME280 humidity out of range: {reading['humidity']}")
+                    f"BME280 humidity out of range: {reading['humidity']}"
+                )
                 return False
-            if 'pressure' in reading and (
-                    reading['pressure'] < 300 or reading['pressure'] > 1100):
+            if "pressure" in reading and (
+                reading["pressure"] < 300 or reading["pressure"] > 1100
+            ):
                 logging.warning(
-                    f"BME280 pressure out of range: {reading['pressure']}")
+                    f"BME280 pressure out of range: {reading['pressure']}"
+                )
                 return False
-        elif sensor_name.lower() == 'gps':
+        elif sensor_name.lower() == "gps":
             # Basic checks for latitude/longitude
-            if 'latitude' in reading and (
-                    reading['latitude'] < -90 or reading['latitude'] > 90):
+            if "latitude" in reading and (
+                reading["latitude"] < -90 or reading["latitude"] > 90
+            ):
                 logging.warning(
-                    f"GPS latitude out of range: {reading['latitude']}")
+                    f"GPS latitude out of range: {reading['latitude']}"
+                )
                 return False
-            if 'longitude' in reading and (
-                    reading['longitude'] < -180 or reading['longitude'] > 180):
+            if "longitude" in reading and (
+                reading["longitude"] < -180 or reading["longitude"] > 180
+            ):
                 logging.warning(
-                    f"GPS longitude out of range: {reading['longitude']}")
+                    f"GPS longitude out of range: {reading['longitude']}"
+                )
                 return False
-        elif sensor_name.lower() == 'power_monitor':
+        elif sensor_name.lower() == "power_monitor":
             # Check for reasonable voltage/current ranges
-            if ('battery_voltage' in reading and
-                    (reading['battery_voltage'] < 0 or
-                     reading['battery_voltage'] > 30)):
+            if "battery_voltage" in reading and (
+                reading["battery_voltage"] < 0
+                or reading["battery_voltage"] > 30
+            ):
                 logging.warning(
                     f"Battery voltage out of range: "
-                    f"{reading['battery_voltage']}")
+                    f"{reading['battery_voltage']}"
+                )
                 return False
         # Add more checks as needed for additional sensors
         return True
@@ -286,9 +305,10 @@ class HardwareTestSuite:
         try:
             # Basic test to check if GPIO is accessible
             logging.info("Testing GPIO accessibility")
-            
+
             # First check if we're running as root
             import os
+
             if os.geteuid() != 0:
                 msg = (
                     "GPIO test requires root privileges. "
@@ -298,9 +318,10 @@ class HardwareTestSuite:
                 logging.warning(msg)
                 print(msg)
                 return False
-                
+
             # This just checks if we can access the GPIO library without errors
             import RPi.GPIO as GPIO
+
             # Check if GPIO is accessible
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(18, GPIO.OUT)
@@ -348,13 +369,16 @@ class HardwareTestSuite:
             logging.info(f"IMU reading: {reading}")
 
             # Example of minimal check
-            if not self._check_sensor_ranges('IMU', reading):
+            if not self._check_sensor_ranges("IMU", reading):
                 logging.warning("IMU reading outside safe range guidelines.")
                 return False
 
             # Additional validations
-            if ('heading' not in reading or 'roll' not in reading or
-                    'pitch' not in reading):
+            if (
+                "heading" not in reading
+                or "roll" not in reading
+                or "pitch" not in reading
+            ):
                 logging.warning("IMU returned incomplete data")
                 return False
 
@@ -386,14 +410,18 @@ class HardwareTestSuite:
             logging.info(f"BME280 reading: {reading}")
 
             # Validate reading with range checks
-            if not self._check_sensor_ranges('BME280', reading):
+            if not self._check_sensor_ranges("BME280", reading):
                 logging.warning(
-                    "BME280 reading outside safe range guidelines.")
+                    "BME280 reading outside safe range guidelines."
+                )
                 return False
 
             # Additional validations for required fields
-            if ('temperature' not in reading or 'humidity' not in reading or
-                    'pressure' not in reading):
+            if (
+                "temperature" not in reading
+                or "humidity" not in reading
+                or "pressure" not in reading
+            ):
                 logging.warning("BME280 returned incomplete data")
                 return False
 
@@ -439,22 +467,13 @@ class HardwareTestSuite:
                 # 50mm to 4000mm
                 if distance < 0 or distance > 5000:
                     sensor_num = i + 1
-                    msg = (
-                        f"ToF{sensor_num} "
-                        f"err: {distance}mm"
-                    )
+                    msg = f"ToF{sensor_num} " f"err: {distance}mm"
                     logging.warning(msg)
-                    msg = (
-                        f"S{sensor_num}: {distance}mm "
-                        "(ERR)"
-                    )
+                    msg = f"S{sensor_num}: {distance}mm " "(ERR)"
                     print(msg)
                 else:
                     sensor_num = i + 1
-                    msg = (
-                        f"S{sensor_num}: {distance}mm "
-                        "(OK)"
-                    )
+                    msg = f"S{sensor_num}: {distance}mm " "(OK)"
                     print(msg)
 
             return True
@@ -485,24 +504,25 @@ class HardwareTestSuite:
             logging.info(f"Power monitor reading: {reading}")
 
             # Check if readings are within expected ranges
-            if not self._check_sensor_ranges('power_monitor', reading):
+            if not self._check_sensor_ranges("power_monitor", reading):
                 logging.warning(
-                    "Power monitor readings outside safe range guidelines.")
+                    "Power monitor readings outside safe range guidelines."
+                )
                 return False
 
             # Display readings for user
             print(f"Power monitor reading: {reading}")
-            if 'battery_voltage' in reading:
+            if "battery_voltage" in reading:
                 print(f"Battery voltage: {reading['battery_voltage']} V")
-            if 'battery_current' in reading:
+            if "battery_current" in reading:
                 print(f"Battery current: {reading['battery_current']} mA")
-            if 'solar_voltage' in reading:
+            if "solar_voltage" in reading:
                 print(f"Solar voltage: {reading['solar_voltage']} V")
-            if 'solar_current' in reading:
+            if "solar_current" in reading:
                 print(f"Solar current: {reading['solar_current']} mA")
 
             # Simple validation of reading
-            if 'battery_voltage' not in reading:
+            if "battery_voltage" not in reading:
                 logging.warning("Power monitor returned incomplete data")
                 return False
 
@@ -538,8 +558,11 @@ class HardwareTestSuite:
 
             while time.time() - start_time < 10:
                 position = gps.get_position()
-                if position and position.get(
-                        'latitude') and position.get('longitude'):
+                if (
+                    position
+                    and position.get("latitude")
+                    and position.get("longitude")
+                ):
                     break
                 time.sleep(0.5)
 
@@ -550,27 +573,29 @@ class HardwareTestSuite:
             logging.info(f"GPS position: {position}")
 
             # Check if position data is within plausible ranges
-            if not self._check_sensor_ranges('GPS', position):
+            if not self._check_sensor_ranges("GPS", position):
                 logging.warning("GPS reading outside safe range guidelines.")
                 return False
 
             # Display readings for user
             print(f"Latitude: {position.get('latitude', 'N/A')}")
             print(f"Longitude: {position.get('longitude', 'N/A')}")
-            if 'altitude' in position:
+            if "altitude" in position:
                 print(f"Altitude: {position.get('altitude')} m")
-            if 'accuracy' in position:
+            if "accuracy" in position:
                 print(f"Accuracy: {position.get('accuracy')} m")
-            if 'satellites' in position:
+            if "satellites" in position:
                 print(f"Satellites: {position.get('satellites')}")
-            if 'fix_quality' in position:
+            if "fix_quality" in position:
                 print(f"Fix Quality: {position.get('fix_quality')}")
 
             # Validate GPS data completeness
-            if ('latitude' not in position or
-                'longitude' not in position or
-                position.get('latitude') == 0 or
-                    position.get('longitude') == 0):
+            if (
+                "latitude" not in position
+                or "longitude" not in position
+                or position.get("latitude") == 0
+                or position.get("longitude") == 0
+            ):
                 logging.warning("GPS returned invalid position data")
                 return False
 
@@ -609,8 +634,8 @@ class HardwareTestSuite:
                 ("turn left", -0.5, 0.5),
                 ("stop", 0, 0),
                 ("turn right", 0.5, -0.5),
-                ("stop", 0, 0)
-                ]
+                ("stop", 0, 0),
+            ]
 
             for move, left, right in moves:
                 print(f"Motor test: {move}")
@@ -621,8 +646,10 @@ class HardwareTestSuite:
             robohat.set_motors(0, 0)
 
             print("Drive motors test complete.")
-            feedback = input("Did all motor movements work correctly? (y/n): ")
-            return feedback.lower().startswith('y')
+            feedback = input(
+                "Did all motor movements work correctly? (y/n): "
+            )
+            return feedback.lower().startswith("y")
         except Exception as e:
             logging.error(f"Error testing drive motors: {e}")
             # Ensure motors are stopped after exception
@@ -649,8 +676,10 @@ class HardwareTestSuite:
 
             print("Testing blade motor...")
             print("WARNING: The blade motor will run during this test!")
-            print("Ensure the mower is in a safe position with no "
-                  "obstructions.")
+            print(
+                "Ensure the mower is in a safe position with no "
+                "obstructions."
+            )
             input("Press Enter to continue or Ctrl+C to cancel...")
 
             # Test sequence: low speed, medium speed, high speed, stop
@@ -658,8 +687,8 @@ class HardwareTestSuite:
                 ("low speed (25%)", 0.25),
                 ("medium speed (50%)", 0.5),
                 ("high speed (75%)", 0.75),
-                ("stop", 0)
-                ]
+                ("stop", 0),
+            ]
 
             for description, speed in speeds:
                 print(f"Blade test: {description}")
@@ -671,8 +700,9 @@ class HardwareTestSuite:
 
             print("Blade motor test complete.")
             feedback = input(
-                "Did the blade motor work correctly at all speeds? (y/n): ")
-            return feedback.lower().startswith('y')
+                "Did the blade motor work correctly at all speeds? (y/n): "
+            )
+            return feedback.lower().startswith("y")
         except Exception as e:
             logging.error(f"Error testing blade motor: {e}")
             # Ensure blade is stopped after exception
@@ -711,10 +741,11 @@ class HardwareTestSuite:
             if isinstance(frame, bytes):
                 print("Successfully captured JPEG image")
                 return True
-            elif hasattr(frame, 'shape'):
+            elif hasattr(frame, "shape"):
                 print(
                     f"Successfully captured image: "
-                    f"{frame.shape[0]}x{frame.shape[1]}")
+                    f"{frame.shape[0]}x{frame.shape[1]}"
+                )
                 return True
             else:
                 print("Captured frame but in unexpected format")
@@ -760,19 +791,19 @@ def main():
         return 1
 
     parser = argparse.ArgumentParser(
-        description='Run hardware tests for the autonomous mower')
+        description="Run hardware tests for the autonomous mower"
+    )
     parser.add_argument(
-        '--non-interactive',
-        action='store_true',
-        help='Run tests without prompting')
+        "--non-interactive",
+        action="store_true",
+        help="Run tests without prompting",
+    )
     parser.add_argument(
-        '--test',
-        type=str,
-        help='Run only the specified test')
+        "--test", type=str, help="Run only the specified test"
+    )
     parser.add_argument(
-        '--verbose',
-        action='store_true',
-        help='Enable verbose output')
+        "--verbose", action="store_true", help="Enable verbose output"
+    )
 
     args = parser.parse_args()
 
@@ -815,15 +846,17 @@ def main():
                 print(f"Error: Test '{args.test}' not found")
                 print("Available tests:")
                 for attr in dir(test_suite):
-                    if attr.startswith('test_') and callable(
-                            getattr(test_suite, attr)):
-                        test_name = attr[5:].replace('_', '-')
+                    if attr.startswith("test_") and callable(
+                        getattr(test_suite, attr)
+                    ):
+                        test_name = attr[5:].replace("_", "-")
                         print(f"  - {test_name}")
                 return 1
         else:
             # Run all tests
             test_results = test_suite.run_all_tests(
-                interactive=not args.non_interactive)
+                interactive=not args.non_interactive
+            )
             return 0 if all(test_results.values()) else 1
 
     except Exception as e:

@@ -25,12 +25,12 @@ from mower.events.event_bus import EventBus, get_event_bus
 from mower.events.handlers import EventHandler, subscribe, publish
 
 __all__ = [
-    'Event',
-    'EventType',
-    'EventPriority',
-    'EventBus',
-    'get_event_bus',
-    'EventHandler',
-    'subscribe',
-    'publish',
+    "Event",
+    "EventType",
+    "EventPriority",
+    "EventBus",
+    "get_event_bus",
+    "EventHandler",
+    "subscribe",
+    "publish",
 ]

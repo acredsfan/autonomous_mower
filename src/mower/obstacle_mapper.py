@@ -7,8 +7,7 @@ from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.sensor_interface import EnhancedSensorInterface
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
-from mower.constants import (MIN_DISTANCE_THRESHOLD,
-                             polygon_coordinates)
+from mower.constants import MIN_DISTANCE_THRESHOLD, polygon_coordinates
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -16,16 +15,18 @@ logger = logging.getLogger(__name__)
 
 class ObstacleMapper:
     def __init__(
-            self,
-            localization: Localization,
-            sensors: EnhancedSensorInterface,
-            driver: RoboHATDriver):
+        self,
+        localization: Localization,
+        sensors: EnhancedSensorInterface,
+        driver: RoboHATDriver,
+    ):
         self.localization = localization  # Store the instance properly
         self.sensors = sensors
         self.driver = driver
         self.obstacle_map = []  # Store obstacle locations
         self.navigation_controller = NavigationController(
-            localization, driver, sensors)
+            localization, driver, sensors
+        )
 
         # Convert polygon_coordinates to a Shapely Polygon
         self.yard_boundary = self.load_yard_boundary()
@@ -35,29 +36,39 @@ class ObstacleMapper:
         points = []
 
         # Handle empty or invalid polygon_coordinates
-        if not polygon_coordinates or not isinstance(polygon_coordinates, list):
+        if not polygon_coordinates or not isinstance(
+            polygon_coordinates, list
+        ):
             logger.warning(
-                "Invalid polygon_coordinates. Using default boundary.")
+                "Invalid polygon_coordinates. Using default boundary."
+            )
             # Return a default small polygon around (0,0)
-            return Polygon([(0.001, 0.001), (0.001, -0.001),
-                           (-0.001, -0.001), (-0.001, 0.001)])
+            return Polygon(
+                [
+                    (0.001, 0.001),
+                    (0.001, -0.001),
+                    (-0.001, -0.001),
+                    (-0.001, 0.001),
+                ]
+            )
 
         # Process each coordinate, handling both 'lng'/'lat' and 'lon'/'lat' formats
         for coord in polygon_coordinates:
             if not isinstance(coord, dict):
                 logger.warning(
-                    f"Invalid coordinate format: {coord}. Skipping.")
+                    f"Invalid coordinate format: {coord}. Skipping."
+                )
                 continue
 
             # Try to get longitude (either 'lng' or 'lon')
             lon = None
-            if 'lng' in coord:
-                lon = coord['lng']
-            elif 'lon' in coord:
-                lon = coord['lon']
+            if "lng" in coord:
+                lon = coord["lng"]
+            elif "lon" in coord:
+                lon = coord["lon"]
 
             # Try to get latitude
-            lat = coord.get('lat')
+            lat = coord.get("lat")
 
             # Only add point if both coordinates are valid
             if lon is not None and lat is not None:
@@ -66,21 +77,32 @@ class ObstacleMapper:
         # If no valid points were found, use default
         if not points:
             logger.warning(
-                "No valid points found in polygon_coordinates. Using default boundary.")
-            return Polygon([(0.001, 0.001), (0.001, -0.001),
-                           (-0.001, -0.001), (-0.001, 0.001)])
+                "No valid points found in polygon_coordinates. Using default boundary."
+            )
+            return Polygon(
+                [
+                    (0.001, 0.001),
+                    (0.001, -0.001),
+                    (-0.001, -0.001),
+                    (-0.001, 0.001),
+                ]
+            )
 
         return Polygon(points)
 
     def detect_obstacle(self):
         """Check if an obstacle is detected using the sensors."""
-        left_distance = self.sensors.sensor_data.get('left_distance',
-                                                     float('inf'))
-        right_distance = self.sensors.sensor_data.get('right_distance',
-                                                      float('inf'))
+        left_distance = self.sensors.sensor_data.get(
+            "left_distance", float("inf")
+        )
+        right_distance = self.sensors.sensor_data.get(
+            "right_distance", float("inf")
+        )
 
-        return (left_distance < MIN_DISTANCE_THRESHOLD or
-                right_distance < MIN_DISTANCE_THRESHOLD)
+        return (
+            left_distance < MIN_DISTANCE_THRESHOLD
+            or right_distance < MIN_DISTANCE_THRESHOLD
+        )
 
     def record_obstacle(self):
         """Record the current GPS position as an obstacle if inside the boundary."""
@@ -91,15 +113,17 @@ class ObstacleMapper:
 
             if self.yard_boundary.contains(obstacle_point):
                 logger.info(
-                    f"Obstacle detected inside boundary at {lat}, {lon}")
+                    f"Obstacle detected inside boundary at {lat}, {lon}"
+                )
                 self.obstacle_map.append({"latitude": lat, "longitude": lon})
             else:
                 logger.warning(
-                    f"Obstacle at {lat}, {lon} is outside boundary. Ignored.")
+                    f"Obstacle at {lat}, {lon} is outside boundary. Ignored."
+                )
 
     def save_obstacle_map(self, filename="obstacle_map.json"):
         """Save the obstacle map to a JSON file."""
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(self.obstacle_map, f, indent=4)
         logger.info(f"Obstacle map saved to {filename}")
 
@@ -122,11 +146,13 @@ class ObstacleMapper:
             top_right_lat = corner[3]
             top_right_lon = corner[2]
             logger.info(
-                f"Center of the yard is at {top_right_lat}, {top_right_lon}")
+                f"Center of the yard is at {top_right_lat}, {top_right_lon}"
+            )
 
             # Move Robot to the center of the yard and grid pattern
             self.navigation_controller.navigate_to_location(
-                (top_right_lat, top_right_lon))
+                (top_right_lat, top_right_lon)
+            )
             # Create a grid pattern to cover the yard
             # Define the grid parameters
             grid_spacing = 1.0  # Distance between grid points in meters
@@ -163,9 +189,11 @@ class ObstacleMapper:
                 # If the Robot is not in the yard, allow it to return to the
                 # yard
                 if not self.is_within_yard(
-                        self.localization.estimate_position()):
+                    self.localization.estimate_position()
+                ):
                     self.navigation_controller.navigate_to_location(
-                        (top_right_lat, top_right_lon))
+                        (top_right_lat, top_right_lon)
+                    )
 
             # Drive the mower forward at low speed
             self.driver.run(steering=0.0, throttle=0.2)

@@ -7,13 +7,8 @@ import utm
 from dataclasses import dataclass
 
 from mower.hardware.robohat import RoboHATDriver
-from mower.navigation.gps import (
-    GpsLatestPosition,
-    GpsPosition
-    )
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.navigation.gps import GpsLatestPosition, GpsPosition
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 
 logger = LoggerConfig.get_logger(__name__)
@@ -36,12 +31,12 @@ class NavigationController:
     """Handles navigation logic separately from the motor controller."""
 
     def __init__(
-            self,
-            gps_latest_position: GpsLatestPosition,
-            robohat_driver: RoboHATDriver,
-            sensor_interface,
-            debug: bool = False
-            ):
+        self,
+        gps_latest_position: GpsLatestPosition,
+        robohat_driver: RoboHATDriver,
+        sensor_interface,
+        debug: bool = False,
+    ):
         """
         Initialize the navigation controller.
 
@@ -58,14 +53,14 @@ class NavigationController:
 
         # Navigation parameters
         self.control_params = {
-            'steering_kp': 0.01,  # Proportional gain for steering
-            'throttle_kp': 0.5,   # Proportional gain for throttle
-            'max_throttle': 1.0,  # Maximum throttle value
-            'min_throttle': 0.1,  # Minimum throttle value
-            'position_tolerance': 0.0001,  # GPS position tolerance
-            'max_steering': 1.0,  # Maximum steering value
-            'safety_timeout': 30.0  # Maximum time without position update
-            }
+            "steering_kp": 0.01,  # Proportional gain for steering
+            "throttle_kp": 0.5,  # Proportional gain for throttle
+            "max_throttle": 1.0,  # Maximum throttle value
+            "min_throttle": 0.1,  # Minimum throttle value
+            "position_tolerance": 0.0001,  # GPS position tolerance
+            "max_steering": 1.0,  # Maximum steering value
+            "safety_timeout": 30.0,  # Maximum time without position update
+        }
 
         self.status = NavigationStatus(
             is_moving=False,
@@ -74,15 +69,14 @@ class NavigationController:
             target_position=None,
             distance_to_target=0.0,
             heading_error=0.0,
-            last_error=None
-            )
+            last_error=None,
+        )
 
         self.last_position_update = time.time()
 
     def navigate_to_location(
-            self,
-            target_location: Tuple[float, float]
-            ) -> bool:
+        self, target_location: Tuple[float, float]
+    ) -> bool:
         """
         Navigate the robot to the specified target location.
 
@@ -131,16 +125,14 @@ class NavigationController:
         self.last_position_update = time.time()
 
         if self.has_reached_location(
-                current_position,
-                self.status.target_position
-                ):
+            current_position, self.status.target_position
+        ):
             self.status.target_reached = True
             return True
 
         steering, throttle = self.calculate_navigation_commands(
-            current_position,
-            self.status.target_position
-            )
+            current_position, self.status.target_position
+        )
 
         self.robohat_driver.run(steering, throttle)
         return True
@@ -156,16 +148,13 @@ class NavigationController:
             position = self.gps_latest_position.run()
 
             if not position or len(position) < 4:
-                logger.warning('Incomplete GPS data received.')
+                logger.warning("Incomplete GPS data received.")
                 return None
 
             ts, easting, northing, zone_number, zone_letter = position
             lat, lon = utm.to_latlon(
-                easting,
-                northing,
-                zone_number,
-                zone_letter
-                )
+                easting, northing, zone_number, zone_letter
+            )
             return (lat, lon)
 
         except Exception as e:
@@ -173,10 +162,10 @@ class NavigationController:
             return None
 
     def calculate_navigation_commands(
-            self,
-            current_position: Tuple[float, float],
-            target_location: Tuple[float, float]
-            ) -> Tuple[float, float]:
+        self,
+        current_position: Tuple[float, float],
+        target_location: Tuple[float, float],
+    ) -> Tuple[float, float]:
         """
         Calculate steering and throttle commands.
 
@@ -188,7 +177,7 @@ class NavigationController:
             Tuple[float, float]: Steering and throttle commands
         """
         bearing = self.calculate_bearing(current_position, target_location)
-        current_heading = self.sensor_interface.get_sensor_data('heading')
+        current_heading = self.sensor_interface.get_sensor_data("heading")
 
         heading_error = (bearing - current_heading + 360) % 360
         if heading_error > 180:
@@ -197,37 +186,37 @@ class NavigationController:
         self.status.heading_error = heading_error
 
         # Calculate steering using proportional control
-        steering = -self.control_params['steering_kp'] * heading_error
+        steering = -self.control_params["steering_kp"] * heading_error
 
         # Calculate distance and throttle
         distance = self.calculate_distance(current_position, target_location)
         self.status.distance_to_target = distance
 
         throttle = min(
-            self.control_params['throttle_kp'] * distance,
-            self.control_params['max_throttle']
-            )
+            self.control_params["throttle_kp"] * distance,
+            self.control_params["max_throttle"],
+        )
 
         # Apply safety limits
         steering = self._clamp_value(
             steering,
-            -self.control_params['max_steering'],
-            self.control_params['max_steering']
-            )
+            -self.control_params["max_steering"],
+            self.control_params["max_steering"],
+        )
 
         throttle = self._clamp_value(
             throttle,
-            self.control_params['min_throttle'],
-            self.control_params['max_throttle']
-            )
+            self.control_params["min_throttle"],
+            self.control_params["max_throttle"],
+        )
 
         return steering, throttle
 
     @staticmethod
     def calculate_bearing(
-            current_position: Tuple[float, float],
-            target_location: Tuple[float, float]
-            ) -> float:
+        current_position: Tuple[float, float],
+        target_location: Tuple[float, float],
+    ) -> float:
         """
         Calculate bearing between two points.
 
@@ -244,8 +233,7 @@ class NavigationController:
         delta_lon = lon2 - lon1
 
         x = sin(delta_lon) * cos(lat2)
-        y = (cos(lat1) * sin(lat2) -
-             sin(lat1) * cos(lat2) * cos(delta_lon))
+        y = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)
 
         initial_bearing = atan2(x, y)
         bearing = (math.degrees(initial_bearing) + 360) % 360
@@ -254,9 +242,9 @@ class NavigationController:
 
     @staticmethod
     def calculate_distance(
-            current_position: Tuple[float, float],
-            target_location: Tuple[float, float]
-            ) -> float:
+        current_position: Tuple[float, float],
+        target_location: Tuple[float, float],
+    ) -> float:
         """
         Calculate Haversine distance between two points.
 
@@ -274,18 +262,20 @@ class NavigationController:
         delta_lat = lat2 - lat1
         delta_lon = lon2 - lon1
 
-        a = (sin(delta_lat / 2) ** 2 +
-             cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2)
+        a = (
+            sin(delta_lat / 2) ** 2
+            + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
+        )
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         return R * c
 
     def has_reached_location(
-            self,
-            current_position: Tuple[float, float],
-            target_location: Tuple[float, float],
-            tolerance: float = None
-            ) -> bool:
+        self,
+        current_position: Tuple[float, float],
+        target_location: Tuple[float, float],
+        tolerance: float = None,
+    ) -> bool:
         """
         Check if target location has been reached.
 
@@ -298,13 +288,12 @@ class NavigationController:
             bool: True if target has been reached
         """
         if tolerance is None:
-            tolerance = self.control_params['position_tolerance']
+            tolerance = self.control_params["position_tolerance"]
 
         lat1, lon1 = current_position
         lat2, lon2 = target_location
 
-        return (abs(lat1 - lat2) < tolerance and
-                abs(lon1 - lon2) < tolerance)
+        return abs(lat1 - lat2) < tolerance and abs(lon1 - lon2) < tolerance
 
     def _check_safety_timeout(self) -> bool:
         """
@@ -314,7 +303,7 @@ class NavigationController:
             bool: True if safety timeout has occurred
         """
         time_since_update = time.time() - self.last_position_update
-        return time_since_update > self.control_params['safety_timeout']
+        return time_since_update > self.control_params["safety_timeout"]
 
     def _handle_safety_stop(self, reason: str):
         """
@@ -370,28 +359,27 @@ class NavigationController:
             Dict: Current navigation status
         """
         return {
-            'is_moving': self.status.is_moving,
-            'target_reached': self.status.target_reached,
-            'current_position': self.status.current_position,
-            'target_position': self.status.target_position,
-            'distance_to_target': self.status.distance_to_target,
-            'heading_error': self.status.heading_error,
-            'last_error': self.status.last_error
-            }
+            "is_moving": self.status.is_moving,
+            "target_reached": self.status.target_reached,
+            "current_position": self.status.current_position,
+            "target_position": self.status.target_position,
+            "distance_to_target": self.status.distance_to_target,
+            "heading_error": self.status.heading_error,
+            "last_error": self.status.last_error,
+        }
 
 
 def initialize_navigation():
     """Initialize navigation system components."""
     try:
         gps_position_instance = GpsPosition(
-            serial_port='/dev/ttyACM0',
-            debug=True
-            )
+            serial_port="/dev/ttyACM0", debug=True
+        )
         gps_position_instance.start()
 
         gps_latest_position = GpsLatestPosition(
             gps_position_instance=gps_position_instance
-            )
+        )
         robohat_driver = RoboHATDriver()
 
         return gps_latest_position, robohat_driver
@@ -407,11 +395,8 @@ if __name__ == "__main__":
     if gps_latest_position and robohat_driver:
         sensor_interface = None  # Replace with actual sensor interface
         controller = NavigationController(
-            gps_latest_position,
-            robohat_driver,
-            sensor_interface,
-            debug=True
-            )
+            gps_latest_position, robohat_driver, sensor_interface, debug=True
+        )
 
         # Example target location (latitude, longitude)
         target = (39.123, -84.512)

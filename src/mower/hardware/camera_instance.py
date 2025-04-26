@@ -12,9 +12,7 @@ import cv2
 from dotenv import load_dotenv
 from typing import Optional, Union
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Load environment variables
 load_dotenv()
@@ -23,20 +21,22 @@ load_dotenv()
 logging = LoggerConfig.get_logger(__name__)
 
 # Camera configuration from environment variables
-FPS = int(os.getenv('STREAMING_FPS', 15))
-STREAMING_RESOLUTION = os.getenv('STREAMING_RESOLUTION', '640x480')
-WIDTH, HEIGHT = map(int, STREAMING_RESOLUTION.split('x'))
+FPS = int(os.getenv("STREAMING_FPS", 15))
+STREAMING_RESOLUTION = os.getenv("STREAMING_RESOLUTION", "640x480")
+WIDTH, HEIGHT = map(int, STREAMING_RESOLUTION.split("x"))
 # Number of frames to keep in buffer
-BUFFER_SIZE = int(os.getenv('FRAME_BUFFER_SIZE', 5))
+BUFFER_SIZE = int(os.getenv("FRAME_BUFFER_SIZE", 5))
 
 # Try to import picamera2, but don't fail if not available
 try:
     from picamera2 import Picamera2  # type: ignore
+
     PICAMERA_AVAILABLE = True
 except ImportError:
     PICAMERA_AVAILABLE = False
     logging.warning(
-        "picamera2 not available. Using OpenCV camera or simulation.")
+        "picamera2 not available. Using OpenCV camera or simulation."
+    )
 
 # Global camera instance
 _camera_instance = None
@@ -55,12 +55,12 @@ def get_device_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # Doesn't need to connect, just open a socket to get the IP
-        s.connect(('8.8.8.8', 80))  # Google's DNS server
+        s.connect(("8.8.8.8", 80))  # Google's DNS server
         device_ip = s.getsockname()[0]
     except Exception as e:
         # Fallback if IP detection fails
         logging.error(f"Could not determine device IP: {e}")
-        device_ip = '127.0.0.1'  # Default to localhost if detection fails
+        device_ip = "127.0.0.1"  # Default to localhost if detection fails
     finally:
         s.close()
     return device_ip
@@ -101,10 +101,14 @@ class CameraInstance:
                     self._camera = Picamera2()
                     self._camera.configure(
                         self._camera.create_preview_configuration(
-                            main={"size": (self._frame_width,
-                                           self._frame_height)}
-                            )
+                            main={
+                                "size": (
+                                    self._frame_width,
+                                    self._frame_height,
+                                )
+                            }
                         )
+                    )
                     self._camera.start()
                     self._is_picamera = True
                     self._is_initialized = True
@@ -151,7 +155,7 @@ class CameraInstance:
                         return None
 
                 # Convert to JPEG
-                ret, jpeg = cv2.imencode('.jpg', frame)
+                ret, jpeg = cv2.imencode(".jpg", frame)
                 if not ret:
                     return None
 

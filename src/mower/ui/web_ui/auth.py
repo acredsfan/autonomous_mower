@@ -31,7 +31,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 audit_logger = get_audit_logger()
 
 # Type variable for route functions
-F = TypeVar('F', bound=Callable[..., Response])
+F = TypeVar("F", bound=Callable[..., Response])
 
 
 def init_auth(app: Flask, config: dict) -> None:
@@ -41,13 +41,10 @@ def init_auth(app: Flask, config: dict) -> None:
         app: The Flask application instance.
         config: Configuration dictionary containing auth settings.
     """
-    app.secret_key = os.environ.get(
-        'FLASK_SECRET_KEY',
-        os.urandom(24).hex()
-    )
+    app.secret_key = os.environ.get("FLASK_SECRET_KEY", os.urandom(24).hex())
 
     # Add authentication middleware if required
-    if config.get('auth_required', True):
+    if config.get("auth_required", True):
         logger.info("Authentication is enabled for the web interface")
 
         # Register the before_request handler to check authentication
@@ -55,40 +52,43 @@ def init_auth(app: Flask, config: dict) -> None:
         def check_auth() -> Optional[Response]:
             """Check if the user is authenticated before processing requests."""
             # Skip authentication for login page and static files
-            if request.endpoint == 'login' or request.path.startswith('/static/'):
+            if request.endpoint == "login" or request.path.startswith(
+                "/static/"
+            ):
                 return None
 
-            if not session.get('authenticated'):
-                return redirect(url_for('login'))
+            if not session.get("authenticated"):
+                return redirect(url_for("login"))
 
             return None
 
         # Add login route
-        @app.route('/login', methods=['GET', 'POST'])
+        @app.route("/login", methods=["GET", "POST"])
         def login() -> Response:
             """Handle user login."""
             error = None
 
-            if request.method == 'POST':
-                username = request.form.get('username', '')
-                password = request.form.get('password', '')
+            if request.method == "POST":
+                username = request.form.get("username", "")
+                password = request.form.get("password", "")
 
                 if authenticate(username, password, config):
-                    session['authenticated'] = True
-                    session['username'] = username
+                    session["authenticated"] = True
+                    session["username"] = username
 
                     # Get client IP address
                     ip_address = request.remote_addr
 
                     # Log successful login
                     logger.info(
-                        f"User '{username}' logged in successfully from {ip_address}")
+                        f"User '{username}' logged in successfully from {ip_address}"
+                    )
 
                     # Audit log for successful login
                     audit_logger.log_login(username, ip_address, success=True)
 
                     # Redirect to the page the user was trying to access
-                    next_page = request.args.get('next', '/')
+                    next_page = request.args.get("next", "/")
                     return redirect(next_page)
                 else:
                     error = "Invalid username or password"
@@ -98,19 +98,22 @@ def init_auth(app: Flask, config: dict) -> None:
 
                     # Log failed login attempt
                     logger.warning(
-                        f"Failed login attempt for user '{username}' from {ip_address}")
+                        f"Failed login attempt for user '{username}' from {ip_address}"
+                    )
 
                     # Audit log for failed login
-                    audit_logger.log_login(username, ip_address, success=False)
+                    audit_logger.log_login(
+                        username, ip_address, success=False
+                    )
 
-            return current_app.send_static_file('login.html')
+            return current_app.send_static_file("login.html")
 
         # Add logout route
-        @app.route('/logout')
+        @app.route("/logout")
         def logout() -> Response:
             """Handle user logout."""
-            if session.get('authenticated'):
-                username = session.get('username', 'Unknown')
+            if session.get("authenticated"):
+                username = session.get("username", "Unknown")
 
                 # Get client IP address
                 ip_address = request.remote_addr
@@ -122,7 +125,8 @@ def init_auth(app: Flask, config: dict) -> None:
                 audit_logger.log_logout(username, ip_address)
 
             session.clear()
-            return redirect(url_for('login'))
+            return redirect(url_for("login"))
+
     else:
         logger.info("Authentication is disabled for the web interface")
 
@@ -138,16 +142,17 @@ def authenticate(username: str, password: str, config: dict) -> bool:
     Returns:
         True if authentication is successful, False otherwise.
     """
-    if not config.get('auth_required', True):
+    if not config.get("auth_required", True):
         return True
 
-    expected_username = config.get('auth_username', 'admin')
-    expected_password = config.get('auth_password', '')
+    expected_username = config.get("auth_username", "admin")
+    expected_password = config.get("auth_password", "")
 
     # If no password is set, authentication fails
     if not expected_password:
         logger.warning(
-            "Authentication failed: No password set in configuration")
+            "Authentication failed: No password set in configuration"
+        )
         return False
 
     # Check if username and password match
@@ -169,10 +174,11 @@ def require_auth(func: F) -> F:
     Returns:
         The wrapped function that checks authentication.
     """
+
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        if not session.get('authenticated'):
-            return redirect(url_for('login', next=request.path))
+        if not session.get("authenticated"):
+            return redirect(url_for("login", next=request.path))
         return func(*args, **kwargs)
 
     return cast(F, wrapped)

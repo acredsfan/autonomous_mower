@@ -169,7 +169,11 @@ class AvoidancePlugin(Plugin):
     """
 
     @abstractmethod
-    def avoid(self, obstacles: List[Dict[str, Any]], current_path: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def avoid(
+        self,
+        obstacles: List[Dict[str, Any]],
+        current_path: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
         """
         Generate a new path to avoid the detected obstacles.
 

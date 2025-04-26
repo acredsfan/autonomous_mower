@@ -122,9 +122,8 @@ class ConfigurationInterface(ABC):
 
     @abstractmethod
     def get_int(
-            self,
-            key: str,
-            default: Optional[int] = None) -> Optional[int]:
+        self, key: str, default: Optional[int] = None
+    ) -> Optional[int]:
         """
         Get a configuration value as an integer.
 
@@ -139,9 +138,8 @@ class ConfigurationInterface(ABC):
 
     @abstractmethod
     def get_float(
-            self,
-            key: str,
-            default: Optional[float] = None) -> Optional[float]:
+        self, key: str, default: Optional[float] = None
+    ) -> Optional[float]:
         """
         Get a configuration value as a float.
 
@@ -156,9 +154,8 @@ class ConfigurationInterface(ABC):
 
     @abstractmethod
     def get_bool(
-            self,
-            key: str,
-            default: Optional[bool] = None) -> Optional[bool]:
+        self, key: str, default: Optional[bool] = None
+    ) -> Optional[bool]:
         """
         Get a configuration value as a boolean.
 
@@ -173,9 +170,8 @@ class ConfigurationInterface(ABC):
 
     @abstractmethod
     def get_str(
-            self,
-            key: str,
-            default: Optional[str] = None) -> Optional[str]:
+        self, key: str, default: Optional[str] = None
+    ) -> Optional[str]:
         """
         Get a configuration value as a string.
 
@@ -189,8 +185,9 @@ class ConfigurationInterface(ABC):
         pass
 
     @abstractmethod
-    def get_list(self, key: str,
-                 default: Optional[List[Any]] = None) -> Optional[List[Any]]:
+    def get_list(
+        self, key: str, default: Optional[List[Any]] = None
+    ) -> Optional[List[Any]]:
         """
         Get a configuration value as a list.
 
@@ -204,11 +201,9 @@ class ConfigurationInterface(ABC):
         pass
 
     @abstractmethod
-    def get_dict(self,
-                 key: str,
-                 default: Optional[Dict[str,
-                                        Any]] = None) -> Optional[Dict[str,
-                                                                       Any]]:
+    def get_dict(
+        self, key: str, default: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
         """
         Get a configuration value as a dictionary.
 

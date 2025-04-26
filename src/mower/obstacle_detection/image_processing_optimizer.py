@@ -80,12 +80,15 @@ class ImageProcessingOptimizer:
                 return original_detect_obstacles(frame)
 
             # Check if the frame is similar to the last frame
-            if self.enable_frame_skipping and self._is_similar_to_last_frame(frame):
+            if self.enable_frame_skipping and self._is_similar_to_last_frame(
+                frame
+            ):
                 self.frame_skip_count += 1
                 if self.frame_skip_count <= self.max_frame_skip:
                     logger.debug(
-                        f"Skipping frame {self.frame_skip_count} (similar to previous)")
-                    return self.detection_cache.get('last_detection', [])
+                        f"Skipping frame {self.frame_skip_count} (similar to previous)"
+                    )
+                    return self.detection_cache.get("last_detection", [])
             else:
                 self.frame_skip_count = 0
                 self._update_last_frame(frame)
@@ -109,21 +112,27 @@ class ImageProcessingOptimizer:
 
             # Cache the detection
             self.detection_cache[frame_hash] = detections
-            self.detection_cache['last_detection'] = detections
+            self.detection_cache["last_detection"] = detections
 
             # Limit cache size
-            if len(self.detection_cache) > 20:  # Keep only the 20 most recent detections
+            if (
+                len(self.detection_cache) > 20
+            ):  # Keep only the 20 most recent detections
                 # Remove oldest entries (except 'last_detection')
                 keys_to_remove = sorted(
-                    [k for k in self.detection_cache.keys() if k !=
-                     'last_detection'],
-                    key=lambda k: self.detection_cache[k].get('timestamp', 0)
-                )[:len(self.detection_cache) - 20]
+                    [
+                        k
+                        for k in self.detection_cache.keys()
+                        if k != "last_detection"
+                    ],
+                    key=lambda k: self.detection_cache[k].get("timestamp", 0),
+                )[: len(self.detection_cache) - 20]
                 for key in keys_to_remove:
                     del self.detection_cache[key]
 
             logger.debug(
-                f"Obstacle detection took {detection_time:.4f} seconds")
+                f"Obstacle detection took {detection_time:.4f} seconds"
+            )
             return detections
 
         # Replace the original method with the cached version
@@ -145,7 +154,8 @@ class ImageProcessingOptimizer:
             # Check if the detection is already cached
             if cache_key in self.detection_cache:
                 logger.debug(
-                    f"Using cached drop detection for frame {frame_hash}")
+                    f"Using cached drop detection for frame {frame_hash}"
+                )
                 return self.detection_cache[cache_key]
 
             # Apply preprocessing optimizations if enabled
@@ -246,8 +256,9 @@ class ImageProcessingOptimizer:
         # Apply downsampling if enabled
         if self.enable_downsampling:
             h, w = frame.shape[:2]
-            new_h, new_w = int(
-                h * self.downsampling_factor), int(w * self.downsampling_factor)
+            new_h, new_w = int(h * self.downsampling_factor), int(
+                w * self.downsampling_factor
+            )
             frame = cv2.resize(frame, (new_w, new_h))
 
         # Apply region of interest if enabled
@@ -261,7 +272,9 @@ class ImageProcessingOptimizer:
     def _apply_preprocessing_optimizations(self):
         """Apply image preprocessing optimizations."""
         # Optimize the _detect_obstacles_opencv method
-        original_detect_opencv = self.obstacle_detector._detect_obstacles_opencv
+        original_detect_opencv = (
+            self.obstacle_detector._detect_obstacles_opencv
+        )
 
         @functools.wraps(original_detect_opencv)
         def optimized_detect_opencv(frame):
@@ -274,8 +287,12 @@ class ImageProcessingOptimizer:
 
                 # Use adaptive thresholding instead of Canny for better edge detection
                 thresh = cv2.adaptiveThreshold(
-                    blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                    cv2.THRESH_BINARY_INV, 11, 2
+                    blurred,
+                    255,
+                    cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                    cv2.THRESH_BINARY_INV,
+                    11,
+                    2,
                 )
 
                 # Apply morphological operations to clean up the image
@@ -303,13 +320,15 @@ class ImageProcessingOptimizer:
 
                         # Filter out very elongated shapes (likely not obstacles)
                         if 0.3 < aspect_ratio < 3.0:
-                            detected_objects.append({
-                                'name': 'obstacle',
-                                # Normalize score
-                                'score': min(1.0, area / 10000),
-                                'type': 'opencv',
-                                'box': [x, y, w, h]
-                            })
+                            detected_objects.append(
+                                {
+                                    "name": "obstacle",
+                                    # Normalize score
+                                    "score": min(1.0, area / 10000),
+                                    "type": "opencv",
+                                    "box": [x, y, w, h],
+                                }
+                            )
 
                 return detected_objects
 
@@ -319,7 +338,9 @@ class ImageProcessingOptimizer:
                 return original_detect_opencv(frame)
 
         # Replace the original method with the optimized version
-        self.obstacle_detector._detect_obstacles_opencv = optimized_detect_opencv
+        self.obstacle_detector._detect_obstacles_opencv = (
+            optimized_detect_opencv
+        )
 
         logger.info("Applied preprocessing optimizations")
 
@@ -333,13 +354,15 @@ class ImageProcessingOptimizer:
             try:
                 # Check if ML detection is really needed
                 # If OpenCV detection finds nothing, we can skip ML detection in some cases
-                opencv_detections = self.obstacle_detector._detect_obstacles_opencv(
-                    frame)
+                opencv_detections = (
+                    self.obstacle_detector._detect_obstacles_opencv(frame)
+                )
 
                 # If no objects detected by OpenCV and not every frame needs ML processing
                 if not opencv_detections and self.frame_skip_count > 0:
                     logger.debug(
-                        "Skipping ML detection (no OpenCV detections)")
+                        "Skipping ML detection (no OpenCV detections)"
+                    )
                     return []
 
                 # Proceed with optimized ML detection
@@ -365,7 +388,9 @@ class ImageProcessingOptimizer:
         logger.info("Cleared all caches")
 
 
-def optimize_obstacle_detector(detector: ObstacleDetector) -> ObstacleDetector:
+def optimize_obstacle_detector(
+    detector: ObstacleDetector,
+) -> ObstacleDetector:
     """
     Optimize an obstacle detector for better performance.
 
@@ -379,7 +404,9 @@ def optimize_obstacle_detector(detector: ObstacleDetector) -> ObstacleDetector:
     return detector
 
 
-def benchmark_obstacle_detector(detector: ObstacleDetector, iterations: int = 5) -> Dict[str, Any]:
+def benchmark_obstacle_detector(
+    detector: ObstacleDetector, iterations: int = 5
+) -> Dict[str, Any]:
     """
     Benchmark an obstacle detector's performance.
 
@@ -394,6 +421,7 @@ def benchmark_obstacle_detector(detector: ObstacleDetector, iterations: int = 5)
 
     # Get a test frame
     from mower.hardware.camera_instance import capture_frame
+
     frame = capture_frame()
 
     if frame is None:
@@ -428,20 +456,20 @@ def benchmark_obstacle_detector(detector: ObstacleDetector, iterations: int = 5)
     drop_max = np.max(drop_times)
 
     results = {
-        'detect_obstacles': {
-            'avg_time': detect_avg,
-            'std_time': detect_std,
-            'min_time': detect_min,
-            'max_time': detect_max,
-            'times': detect_times
+        "detect_obstacles": {
+            "avg_time": detect_avg,
+            "std_time": detect_std,
+            "min_time": detect_min,
+            "max_time": detect_max,
+            "times": detect_times,
         },
-        'detect_drops': {
-            'avg_time': drop_avg,
-            'std_time': drop_std,
-            'min_time': drop_min,
-            'max_time': drop_max,
-            'times': drop_times
-        }
+        "detect_drops": {
+            "avg_time": drop_avg,
+            "std_time": drop_std,
+            "min_time": drop_min,
+            "max_time": drop_max,
+            "times": drop_times,
+        },
     }
 
     logger.info(f"Obstacle detection benchmark results:")
@@ -460,7 +488,7 @@ def benchmark_obstacle_detector(detector: ObstacleDetector, iterations: int = 5)
 def compare_obstacle_detectors(
     original_detector: ObstacleDetector,
     optimized_detector: ObstacleDetector,
-    iterations: int = 5
+    iterations: int = 5,
 ) -> Dict[str, Any]:
     """
     Compare the performance of two obstacle detectors.
@@ -477,41 +505,53 @@ def compare_obstacle_detectors(
 
     # Benchmark original detector
     original_results = benchmark_obstacle_detector(
-        original_detector, iterations)
+        original_detector, iterations
+    )
 
     # Benchmark optimized detector
     optimized_results = benchmark_obstacle_detector(
-        optimized_detector, iterations)
+        optimized_detector, iterations
+    )
 
     # Calculate improvement for obstacle detection
-    original_detect_avg = original_results['detect_obstacles']['avg_time']
-    optimized_detect_avg = optimized_results['detect_obstacles']['avg_time']
-    detect_improvement = (original_detect_avg -
-                          optimized_detect_avg) / original_detect_avg * 100
+    original_detect_avg = original_results["detect_obstacles"]["avg_time"]
+    optimized_detect_avg = optimized_results["detect_obstacles"]["avg_time"]
+    detect_improvement = (
+        (original_detect_avg - optimized_detect_avg)
+        / original_detect_avg
+        * 100
+    )
 
     # Calculate improvement for drop detection
-    original_drop_avg = original_results['detect_drops']['avg_time']
-    optimized_drop_avg = optimized_results['detect_drops']['avg_time']
-    drop_improvement = (original_drop_avg -
-                        optimized_drop_avg) / original_drop_avg * 100
+    original_drop_avg = original_results["detect_drops"]["avg_time"]
+    optimized_drop_avg = optimized_results["detect_drops"]["avg_time"]
+    drop_improvement = (
+        (original_drop_avg - optimized_drop_avg) / original_drop_avg * 100
+    )
 
     comparison = {
-        'original': original_results,
-        'optimized': optimized_results,
-        'detect_improvement_percent': detect_improvement,
-        'drop_improvement_percent': drop_improvement
+        "original": original_results,
+        "optimized": optimized_results,
+        "detect_improvement_percent": detect_improvement,
+        "drop_improvement_percent": drop_improvement,
     }
 
     logger.info(f"Performance comparison results:")
     logger.info(
-        f"  Original obstacle detection time: {original_detect_avg:.4f} seconds")
+        f"  Original obstacle detection time: {original_detect_avg:.4f} seconds"
+    )
     logger.info(
-        f"  Optimized obstacle detection time: {optimized_detect_avg:.4f} seconds")
-    logger.info(f"  Obstacle detection improvement: {detect_improvement:.2f}%")
+        f"  Optimized obstacle detection time: {optimized_detect_avg:.4f} seconds"
+    )
     logger.info(
-        f"  Original drop detection time: {original_drop_avg:.4f} seconds")
+        f"  Obstacle detection improvement: {detect_improvement:.2f}%"
+    )
     logger.info(
-        f"  Optimized drop detection time: {optimized_drop_avg:.4f} seconds")
+        f"  Original drop detection time: {original_drop_avg:.4f} seconds"
+    )
+    logger.info(
+        f"  Optimized drop detection time: {optimized_drop_avg:.4f} seconds"
+    )
     logger.info(f"  Drop detection improvement: {drop_improvement:.2f}%")
 
     return comparison
@@ -522,7 +562,10 @@ def run_optimization_benchmark():
     logger.info("Running obstacle detection optimization benchmark")
 
     # Create original obstacle detector
-    from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
+    from mower.obstacle_detection.obstacle_detector import (
+        get_obstacle_detector,
+    )
+
     original_detector = get_obstacle_detector()
 
     # Create optimized obstacle detector
@@ -530,7 +573,9 @@ def run_optimization_benchmark():
     optimize_obstacle_detector(optimized_detector)
 
     # Compare detectors
-    results = compare_obstacle_detectors(original_detector, optimized_detector)
+    results = compare_obstacle_detectors(
+        original_detector, optimized_detector
+    )
 
     return results
 

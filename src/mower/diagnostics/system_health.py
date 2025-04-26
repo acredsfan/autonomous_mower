@@ -42,7 +42,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union, Any
 
 # Import hardware test suite
-from mower.diagnostics.hardware_test import HardwareTestSuite, initialize_resource_manager
+from mower.diagnostics.hardware_test import (
+    HardwareTestSuite,
+    initialize_resource_manager,
+)
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Configure logging
@@ -107,7 +110,7 @@ class SystemHealth:
             memory_available_mb = memory.available / (1024 * 1024)
 
             # Get disk information
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_percent = disk.percent
             disk_free_gb = disk.free / (1024 * 1024 * 1024)
 
@@ -123,7 +126,10 @@ class SystemHealth:
                 issues.append(f"Critical memory usage: {memory_percent}%")
             if disk_percent > CRITICAL_DISK_THRESHOLD:
                 issues.append(f"Critical disk usage: {disk_percent}%")
-            if cpu_temp is not None and cpu_temp > CRITICAL_TEMPERATURE_THRESHOLD:
+            if (
+                cpu_temp is not None
+                and cpu_temp > CRITICAL_TEMPERATURE_THRESHOLD
+            ):
                 issues.append(f"Critical CPU temperature: {cpu_temp}°C")
 
             # Create system health report
@@ -132,17 +138,29 @@ class SystemHealth:
                     "usage_percent": cpu_percent,
                     "temperature": cpu_temp,
                     "frequency_mhz": cpu_freq_current,
-                    "status": "critical" if cpu_percent > CRITICAL_CPU_THRESHOLD else "warning" if cpu_percent > 70 else "ok",
+                    "status": (
+                        "critical"
+                        if cpu_percent > CRITICAL_CPU_THRESHOLD
+                        else "warning" if cpu_percent > 70 else "ok"
+                    ),
                 },
                 "memory": {
                     "usage_percent": memory_percent,
                     "available_mb": memory_available_mb,
-                    "status": "critical" if memory_percent > CRITICAL_MEMORY_THRESHOLD else "warning" if memory_percent > 70 else "ok",
+                    "status": (
+                        "critical"
+                        if memory_percent > CRITICAL_MEMORY_THRESHOLD
+                        else "warning" if memory_percent > 70 else "ok"
+                    ),
                 },
                 "disk": {
                     "usage_percent": disk_percent,
                     "free_gb": disk_free_gb,
-                    "status": "critical" if disk_percent > CRITICAL_DISK_THRESHOLD else "warning" if disk_percent > 70 else "ok",
+                    "status": (
+                        "critical"
+                        if disk_percent > CRITICAL_DISK_THRESHOLD
+                        else "warning" if disk_percent > 70 else "ok"
+                    ),
                 },
                 "uptime": {
                     "seconds": uptime_seconds,
@@ -177,10 +195,10 @@ class SystemHealth:
         try:
             # Try to get temperature from vcgencmd (Raspberry Pi specific)
             result = subprocess.run(
-                ['vcgencmd', 'measure_temp'],
+                ["vcgencmd", "measure_temp"],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             # Parse output like "temp=42.8'C"
             temp_str = result.stdout.strip()
@@ -216,9 +234,12 @@ class SystemHealth:
                     hardware_health["imu"] = {"status": "ok"}
                 else:
                     hardware_health["imu"] = {
-                        "status": "error", "error": "IMU not available or not returning data"}
+                        "status": "error",
+                        "error": "IMU not available or not returning data",
+                    }
                     issues.append(
-                        "IMU sensor not available or not returning data")
+                        "IMU sensor not available or not returning data"
+                    )
             except Exception as e:
                 hardware_health["imu"] = {"status": "error", "error": str(e)}
                 issues.append(f"IMU sensor error: {str(e)}")
@@ -230,7 +251,9 @@ class SystemHealth:
                     hardware_health["gps"] = {"status": "ok"}
                 else:
                     hardware_health["gps"] = {
-                        "status": "warning", "error": "GPS not available or no fix"}
+                        "status": "warning",
+                        "error": "GPS not available or no fix",
+                    }
                     issues.append("GPS not available or not getting a fix")
             except Exception as e:
                 hardware_health["gps"] = {"status": "error", "error": str(e)}
@@ -247,7 +270,9 @@ class SystemHealth:
                         issues.append(f"Low battery: {battery_percent}%")
                     elif battery_percent < 30:
                         status = "warning"
-                        issues.append(f"Battery level low: {battery_percent}%")
+                        issues.append(
+                            f"Battery level low: {battery_percent}%"
+                        )
 
                     hardware_health["battery"] = {
                         "status": status,
@@ -255,11 +280,15 @@ class SystemHealth:
                     }
                 else:
                     hardware_health["battery"] = {
-                        "status": "error", "error": "Battery monitor not available"}
+                        "status": "error",
+                        "error": "Battery monitor not available",
+                    }
                     issues.append("Battery monitor not available")
             except Exception as e:
                 hardware_health["battery"] = {
-                    "status": "error", "error": str(e)}
+                    "status": "error",
+                    "error": str(e),
+                }
                 issues.append(f"Battery monitor error: {str(e)}")
 
             # Check motors and other components
@@ -275,20 +304,34 @@ class SystemHealth:
                             hardware_health[component] = {"status": "ok"}
                         else:
                             hardware_health[component] = {
-                                "status": "error", "error": f"{component} controller not available"}
+                                "status": "error",
+                                "error": f"{component} controller not available",
+                            }
                             issues.append(
-                                f"{component} controller not available")
+                                f"{component} controller not available"
+                            )
                 except Exception as e:
                     hardware_health[component] = {
-                        "status": "error", "error": str(e)}
+                        "status": "error",
+                        "error": str(e),
+                    }
                     issues.append(f"{component} error: {str(e)}")
 
             # Add overall status
-            if any(component.get("status") == "critical" for component in hardware_health.values()):
+            if any(
+                component.get("status") == "critical"
+                for component in hardware_health.values()
+            ):
                 hardware_health["status"] = "critical"
-            elif any(component.get("status") == "error" for component in hardware_health.values()):
+            elif any(
+                component.get("status") == "error"
+                for component in hardware_health.values()
+            ):
                 hardware_health["status"] = "error"
-            elif any(component.get("status") == "warning" for component in hardware_health.values()):
+            elif any(
+                component.get("status") == "warning"
+                for component in hardware_health.values()
+            ):
                 hardware_health["status"] = "warning"
             else:
                 hardware_health["status"] = "ok"
@@ -324,14 +367,21 @@ class SystemHealth:
 
                 if service_active:
                     software_health["mower_service"] = {
-                        "status": "ok", "active": True}
+                        "status": "ok",
+                        "active": True,
+                    }
                 else:
                     software_health["mower_service"] = {
-                        "status": "critical", "active": False, "error": "Service not running"}
+                        "status": "critical",
+                        "active": False,
+                        "error": "Service not running",
+                    }
                     issues.append("Mower service not running")
             except Exception as e:
                 software_health["mower_service"] = {
-                    "status": "error", "error": str(e)}
+                    "status": "error",
+                    "error": str(e),
+                }
                 issues.append(f"Error checking mower service: {str(e)}")
 
             # Check for recent crashes in logs
@@ -348,9 +398,11 @@ class SystemHealth:
                         yesterday = datetime.now() - timedelta(days=1)
                         yesterday_str = yesterday.strftime("%Y-%m-%d")
 
-                        with open(error_log, 'r') as f:
+                        with open(error_log, "r") as f:
                             for line in f:
-                                if yesterday_str in line and ("ERROR" in line or "CRITICAL" in line):
+                                if yesterday_str in line and (
+                                    "ERROR" in line or "CRITICAL" in line
+                                ):
                                     error_count += 1
                                 if "Traceback" in line or "Exception" in line:
                                     crash_count += 1
@@ -371,7 +423,8 @@ class SystemHealth:
                             "error": f"High number of errors: {error_count}",
                         }
                         issues.append(
-                            f"High number of errors in logs: {error_count}")
+                            f"High number of errors in logs: {error_count}"
+                        )
                     else:
                         software_health["logs"] = {
                             "status": "ok",
@@ -380,18 +433,29 @@ class SystemHealth:
                         }
                 else:
                     software_health["logs"] = {
-                        "status": "warning", "error": "Log directory not found"}
+                        "status": "warning",
+                        "error": "Log directory not found",
+                    }
                     issues.append("Log directory not found")
             except Exception as e:
                 software_health["logs"] = {"status": "error", "error": str(e)}
                 issues.append(f"Error checking logs: {str(e)}")
 
             # Add overall status
-            if any(component.get("status") == "critical" for component in software_health.values()):
+            if any(
+                component.get("status") == "critical"
+                for component in software_health.values()
+            ):
                 software_health["status"] = "critical"
-            elif any(component.get("status") == "error" for component in software_health.values()):
+            elif any(
+                component.get("status") == "error"
+                for component in software_health.values()
+            ):
                 software_health["status"] = "error"
-            elif any(component.get("status") == "warning" for component in software_health.values()):
+            elif any(
+                component.get("status") == "warning"
+                for component in software_health.values()
+            ):
                 software_health["status"] = "warning"
             else:
                 software_health["status"] = "ok"
@@ -418,48 +482,60 @@ class SystemHealth:
         # System recommendations
         if any("Critical CPU usage" in issue for issue in issues):
             recommendations.append(
-                "Reduce CPU load by disabling non-essential services or reducing sensor polling frequency")
+                "Reduce CPU load by disabling non-essential services or reducing sensor polling frequency"
+            )
         if any("Critical memory usage" in issue for issue in issues):
             recommendations.append(
-                "Free up memory by restarting the mower service or the entire system")
+                "Free up memory by restarting the mower service or the entire system"
+            )
         if any("Critical disk usage" in issue for issue in issues):
             recommendations.append(
-                "Free up disk space by removing old logs or unnecessary files")
+                "Free up disk space by removing old logs or unnecessary files"
+            )
         if any("Critical CPU temperature" in issue for issue in issues):
             recommendations.append(
-                "Improve cooling or reduce CPU load to lower temperature")
+                "Improve cooling or reduce CPU load to lower temperature"
+            )
 
         # Hardware recommendations
         if any("IMU sensor" in issue for issue in issues):
             recommendations.append(
-                "Check IMU sensor connections and configuration")
+                "Check IMU sensor connections and configuration"
+            )
         if any("GPS not" in issue for issue in issues):
             recommendations.append(
-                "Move to an area with better GPS reception or check GPS antenna")
+                "Move to an area with better GPS reception or check GPS antenna"
+            )
         if any("Low battery" in issue for issue in issues):
             recommendations.append("Charge the mower battery immediately")
         if any("Battery level low" in issue for issue in issues):
             recommendations.append("Consider charging the mower soon")
         if any("Motor controller" in issue for issue in issues):
             recommendations.append(
-                "Check motor controller connections and configuration")
+                "Check motor controller connections and configuration"
+            )
         if any("Blade controller" in issue for issue in issues):
             recommendations.append(
-                "Check blade controller connections and configuration")
+                "Check blade controller connections and configuration"
+            )
         if any("Camera" in issue for issue in issues):
             recommendations.append(
-                "Check camera connections and configuration")
+                "Check camera connections and configuration"
+            )
 
         # Software recommendations
         if any("Mower service not running" in issue for issue in issues):
             recommendations.append(
-                "Start the mower service with: sudo systemctl start autonomous-mower.service")
+                "Start the mower service with: sudo systemctl start autonomous-mower.service"
+            )
         if any("crashes in logs" in issue for issue in issues):
             recommendations.append(
-                "Check error logs for crash details and consider updating software")
+                "Check error logs for crash details and consider updating software"
+            )
         if any("High number of errors" in issue for issue in issues):
             recommendations.append(
-                "Review error logs to identify and fix recurring issues")
+                "Review error logs to identify and fix recurring issues"
+            )
 
         # Update health status
         self.health_status["recommendations"] = recommendations
@@ -493,17 +569,23 @@ class SystemHealth:
         self.generate_recommendations()
 
         # Determine overall status
-        if (self.health_status["system"].get("status") == "critical" or
-                self.health_status["hardware"].get("status") == "critical" or
-                self.health_status["software"].get("status") == "critical"):
+        if (
+            self.health_status["system"].get("status") == "critical"
+            or self.health_status["hardware"].get("status") == "critical"
+            or self.health_status["software"].get("status") == "critical"
+        ):
             self.health_status["status"] = "critical"
-        elif (self.health_status["system"].get("status") == "error" or
-                self.health_status["hardware"].get("status") == "error" or
-                self.health_status["software"].get("status") == "error"):
+        elif (
+            self.health_status["system"].get("status") == "error"
+            or self.health_status["hardware"].get("status") == "error"
+            or self.health_status["software"].get("status") == "error"
+        ):
             self.health_status["status"] = "error"
-        elif (self.health_status["system"].get("status") == "warning" or
-                self.health_status["hardware"].get("status") == "warning" or
-                self.health_status["software"].get("status") == "warning"):
+        elif (
+            self.health_status["system"].get("status") == "warning"
+            or self.health_status["hardware"].get("status") == "warning"
+            or self.health_status["software"].get("status") == "warning"
+        ):
             self.health_status["status"] = "warning"
         else:
             self.health_status["status"] = "ok"
@@ -522,7 +604,7 @@ class SystemHealth:
             filepath = os.path.join(HEALTH_REPORT_DIR, filename)
 
             # Save the report
-            with open(filepath, 'w') as f:
+            with open(filepath, "w") as f:
                 json.dump(self.health_status, f, indent=2)
 
             logger.info(f"Health report saved to {filepath}")
@@ -538,7 +620,9 @@ class SystemHealth:
             # List all health reports
             reports = []
             for filename in os.listdir(HEALTH_REPORT_DIR):
-                if filename.startswith("health_report_") and filename.endswith(".json"):
+                if filename.startswith(
+                    "health_report_"
+                ) and filename.endswith(".json"):
                     filepath = os.path.join(HEALTH_REPORT_DIR, filename)
                     reports.append((filepath, os.path.getmtime(filepath)))
 
@@ -553,7 +637,9 @@ class SystemHealth:
         except Exception as e:
             logger.error(f"Error cleaning up old health reports: {e}")
 
-    def monitor_health(self, interval: int = HEALTH_CHECK_INTERVAL, callback=None) -> None:
+    def monitor_health(
+        self, interval: int = HEALTH_CHECK_INTERVAL, callback=None
+    ) -> None:
         """
         Monitor system health continuously.
 
@@ -563,7 +649,8 @@ class SystemHealth:
         """
         try:
             logger.info(
-                f"Starting health monitoring with interval {interval} seconds")
+                f"Starting health monitoring with interval {interval} seconds"
+            )
             while True:
                 # Run a full health check
                 health_status = self.run_full_health_check()
@@ -575,13 +662,16 @@ class SystemHealth:
                 # Log critical issues
                 if health_status["status"] == "critical":
                     logger.critical(
-                        f"Critical health issues detected: {health_status['issues']}")
+                        f"Critical health issues detected: {health_status['issues']}"
+                    )
                 elif health_status["status"] == "error":
                     logger.error(
-                        f"Health errors detected: {health_status['issues']}")
+                        f"Health errors detected: {health_status['issues']}"
+                    )
                 elif health_status["status"] == "warning":
                     logger.warning(
-                        f"Health warnings detected: {health_status['issues']}")
+                        f"Health warnings detected: {health_status['issues']}"
+                    )
                 else:
                     logger.info("System health is OK")
 
@@ -663,15 +753,19 @@ def main():
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER HEALTH REPORT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    f"AUTONOMOUS MOWER HEALTH REPORT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 print("=" * 80)
                 print(
-                    f"Overall Status: {health_status.get('status', 'unknown').upper()}")
+                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
+                )
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")
                 print("\nRecommendations:")
-                for recommendation in health_status.get("recommendations", []):
+                for recommendation in health_status.get(
+                    "recommendations", []
+                ):
                     print(f"  - {recommendation}")
                 print("=" * 80)
 
@@ -692,7 +786,8 @@ def main():
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER {args.check.upper()} HEALTH CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    f"AUTONOMOUS MOWER {args.check.upper()} HEALTH CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 print("=" * 80)
                 print(f"Status: {result.get('status', 'unknown').upper()}")
                 if "issues" in result:

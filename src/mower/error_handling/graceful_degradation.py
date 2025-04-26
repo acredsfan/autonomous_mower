@@ -42,6 +42,7 @@ logger = LoggerConfig.get_logger(__name__)
 
 class ComponentStatus(Enum):
     """Status of a component in the graceful degradation system."""
+
     NORMAL = auto()  # Component is functioning normally
     DEGRADED = auto()  # Component is functioning in a degraded state
     FAILED = auto()  # Component has failed and no fallback is available
@@ -49,6 +50,7 @@ class ComponentStatus(Enum):
 
 class DegradationLevel(Enum):
     """Level of degradation for the mower system."""
+
     NONE = auto()  # No degradation, all systems normal
     MINOR = auto()  # Minor degradation, non-critical systems affected
     MODERATE = auto()  # Moderate degradation, some critical systems affected
@@ -107,8 +109,9 @@ class GracefulDegradationHandler:
         """Initialize the graceful degradation handler."""
         self.components: Dict[str, ComponentInfo] = {}
         self.degradation_level = DegradationLevel.NONE
-        self.degradation_callbacks: List[Callable[[
-            DegradationLevel], None]] = []
+        self.degradation_callbacks: List[
+            Callable[[DegradationLevel], None]
+        ] = []
 
     def register_component(
         self,
@@ -139,9 +142,12 @@ class GracefulDegradationHandler:
             recovery_interval=recovery_interval,
         )
         logger.info(
-            f"Registered component '{name}' with {len(fallbacks) if fallbacks else 0} fallbacks")
+            f"Registered component '{name}' with {len(fallbacks) if fallbacks else 0} fallbacks"
+        )
 
-    def register_degradation_callback(self, callback: Callable[[DegradationLevel], None]) -> None:
+    def register_degradation_callback(
+        self, callback: Callable[[DegradationLevel], None]
+    ) -> None:
         """
         Register a callback to be called when the degradation level changes.
 
@@ -150,7 +156,9 @@ class GracefulDegradationHandler:
         """
         self.degradation_callbacks.append(callback)
 
-    def use_component(self, name: str, operation: Callable[[Any], Any], *args, **kwargs) -> Any:
+    def use_component(
+        self, name: str, operation: Callable[[Any], Any], *args, **kwargs
+    ) -> Any:
         """
         Use a component with graceful degradation.
 
@@ -178,7 +186,8 @@ class GracefulDegradationHandler:
         # Try to use the active implementation
         try:
             result = operation(
-                component.active_implementation, *args, **kwargs)
+                component.active_implementation, *args, **kwargs
+            )
 
             # If we were using a fallback and the operation succeeded,
             # try to recover the primary implementation
@@ -197,7 +206,13 @@ class GracefulDegradationHandler:
             # Try fallbacks
             return self._try_fallbacks(component, operation, *args, **kwargs)
 
-    def _try_fallbacks(self, component: ComponentInfo, operation: Callable[[Any], Any], *args, **kwargs) -> Any:
+    def _try_fallbacks(
+        self,
+        component: ComponentInfo,
+        operation: Callable[[Any], Any],
+        *args,
+        **kwargs,
+    ) -> Any:
         """
         Try fallback implementations for a component.
 
@@ -228,7 +243,8 @@ class GracefulDegradationHandler:
                 component.current_fallback_index = i
 
                 logger.info(
-                    f"Component '{component.name}' degraded to fallback {i+1}/{len(component.fallbacks)}")
+                    f"Component '{component.name}' degraded to fallback {i+1}/{len(component.fallbacks)}"
+                )
 
                 # Update overall degradation level
                 self._update_degradation_level()
@@ -237,12 +253,14 @@ class GracefulDegradationHandler:
 
             except Exception as e:
                 logger.warning(
-                    f"Fallback {i+1}/{len(component.fallbacks)} for component '{component.name}' failed: {e}")
+                    f"Fallback {i+1}/{len(component.fallbacks)} for component '{component.name}' failed: {e}"
+                )
 
         # All fallbacks failed
         component.status = ComponentStatus.FAILED
         logger.error(
-            f"All implementations of component '{component.name}' failed")
+            f"All implementations of component '{component.name}' failed"
+        )
 
         # Update overall degradation level
         self._update_degradation_level()
@@ -250,7 +268,8 @@ class GracefulDegradationHandler:
         # If the component is critical, raise an exception
         if component.is_critical:
             raise RuntimeError(
-                f"Critical component '{component.name}' failed with no working fallbacks")
+                f"Critical component '{component.name}' failed with no working fallbacks"
+            )
 
         return None
 
@@ -270,7 +289,10 @@ class GracefulDegradationHandler:
 
         # Check if enough time has passed since the last recovery attempt
         current_time = time.time()
-        if current_time - component.last_recovery_attempt < component.recovery_interval:
+        if (
+            current_time - component.last_recovery_attempt
+            < component.recovery_interval
+        ):
             return False
 
         component.last_recovery_attempt = current_time
@@ -279,7 +301,9 @@ class GracefulDegradationHandler:
         try:
             # This is a simple test to see if the primary implementation is working
             # In a real implementation, you would need a more specific test
-            if hasattr(component.primary, "is_available") and callable(component.primary.is_available):
+            if hasattr(component.primary, "is_available") and callable(
+                component.primary.is_available
+            ):
                 if not component.primary.is_available():
                     return False
 
@@ -289,7 +313,8 @@ class GracefulDegradationHandler:
             component.current_fallback_index = -1
 
             logger.info(
-                f"Component '{component.name}' recovered to primary implementation")
+                f"Component '{component.name}' recovered to primary implementation"
+            )
 
             # Update overall degradation level
             self._update_degradation_level()
@@ -298,7 +323,8 @@ class GracefulDegradationHandler:
 
         except Exception as e:
             logger.warning(
-                f"Recovery attempt for component '{component.name}' failed: {e}")
+                f"Recovery attempt for component '{component.name}' failed: {e}"
+            )
             return False
 
     def _update_degradation_level(self) -> None:
@@ -349,7 +375,8 @@ class GracefulDegradationHandler:
         # If the degradation level changed, log it and call callbacks
         if self.degradation_level != old_level:
             logger.info(
-                f"Degradation level changed from {old_level.name} to {self.degradation_level.name}")
+                f"Degradation level changed from {old_level.name} to {self.degradation_level.name}"
+            )
 
             for callback in self.degradation_callbacks:
                 try:
@@ -402,7 +429,11 @@ class GracefulDegradationHandler:
                 "is_critical": component.is_critical,
                 "failure_count": component.failure_count,
                 "using_fallback": component.current_fallback_index >= 0,
-                "fallback_index": component.current_fallback_index if component.current_fallback_index >= 0 else None,
+                "fallback_index": (
+                    component.current_fallback_index
+                    if component.current_fallback_index >= 0
+                    else None
+                ),
                 "fallback_count": len(component.fallbacks),
             }
 
@@ -410,7 +441,9 @@ class GracefulDegradationHandler:
 
 
 # Decorator for graceful degradation
-def with_graceful_degradation(handler: GracefulDegradationHandler, component_name: str):
+def with_graceful_degradation(
+    handler: GracefulDegradationHandler, component_name: str
+):
     """
     Decorator for methods that should use graceful degradation.
 
@@ -423,6 +456,7 @@ def with_graceful_degradation(handler: GracefulDegradationHandler, component_nam
     Returns:
         Decorated method.
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(self, *args, **kwargs):
@@ -440,7 +474,9 @@ def with_graceful_degradation(handler: GracefulDegradationHandler, component_nam
                     setattr(self, component_name, original_component)
 
             # Use the component with graceful degradation
-            return handler.use_component(component_name, operation, *args, **kwargs)
+            return handler.use_component(
+                component_name, operation, *args, **kwargs
+            )
 
         return wrapper
 
@@ -482,28 +518,36 @@ if __name__ == "__main__":
     # Use GPS component
     try:
         # This should use the primary GPS
-        position = handler.use_component("gps", lambda gps: gps.get_position())
+        position = handler.use_component(
+            "gps", lambda gps: gps.get_position()
+        )
         print(f"Position from primary GPS: {position}")
 
         # Simulate primary GPS failure
         primary_gps.available = False
 
         # This should use the first fallback
-        position = handler.use_component("gps", lambda gps: gps.get_position())
+        position = handler.use_component(
+            "gps", lambda gps: gps.get_position()
+        )
         print(f"Position from fallback GPS: {position}")
 
         # Simulate first fallback failure
         fallback_gps1.available = False
 
         # This should use the second fallback
-        position = handler.use_component("gps", lambda gps: gps.get_position())
+        position = handler.use_component(
+            "gps", lambda gps: gps.get_position()
+        )
         print(f"Position from second fallback GPS: {position}")
 
         # Simulate all GPS failures
         fallback_gps2.available = False
 
         # This should raise an exception
-        position = handler.use_component("gps", lambda gps: gps.get_position())
+        position = handler.use_component(
+            "gps", lambda gps: gps.get_position()
+        )
         print(f"Position: {position}")  # This line should not be reached
 
     except Exception as e:

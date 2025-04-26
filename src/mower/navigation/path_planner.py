@@ -20,6 +20,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 
 class PatternType(Enum):
     """Types of mowing patterns."""
+
     PARALLEL = auto()
     SPIRAL = auto()
     ZIGZAG = auto()
@@ -33,6 +34,7 @@ class PatternType(Enum):
 @dataclass
 class PatternConfig:
     """Configuration for mowing patterns."""
+
     pattern_type: PatternType
     spacing: float  # Distance between passes in meters
     angle: float  # Angle of pattern in degrees
@@ -44,6 +46,7 @@ class PatternConfig:
 @dataclass
 class LearningConfig:
     """Configuration for learning-based optimization."""
+
     learning_rate: float = 0.1
     discount_factor: float = 0.9
     exploration_rate: float = 0.2
@@ -62,7 +65,7 @@ class PathPlanner:
         self,
         pattern_config: PatternConfig,
         learning_config: Optional[LearningConfig] = None,
-        resource_manager=None
+        resource_manager=None,
     ):
         """Initialize the path planner."""
         self.pattern_config = pattern_config
@@ -85,14 +88,18 @@ class PathPlanner:
         """Generate mowing path based on pattern type."""
         try:
             # If learning is enabled, use it to select pattern
-            if self.learning_config and np.random.random(
-            ) < self.learning_config.exploration_rate:
+            if (
+                self.learning_config
+                and np.random.random() < self.learning_config.exploration_rate
+            ):
                 self.pattern_config.pattern_type = np.random.choice(
-                    list(
-                        PatternType))
+                    list(PatternType)
+                )
             elif self.learning_config:
                 state = self._get_current_state()
-                self.pattern_config.pattern_type = self._get_best_action(state)
+                self.pattern_config.pattern_type = self._get_best_action(
+                    state
+                )
 
             # Generate path based on selected pattern
             path = self._generate_pattern_path()
@@ -102,15 +109,16 @@ class PathPlanner:
                 state = self._get_current_state()
                 reward = self._calculate_reward(path)
                 self._update_q_table(
-                    state, self.pattern_config.pattern_type, reward)
+                    state, self.pattern_config.pattern_type, reward
+                )
                 self._store_experience(
-                    state,
-                    self.pattern_config.pattern_type,
-                    reward
+                    state, self.pattern_config.pattern_type, reward
                 )
 
-                if (self.step_count %
-                        self.learning_config.update_frequency == 0):
+                if (
+                    self.step_count % self.learning_config.update_frequency
+                    == 0
+                ):
                     self._update_model()
 
                 self.step_count += 1
@@ -132,11 +140,12 @@ class PathPlanner:
                 PatternType.DIAMOND: self._generate_diamond_path,
                 PatternType.WAVES: self._generate_waves_path,
                 PatternType.CONCENTRIC: self._generate_concentric_path,
-                PatternType.CUSTOM: self._generate_custom_path
+                PatternType.CUSTOM: self._generate_custom_path,
             }
 
             generator = pattern_generators.get(
-                self.pattern_config.pattern_type)
+                self.pattern_config.pattern_type
+            )
             if not generator:
                 logger.error(
                     f"Unknown pattern type: {self.pattern_config.pattern_type}"
@@ -164,8 +173,9 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * \
-                (1 - self.pattern_config.overlap)
+            spacing = self.pattern_config.spacing * (
+                1 - self.pattern_config.overlap
+            )
             num_passes = int(np.ceil(width / spacing))
 
             # Generate pass lines
@@ -207,8 +217,10 @@ class PathPlanner:
             while r < max_radius:
                 # Calculate points on spiral
                 theta = np.linspace(
-                    0, 2 * np.pi,
-                    int(2 * np.pi * r / self.pattern_config.spacing))
+                    0,
+                    2 * np.pi,
+                    int(2 * np.pi * r / self.pattern_config.spacing),
+                )
                 x = center[0] + r * np.cos(theta)
                 y = center[1] + r * np.sin(theta)
 
@@ -217,7 +229,8 @@ class PathPlanner:
 
                 # Increase radius
                 r += self.pattern_config.spacing * (
-                    1 - self.pattern_config.overlap)
+                    1 - self.pattern_config.overlap
+                )
 
             return path
 
@@ -240,8 +253,9 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * \
-                (1 - self.pattern_config.overlap)
+            spacing = self.pattern_config.spacing * (
+                1 - self.pattern_config.overlap
+            )
             num_passes = int(np.ceil(width / spacing))
 
             # Generate zigzag points
@@ -326,7 +340,8 @@ class PathPlanner:
             while y <= max_y:
                 x_points = np.linspace(min_x, max_x, 100)
                 y_points = y + amplitude * np.sin(
-                    2 * np.pi * x_points / wave_length)
+                    2 * np.pi * x_points / wave_length
+                )
 
                 # Add points that fall within boundary
                 for x, wave_y in zip(x_points, y_points):
@@ -360,8 +375,10 @@ class PathPlanner:
             while r > self.pattern_config.spacing:
                 # Generate circle points
                 theta = np.linspace(
-                    0, 2 * np.pi,
-                    int(2 * np.pi * r / self.pattern_config.spacing))
+                    0,
+                    2 * np.pi,
+                    int(2 * np.pi * r / self.pattern_config.spacing),
+                )
                 x = center[0] + r * np.cos(theta)
                 y = center[1] + r * np.sin(theta)
 
@@ -372,7 +389,8 @@ class PathPlanner:
                         path.append((px, py))
 
                 r -= self.pattern_config.spacing * (
-                    1 - self.pattern_config.overlap)
+                    1 - self.pattern_config.overlap
+                )
 
             return path
 
@@ -387,10 +405,7 @@ class PathPlanner:
         return self._generate_parallel_path()
 
     def _find_boundary_intersections(
-        self,
-        start: np.ndarray,
-        end: np.ndarray,
-        boundary: np.ndarray
+        self, start: np.ndarray, end: np.ndarray, boundary: np.ndarray
     ) -> List[Tuple[float, float]]:
         """Find intersection points of line with boundary."""
         try:
@@ -419,11 +434,7 @@ class PathPlanner:
             return []
 
     def _line_intersection(
-        self,
-        p1: np.ndarray,
-        p2: np.ndarray,
-        p3: np.ndarray,
-        p4: np.ndarray
+        self, p1: np.ndarray, p2: np.ndarray, p3: np.ndarray, p4: np.ndarray
     ) -> Optional[np.ndarray]:
         """Find intersection point of two lines."""
         try:
@@ -447,10 +458,12 @@ class PathPlanner:
             y = (A1 * C2 - A2 * C1) / det
 
             # Check if intersection is within line segments
-            if (min(p1[0], p2[0]) <= x <= max(p1[0], p2[0]) and
-                    min(p1[1], p2[1]) <= y <= max(p1[1], p2[1]) and
-                    min(p3[0], p4[0]) <= x <= max(p3[0], p4[0]) and
-                    min(p3[1], p4[1]) <= y <= max(p3[1], p4[1])):
+            if (
+                min(p1[0], p2[0]) <= x <= max(p1[0], p2[0])
+                and min(p1[1], p2[1]) <= y <= max(p1[1], p2[1])
+                and min(p3[0], p4[0]) <= x <= max(p3[0], p4[0])
+                and min(p3[1], p4[1]) <= y <= max(p3[1], p4[1])
+            ):
                 return np.array([x, y])
 
             return None
@@ -460,9 +473,8 @@ class PathPlanner:
             return None
 
     def _point_in_polygon(
-            self,
-            point: np.ndarray,
-            polygon: np.ndarray) -> bool:
+        self, point: np.ndarray, polygon: np.ndarray
+    ) -> bool:
         """Check if a point is inside a polygon."""
         x, y = point
         n = len(polygon)
@@ -470,17 +482,21 @@ class PathPlanner:
 
         j = n - 1
         for i in range(n):
-            if (((polygon[i, 1] > y) != (polygon[j, 1] > y)) and
-                    (x < (polygon[j, 0] - polygon[i, 0]) *
-                     (y - polygon[i, 1]) / (polygon[j, 1] - polygon[i, 1]) +
-                     polygon[i, 0])):
+            if ((polygon[i, 1] > y) != (polygon[j, 1] > y)) and (
+                x
+                < (polygon[j, 0] - polygon[i, 0])
+                * (y - polygon[i, 1])
+                / (polygon[j, 1] - polygon[i, 1])
+                + polygon[i, 0]
+            ):
                 inside = not inside
             j = i
 
         return inside
 
     def update_obstacle_map(
-            self, obstacles: List[Tuple[float, float]]) -> None:
+        self, obstacles: List[Tuple[float, float]]
+    ) -> None:
         """Update the obstacle map."""
         self.obstacles = obstacles
 
@@ -531,9 +547,9 @@ class PathPlanner:
 
             # Combine metrics into reward
             reward = (
-                0.4 * (1.0 / total_distance) +  # Efficiency
-                0.4 * coverage +  # Coverage
-                0.2 * smoothness  # Smoothness
+                0.4 * (1.0 / total_distance)  # Efficiency
+                + 0.4 * coverage  # Coverage
+                + 0.2 * smoothness  # Smoothness
             )
 
             return max(0.0, min(1.0, reward))
@@ -542,11 +558,12 @@ class PathPlanner:
             return 0.0
 
     def _calculate_path_distance(
-            self, path: List[Tuple[float, float]]) -> float:
+        self, path: List[Tuple[float, float]]
+    ) -> float:
         """Calculate total distance of path."""
         try:
             if len(path) < 2:
-                return float('inf')
+                return float("inf")
 
             total_distance = 0.0
             for i in range(len(path) - 1):
@@ -557,7 +574,7 @@ class PathPlanner:
             return total_distance
         except Exception as e:
             logger.error(f"Error calculating path distance: {e}")
-            return float('inf')
+            return float("inf")
 
     def _calculate_coverage(self, path: List[Tuple[float, float]]) -> float:
         """Calculate area coverage of path."""
@@ -570,6 +587,7 @@ class PathPlanner:
 
             # Calculate convex hull of path points
             from scipy.spatial import ConvexHull
+
             hull = ConvexHull(path_array)
 
             # Calculate area of convex hull
@@ -618,10 +636,7 @@ class PathPlanner:
             return 0.0
 
     def _update_q_table(
-        self,
-        state: str,
-        action: PatternType,
-        reward: float
+        self, state: str, action: PatternType, reward: float
     ) -> None:
         """Update Q-table with new experience."""
         try:
@@ -636,13 +651,12 @@ class PathPlanner:
             # Calculate new Q-value
             next_state = self._get_current_state()
             max_next_q = max(
-                self.q_table.get(next_state, {}).values(),
-                default=0.0
+                self.q_table.get(next_state, {}).values(), default=0.0
             )
             new_q = current_q + self.learning_config.learning_rate * (
-                reward +
-                self.learning_config.discount_factor * max_next_q -
-                current_q
+                reward
+                + self.learning_config.discount_factor * max_next_q
+                - current_q
             )
 
             # Update Q-table
@@ -651,18 +665,15 @@ class PathPlanner:
             logger.error(f"Error updating Q-table: {e}")
 
     def _store_experience(
-        self,
-        state: str,
-        action: PatternType,
-        reward: float
+        self, state: str, action: PatternType, reward: float
     ) -> None:
         """Store experience in replay buffer."""
         try:
             experience = {
-                'state': state,
-                'action': action,
-                'reward': reward,
-                'next_state': self._get_current_state()
+                "state": state,
+                "action": action,
+                "reward": reward,
+                "next_state": self._get_current_state(),
             }
 
             self.memory.append(experience)
@@ -683,15 +694,15 @@ class PathPlanner:
             batch = np.random.choice(
                 self.memory,
                 size=self.learning_config.batch_size,
-                replace=False
+                replace=False,
             )
 
             # Update Q-table for each experience in batch
             for experience in batch:
                 self._update_q_table(
-                    experience['state'],
-                    experience['action'],
-                    experience['reward']
+                    experience["state"],
+                    experience["action"],
+                    experience["reward"],
                 )
 
             # Save updated model
@@ -708,19 +719,18 @@ class PathPlanner:
             # Convert Q-table to serializable format
             q_table_serializable = {
                 state: {
-                    pattern.name: value
-                    for pattern, value in actions.items()
+                    pattern.name: value for pattern, value in actions.items()
                 }
                 for state, actions in self.q_table.items()
             }
 
             # Save model data
             model_data = {
-                'q_table': q_table_serializable,
-                'step_count': self.step_count
+                "q_table": q_table_serializable,
+                "step_count": self.step_count,
             }
 
-            with open(model_path, 'w') as f:
+            with open(model_path, "w") as f:
                 json.dump(model_data, f)
         except Exception as e:
             logger.error(f"Error saving model: {e}")
@@ -732,7 +742,7 @@ class PathPlanner:
             if not model_path.exists():
                 return
 
-            with open(model_path, 'r') as f:
+            with open(model_path, "r") as f:
                 model_data = json.load(f)
 
             # Convert serialized Q-table back to original format
@@ -741,10 +751,10 @@ class PathPlanner:
                     PatternType[pattern_name]: value
                     for pattern_name, value in actions.items()
                 }
-                for state, actions in model_data['q_table'].items()
+                for state, actions in model_data["q_table"].items()
             }
 
-            self.step_count = model_data.get('step_count', 0)
+            self.step_count = model_data.get("step_count", 0)
         except Exception as e:
             logger.error(f"Error loading model: {e}")
             self.q_table = {}

@@ -23,8 +23,11 @@ from mower.main_controller import ResourceManager
 logging = LoggerConfig.get_logger(__name__)
 
 
-def test_blade_speeds(resource_manager: ResourceManager, speed_steps: int = 5,
-                      run_time: float = 2.0) -> bool:
+def test_blade_speeds(
+    resource_manager: ResourceManager,
+    speed_steps: int = 5,
+    run_time: float = 2.0,
+) -> bool:
     """
     Test the blade motor at different speeds.
 
@@ -90,7 +93,8 @@ def test_blade_speeds(resource_manager: ResourceManager, speed_steps: int = 5,
 
 
 def calibrate_blade_pwm(
-        resource_manager: ResourceManager) -> Tuple[float, float]:
+    resource_manager: ResourceManager,
+) -> Tuple[float, float]:
     """
     Calibrate the PWM values for the blade motor.
 
@@ -123,8 +127,10 @@ def calibrate_blade_pwm(
 
         # Find minimum PWM
         print("\n--- Finding minimum PWM value ---")
-        print("The PWM value will slowly increase until the blade starts "
-              "moving.")
+        print(
+            "The PWM value will slowly increase until the blade starts "
+            "moving."
+        )
         input("Press Enter to begin...")
 
         min_pwm = 0.0
@@ -136,10 +142,10 @@ def calibrate_blade_pwm(
             time.sleep(0.5)
 
             response = input("Is the blade moving? (y/n/q to quit): ")
-            if response.lower() == 'y':
+            if response.lower() == "y":
                 print(f"Minimum PWM value found: {min_pwm:.2f}")
                 break
-            elif response.lower() == 'q':
+            elif response.lower() == "q":
                 break
 
             min_pwm += step
@@ -162,11 +168,12 @@ def calibrate_blade_pwm(
             time.sleep(1)
 
             response = input(
-                "Is this the maximum safe speed? (y/n/q to quit): ")
-            if response.lower() == 'y':
+                "Is this the maximum safe speed? (y/n/q to quit): "
+            )
+            if response.lower() == "y":
                 print(f"Maximum PWM value set: {max_pwm:.2f}")
                 break
-            elif response.lower() == 'q':
+            elif response.lower() == "q":
                 break
 
             max_pwm += 0.05
@@ -181,7 +188,7 @@ def calibrate_blade_pwm(
 
         # Save to configuration if desired
         save = input("Save these values to configuration? (y/n): ")
-        if save.lower() == 'y':
+        if save.lower() == "y":
             # TODO: Implement saving to configuration file
             print("Values will be saved to configuration.")
 
@@ -207,21 +214,26 @@ def main():
         --calibrate: Run the PWM calibration
     """
     parser = argparse.ArgumentParser(
-        description='Blade motor testing and calibration')
+        description="Blade motor testing and calibration"
+    )
     parser.add_argument(
-        '--test',
-        action='store_true',
-        help='Test blade at different speeds')
+        "--test", action="store_true", help="Test blade at different speeds"
+    )
     parser.add_argument(
-        '--calibrate',
-        action='store_true',
-        help='Calibrate blade PWM values')
+        "--calibrate", action="store_true", help="Calibrate blade PWM values"
+    )
     parser.add_argument(
-        '--steps', type=int, default=5,
-        help='Number of speed steps for testing')
+        "--steps",
+        type=int,
+        default=5,
+        help="Number of speed steps for testing",
+    )
     parser.add_argument(
-        '--time', type=float, default=2.0,
-        help='Time to run at each speed step')
+        "--time",
+        type=float,
+        default=2.0,
+        help="Time to run at each speed step",
+    )
 
     args = parser.parse_args()
 

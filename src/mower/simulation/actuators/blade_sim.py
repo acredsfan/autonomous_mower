@@ -36,7 +36,7 @@ class SimulatedBladeController(SimulatedActuator):
             "enabled": False,
             "speed": 0.0,  # 0.0 to 1.0
             "in1_pin": 24,  # Same as real controller for compatibility
-            "in2_pin": 25   # Same as real controller for compatibility
+            "in2_pin": 25,  # Same as real controller for compatibility
         }
 
         # Initialize actuator parameters
@@ -70,8 +70,7 @@ class SimulatedBladeController(SimulatedActuator):
         # If the key is enabled or speed, update the robot's blade state
         if key in ["enabled", "speed"]:
             self.world.set_robot_blade_state(
-                self.state["enabled"],
-                self.state["speed"]
+                self.state["enabled"], self.state["speed"]
             )
 
     # BladeController interface methods
@@ -196,7 +195,9 @@ class SimulatedBladeControllerAdapter:
     the interface of the BladeControllerAdapter class used in the real system.
     """
 
-    def __init__(self, blade_controller: Optional[SimulatedBladeController] = None):
+    def __init__(
+        self, blade_controller: Optional[SimulatedBladeController] = None
+    ):
         """
         Initialize the simulated blade controller adapter.
 

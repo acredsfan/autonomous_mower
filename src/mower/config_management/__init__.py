@@ -28,13 +28,13 @@ from mower.config_management.config_manager import (
     get_config_manager,
     initialize_config_manager,
     get_config,
-    set_config
+    set_config,
 )
 from mower.config_management.config_source import (
     ConfigurationSource,
     EnvironmentConfigurationSource,
     FileConfigurationSource,
-    DictConfigurationSource
+    DictConfigurationSource,
 )
 from mower.config_management.constants import (
     BASE_DIR,
@@ -46,7 +46,7 @@ from mower.config_management.constants import (
     DEFAULT_CONFIG,
     ENV_PREFIX,
     DEFAULT_CONFIG_FILE,
-    DEFAULT_ENV_FILE
+    DEFAULT_ENV_FILE,
 )
 
 # Initialize the configuration manager with default values
@@ -66,7 +66,7 @@ def init_config():
     return initialize_config_manager(
         defaults=DEFAULT_CONFIG,
         config_file=DEFAULT_CONFIG_FILE,
-        env_file=DEFAULT_ENV_FILE
+        env_file=DEFAULT_ENV_FILE,
     )
 
 
@@ -74,25 +74,25 @@ def init_config():
 init_config()
 
 __all__ = [
-    'ConfigurationInterface',
-    'ConfigurationManager',
-    'get_config_manager',
-    'initialize_config_manager',
-    'get_config',
-    'set_config',
-    'init_config',
-    'ConfigurationSource',
-    'EnvironmentConfigurationSource',
-    'FileConfigurationSource',
-    'DictConfigurationSource',
-    'BASE_DIR',
-    'CONFIG_DIR',
-    'USER_POLYGON_PATH',
-    'HOME_LOCATION_PATH',
-    'MOWING_SCHEDULE_PATH',
-    'PATTERN_PLANNER_PATH',
-    'DEFAULT_CONFIG',
-    'ENV_PREFIX',
-    'DEFAULT_CONFIG_FILE',
-    'DEFAULT_ENV_FILE'
+    "ConfigurationInterface",
+    "ConfigurationManager",
+    "get_config_manager",
+    "initialize_config_manager",
+    "get_config",
+    "set_config",
+    "init_config",
+    "ConfigurationSource",
+    "EnvironmentConfigurationSource",
+    "FileConfigurationSource",
+    "DictConfigurationSource",
+    "BASE_DIR",
+    "CONFIG_DIR",
+    "USER_POLYGON_PATH",
+    "HOME_LOCATION_PATH",
+    "MOWING_SCHEDULE_PATH",
+    "PATTERN_PLANNER_PATH",
+    "DEFAULT_CONFIG",
+    "ENV_PREFIX",
+    "DEFAULT_CONFIG_FILE",
+    "DEFAULT_ENV_FILE",
 ]

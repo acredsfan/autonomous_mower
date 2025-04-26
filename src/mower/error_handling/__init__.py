@@ -20,20 +20,31 @@ Usage:
         # ...
 """
 
-from mower.error_handling.exceptions import MowerError, HardwareError, NavigationError, SoftwareError
+from mower.error_handling.exceptions import (
+    MowerError,
+    HardwareError,
+    NavigationError,
+    SoftwareError,
+)
 from mower.error_handling.error_codes import ErrorCode, ErrorCategory
-from mower.error_handling.error_reporter import report_error, get_error_reporter
-from mower.error_handling.error_handler import handle_error, with_error_handling
+from mower.error_handling.error_reporter import (
+    report_error,
+    get_error_reporter,
+)
+from mower.error_handling.error_handler import (
+    handle_error,
+    with_error_handling,
+)
 
 __all__ = [
-    'MowerError',
-    'HardwareError',
-    'NavigationError',
-    'SoftwareError',
-    'ErrorCode',
-    'ErrorCategory',
-    'report_error',
-    'get_error_reporter',
-    'handle_error',
-    'with_error_handling',
+    "MowerError",
+    "HardwareError",
+    "NavigationError",
+    "SoftwareError",
+    "ErrorCode",
+    "ErrorCategory",
+    "report_error",
+    "get_error_reporter",
+    "handle_error",
+    "with_error_handling",
 ]

@@ -126,7 +126,7 @@ class TemperatureSensorPlugin(SensorPlugin):
             return {
                 "temperature_c": round(self._last_reading, 1),
                 "temperature_f": round(self._last_reading * 9 / 5 + 32, 1),
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
         except Exception as e:
@@ -143,7 +143,7 @@ class TemperatureSensorPlugin(SensorPlugin):
         return {
             "initialized": self._initialized,
             "last_update": self._last_update,
-            "update_interval": self._update_interval
+            "update_interval": self._update_interval,
         }
 
     def cleanup(self) -> None:
@@ -171,7 +171,8 @@ if __name__ == "__main__":
     for _ in range(5):
         data = plugin.get_data()
         print(
-            f"Temperature: {data.get('temperature_c')}°C / {data.get('temperature_f')}°F")
+            f"Temperature: {data.get('temperature_c')}°C / {data.get('temperature_f')}°F"
+        )
         time.sleep(1)
 
     # Clean up the plugin

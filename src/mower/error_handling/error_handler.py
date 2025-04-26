@@ -18,15 +18,15 @@ from mower.error_handling.error_reporter import report_error
 
 
 # Type variables for function decorators
-F = TypeVar('F', bound=Callable[..., Any])
-T = TypeVar('T')
+F = TypeVar("F", bound=Callable[..., Any])
+T = TypeVar("T")
 
 
 def handle_error(
     error_code: Optional[ErrorCode] = None,
     reraise: bool = True,
     log_level: int = logging.ERROR,
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None,
 ) -> Callable[[F], F]:
     """
     Decorator to handle exceptions in a consistent way.
@@ -40,6 +40,7 @@ def handle_error(
     Returns:
         Callable: Decorator function
     """
+
     def decorator(func: F) -> F:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -52,9 +53,7 @@ def handle_error(
                 else:
                     # Convert to MowerError
                     error = convert_exception(
-                        e,
-                        error_code=error_code,
-                        context=context
+                        e, error_code=error_code, context=context
                     )
 
                 # Report the error
@@ -77,7 +76,7 @@ def error_context(
     error_code: Optional[ErrorCode] = None,
     reraise: bool = True,
     log_level: int = logging.ERROR,
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None,
 ):
     """
     Context manager for consistent error handling.
@@ -100,9 +99,7 @@ def error_context(
         else:
             # Convert to MowerError
             error = convert_exception(
-                e,
-                error_code=error_code,
-                context=context
+                e, error_code=error_code, context=context
             )
 
         # Report the error
@@ -119,7 +116,7 @@ def with_error_handling(
     error_code: Optional[ErrorCode] = None,
     reraise: bool = True,
     log_level: int = logging.ERROR,
-    context: Optional[Dict[str, Any]] = None
+    context: Optional[Dict[str, Any]] = None,
 ) -> Any:
     """
     Decorator to handle exceptions in a consistent way.
@@ -142,14 +139,14 @@ def with_error_handling(
             error_code=error_code,
             reraise=reraise,
             log_level=log_level,
-            context=context
+            context=context,
         )
 
     return handle_error(
         error_code=error_code,
         reraise=reraise,
         log_level=log_level,
-        context=context
+        context=context,
     )(func)
 
 
@@ -160,7 +157,7 @@ def safe_call(
     default_value: Optional[T] = None,
     log_level: int = logging.ERROR,
     context: Optional[Dict[str, Any]] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Optional[T]:
     """
     Call a function with error handling.
@@ -186,9 +183,7 @@ def safe_call(
         else:
             # Convert to MowerError
             error = convert_exception(
-                e,
-                error_code=error_code,
-                context=context
+                e, error_code=error_code, context=context
             )
 
         # Report the error
@@ -205,10 +200,11 @@ def install_global_exception_handler():
     This function installs a global exception handler that will report
     unhandled exceptions to the error reporter before the program exits.
     """
+
     def global_exception_handler(
         exc_type: Type[BaseException],
         exc_value: BaseException,
-        exc_traceback: Optional[traceback.TracebackType]
+        exc_traceback: Optional[traceback.TracebackType],
     ):
         # Skip if it's a KeyboardInterrupt
         if issubclass(exc_type, KeyboardInterrupt):
@@ -220,7 +216,7 @@ def install_global_exception_handler():
             error = convert_exception(
                 exc_value,
                 error_code=ErrorCode.SOFTWARE_GENERIC,
-                context={"unhandled": True}
+                context={"unhandled": True},
             )
 
             # Report the error

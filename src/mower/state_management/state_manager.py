@@ -19,6 +19,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 
 class StateTransitionError(Exception):
     """Exception raised when an invalid state transition is attempted."""
+
     pass
 
 
@@ -46,17 +47,20 @@ class StateManager:
         self._current_state = initial_state
         self._previous_state = None
         self._error_condition = None
-        self._transition_history: List[Tuple[float,
-                                             MowerState, MowerState]] = []
+        self._transition_history: List[
+            Tuple[float, MowerState, MowerState]
+        ] = []
         self._state_entry_time = time.time()
         self._lock = threading.RLock()
-        self._transition_callbacks: Dict[Tuple[MowerState,
-                                               MowerState], List[Callable]] = {}
+        self._transition_callbacks: Dict[
+            Tuple[MowerState, MowerState], List[Callable]
+        ] = {}
         self._state_entry_callbacks: Dict[MowerState, List[Callable]] = {}
         self._state_exit_callbacks: Dict[MowerState, List[Callable]] = {}
 
         logger.info(
-            f"State manager initialized with state: {initial_state.name}")
+            f"State manager initialized with state: {initial_state.name}"
+        )
 
     @property
     def current_state(self) -> MowerState:
@@ -83,7 +87,9 @@ class StateManager:
             return time.time() - self._state_entry_time
 
     @property
-    def transition_history(self) -> List[Tuple[float, MowerState, MowerState]]:
+    def transition_history(
+        self,
+    ) -> List[Tuple[float, MowerState, MowerState]]:
         """Get the history of state transitions."""
         with self._lock:
             return list(self._transition_history)
@@ -105,7 +111,7 @@ class StateManager:
         self,
         target_state: MowerState,
         error_condition: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Transition to a new state.
@@ -162,7 +168,8 @@ class StateManager:
 
             # Call transition callbacks
             self._call_transition_callbacks(
-                previous_state, target_state, context)
+                previous_state, target_state, context
+            )
 
             # Call entry callbacks for the new state
             self._call_state_entry_callbacks(target_state, context)
@@ -184,12 +191,13 @@ class StateManager:
             self._error_condition = error_condition
 
             # If not already in an error state, transition to ERROR
-            if (self._current_state != MowerState.ERROR and
-                    self._current_state != MowerState.EMERGENCY_STOP):
+            if (
+                self._current_state != MowerState.ERROR
+                and self._current_state != MowerState.EMERGENCY_STOP
+            ):
                 try:
                     self.transition_to(
-                        MowerState.ERROR,
-                        error_condition=error_condition
+                        MowerState.ERROR, error_condition=error_condition
                     )
                 except StateTransitionError:
                     logger.error(
@@ -206,7 +214,7 @@ class StateManager:
         self,
         from_state: MowerState,
         to_state: MowerState,
-        callback: Callable[[MowerState, MowerState, Dict[str, Any]], None]
+        callback: Callable[[MowerState, MowerState, Dict[str, Any]], None],
     ) -> None:
         """
         Register a callback for a specific state transition.
@@ -225,7 +233,7 @@ class StateManager:
     def register_state_entry_callback(
         self,
         state: MowerState,
-        callback: Callable[[MowerState, Dict[str, Any]], None]
+        callback: Callable[[MowerState, Dict[str, Any]], None],
     ) -> None:
         """
         Register a callback for when a state is entered.
@@ -242,7 +250,7 @@ class StateManager:
     def register_state_exit_callback(
         self,
         state: MowerState,
-        callback: Callable[[MowerState, Dict[str, Any]], None]
+        callback: Callable[[MowerState, Dict[str, Any]], None],
     ) -> None:
         """
         Register a callback for when a state is exited.
@@ -260,7 +268,7 @@ class StateManager:
         self,
         from_state: MowerState,
         to_state: MowerState,
-        context: Dict[str, Any]
+        context: Dict[str, Any],
     ) -> None:
         """
         Call all registered callbacks for a state transition.
@@ -282,9 +290,7 @@ class StateManager:
                 )
 
     def _call_state_entry_callbacks(
-        self,
-        state: MowerState,
-        context: Dict[str, Any]
+        self, state: MowerState, context: Dict[str, Any]
     ) -> None:
         """
         Call all registered callbacks for entering a state.
@@ -304,9 +310,7 @@ class StateManager:
                 )
 
     def _call_state_exit_callbacks(
-        self,
-        state: MowerState,
-        context: Dict[str, Any]
+        self, state: MowerState, context: Dict[str, Any]
     ) -> None:
         """
         Call all registered callbacks for exiting a state.
@@ -339,10 +343,15 @@ class StateManager:
                 "current_state_display_name": self._current_state.display_name,
                 "current_state_description": self._current_state.description,
                 "current_state_category": self._current_state.category.name,
-                "previous_state": self._previous_state.name if self._previous_state else None,
+                "previous_state": (
+                    self._previous_state.name
+                    if self._previous_state
+                    else None
+                ),
                 "error_condition": self._error_condition,
                 "time_in_current_state": self.time_in_current_state,
                 "allowed_transitions": [
-                    state.name for state in self._current_state.allowed_transitions
+                    state.name
+                    for state in self._current_state.allowed_transitions
                 ],
             }

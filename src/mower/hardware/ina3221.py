@@ -1,8 +1,6 @@
 import barbudor_ina3221.full as INA3221
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -28,16 +26,20 @@ class INA3221Sensor:
                 Shunt_Voltage = round(sensor.shunt_voltage(channel), 1)
                 Current = round(sensor.current(channel), 1)
                 sensor_data = {
-                    'bus_voltage': Voltage,
-                    'current': Current,
-                    'shunt_voltage': Shunt_Voltage}
+                    "bus_voltage": Voltage,
+                    "current": Current,
+                    "shunt_voltage": Shunt_Voltage,
+                }
                 if channel == 3:
                     Charge_Level = round(
-                        (Voltage - 11.2) / (14.6 - 11.2) * 100, 1)
+                        (Voltage - 11.2) / (14.6 - 11.2) * 100, 1
+                    )
                     sensor_data["charge_level"] = f"{Charge_Level}%"
                 return sensor_data
             else:
-                raise ValueError("Invalid INA3221 channel. Please use 1 or 3.")
+                raise ValueError(
+                    "Invalid INA3221 channel. Please use 1 or 3."
+                )
         except Exception as e:
             logging.error(f"Error reading INA3221 data: {e}")
             return {}
@@ -46,6 +48,7 @@ class INA3221Sensor:
     for a 12.8V 20Ah lithium-ion battery.
     Variables may need to be changed based on the
     battery chemistry of the battery being used."""
+
     @staticmethod
     def battery_charge(sensor):
         try:

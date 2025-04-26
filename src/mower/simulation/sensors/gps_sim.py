@@ -48,7 +48,9 @@ class SimulatedGpsPosition(SimulatedSensor):
         self.noise_level = 0.0001  # Noise level in degrees (about 10m)
         self.reading_interval = 1.0  # 1Hz update rate (typical for GPS)
         self.fix_probability = 0.95  # Probability of having a GPS fix
-        self.dgps_probability = 0.5  # Probability of having a DGPS fix if we have a fix
+        self.dgps_probability = (
+            0.5  # Probability of having a DGPS fix if we have a fix
+        )
 
         # Initialize GPS parameters
         self.origin_lat = 37.7749  # San Francisco latitude
@@ -68,7 +70,8 @@ class SimulatedGpsPosition(SimulatedSensor):
         # Start the NMEA generation thread
         self.running = True
         self.thread = threading.Thread(
-            target=self._generate_nmea_sentences, daemon=True)
+            target=self._generate_nmea_sentences, daemon=True
+        )
         self.thread.start()
 
     def _cleanup_sim(self) -> None:
@@ -92,8 +95,9 @@ class SimulatedGpsPosition(SimulatedSensor):
         # 1 degree of latitude is approximately 111km
         # 1 degree of longitude is approximately 111km * cos(latitude)
         lat = self.origin_lat + position[1] / 111000.0
-        lng = self.origin_lng + \
-            position[0] / (111000.0 * math.cos(math.radians(self.origin_lat)))
+        lng = self.origin_lng + position[0] / (
+            111000.0 * math.cos(math.radians(self.origin_lat))
+        )
 
         # Add noise to lat/lng
         lat = self.add_noise(lat, self.noise_level)
@@ -102,8 +106,11 @@ class SimulatedGpsPosition(SimulatedSensor):
         # Convert lat/lng to UTM
         # In a real system, this would use a proper UTM conversion
         # For simulation, we'll use a simple approximation
-        easting = (lng - self.origin_lng) * 111000.0 * \
-            math.cos(math.radians(self.origin_lat))
+        easting = (
+            (lng - self.origin_lng)
+            * 111000.0
+            * math.cos(math.radians(self.origin_lat))
+        )
         northing = (lat - self.origin_lat) * 111000.0
 
         # Determine fix quality
@@ -124,23 +131,33 @@ class SimulatedGpsPosition(SimulatedSensor):
             hdop = random.uniform(10.0, 99.9)
             status = "Waiting for GPS fix..."
             # Return early without updating position
-            self.state.update({
-                "fix_quality": fix_quality,
-                "satellites": satellites,
-                "hdop": hdop,
-                "status": status
-            })
+            self.state.update(
+                {
+                    "fix_quality": fix_quality,
+                    "satellites": satellites,
+                    "hdop": hdop,
+                    "status": status,
+                }
+            )
             return
 
         # Update state
         timestamp = time.time()
-        self.state.update({
-            "position": (timestamp, easting, northing, self.utm_zone, self.utm_letter),
-            "fix_quality": fix_quality,
-            "satellites": satellites,
-            "hdop": hdop,
-            "status": status
-        })
+        self.state.update(
+            {
+                "position": (
+                    timestamp,
+                    easting,
+                    northing,
+                    self.utm_zone,
+                    self.utm_letter,
+                ),
+                "fix_quality": fix_quality,
+                "satellites": satellites,
+                "hdop": hdop,
+                "status": status,
+            }
+        )
 
     def _get_sensor_data(self) -> Dict[str, Any]:
         """Get the current simulated GPS sensor data."""
@@ -153,17 +170,22 @@ class SimulatedGpsPosition(SimulatedSensor):
                 # Get the current position
                 position = self.state.get("position")
                 if position:
-                    timestamp, easting, northing, zone_number, zone_letter = position
+                    timestamp, easting, northing, zone_number, zone_letter = (
+                        position
+                    )
 
                     # Convert UTM to lat/lng
                     # In a real system, this would use a proper UTM conversion
                     # For simulation, we'll use a simple approximation
                     lat = self.origin_lat + northing / 111000.0
-                    lng = self.origin_lng + easting / \
-                        (111000.0 * math.cos(math.radians(self.origin_lat)))
+                    lng = self.origin_lng + easting / (
+                        111000.0 * math.cos(math.radians(self.origin_lat))
+                    )
 
                     # Generate NMEA sentences
-                    nmea_sentences = self._generate_nmea_for_position(lat, lng)
+                    nmea_sentences = self._generate_nmea_for_position(
+                        lat, lng
+                    )
 
                     # Update state
                     with self._lock:
@@ -176,7 +198,9 @@ class SimulatedGpsPosition(SimulatedSensor):
                 logger.error(f"Error generating NMEA sentences: {e}")
                 time.sleep(1.0)
 
-    def _generate_nmea_for_position(self, lat: float, lng: float) -> List[Tuple[float, str]]:
+    def _generate_nmea_for_position(
+        self, lat: float, lng: float
+    ) -> List[Tuple[float, str]]:
         """
         Generate NMEA sentences for the given position.
 
@@ -337,7 +361,7 @@ class SimulatedGpsLatestPosition(SimulatedSensor):
         self.state = {
             # (timestamp, easting, northing, zone_number, zone_letter)
             "position": None,
-            "status": "Initializing GPS..."
+            "status": "Initializing GPS...",
         }
 
     def _initialize_sim(self, *args, **kwargs) -> None:
@@ -357,10 +381,7 @@ class SimulatedGpsLatestPosition(SimulatedSensor):
         status = self.gps_position.get_status()
 
         # Update state
-        self.state.update({
-            "position": position,
-            "status": status
-        })
+        self.state.update({"position": position, "status": status})
 
     def _get_sensor_data(self) -> Dict[str, Any]:
         """Get the current simulated GPS latest position sensor data."""

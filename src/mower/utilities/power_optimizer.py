@@ -21,10 +21,11 @@ logger = LoggerConfig.get_logger(__name__)
 
 class PowerMode(Enum):
     """Power modes for the system."""
+
     HIGH_PERFORMANCE = auto()  # Maximum performance, no power saving
-    BALANCED = auto()          # Balance between performance and power saving
-    POWER_SAVING = auto()      # Aggressive power saving
-    CRITICAL = auto()          # Critical battery level, maximum power saving
+    BALANCED = auto()  # Balance between performance and power saving
+    POWER_SAVING = auto()  # Aggressive power saving
+    CRITICAL = auto()  # Critical battery level, maximum power saving
 
 
 class PowerOptimizer:
@@ -57,41 +58,41 @@ class PowerOptimizer:
         # Battery thresholds for power modes
         self.battery_thresholds = {
             PowerMode.HIGH_PERFORMANCE: 80,  # Above 80%
-            PowerMode.BALANCED: 50,          # 50-80%
-            PowerMode.POWER_SAVING: 20,      # 20-50%
-            PowerMode.CRITICAL: 0            # Below 20%
+            PowerMode.BALANCED: 50,  # 50-80%
+            PowerMode.POWER_SAVING: 20,  # 20-50%
+            PowerMode.CRITICAL: 0,  # Below 20%
         }
 
         # Component power settings for each mode
         self.power_settings = {
             PowerMode.HIGH_PERFORMANCE: {
-                'cpu_governor': 'performance',
-                'sensor_poll_interval': 0.1,  # seconds
-                'camera_resolution': 'high',
-                'gps_update_interval': 1.0,   # seconds
-                'background_processes': True
+                "cpu_governor": "performance",
+                "sensor_poll_interval": 0.1,  # seconds
+                "camera_resolution": "high",
+                "gps_update_interval": 1.0,  # seconds
+                "background_processes": True,
             },
             PowerMode.BALANCED: {
-                'cpu_governor': 'ondemand',
-                'sensor_poll_interval': 0.5,  # seconds
-                'camera_resolution': 'medium',
-                'gps_update_interval': 3.0,   # seconds
-                'background_processes': True
+                "cpu_governor": "ondemand",
+                "sensor_poll_interval": 0.5,  # seconds
+                "camera_resolution": "medium",
+                "gps_update_interval": 3.0,  # seconds
+                "background_processes": True,
             },
             PowerMode.POWER_SAVING: {
-                'cpu_governor': 'powersave',
-                'sensor_poll_interval': 1.0,  # seconds
-                'camera_resolution': 'low',
-                'gps_update_interval': 5.0,   # seconds
-                'background_processes': False
+                "cpu_governor": "powersave",
+                "sensor_poll_interval": 1.0,  # seconds
+                "camera_resolution": "low",
+                "gps_update_interval": 5.0,  # seconds
+                "background_processes": False,
             },
             PowerMode.CRITICAL: {
-                'cpu_governor': 'powersave',
-                'sensor_poll_interval': 2.0,  # seconds
-                'camera_resolution': 'lowest',
-                'gps_update_interval': 10.0,  # seconds
-                'background_processes': False
-            }
+                "cpu_governor": "powersave",
+                "sensor_poll_interval": 2.0,  # seconds
+                "camera_resolution": "lowest",
+                "gps_update_interval": 10.0,  # seconds
+                "background_processes": False,
+            },
         }
 
         # Optimized components
@@ -99,9 +100,9 @@ class PowerOptimizer:
 
         # Power usage statistics
         self.stats = {
-            'battery_levels': [],
-            'power_modes': [],
-            'cpu_usage': []
+            "battery_levels": [],
+            "power_modes": [],
+            "cpu_usage": [],
         }
 
         # Start monitoring if enabled
@@ -112,21 +113,26 @@ class PowerOptimizer:
 
     def start_monitoring(self):
         """Start power usage monitoring."""
-        if self.monitoring_thread is not None and self.monitoring_thread.is_alive():
+        if (
+            self.monitoring_thread is not None
+            and self.monitoring_thread.is_alive()
+        ):
             logger.warning("Monitoring thread is already running")
             return
 
         self.stop_monitoring.clear()
         self.monitoring_thread = threading.Thread(
-            target=self._monitoring_loop,
-            daemon=True
+            target=self._monitoring_loop, daemon=True
         )
         self.monitoring_thread.start()
         logger.info("Power monitoring started")
 
     def stop_monitoring(self):
         """Stop power usage monitoring."""
-        if self.monitoring_thread is None or not self.monitoring_thread.is_alive():
+        if (
+            self.monitoring_thread is None
+            or not self.monitoring_thread.is_alive()
+        ):
             logger.warning("Monitoring thread is not running")
             return
 
@@ -145,15 +151,19 @@ class PowerOptimizer:
                 cpu_usage = psutil.cpu_percent(interval=0.1)
 
                 # Store statistics
-                self.stats['battery_levels'].append(battery_level)
-                self.stats['power_modes'].append(self.power_mode.name)
-                self.stats['cpu_usage'].append(cpu_usage)
+                self.stats["battery_levels"].append(battery_level)
+                self.stats["power_modes"].append(self.power_mode.name)
+                self.stats["cpu_usage"].append(cpu_usage)
 
                 # Keep only the last 100 measurements
-                if len(self.stats['battery_levels']) > 100:
-                    self.stats['battery_levels'] = self.stats['battery_levels'][-100:]
-                    self.stats['power_modes'] = self.stats['power_modes'][-100:]
-                    self.stats['cpu_usage'] = self.stats['cpu_usage'][-100:]
+                if len(self.stats["battery_levels"]) > 100:
+                    self.stats["battery_levels"] = self.stats[
+                        "battery_levels"
+                    ][-100:]
+                    self.stats["power_modes"] = self.stats["power_modes"][
+                        -100:
+                    ]
+                    self.stats["cpu_usage"] = self.stats["cpu_usage"][-100:]
 
                 # Update power mode based on battery level
                 self._update_power_mode(battery_level)
@@ -174,7 +184,10 @@ class PowerOptimizer:
         """
         # Determine appropriate power mode
         new_mode = None
-        if battery_level >= self.battery_thresholds[PowerMode.HIGH_PERFORMANCE]:
+        if (
+            battery_level
+            >= self.battery_thresholds[PowerMode.HIGH_PERFORMANCE]
+        ):
             new_mode = PowerMode.HIGH_PERFORMANCE
         elif battery_level >= self.battery_thresholds[PowerMode.BALANCED]:
             new_mode = PowerMode.BALANCED
@@ -186,7 +199,8 @@ class PowerOptimizer:
         # If mode has changed, apply new settings
         if new_mode != self.power_mode:
             logger.info(
-                f"Changing power mode from {self.power_mode.name} to {new_mode.name} (battery: {battery_level}%)")
+                f"Changing power mode from {self.power_mode.name} to {new_mode.name} (battery: {battery_level}%)"
+            )
             self.power_mode = new_mode
             self._apply_power_settings()
 
@@ -195,7 +209,7 @@ class PowerOptimizer:
         settings = self.power_settings[self.power_mode]
 
         # Apply CPU governor setting
-        self._set_cpu_governor(settings['cpu_governor'])
+        self._set_cpu_governor(settings["cpu_governor"])
 
         # Apply settings to all optimized components
         for component_name in self.optimized_components:
@@ -212,7 +226,7 @@ class PowerOptimizer:
         """
         try:
             # This requires root privileges and only works on Linux
-            if os.name == 'posix':
+            if os.name == "posix":
                 # Get number of CPU cores
                 cpu_count = psutil.cpu_count()
 
@@ -220,17 +234,20 @@ class PowerOptimizer:
                 for i in range(cpu_count):
                     governor_path = f"/sys/devices/system/cpu/cpu{i}/cpufreq/scaling_governor"
                     if os.path.exists(governor_path):
-                        with open(governor_path, 'w') as f:
+                        with open(governor_path, "w") as f:
                             f.write(governor)
 
                 logger.info(f"Set CPU governor to {governor}")
             else:
                 logger.warning(
-                    f"Setting CPU governor not supported on {os.name}")
+                    f"Setting CPU governor not supported on {os.name}"
+                )
         except Exception as e:
             logger.error(f"Error setting CPU governor: {e}")
 
-    def _apply_component_settings(self, component_name: str, settings: Dict[str, Any]):
+    def _apply_component_settings(
+        self, component_name: str, settings: Dict[str, Any]
+    ):
         """
         Apply power settings to a component.
 
@@ -245,26 +262,43 @@ class PowerOptimizer:
                 return
 
             # Apply settings based on component type
-            if hasattr(component, 'set_poll_interval') and 'sensor_poll_interval' in settings:
-                component.set_poll_interval(settings['sensor_poll_interval'])
+            if (
+                hasattr(component, "set_poll_interval")
+                and "sensor_poll_interval" in settings
+            ):
+                component.set_poll_interval(settings["sensor_poll_interval"])
                 logger.debug(
-                    f"Set poll interval for {component_name} to {settings['sensor_poll_interval']}s")
+                    f"Set poll interval for {component_name} to {settings['sensor_poll_interval']}s"
+                )
 
-            if hasattr(component, 'set_resolution') and 'camera_resolution' in settings:
-                component.set_resolution(settings['camera_resolution'])
+            if (
+                hasattr(component, "set_resolution")
+                and "camera_resolution" in settings
+            ):
+                component.set_resolution(settings["camera_resolution"])
                 logger.debug(
-                    f"Set resolution for {component_name} to {settings['camera_resolution']}")
+                    f"Set resolution for {component_name} to {settings['camera_resolution']}"
+                )
 
-            if hasattr(component, 'set_update_interval') and 'gps_update_interval' in settings:
-                component.set_update_interval(settings['gps_update_interval'])
+            if (
+                hasattr(component, "set_update_interval")
+                and "gps_update_interval" in settings
+            ):
+                component.set_update_interval(settings["gps_update_interval"])
                 logger.debug(
-                    f"Set update interval for {component_name} to {settings['gps_update_interval']}s")
+                    f"Set update interval for {component_name} to {settings['gps_update_interval']}s"
+                )
 
-            if hasattr(component, 'set_background_processes') and 'background_processes' in settings:
+            if (
+                hasattr(component, "set_background_processes")
+                and "background_processes" in settings
+            ):
                 component.set_background_processes(
-                    settings['background_processes'])
+                    settings["background_processes"]
+                )
                 logger.debug(
-                    f"Set background processes for {component_name} to {settings['background_processes']}")
+                    f"Set background processes for {component_name} to {settings['background_processes']}"
+                )
         except Exception as e:
             logger.error(f"Error applying settings to {component_name}: {e}")
 
@@ -296,8 +330,8 @@ class PowerOptimizer:
                 return battery.percent
 
             # If psutil doesn't provide battery info, try reading from sysfs
-            if os.path.exists('/sys/class/power_supply/BAT0/capacity'):
-                with open('/sys/class/power_supply/BAT0/capacity', 'r') as f:
+            if os.path.exists("/sys/class/power_supply/BAT0/capacity"):
+                with open("/sys/class/power_supply/BAT0/capacity", "r") as f:
                     return float(f.read().strip())
 
             # If no battery info is available, assume a default value
@@ -359,10 +393,10 @@ class PowerOptimizer:
             Dictionary with power usage statistics
         """
         return {
-            'battery_level': self.get_battery_level(),
-            'power_mode': self.power_mode.name,
-            'cpu_usage': psutil.cpu_percent(interval=0.1),
-            'stats': self.stats
+            "battery_level": self.get_battery_level(),
+            "power_mode": self.power_mode.name,
+            "cpu_usage": psutil.cpu_percent(interval=0.1),
+            "stats": self.stats,
         }
 
     def print_power_usage(self):
@@ -384,6 +418,7 @@ class PowerOptimizer:
 
         logger.info("Power optimizer cleaned up")
 
+
 # Decorator for power-aware functions
 
 
@@ -393,13 +428,14 @@ def power_aware(func):
 
     This decorator adjusts function behavior based on the current power mode.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         # Get current power mode
         power_mode = get_power_optimizer().get_power_mode()
 
         # Add power mode to kwargs
-        kwargs['power_mode'] = power_mode
+        kwargs["power_mode"] = power_mode
 
         # Call the function
         return func(*args, **kwargs)
@@ -464,10 +500,14 @@ def optimize_power_consumption():
 
     # Optimize obstacle detection
     try:
-        from mower.obstacle_detection.obstacle_detector import ObstacleDetector
+        from mower.obstacle_detection.obstacle_detector import (
+            ObstacleDetector,
+        )
 
         # Create a power-aware wrapper for the detect_obstacles method
-        def power_aware_detect_obstacles(detector, frame=None, power_mode=None):
+        def power_aware_detect_obstacles(
+            detector, frame=None, power_mode=None
+        ):
             """Power-aware wrapper for detect_obstacles."""
             # Adjust detection based on power mode
             if power_mode == PowerMode.CRITICAL:
@@ -475,9 +515,11 @@ def optimize_power_consumption():
                 return detector._detect_obstacles_opencv(frame)
             elif power_mode == PowerMode.POWER_SAVING:
                 # Use ML detection less frequently in power saving mode
-                if hasattr(detector, 'detection_count'):
+                if hasattr(detector, "detection_count"):
                     detector.detection_count += 1
-                    if detector.detection_count % 3 != 0:  # Only use ML every 3rd frame
+                    if (
+                        detector.detection_count % 3 != 0
+                    ):  # Only use ML every 3rd frame
                         return detector._detect_obstacles_opencv(frame)
                 else:
                     detector.detection_count = 0
@@ -488,7 +530,8 @@ def optimize_power_consumption():
         # Monkey patch the ObstacleDetector class
         original_detect_obstacles = ObstacleDetector.detect_obstacles
         ObstacleDetector.detect_obstacles = power_aware(
-            power_aware_detect_obstacles)
+            power_aware_detect_obstacles
+        )
 
         logger.info("Optimized power consumption for obstacle detection")
     except Exception as e:
@@ -515,7 +558,7 @@ def optimize_power_consumption():
             return gps_manager.update()
 
         # Monkey patch the GPSManager class
-        if hasattr(GPSManager, 'update'):
+        if hasattr(GPSManager, "update"):
             original_update = GPSManager.update
             GPSManager.update = power_aware(power_aware_update)
 

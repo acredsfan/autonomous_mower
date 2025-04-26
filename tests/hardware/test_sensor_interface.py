@@ -16,7 +16,9 @@ import time
 from unittest.mock import MagicMock, patch, call
 
 from mower.hardware.sensor_interface import (
-    EnhancedSensorInterface, SensorStatus, get_sensor_interface
+    EnhancedSensorInterface,
+    SensorStatus,
+    get_sensor_interface,
 )
 
 
@@ -38,17 +40,17 @@ class TestEnhancedSensorInterface:
 
         # Verify that the error thresholds were initialized
         assert sensor_interface._error_thresholds == {
-            'bme280': 3,
-            'bno085': 3,
-            'ina3221': 3,
-            'vl53l0x': 3
+            "bme280": 3,
+            "bno085": 3,
+            "ina3221": 3,
+            "vl53l0x": 3,
         }
 
         # Verify that the sensor status dictionary was initialized
-        assert 'bme280' in sensor_interface._sensor_status
-        assert 'bno085' in sensor_interface._sensor_status
-        assert 'ina3221' in sensor_interface._sensor_status
-        assert 'vl53l0x' in sensor_interface._sensor_status
+        assert "bme280" in sensor_interface._sensor_status
+        assert "bno085" in sensor_interface._sensor_status
+        assert "ina3221" in sensor_interface._sensor_status
+        assert "vl53l0x" in sensor_interface._sensor_status
 
         # Verify that the stop event was initialized
         assert isinstance(sensor_interface._stop_event, threading.Event)
@@ -56,16 +58,16 @@ class TestEnhancedSensorInterface:
 
         # Verify that the sensors dictionary was initialized
         assert sensor_interface._sensors == {
-            'bme280': None,
-            'bno085': None,
-            'ina3221': None,
-            'vl53l0x': None
+            "bme280": None,
+            "bno085": None,
+            "ina3221": None,
+            "vl53l0x": None,
         }
 
         # Verify that the locks were initialized
-        assert isinstance(sensor_interface._locks['i2c'], threading.Lock)
-        assert isinstance(sensor_interface._locks['data'], threading.Lock)
-        assert isinstance(sensor_interface._locks['status'], threading.Lock)
+        assert isinstance(sensor_interface._locks["i2c"], threading.Lock)
+        assert isinstance(sensor_interface._locks["data"], threading.Lock)
+        assert isinstance(sensor_interface._locks["status"], threading.Lock)
 
     @patch("mower.hardware.sensor_interface.busio.I2C")
     @patch("mower.hardware.sensor_interface.BME280Sensor")
@@ -74,14 +76,22 @@ class TestEnhancedSensorInterface:
     @patch("mower.hardware.sensor_interface.VL53L0XSensors")
     @patch("mower.hardware.sensor_interface.threading.Thread")
     def test_start(
-        self, mock_thread, mock_vl53l0x, mock_ina3221, mock_bno085, mock_bme280, mock_i2c
+        self,
+        mock_thread,
+        mock_vl53l0x,
+        mock_ina3221,
+        mock_bno085,
+        mock_bme280,
+        mock_i2c,
     ):
         """Test starting the sensor interface."""
         # Create an EnhancedSensorInterface instance
         sensor_interface = EnhancedSensorInterface()
 
         # Mock the _init_sensor_with_retry method
-        sensor_interface._init_sensor_with_retry = MagicMock(return_value=True)
+        sensor_interface._init_sensor_with_retry = MagicMock(
+            return_value=True
+        )
 
         # Call start
         sensor_interface.start()
@@ -129,14 +139,14 @@ class TestEnhancedSensorInterface:
 
         # Set some test data
         test_data = {
-            'temperature': 25.0,
-            'humidity': 50.0,
-            'pressure': 1013.25,
-            'heading': 0.0,
-            'roll': 0.0,
-            'pitch': 0.0,
-            'left_distance': 100.0,
-            'right_distance': 100.0
+            "temperature": 25.0,
+            "humidity": 50.0,
+            "pressure": 1013.25,
+            "heading": 0.0,
+            "roll": 0.0,
+            "pitch": 0.0,
+            "left_distance": 100.0,
+            "right_distance": 100.0,
         }
         sensor_interface._data = test_data
 
@@ -159,10 +169,10 @@ class TestEnhancedSensorInterface:
         status = sensor_interface.get_sensor_status()
 
         # Verify that the correct status was returned
-        assert 'bme280' in status
-        assert 'bno085' in status
-        assert 'ina3221' in status
-        assert 'vl53l0x' in status
+        assert "bme280" in status
+        assert "bno085" in status
+        assert "ina3221" in status
+        assert "vl53l0x" in status
 
         # Verify that the returned status is a copy
         assert status is not sensor_interface._sensor_status
@@ -174,14 +184,14 @@ class TestEnhancedSensorInterface:
         sensor_interface = EnhancedSensorInterface()
 
         # Set all critical sensors to working
-        sensor_interface._sensor_status['bno085'].working = True
-        sensor_interface._sensor_status['vl53l0x'].working = True
+        sensor_interface._sensor_status["bno085"].working = True
+        sensor_interface._sensor_status["vl53l0x"].working = True
 
         # Check if it's safe to operate
         assert sensor_interface.is_safe_to_operate() is True
 
         # Set one critical sensor to not working
-        sensor_interface._sensor_status['bno085'].working = False
+        sensor_interface._sensor_status["bno085"].working = False
 
         # Check if it's safe to operate
         assert sensor_interface.is_safe_to_operate() is False
@@ -197,18 +207,21 @@ class TestEnhancedSensorInterface:
 
         # Call _init_sensor_with_retry
         result = sensor_interface._init_sensor_with_retry(
-            'test_sensor', mock_initializer)
+            "test_sensor", mock_initializer
+        )
 
         # Verify that the initializer was called twice
         assert mock_initializer.call_count == 2
 
         # Verify that the sensor was initialized
-        assert sensor_interface._sensors['test_sensor'] is not None
+        assert sensor_interface._sensors["test_sensor"] is not None
 
         # Verify that the sensor status was updated
-        assert sensor_interface._sensor_status['test_sensor'].working is True
-        assert sensor_interface._sensor_status['test_sensor'].error_count == 0
-        assert sensor_interface._sensor_status['test_sensor'].last_error is None
+        assert sensor_interface._sensor_status["test_sensor"].working is True
+        assert sensor_interface._sensor_status["test_sensor"].error_count == 0
+        assert (
+            sensor_interface._sensor_status["test_sensor"].last_error is None
+        )
 
         # Verify that the function returned True
         assert result is True
@@ -218,15 +231,19 @@ class TestEnhancedSensorInterface:
 
         # Call _init_sensor_with_retry
         result = sensor_interface._init_sensor_with_retry(
-            'test_sensor', mock_initializer)
+            "test_sensor", mock_initializer
+        )
 
         # Verify that the initializer was called three times (max retries)
         assert mock_initializer.call_count == 3
 
         # Verify that the sensor status was updated
-        assert sensor_interface._sensor_status['test_sensor'].working is False
-        assert sensor_interface._sensor_status['test_sensor'].error_count > 0
-        assert sensor_interface._sensor_status['test_sensor'].last_error is not None
+        assert sensor_interface._sensor_status["test_sensor"].working is False
+        assert sensor_interface._sensor_status["test_sensor"].error_count > 0
+        assert (
+            sensor_interface._sensor_status["test_sensor"].last_error
+            is not None
+        )
 
         # Verify that the function returned False
         assert result is False
@@ -239,12 +256,16 @@ class TestEnhancedSensorInterface:
 
         # Call _handle_sensor_error
         sensor_interface._handle_sensor_error(
-            'test_sensor', Exception("Test error"))
+            "test_sensor", Exception("Test error")
+        )
 
         # Verify that the sensor status was updated
-        assert sensor_interface._sensor_status['test_sensor'].working is False
-        assert sensor_interface._sensor_status['test_sensor'].error_count == 1
-        assert sensor_interface._sensor_status['test_sensor'].last_error == "Test error"
+        assert sensor_interface._sensor_status["test_sensor"].working is False
+        assert sensor_interface._sensor_status["test_sensor"].error_count == 1
+        assert (
+            sensor_interface._sensor_status["test_sensor"].last_error
+            == "Test error"
+        )
 
     @patch("mower.hardware.sensor_interface.get_sensor_interface")
     def test_get_sensor_interface(self, mock_get_sensor_interface):
@@ -271,8 +292,8 @@ class TestSensorInterfaceThreadSafety:
         # Define a function that updates sensor data
         def update_data():
             for i in range(100):
-                with sensor_interface._locks['data']:
-                    sensor_interface._data['test'] = i
+                with sensor_interface._locks["data"]:
+                    sensor_interface._data["test"] = i
                 time.sleep(0.001)
 
         # Define a function that reads sensor data
@@ -280,8 +301,8 @@ class TestSensorInterfaceThreadSafety:
             for i in range(100):
                 data = sensor_interface.get_sensor_data()
                 # Verify that we get a consistent view of the data
-                if 'test' in data:
-                    assert isinstance(data['test'], int)
+                if "test" in data:
+                    assert isinstance(data["test"], int)
                 time.sleep(0.001)
 
         # Create and start threads

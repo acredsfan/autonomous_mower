@@ -4,9 +4,7 @@ from json import JSONDecodeError
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logging = LoggerConfig.get_logger(__name__)
@@ -30,18 +28,17 @@ try:
                 "Invalid polygon_coordinates: expected list, got %s. "
                 "Using empty list."
             ),
-            type(data)
+            type(data),
         )
         polygon_coordinates = []
     else:
         filtered = []
         for idx, coord in enumerate(data):
-            if isinstance(coord, dict) and 'lat' in coord and 'lng' in coord:
+            if isinstance(coord, dict) and "lat" in coord and "lng" in coord:
                 filtered.append(coord)
             else:
                 logging.warning(
-                    "Skipping invalid coordinate at index %d: %s",
-                    idx, coord
+                    "Skipping invalid coordinate at index %d: %s", idx, coord
                 )
         polygon_coordinates = filtered
 except (FileNotFoundError, JSONDecodeError) as e:
@@ -84,12 +81,14 @@ SHOW_STEERING_VALUE = True  # Update this based on your use case
 
 # Derived constants for UI limits
 latitudes = [
-    coord['lat'] for coord in polygon_coordinates
-    if isinstance(coord, dict) and 'lat' in coord
+    coord["lat"]
+    for coord in polygon_coordinates
+    if isinstance(coord, dict) and "lat" in coord
 ]
 longitudes = [
-    coord['lng'] for coord in polygon_coordinates
-    if isinstance(coord, dict) and 'lng' in coord
+    coord["lng"]
+    for coord in polygon_coordinates
+    if isinstance(coord, dict) and "lng" in coord
 ]
 
 min_lat = min(latitudes) if latitudes else 10

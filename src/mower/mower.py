@@ -20,8 +20,10 @@ from mower.hardware.tof import VL53L0XSensors
 
 # Navigation imports
 from mower.navigation.gps import (
-    GpsNmeaPositions, GpsLatestPosition, GpsPosition
-    )
+    GpsNmeaPositions,
+    GpsLatestPosition,
+    GpsPosition,
+)
 from mower.navigation.localization import Localization
 from mower.navigation.path_planning import PathPlanner
 from mower.navigation.navigation import NavigationController
@@ -29,8 +31,10 @@ from mower.navigation.navigation import NavigationController
 # Obstacle Detection imports
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from mower.obstacle_detection.local_obstacle_detection import (
-    detect_obstacle, detect_drop, stream_frame_with_overlays
-    )
+    detect_obstacle,
+    detect_drop,
+    stream_frame_with_overlays,
+)
 
 # UI and utilities imports
 from mower.ui.web_ui.web_interface import WebInterface
@@ -140,6 +144,7 @@ def get_tof_sensors():
         _tof_sensors = VL53L0XSensors()
     return _tof_sensors
 
+
 # Navigation initialization functions
 
 
@@ -153,8 +158,7 @@ def get_gps_nmea_positions():
 def get_gps_latest_position():
     global _gps_latest_position
     if _gps_latest_position is None:
-        _gps_latest_position = GpsLatestPosition(
-            get_gps_nmea_positions())
+        _gps_latest_position = GpsLatestPosition(get_gps_nmea_positions())
     return _gps_latest_position
 
 
@@ -185,8 +189,10 @@ def get_navigation_controller():
         _navigation_controller = NavigationController(
             gps_latest_position=get_gps_latest_position(),
             robohat_driver=get_robohat_driver(),
-            sensor_interface=get_sensor_interface())
+            sensor_interface=get_sensor_interface(),
+        )
     return _navigation_controller
+
 
 # Obstacle Detection initialization functions
 
@@ -208,6 +214,7 @@ def get_detect_drop():
 
 def get_stream_frame_with_overlays():
     return stream_frame_with_overlays
+
 
 # UI and utilities initialization functions
 
@@ -246,6 +253,7 @@ def get_utils():
         _utils = Utils()
     return _utils
 
+
 # Function to initialize all resources
 
 
@@ -278,6 +286,7 @@ def init_resources():
     get_text_logger()
     get_csv_logger()
     get_utils()
+
 
 # Function to cleanup all resources
 
@@ -330,17 +339,20 @@ def cleanup_resources():
     if _utils is not None:
         _utils.cleanup()
 
+
 # Function to start the web interface
 
 
 def start_web_interface():
     get_web_interface().start()
 
+
 # Function to start the robot logic
 
 
 def start_robot_logic():
     from mower.robot import run_robot
+
     robot_thread = threading.Thread(target=run_robot, daemon=True)
     robot_thread.start()
 

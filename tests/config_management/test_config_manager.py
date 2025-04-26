@@ -16,8 +16,11 @@ import pytest
 from pathlib import Path
 
 from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR, initialize_config_manager
+    get_config_manager,
+    get_config,
+    set_config,
+    CONFIG_DIR,
+    initialize_config_manager,
 )
 
 
@@ -77,7 +80,8 @@ class TestConfigManager:
         assert config_manager.get_bool("test.bool_value", False) is True
         assert config_manager.get_list("test.list_value", []) == [1, 2, 3]
         assert config_manager.get_dict("test.dict_value", {}) == {
-            "key": "value"}
+            "key": "value"
+        }
 
         # Test type conversion with invalid values
         set_config("test.invalid_int", "not_an_int")
@@ -116,10 +120,7 @@ class TestConfigManager:
         """Test saving and loading configuration files."""
         # Initialize configuration manager with test values
         test_config = {
-            "test": {
-                "string_value": "test_string",
-                "int_value": 42
-            }
+            "test": {"string_value": "test_string", "int_value": 42}
         }
         initialize_config_manager(defaults=test_config)
         config_manager = get_config_manager()

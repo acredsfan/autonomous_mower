@@ -5,8 +5,11 @@ This file contains fixtures that can be used across all tests.
 """
 
 from mower.config_management import (
-    get_config_manager, get_config, set_config,
-    CONFIG_DIR, initialize_config_manager
+    get_config_manager,
+    get_config,
+    set_config,
+    CONFIG_DIR,
+    initialize_config_manager,
 )
 import os
 import sys
@@ -31,7 +34,7 @@ def config_manager():
             "float_value": 3.14,
             "bool_value": True,
             "list_value": [1, 2, 3],
-            "dict_value": {"key": "value"}
+            "dict_value": {"key": "value"},
         }
     }
 
@@ -68,7 +71,7 @@ def mock_hardware():
         "blade_controller": mock_blade_controller,
         "camera": mock_camera,
         "gps_serial": mock_gps_serial,
-        "sensor_interface": mock_sensor_interface
+        "sensor_interface": mock_sensor_interface,
     }
 
 
@@ -79,22 +82,33 @@ def mock_resource_manager(mock_hardware):
     mock_resource_manager = MagicMock()
 
     # Configure the mock to return the mock hardware components
-    mock_resource_manager.get_resource.side_effect = lambda name: mock_hardware.get(
-        name)
+    mock_resource_manager.get_resource.side_effect = (
+        lambda name: mock_hardware.get(name)
+    )
     mock_resource_manager.get_path_planner.return_value = MagicMock()
     mock_resource_manager.get_navigation.return_value = MagicMock()
     mock_resource_manager.get_obstacle_detection.return_value = MagicMock()
     mock_resource_manager.get_blade_controller.return_value = mock_hardware[
-        "blade_controller"]
-    mock_resource_manager.get_bme280_sensor.return_value = mock_hardware["bme280"]
+        "blade_controller"
+    ]
+    mock_resource_manager.get_bme280_sensor.return_value = mock_hardware[
+        "bme280"
+    ]
     mock_resource_manager.get_camera.return_value = mock_hardware["camera"]
-    mock_resource_manager.get_robohat_driver.return_value = mock_hardware["motor_driver"]
-    mock_resource_manager.get_gps_serial.return_value = mock_hardware["gps_serial"]
+    mock_resource_manager.get_robohat_driver.return_value = mock_hardware[
+        "motor_driver"
+    ]
+    mock_resource_manager.get_gps_serial.return_value = mock_hardware[
+        "gps_serial"
+    ]
     mock_resource_manager.get_imu_sensor.return_value = mock_hardware["imu"]
-    mock_resource_manager.get_ina3221_sensor.return_value = mock_hardware["ina3221"]
+    mock_resource_manager.get_ina3221_sensor.return_value = mock_hardware[
+        "ina3221"
+    ]
     mock_resource_manager.get_tof_sensors.return_value = mock_hardware["tof"]
     mock_resource_manager.get_sensor_interface.return_value = mock_hardware[
-        "sensor_interface"]
+        "sensor_interface"
+    ]
 
     return mock_resource_manager
 

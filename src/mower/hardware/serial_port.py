@@ -8,21 +8,19 @@ import serial
 import serial.tools.list_ports
 from dotenv import load_dotenv
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
-dotenv_path = '/home/pi/autonomous_mower/.env'
+dotenv_path = "/home/pi/autonomous_mower/.env"
 load_dotenv(dotenv_path)
 
 
 logger = LoggerConfig.get_logger(__name__)
 
 
-GPS_PORT = os.getenv('GPS_SERIAL_PORT')
-GPS_BAUDRATE = int(os.getenv('GPS_BAUD_RATE', '9600'))
-IMU_SERIAL_PORT = os.getenv('IMU_SERIAL_PORT')
-IMU_BAUDRATE = int(os.getenv('IMU_BAUD_RATE', '3000000'))
+GPS_PORT = os.getenv("GPS_SERIAL_PORT")
+GPS_BAUDRATE = int(os.getenv("GPS_BAUD_RATE", "9600"))
+IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT")
+IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
 
 
 class SerialPort:
@@ -35,17 +33,19 @@ class SerialPort:
     It also provides a layer of indirection
     so that we can mock this for testing.
     """
+
     _instance = None
 
     def __init__(
-            self,
-            port: str,
-            baudrate: int,
-            bits: int = 8,
-            parity: str = 'N',
-            stop_bits: int = 1,
-            charset: str = 'ascii',
-            timeout: float = 0.1):
+        self,
+        port: str,
+        baudrate: int,
+        bits: int = 8,
+        parity: str = "N",
+        stop_bits: int = 1,
+        charset: str = "ascii",
+        timeout: float = 0.1,
+    ):
         self.port = port
         self.baudrate = baudrate
         self.bits = bits
@@ -64,7 +64,8 @@ class SerialPort:
                 self.bits,
                 self.parity,
                 self.stop_bits,
-                timeout=self.timeout)
+                timeout=self.timeout,
+            )
             logger.debug("Opened serial port " + self.ser.name)
         except Exception as e:
             logger.error(f"Error opening serial port: {e}")
@@ -121,17 +122,17 @@ class SerialPort:
                        blank if count bytes are not available
         """
         if self.ser is None or not self.ser.is_open:
-            return (False, b'')
+            return (False, b"")
 
         try:
             waiting = self.buffered() >= count
             if waiting:
                 input_bytes = self.ser.read(count)
                 return (waiting, input_bytes)
-            return (False, b'')
+            return (False, b"")
         except (serial.serialutil.SerialException, TypeError):
             logger.warning("Failed reading bytes from serial port")
-            return (False, b'')
+            return (False, b"")
 
     def read(self, count: int = 0) -> Tuple[bool, str]:
         ok, bytestring = self.readBytes(count)
@@ -181,20 +182,19 @@ class SerialPort:
         self.writeBytes(value.encode())
 
     def writeln(self, value: str):
-        self.write(value + '\n')
+        self.write(value + "\n")
 
 
 class SerialLineReader:
     """
     Donkeycar part for reading lines from a serial port
     """
+
     _instance = None
 
     def __init__(
-            self,
-            serial: SerialPort,
-            max_lines: int = 0,
-            debug: bool = False):
+        self, serial: SerialPort, max_lines: int = 0, debug: bool = False
+    ):
         self.serial = serial
         self.max_lines = max_lines
         self.debug = debug
@@ -239,8 +239,11 @@ class SerialLineReader:
             while line is not None:
                 lines.append((time.time(), line))
                 line = None
-                if (self.max_lines is None or self.max_lines == 0 or
-                        len(lines) < self.max_lines):
+                if (
+                    self.max_lines is None
+                    or self.max_lines == 0
+                    or len(lines) < self.max_lines
+                ):
                     line = self._readline()
             return lines
         return []
@@ -284,40 +287,42 @@ if __name__ == "__main__":
         "--serial",
         type=str,
         required=True,
-        help="Serial port address, like '/dev/tty.usbmodem1411'")
+        help="Serial port address, like '/dev/tty.usbmodem1411'",
+    )
     parser.add_argument(
         "-b",
         "--baudrate",
         type=int,
         default=9600,
-        help="Serial port baud rate.")
+        help="Serial port baud rate.",
+    )
     parser.add_argument(
         "-t",
         "--timeout",
         type=float,
         default=0.5,
-        help="Serial port timeout in seconds.")
+        help="Serial port timeout in seconds.",
+    )
     parser.add_argument(
         "-sp",
-        '--samples',
+        "--samples",
         type=int,
         default=5,
-        help="Number of samples per read cycle; 0 for unlimited.")
+        help="Number of samples per read cycle; 0 for unlimited.",
+    )
     parser.add_argument(
-        "-th",
-        "--threaded",
-        action='store_true',
-        help="run in threaded mode.")
+        "-th", "--threaded", action="store_true", help="run in threaded mode."
+    )
     parser.add_argument(
-        "-db",
-        "--debug",
-        action='store_true',
-        help="Enable extra logging")
+        "-db", "--debug", action="store_true", help="Enable extra logging"
+    )
     args = parser.parse_args()
 
     if args.samples < 0:
-        print("Samples per read cycle,"
-              "greater than zero OR zero for unlimited")
+        print(
+            "Samples per read cycle,"
+            "greater than zero OR zero for unlimited"
+        )
         parser.print_help()
         sys.exit(0)
 
@@ -331,17 +336,16 @@ if __name__ == "__main__":
 
     try:
         serial_port = SerialPort(
-            args.serial,
-            baudrate=args.baudrate,
-            timeout=args.timeout)
+            args.serial, baudrate=args.baudrate, timeout=args.timeout
+        )
         line_reader = SerialLineReader(
-            serial_port,
-            max_lines=args.samples,
-            debug=args.debug)
+            serial_port, max_lines=args.samples, debug=args.debug
+        )
 
         if args.threaded:
             update_thread = threading.Thread(
-                target=line_reader.update, args=())
+                target=line_reader.update, args=()
+            )
             update_thread.start()
 
         def read_lines():

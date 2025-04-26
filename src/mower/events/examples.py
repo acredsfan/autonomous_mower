@@ -11,7 +11,12 @@ from typing import Dict, Any
 
 from mower.events.event import Event, EventType, EventPriority
 from mower.events.event_bus import EventBus, get_event_bus
-from mower.events.handlers import EventHandler, handle_event, subscribe, publish
+from mower.events.handlers import (
+    EventHandler,
+    handle_event,
+    subscribe,
+    publish,
+)
 
 
 # Example 1: Basic event publishing and subscribing
@@ -33,7 +38,7 @@ def example_basic_usage():
     event = Event(
         event_type=EventType.HARDWARE_SENSOR_DATA,
         data={"temperature": 25.0, "humidity": 60.0},
-        source="example_basic_usage"
+        source="example_basic_usage",
     )
     event_bus.publish(event, synchronous=True)
 
@@ -60,7 +65,7 @@ def example_decorator_usage():
     publish(
         EventType.HARDWARE_BATTERY_STATUS,
         data={"level": 15, "voltage": 11.2},
-        source="example_decorator_usage"
+        source="example_decorator_usage",
     )
 
 
@@ -111,19 +116,19 @@ def example_event_handler_class():
     publish(
         EventType.HARDWARE_SENSOR_DATA,
         data={"temperature": 22.5, "humidity": 55.0},
-        source="example_event_handler_class"
+        source="example_event_handler_class",
     )
 
     publish(
         EventType.HARDWARE_SENSOR_DATA,
         data={"temperature": 23.0, "humidity": 56.0},
-        source="example_event_handler_class"
+        source="example_event_handler_class",
     )
 
     publish(
         EventType.HARDWARE_IMU_DATA,
         data={"acceleration": [0.1, 0.2, 9.8], "gyro": [0.01, 0.02, 0.03]},
-        source="example_event_handler_class"
+        source="example_event_handler_class",
     )
 
     # Get the average temperature
@@ -158,14 +163,14 @@ def example_priorities_and_async():
         event_type=EventType.SYSTEM_HEARTBEAT,
         data={"timestamp": time.time()},
         priority=EventPriority.NORMAL,
-        source="example_priorities_and_async"
+        source="example_priorities_and_async",
     )
 
     critical_event = Event(
         event_type=EventType.ERROR_OCCURRED,
         data={"error": "Critical system error", "code": 500},
         priority=EventPriority.CRITICAL,
-        source="example_priorities_and_async"
+        source="example_priorities_and_async",
     )
 
     # Publish asynchronously
@@ -201,7 +206,7 @@ class TemperatureSensor:
         publish(
             EventType.HARDWARE_SENSOR_DATA,
             data={"temperature": temperature, "sensor_id": "temp_sensor_1"},
-            source="TemperatureSensor"
+            source="TemperatureSensor",
         )
 
 
@@ -227,8 +232,8 @@ class TemperatureMonitor(EventHandler):
                     EventType.WARNING_OCCURRED,
                     data={
                         "message": f"Temperature above threshold: {temperature}°C",
-                        "threshold": self.temperature_threshold
-                    }
+                        "threshold": self.temperature_threshold,
+                    },
                 )
 
 

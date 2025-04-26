@@ -20,17 +20,20 @@ it's not.
 
 # Configure logging
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+
 logger = LoggerConfig.get_logger(__name__)
 
 # Try to import Coral libraries, with graceful fallback if not available
 try:
     from pycoral.utils import edgetpu
     from pycoral.adapters import common
+
     coral_available = True
     logger.info("Coral libraries successfully imported")
 except ImportError:
     logger.warning(
-        "Coral libraries not available. Falling back to CPU inference only.")
+        "Coral libraries not available. Falling back to CPU inference only."
+    )
     coral_available = False
 
     # Define dummy classes for compatibility when pycoral isn't installed
@@ -95,5 +98,6 @@ def get_interpreter_creator(use_coral: bool = False):
     else:
         # Import tflite_runtime only when needed for CPU inference
         import tflite_runtime.interpreter as tflite
+
         logger.info("Using CPU for model inference")
         return tflite.Interpreter

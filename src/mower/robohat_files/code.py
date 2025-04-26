@@ -130,13 +130,16 @@ def main():
                         serial_throttle = int(parts[1].strip())
                         print(
                             f"Serial control => S={serial_steering}, "
-                            f"T={serial_throttle}")
+                            f"T={serial_throttle}"
+                        )
                         # If RC is disabled, apply these pulses
                         if not rc_control_enabled:
                             steering_pwm.duty_cycle = us_to_duty(
-                                serial_steering)
+                                serial_steering
+                            )
                             throttle_pwm.duty_cycle = us_to_duty(
-                                serial_throttle)
+                                serial_throttle
+                            )
                     except ValueError:
                         print("Parse error for steering, throttle.")
                 buffer_str = ""

@@ -45,9 +45,12 @@ class PerformanceProfiler:
         os.makedirs(output_dir, exist_ok=True)
 
         logger.info(
-            f"Performance profiler initialized with output directory: {output_dir}")
+            f"Performance profiler initialized with output directory: {output_dir}"
+        )
 
-    def profile_function(self, func: Callable, *args, **kwargs) -> Dict[str, Any]:
+    def profile_function(
+        self, func: Callable, *args, **kwargs
+    ) -> Dict[str, Any]:
         """
         Profile a function and return performance metrics.
 
@@ -79,7 +82,7 @@ class PerformanceProfiler:
 
         # Get profiling statistics
         s = io.StringIO()
-        ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
+        ps = pstats.Stats(profiler, stream=s).sort_stats("cumulative")
         ps.print_stats(20)  # Print top 20 functions
 
         # Parse statistics
@@ -90,19 +93,21 @@ class PerformanceProfiler:
 
         # Create results dictionary
         metrics = {
-            'execution_time': execution_time,
-            'total_calls': total_calls,
-            'stats': stats_str,
-            'result': result
+            "execution_time": execution_time,
+            "total_calls": total_calls,
+            "stats": stats_str,
+            "result": result,
         }
 
         logger.info(
-            f"Profiled {func.__name__}: {execution_time:.4f} seconds, {total_calls} calls")
+            f"Profiled {func.__name__}: {execution_time:.4f} seconds, {total_calls} calls"
+        )
 
         return metrics
 
-    def profile_component(self, name: str, func: Callable, iterations: int = 10,
-                          *args, **kwargs) -> Dict[str, Any]:
+    def profile_component(
+        self, name: str, func: Callable, iterations: int = 10, *args, **kwargs
+    ) -> Dict[str, Any]:
         """
         Profile a component multiple times and calculate average performance.
 
@@ -124,8 +129,8 @@ class PerformanceProfiler:
         for i in range(iterations):
             logger.debug(f"Iteration {i+1}/{iterations}")
             metrics = self.profile_function(func, *args, **kwargs)
-            execution_times.append(metrics['execution_time'])
-            total_calls_list.append(metrics['total_calls'])
+            execution_times.append(metrics["execution_time"])
+            total_calls_list.append(metrics["total_calls"])
 
         # Calculate statistics
         avg_time = np.mean(execution_times)
@@ -136,16 +141,16 @@ class PerformanceProfiler:
 
         # Create results dictionary
         results = {
-            'name': name,
-            'iterations': iterations,
-            'avg_time': avg_time,
-            'std_time': std_time,
-            'min_time': min_time,
-            'max_time': max_time,
-            'avg_calls': avg_calls,
-            'execution_times': execution_times,
-            'total_calls_list': total_calls_list,
-            'last_stats': metrics['stats']
+            "name": name,
+            "iterations": iterations,
+            "avg_time": avg_time,
+            "std_time": std_time,
+            "min_time": min_time,
+            "max_time": max_time,
+            "avg_calls": avg_calls,
+            "execution_times": execution_times,
+            "total_calls_list": total_calls_list,
+            "last_stats": metrics["stats"],
         }
 
         # Store results
@@ -177,22 +182,29 @@ class PerformanceProfiler:
 
         # Save statistics to text file
         stats_file = os.path.join(component_dir, "stats.txt")
-        with open(stats_file, 'w') as f:
+        with open(stats_file, "w") as f:
             f.write(f"Component: {name}\n")
             f.write(f"Iterations: {results['iterations']}\n")
             f.write(
-                f"Average execution time: {results['avg_time']:.4f} seconds\n")
-            f.write(f"Standard deviation: {results['std_time']:.4f} seconds\n")
+                f"Average execution time: {results['avg_time']:.4f} seconds\n"
+            )
             f.write(
-                f"Min/Max time: {results['min_time']:.4f}/{results['max_time']:.4f} seconds\n")
+                f"Standard deviation: {results['std_time']:.4f} seconds\n"
+            )
+            f.write(
+                f"Min/Max time: {results['min_time']:.4f}/{results['max_time']:.4f} seconds\n"
+            )
             f.write(f"Average function calls: {results['avg_calls']:.1f}\n\n")
             f.write("Detailed statistics:\n")
-            f.write(results['last_stats'])
+            f.write(results["last_stats"])
 
         # Create performance graph
         plt.figure(figsize=(10, 6))
-        plt.plot(range(1, results['iterations'] + 1),
-                 results['execution_times'], 'o-')
+        plt.plot(
+            range(1, results["iterations"] + 1),
+            results["execution_times"],
+            "o-",
+        )
         plt.title(f"{name} Performance")
         plt.xlabel("Iteration")
         plt.ylabel("Execution Time (seconds)")
@@ -219,8 +231,12 @@ class PerformanceProfiler:
 
         for name in names:
             results = self.results[name]
-            plt.plot(range(1, results['iterations'] + 1),
-                     results['execution_times'], 'o-', label=name)
+            plt.plot(
+                range(1, results["iterations"] + 1),
+                results["execution_times"],
+                "o-",
+                label=name,
+            )
 
         plt.title("Component Performance Comparison")
         plt.xlabel("Iteration")
@@ -235,12 +251,12 @@ class PerformanceProfiler:
 
         # Create bar chart of average times
         plt.figure(figsize=(10, 6))
-        avg_times = [self.results[name]['avg_time'] for name in names]
+        avg_times = [self.results[name]["avg_time"] for name in names]
         plt.bar(names, avg_times)
         plt.title("Average Execution Time Comparison")
         plt.xlabel("Component")
         plt.ylabel("Average Execution Time (seconds)")
-        plt.xticks(rotation=45, ha='right')
+        plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
 
         # Save bar chart
@@ -250,8 +266,9 @@ class PerformanceProfiler:
 
         logger.info(f"Saved component comparison to {self.output_dir}")
 
-    def profile_path_planning(self, pattern_config, learning_config=None,
-                              iterations: int = 5) -> Dict[str, Any]:
+    def profile_path_planning(
+        self, pattern_config, learning_config=None, iterations: int = 5
+    ) -> Dict[str, Any]:
         """
         Profile the path planning component.
 
@@ -272,15 +289,17 @@ class PerformanceProfiler:
         results = {}
 
         # Profile generate_path method
-        results['generate_path'] = self.profile_component(
+        results["generate_path"] = self.profile_component(
             "Path Planning - Generate Path",
             path_planner.generate_path,
-            iterations
+            iterations,
         )
 
         return results
 
-    def profile_obstacle_detection(self, iterations: int = 5) -> Dict[str, Any]:
+    def profile_obstacle_detection(
+        self, iterations: int = 5
+    ) -> Dict[str, Any]:
         """
         Profile the obstacle detection component.
 
@@ -290,7 +309,9 @@ class PerformanceProfiler:
         Returns:
             Dictionary of performance metrics
         """
-        from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
+        from mower.obstacle_detection.obstacle_detector import (
+            get_obstacle_detector,
+        )
         from mower.hardware.camera_instance import capture_frame
 
         # Get obstacle detector
@@ -307,44 +328,46 @@ class PerformanceProfiler:
         results = {}
 
         # Profile ML-based detection
-        results['ml_detection'] = self.profile_component(
+        results["ml_detection"] = self.profile_component(
             "Obstacle Detection - ML",
             detector._detect_obstacles_ml,
             iterations,
-            frame
+            frame,
         )
 
         # Profile OpenCV-based detection
-        results['opencv_detection'] = self.profile_component(
+        results["opencv_detection"] = self.profile_component(
             "Obstacle Detection - OpenCV",
             detector._detect_obstacles_opencv,
             iterations,
-            frame
+            frame,
         )
 
         # Profile drop detection
-        results['drop_detection'] = self.profile_component(
+        results["drop_detection"] = self.profile_component(
             "Obstacle Detection - Drop",
             detector.detect_drops,
             iterations,
-            frame
+            frame,
         )
 
         # Profile full detection pipeline
-        results['full_detection'] = self.profile_component(
+        results["full_detection"] = self.profile_component(
             "Obstacle Detection - Full Pipeline",
             detector.detect_obstacles,
             iterations,
-            frame
+            frame,
         )
 
         # Compare all detection methods
-        self.compare_components([
-            "Obstacle Detection - ML",
-            "Obstacle Detection - OpenCV",
-            "Obstacle Detection - Drop",
-            "Obstacle Detection - Full Pipeline"
-        ])
+        self.compare_components(
+            [
+                "Obstacle Detection - ML",
+                "Obstacle Detection - OpenCV",
+                "Obstacle Detection - Drop",
+                "Obstacle Detection - Full Pipeline",
+            ]
+        )
 
         return results
 
@@ -359,34 +382,42 @@ class PerformanceProfiler:
 
         # Profile obstacle detector initialization
         def init_obstacle_detector():
-            from mower.obstacle_detection.obstacle_detector import ObstacleDetector
+            from mower.obstacle_detection.obstacle_detector import (
+                ObstacleDetector,
+            )
+
             detector = ObstacleDetector()
             return detector
 
-        results['obstacle_detector_init'] = self.profile_component(
+        results["obstacle_detector_init"] = self.profile_component(
             "Startup - Obstacle Detector Initialization",
             init_obstacle_detector,
-            1  # Only need to run once
+            1,  # Only need to run once
         )
 
         # Profile path planner initialization
         def init_path_planner():
-            from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
+            from mower.navigation.path_planner import (
+                PathPlanner,
+                PatternConfig,
+                PatternType,
+            )
+
             config = PatternConfig(
                 pattern_type=PatternType.PARALLEL,
                 spacing=0.5,
                 angle=0.0,
                 overlap=0.1,
                 start_point=(0.0, 0.0),
-                boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+                boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
             )
             planner = PathPlanner(config)
             return planner
 
-        results['path_planner_init'] = self.profile_component(
+        results["path_planner_init"] = self.profile_component(
             "Startup - Path Planner Initialization",
             init_path_planner,
-            1  # Only need to run once
+            1,  # Only need to run once
         )
 
         return results
@@ -404,13 +435,14 @@ def run_profiling():
 
     # Profile path planning
     from mower.navigation.path_planner import PatternConfig, PatternType
+
     config = PatternConfig(
         pattern_type=PatternType.PARALLEL,
         spacing=0.5,
         angle=0.0,
         overlap=0.1,
         start_point=(0.0, 0.0),
-        boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)]
+        boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
     )
     profiler.profile_path_planning(config)
 

@@ -13,6 +13,7 @@ from enum import Enum
 
 class MotorType(Enum):
     """Enum for different types of motors."""
+
     DC = "dc"
     BRUSHLESS = "brushless"
     STEPPER = "stepper"

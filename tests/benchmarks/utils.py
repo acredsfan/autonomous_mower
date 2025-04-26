@@ -35,7 +35,9 @@ def get_test_data_path() -> Path:
     return test_data_dir
 
 
-def generate_random_boundary(num_points: int = 8, radius: float = 50.0) -> List[Tuple[float, float]]:
+def generate_random_boundary(
+    num_points: int = 8, radius: float = 50.0
+) -> List[Tuple[float, float]]:
     """
     Generate a random boundary for testing.
 
@@ -47,7 +49,9 @@ def generate_random_boundary(num_points: int = 8, radius: float = 50.0) -> List[
         List[Tuple[float, float]]: List of boundary points
     """
     # Generate points on a circle for a convex polygon
-    angles = sorted([np.random.uniform(0, 2*np.pi) for _ in range(num_points)])
+    angles = sorted(
+        [np.random.uniform(0, 2 * np.pi) for _ in range(num_points)]
+    )
     center_x = np.random.uniform(-50.0, 50.0)
     center_y = np.random.uniform(-50.0, 50.0)
 
@@ -63,7 +67,7 @@ def generate_random_obstacles(
     num_obstacles: int = 5,
     boundary: Optional[List[Tuple[float, float]]] = None,
     min_size: float = 0.5,
-    max_size: float = 2.0
+    max_size: float = 2.0,
 ) -> List[Tuple[Tuple[float, float], float]]:
     """
     Generate random obstacles for testing.
@@ -120,7 +124,9 @@ def time_function(func: Callable, *args, **kwargs) -> Tuple[Any, float]:
     return result, end_time - start_time
 
 
-def log_benchmark_results(name: str, times: List[float], results: Optional[List[Any]] = None) -> Dict[str, float]:
+def log_benchmark_results(
+    name: str, times: List[float], results: Optional[List[Any]] = None
+) -> Dict[str, float]:
     """
     Log benchmark results.
 
@@ -153,5 +159,5 @@ def log_benchmark_results(name: str, times: List[float], results: Optional[List[
         "median": median_time,
         "min": min_time,
         "max": max_time,
-        "std_dev": std_dev
+        "std_dev": std_dev,
     }

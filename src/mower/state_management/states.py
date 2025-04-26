@@ -11,9 +11,10 @@ from typing import Dict, List, Set
 
 class StateCategory(Enum):
     """Categories of mower states."""
+
     OPERATIONAL = auto()  # Normal operational states
-    ERROR = auto()        # Error states
-    SPECIAL = auto()      # Special states like initialization, shutdown
+    ERROR = auto()  # Error states
+    SPECIAL = auto()  # Special states like initialization, shutdown
 
 
 class MowerState(Enum):
@@ -23,25 +24,26 @@ class MowerState(Enum):
     This enum combines all possible states from different components into
     a single, consistent enum that can be used throughout the codebase.
     """
+
     # Operational states
-    IDLE = "idle"                 # Mower is idle, waiting for commands
-    MOWING = "mowing"             # Mower is actively mowing
-    DOCKING = "docking"           # Mower is returning to dock
-    MANUAL = "manual"             # Mower is under manual control
-    AVOIDING = "avoiding"         # Mower is avoiding an obstacle
+    IDLE = "idle"  # Mower is idle, waiting for commands
+    MOWING = "mowing"  # Mower is actively mowing
+    DOCKING = "docking"  # Mower is returning to dock
+    MANUAL = "manual"  # Mower is under manual control
+    AVOIDING = "avoiding"  # Mower is avoiding an obstacle
     RETURNING_HOME = "returning_home"  # Mower is returning to home location
-    DOCKED = "docked"             # Mower is docked at charging station
+    DOCKED = "docked"  # Mower is docked at charging station
 
     # Error states
-    ERROR = "error"               # Generic error state
+    ERROR = "error"  # Generic error state
     EMERGENCY_STOP = "emergency_stop"  # Emergency stop activated
-    STUCK = "stuck"               # Mower is stuck and needs assistance
-    LOW_BATTERY = "low_battery"   # Battery is critically low
+    STUCK = "stuck"  # Mower is stuck and needs assistance
+    LOW_BATTERY = "low_battery"  # Battery is critically low
 
     # Special states
     INITIALIZING = "initializing"  # Mower is initializing
     SHUTTING_DOWN = "shutting_down"  # Mower is shutting down
-    PAUSED = "paused"             # Mower operation is paused
+    PAUSED = "paused"  # Mower operation is paused
 
     @property
     def category(self) -> StateCategory:
@@ -56,7 +58,9 @@ class MowerState(Enum):
     @property
     def display_name(self) -> str:
         """Get a human-readable display name for this state."""
-        return _STATE_DISPLAY_NAMES.get(self, self.value.replace('_', ' ').title())
+        return _STATE_DISPLAY_NAMES.get(
+            self, self.value.replace("_", " ").title()
+        )
 
     @property
     def description(self) -> str:

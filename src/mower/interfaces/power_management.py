@@ -13,6 +13,7 @@ from enum import Enum
 
 class PowerMode(Enum):
     """Enum for different power modes."""
+
     NORMAL = "normal"
     ECO = "eco"
     PERFORMANCE = "performance"
@@ -235,7 +236,9 @@ class ChargingStationInterface(ABC):
         pass
 
     @abstractmethod
-    def set_charging_station_location(self, latitude: float, longitude: float) -> bool:
+    def set_charging_station_location(
+        self, latitude: float, longitude: float
+    ) -> bool:
         """
         Set the location of the charging station.
 

@@ -38,8 +38,7 @@ logging = LoggerConfig.get_logger(__name__)
 
 
 def capture_test_image(
-    resource_manager: ResourceManager,
-    save_path: Optional[str] = None
+    resource_manager: ResourceManager, save_path: Optional[str] = None
 ) -> Optional[np.ndarray]:
     """
     Capture a test image from the camera.
@@ -77,7 +76,9 @@ def capture_test_image(
         return None
 
 
-def display_image(image: np.ndarray, window_name: str = "Camera Test") -> None:
+def display_image(
+    image: np.ndarray, window_name: str = "Camera Test"
+) -> None:
     """
     Display an image in a window.
 
@@ -95,9 +96,11 @@ def display_image(image: np.ndarray, window_name: str = "Camera Test") -> None:
 
 
 def start_stream_test(
-        resource_manager: ResourceManager,
-        resolution: Tuple[int, int] = (640, 480),
-        port: int = 8090, duration: int = 30) -> bool:
+    resource_manager: ResourceManager,
+    resolution: Tuple[int, int] = (640, 480),
+    port: int = 8090,
+    duration: int = 30,
+) -> bool:
     """
     Start a test stream server to view camera feed.
 
@@ -123,7 +126,8 @@ def start_stream_test(
         # Create an HTML file for the stream
         html_path = stream_dir / "index.html"
         with open(html_path, "w") as f:
-            f.write("""
+            f.write(
+                """
             <!DOCTYPE html>
             <html>
             <head>
@@ -157,7 +161,8 @@ initial-scale=1">
                 </script>
             </body>
             </html>
-            """)
+            """
+            )
 
         # Create a class to handle HTTP requests
         class StreamHandler(http.server.SimpleHTTPRequestHandler):
@@ -290,25 +295,35 @@ def main():
         --settings: Test different camera settings
     """
     parser = argparse.ArgumentParser(
-        description='Camera testing and configuration')
+        description="Camera testing and configuration"
+    )
     parser.add_argument(
-        '--capture', action='store_true',
-        help='Capture and display a test image')
+        "--capture",
+        action="store_true",
+        help="Capture and display a test image",
+    )
     parser.add_argument(
-        '--save', type=str,
-        help='Save the captured image to the specified path')
+        "--save",
+        type=str,
+        help="Save the captured image to the specified path",
+    )
     parser.add_argument(
-        '--stream',
-        action='store_true',
-        help='Start a test stream server')
-    parser.add_argument('--port', type=int, default=8090,
-                        help='Port for the stream server')
+        "--stream", action="store_true", help="Start a test stream server"
+    )
     parser.add_argument(
-        '--duration', type=int, default=30,
-        help='Duration in seconds for the stream')
+        "--port", type=int, default=8090, help="Port for the stream server"
+    )
     parser.add_argument(
-        '--settings', action='store_true',
-        help='Test different camera settings')
+        "--duration",
+        type=int,
+        default=30,
+        help="Duration in seconds for the stream",
+    )
+    parser.add_argument(
+        "--settings",
+        action="store_true",
+        help="Test different camera settings",
+    )
 
     args = parser.parse_args()
 
@@ -325,9 +340,8 @@ def main():
 
     if args.stream:
         start_stream_test(
-            resource_manager,
-            port=args.port,
-            duration=args.duration)
+            resource_manager, port=args.port, duration=args.duration
+        )
 
     if args.settings:
         test_camera_settings(resource_manager)

@@ -26,7 +26,7 @@ def convert_model(saved_model_dir, tflite_model_path):
     converter.optimizations = [tf.lite.Optimize.DEFAULT]
     try:
         tflite_model = converter.convert()
-        with open(tflite_model_path, 'wb') as f:
+        with open(tflite_model_path, "wb") as f:
             f.write(tflite_model)
         logging.info(f"TFLite model saved to {tflite_model_path}")
     except Exception as e:
@@ -42,9 +42,13 @@ def main(output_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='Download and convert model to TFLite.'
+        description="Download and convert model to TFLite."
     )
-    parser.add_argument('--output_path', type=str, required=True,
-                        help='The output path for the converted TFLite model.')
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        required=True,
+        help="The output path for the converted TFLite model.",
+    )
     args = parser.parse_args()
     main(args.output_path)

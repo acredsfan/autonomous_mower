@@ -10,8 +10,15 @@ from mower.simulation.actuators.motor_sim import SimulatedMotorController
 from mower.simulation.actuators.blade_sim import SimulatedBladeController
 from mower.simulation.sensors.tof_sim import SimulatedToF
 from mower.simulation.sensors.imu_sim import SimulatedImu
-from mower.simulation.sensors.gps_sim import SimulatedGpsPosition, SimulatedGpsLatestPosition
-from mower.simulation.world_model import get_world_instance, Vector2D, reset_world
+from mower.simulation.sensors.gps_sim import (
+    SimulatedGpsPosition,
+    SimulatedGpsLatestPosition,
+)
+from mower.simulation.world_model import (
+    get_world_instance,
+    Vector2D,
+    reset_world,
+)
 from mower.simulation import enable_simulation, is_simulation_enabled
 import os
 import pytest
@@ -217,7 +224,9 @@ def sim_motor_controller(sim_world):
 
 
 @pytest.fixture(scope="function")
-def sim_hardware(sim_gps, sim_imu, sim_tof, sim_blade_controller, sim_motor_controller):
+def sim_hardware(
+    sim_gps, sim_imu, sim_tof, sim_blade_controller, sim_motor_controller
+):
     """
     Fixture for all simulated hardware components.
 
@@ -239,7 +248,7 @@ def sim_hardware(sim_gps, sim_imu, sim_tof, sim_blade_controller, sim_motor_cont
         "imu": sim_imu,
         "tof": sim_tof,
         "blade_controller": sim_blade_controller,
-        "motor_controller": sim_motor_controller
+        "motor_controller": sim_motor_controller,
     }
 
     # Return the dictionary

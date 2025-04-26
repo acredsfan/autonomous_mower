@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 class WebInterface:
     """Web interface for controlling the mower."""
 
-    def __init__(self, mower: 'Mower'):
+    def __init__(self, mower: "Mower"):
         """Initialize the web interface.
 
         Args:
@@ -47,9 +47,8 @@ class WebInterface:
 
             # Start the web server in a separate thread
             self._thread = threading.Thread(
-                target=self._run_server,
-                daemon=True
-                )
+                target=self._run_server, daemon=True
+            )
             self._thread.start()
 
             self._is_running = True
@@ -98,12 +97,12 @@ class WebInterface:
             if self.socketio and self.app:
                 self.socketio.run(
                     self.app,
-                    host='0.0.0.0',
+                    host="0.0.0.0",
                     port=5000,
                     debug=False,
                     use_reloader=False,
-                    allow_unsafe_werkzeug=True
-                    )
+                    allow_unsafe_werkzeug=True,
+                )
         except Exception as e:
             self.logger.error(f"Error in web server thread: {e}")
             self._is_running = False

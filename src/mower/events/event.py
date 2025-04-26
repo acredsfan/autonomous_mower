@@ -83,7 +83,7 @@ class Event:
         event_type: EventType,
         data: Optional[Dict[str, Any]] = None,
         priority: EventPriority = EventPriority.NORMAL,
-        source: Optional[str] = None
+        source: Optional[str] = None,
     ):
         """
         Initialize an event.
@@ -127,7 +127,7 @@ class Event:
         }
 
     @classmethod
-    def from_dict(cls, event_dict: Dict[str, Any]) -> 'Event':
+    def from_dict(cls, event_dict: Dict[str, Any]) -> "Event":
         """
         Create an event from a dictionary.
 
@@ -153,7 +153,7 @@ def create_event(
     event_type: EventType,
     data: Optional[Dict[str, Any]] = None,
     priority: EventPriority = EventPriority.NORMAL,
-    source: Optional[str] = None
+    source: Optional[str] = None,
 ) -> Event:
     """
     Create an event.

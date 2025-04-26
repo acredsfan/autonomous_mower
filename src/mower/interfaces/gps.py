@@ -14,6 +14,7 @@ from datetime import datetime
 
 class GPSFixType(Enum):
     """Enum for different GPS fix types."""
+
     NO_FIX = 0
     GPS_FIX = 1
     DGPS_FIX = 2
@@ -171,7 +172,9 @@ class RTKGPSModuleInterface(GPSModuleInterface):
         pass
 
     @abstractmethod
-    def set_rtk_base_position(self, latitude: float, longitude: float, altitude: float) -> bool:
+    def set_rtk_base_position(
+        self, latitude: float, longitude: float, altitude: float
+    ) -> bool:
         """
         Set the position of the RTK base station.
 
@@ -186,7 +189,14 @@ class RTKGPSModuleInterface(GPSModuleInterface):
         pass
 
     @abstractmethod
-    def connect_to_ntrip(self, host: str, port: int, mountpoint: str, username: str, password: str) -> bool:
+    def connect_to_ntrip(
+        self,
+        host: str,
+        port: int,
+        mountpoint: str,
+        username: str,
+        password: str,
+    ) -> bool:
         """
         Connect to an NTRIP server for RTK corrections.
 
@@ -232,7 +242,9 @@ class PositioningSystemInterface(ABC):
         pass
 
     @abstractmethod
-    def register_positioning_source(self, source_id: str, source: Any) -> bool:
+    def register_positioning_source(
+        self, source_id: str, source: Any
+    ) -> bool:
         """
         Register a positioning source with the system.
 

@@ -31,10 +31,12 @@ Configuration:
 """
 
 import json
+import os
 import threading
 import time
 from enum import Enum
 from pathlib import Path
+from typing import Any, Optional
 
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
@@ -47,11 +49,15 @@ from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
 from mower.hardware.sensor_interface import get_sensor_interface
 from mower.navigation.localization import Localization
 from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, LearningConfig, PatternType
+    PathPlanner,
+    PatternConfig,
+    LearningConfig,
+    PatternType,
 )
 from mower.navigation.navigation import NavigationController, NavigationStatus
 from mower.obstacle_detection.avoidance_algorithm import (
-    AvoidanceAlgorithm, AvoidanceState
+    AvoidanceAlgorithm,
+    AvoidanceState,
 )
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.ui.web_ui import WebInterface
@@ -70,6 +76,7 @@ CONFIG_DIR = BASE_DIR / "config"
 # System state enumeration
 class SystemState(Enum):
     """Enumeration of possible system states."""
+
     IDLE = "idle"
     MOWING = "mowing"
     DOCKING = "docking"
@@ -106,7 +113,7 @@ class ResourceManager:
         config_path = self.user_polygon_path.parent / filename
         if config_path.exists():
             try:
-                with open(config_path, 'r') as f:
+                with open(config_path, "r") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading config file {filename}: {e}")
@@ -118,42 +125,98 @@ class ResourceManager:
             # Initialize all hardware resources
             self._resources["gpio"] = GPIOManager()
             self._resources["imu"] = BNO085Sensor()
-            # Initialize BME280 sensor on I2C bus
-            import board
-            import busio
-            from mower.hardware.bme280 import BME280Sensor
-            bme = BME280Sensor._initialize(busio.I2C(board.SCL, board.SDA))
-            self._resources["bme280"] = bme
-            self._resources["ina3221"] = INA3221Sensor()
-            self._resources["tof"] = VL53L0XSensors()
-            self._resources["motor_driver"] = RoboHATDriver()
-            self._resources["blade"] = BladeController()
-            self._resources["camera"] = get_camera_instance()
-            self._resources["gps_serial"] = SerialPort(GPS_PORT, GPS_BAUDRATE)
+
+            # Initialize INA3221 sensor
+            try:
+                self._resources["ina3221"] = INA3221Sensor()
+                logger.info("INA3221 power monitor initialized successfully")
+            except Exception as e:
+                logger.warning(f"Error initializing INA3221 sensor: {e}")
+                self._resources["ina3221"] = None
+
+            # Initialize ToF (VL53L0X) sensors
+            try:
+                self._resources["tof"] = VL53L0XSensors()
+                logger.info(
+                    "VL53L0X time-of-flight sensors initialized successfully"
+                )
+            except Exception as e:
+                logger.warning(f"Error initializing VL53L0X sensors: {e}")
+                self._resources["tof"] = None
+
+            # Initialize motor controller
+            try:
+                self._resources["motor_driver"] = RoboHATDriver()
+                logger.info("RoboHAT motor driver initialized successfully")
+            except Exception as e:
+                logger.error(f"Error initializing motor driver: {e}")
+                self._resources["motor_driver"] = None
+
+            # Initialize blade controller
+            try:
+                self._resources["blade"] = BladeController()
+                logger.info("Blade controller initialized successfully")
+            except Exception as e:
+                logger.warning(f"Error initializing blade controller: {e}")
+                self._resources["blade"] = None
+
+            # Initialize camera
+            try:
+                self._resources["camera"] = get_camera_instance()
+                logger.info("Camera initialized successfully")
+            except Exception as e:
+                logger.warning(f"Error initializing camera: {e}")
+                self._resources["camera"] = None
+
+            # Initialize GPS serial port
+            try:
+                self._resources["gps_serial"] = SerialPort(
+                    GPS_PORT, GPS_BAUDRATE
+                )
+                logger.info(
+                    f"GPS serial port initialized on {GPS_PORT} at "
+                    f"{GPS_BAUDRATE} baud"
+                )
+            except Exception as e:
+                logger.warning(f"Error initializing GPS serial port: {e}")
+                self._resources["gps_serial"] = None
 
             # Initialize each resource if possible
-            for name, res in self._resources.items():
+            for name, res in list(self._resources.items()):
+                if res is None:
+                    continue
+
                 if hasattr(res, "initialize"):
                     try:
                         res.initialize()
                     except Exception as e:
                         logger.error(f"Error initializing {name}: {e}")
+                        self._resources[name] = None
                 elif hasattr(res, "_initialize"):
                     try:
                         res._initialize()
                     except Exception as e:
                         logger.error(f"Error initializing {name}: {e}")
+                        self._resources[name] = None
 
-            logger.info("All hardware components initialized successfully")
+            logger.info(
+                "Hardware components initialized with fallbacks for any "
+                "failures"
+            )
         except Exception as e:
-            logger.error(f"Error initializing hardware: {e}")
+            logger.error(f"Critical error in hardware initialization: {e}")
             raise
 
     def _initialize_software(self):
         """Initialize all software components."""
         try:
             # Initialize localization
-            self._resources["localization"] = Localization()
+            try:
+                self._resources["localization"] = Localization()
+                logger.info("Localization system initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize localization: {e}")
+                self._resources["localization"] = None
 
             # Initialize pattern planner with learning capabilities
             pattern_config = PatternConfig(
@@ -161,8 +224,11 @@ class ResourceManager:
                 spacing=0.3,  # 30cm spacing between passes
                 angle=0.0,  # Start with parallel to x-axis
                 overlap=0.1,  # 10% overlap between passes
-                start_point=(0.0, 0.0),  # Will be updated with actual position
-                boundary_points=[]  # Will be loaded from config
+                start_point=(
+                    0.0,
+                    0.0,
+                ),  # Will be updated with actual position
+                boundary_points=[],  # Will be loaded from config
             )
 
             learning_config = LearningConfig(
@@ -172,56 +238,138 @@ class ResourceManager:
                 memory_size=1000,
                 batch_size=32,
                 update_frequency=100,
-                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json")
+                model_path=str(
+                    CONFIG_DIR / "models" / "pattern_planner.json"
+                ),
             )
 
-            self._resources["path_planner"] = PathPlanner(
-                pattern_config, learning_config
-            )
+            try:
+                self._resources["path_planner"] = PathPlanner(
+                    pattern_config, learning_config
+                )
+                logger.info("Path planner initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize path planner: {e}")
+                self._resources["path_planner"] = None
 
             # Initialize frame-based obstacle detector (camera)
-            self._resources["obstacle_detector"] = ObstacleDetector(self)
+            try:
+                self._resources["obstacle_detector"] = ObstacleDetector(self)
+                logger.info("Obstacle detector initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize obstacle detector: {e}")
+                self._resources["obstacle_detector"] = None
 
             # Obtain sensor interface singleton
-            sensor_interface = get_sensor_interface()
-            self._resources["sensor_interface"] = sensor_interface
-            # Initialize NavigationController with gps, motor driver,
-            # and sensor interface
-            self._resources["navigation"] = NavigationController(
-                self._resources["localization"],
-                self._resources["motor_driver"],
-                sensor_interface
+            try:
+                sensor_interface = get_sensor_interface()
+                self._resources["sensor_interface"] = sensor_interface
+                logger.info("Sensor interface initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize sensor interface: {e}")
+                sensor_interface = None
+                self._resources["sensor_interface"] = None
+
+            # Initialize NavigationController
+            try:
+                # Get dependencies, providing fallbacks if they're not
+                # available
+                localization = self._resources.get("localization")
+                motor_driver = self._resources.get("motor_driver")
+
+                if localization and motor_driver and sensor_interface:
+                    self._resources["navigation"] = NavigationController(
+                        localization, motor_driver, sensor_interface
+                    )
+                    logger.info(
+                        "Navigation controller initialized successfully"
+                    )
+                else:
+                    missing = []
+                    if not localization:
+                        missing.append("localization")
+                    if not motor_driver:
+                        missing.append("motor_driver")
+                    if not sensor_interface:
+                        missing.append("sensor_interface")
+                    logger.error(
+                        f"Cannot initialize navigation controller - "
+                        f"missing dependencies: {missing}"
+                    )
+                    self._resources["navigation"] = None
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize navigation controller: {e}"
+                )
+                self._resources["navigation"] = None
+
+            # Initialize the avoidance algorithm
+            try:
+                # Initialize with resource manager for dependency resolution
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
+                    self
+                )
+                logger.info("Avoidance algorithm initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize avoidance algorithm: {e}")
+                self._resources["avoidance_algorithm"] = None
+
+            # Initialize web interface
+            try:
+                # No direct dependency on main controller to avoid circular
+                # imports
+                from mower.ui.web_ui import WebInterface
+
+                # Create web interface with access to resource manager
+                self._resources["web_interface"] = WebInterface(self)
+                logger.info("Web interface initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize web interface: {e}")
+                self._resources["web_interface"] = None
+
+            logger.info(
+                "Software components initialized with fallbacks for any "
+                "failures"
             )
-
-            # Initialize obstacle detection logic
-            self._resources["obstacle_detection"] = AvoidanceAlgorithm(
-                resource_manager=self,
-                pattern_planner=self._resources["path_planner"]
-            )
-
-            # Initialize web interface with resource manager
-            self._resources["web_interface"] = WebInterface(self)
-
-            logger.info("All software components initialized successfully")
         except Exception as e:
-            logger.error(f"Error initializing software: {e}")
-            raise
+            logger.error(f"Critical error in software initialization: {e}")
+            # Don't re-raise here to allow partial initialization
 
     def initialize(self):
         """Initialize all resources."""
-        with self._lock:
-            if self._initialized:
-                return
+        if self._initialized:
+            logger.warning("Resources already initialized")
+            return
 
-            try:
-                self._initialize_hardware()
-                self._initialize_software()
-                self._initialized = True
-                logger.info("All resources initialized successfully")
-            except Exception as e:
-                logger.error(f"Error during initialization: {e}")
-                self.cleanup()
-                raise
+        try:
+            # Set up configuration paths
+            os.makedirs(CONFIG_DIR, exist_ok=True)
+            if not os.path.exists(self.user_polygon_path):
+                logger.warning(
+                    f"User polygon file not found at {self.user_polygon_path}, "
+                    "creating default"
+                )
+                with open(self.user_polygon_path, "w") as f:
+                    json.dump(
+                        {
+                            "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                            "home": [5, 5],
+                        },
+                        f,
+                    )
+
+            # Initialize hardware and software components with robust error
+            # handling
+            self._initialize_hardware()
+            self._initialize_software()
+
+            self._initialized = True
+            logger.info(
+                "All resources initialized with fallbacks for any failures"
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize resources: {e}")
+            self._initialized = False
 
     def init_all_resources(self) -> bool:
         """
@@ -260,20 +408,22 @@ class ResourceManager:
         """Clean up all initialized resources."""
         for name, res in self._resources.items():
             try:
-                if hasattr(res, 'disconnect'):
+                if hasattr(res, "disconnect"):
                     res.disconnect()
-                elif hasattr(res, 'cleanup'):
+                elif hasattr(res, "cleanup"):
                     res.cleanup()
-                elif hasattr(res, 'stop'):
+                elif hasattr(res, "stop"):
                     res.stop()
                 else:
-                    logger.debug(f"No cleanup method for resource '{name}'",)
+                    logger.debug(
+                        f"No cleanup method for resource '{name}'",
+                    )
             except Exception as e:
                 logger.error(f"Error cleaning up resource '{name}': {e}")
         self._resources.clear()
         self._initialized = False
 
-    def get_resource(self, name):
+    def get_resource(self, name: str) -> Any:
         """
         Get a resource by name.
 
@@ -291,31 +441,111 @@ class ResourceManager:
                 raise RuntimeError("Resources not initialized")
             return self._resources[name]
 
-    def get_path_planner(self):
+    def get_path_planner(self) -> Optional[PathPlanner]:
         """Get the path planner instance."""
         return self._resources.get("path_planner")
 
-    def get_navigation(self):
+    def get_navigation(self) -> Optional[NavigationController]:
         """Get the navigation controller instance."""
         return self._resources.get("navigation")
 
-    def get_obstacle_detection(self):
+    def get_obstacle_detection(self) -> Optional[ObstacleDetector]:
         """Get the obstacle detection instance."""
-        return self._resources["obstacle_detection"]
+        return self._resources.get("obstacle_detection")
 
-    def get_web_interface(self):
+    def get_web_interface(self) -> Optional[WebInterface]:
         """Get the web interface instance."""
         return self._resources.get("web_interface")
 
-    def get_camera(self):
+    def get_camera(self) -> Optional[Any]:
         """Get the camera instance."""
         return self._resources.get("camera")
 
-    def get_obstacle_detector(self):
+    def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
         """Get the vision-based obstacle detector instance."""
         return self._resources.get("obstacle_detector")
 
-    def start_web_interface(self) -> None:
+    def get_sensor_interface(self) -> Optional[Any]:
+        """Get the sensor interface instance."""
+        if (
+            "sensor_interface" not in self._resources
+            or self._resources["sensor_interface"] is None
+        ):
+            try:
+                from mower.hardware.sensor_interface import (
+                    get_sensor_interface,
+                )
+
+                self._resources["sensor_interface"] = get_sensor_interface()
+                logger.info("Sensor interface initialized on demand")
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize sensor interface on demand: {e}"
+                )
+                return None
+        return self._resources.get("sensor_interface")
+
+    def get_gps(self) -> Optional[SerialPort]:
+        """Get the GPS serial port instance."""
+        if (
+            "gps_serial" not in self._resources
+            or self._resources["gps_serial"] is None
+        ):
+            try:
+                from mower.hardware.serial_port import (
+                    SerialPort,
+                    GPS_PORT,
+                    GPS_BAUDRATE,
+                )
+
+                self._resources["gps_serial"] = SerialPort(
+                    GPS_PORT, GPS_BAUDRATE
+                )
+                logger.info(
+                    f"GPS serial port initialized on demand on {GPS_PORT}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize GPS serial port on demand: {e}"
+                )
+                return None
+        return self._resources.get("gps_serial")
+
+    def get_navigation_controller(self) -> Optional[NavigationController]:
+        """Get the navigation controller instance."""
+        if (
+            "navigation" not in self._resources
+            or self._resources["navigation"] is None
+        ):
+            try:
+                # Try to initialize navigation controller with dependencies
+                localization = self.get_resource("localization")
+                motor_driver = self.get_robohat_driver()
+                sensor_interface = self.get_sensor_interface()
+
+                if localization and motor_driver and sensor_interface:
+                    from mower.navigation.navigation import (
+                        NavigationController,
+                    )
+
+                    self._resources["navigation"] = NavigationController(
+                        localization, motor_driver, sensor_interface
+                    )
+                    logger.info("Navigation controller initialized on demand")
+                else:
+                    logger.error(
+                        "Cannot initialize navigation controller - missing "
+                        "dependencies"
+                    )
+                    return None
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize navigation controller on demand: {e}"
+                )
+                return None
+        return self._resources.get("navigation")
+
+    def start_web_interface(self):
         """Start the web interface."""
         web = self._resources.get("web_interface")
         if web:
@@ -341,34 +571,105 @@ class ResourceManager:
         return (0, 0)
 
     # Expose hardware interfaces for run_robot and web UI
-    def get_blade_controller(self):
+    def get_blade_controller(self) -> Optional[BladeController]:
         """Return blade controller instance."""
         return self._resources.get("blade")
 
-    def get_robohat_driver(self):
+    def get_robohat_driver(self) -> Optional[RoboHATDriver]:
         """Return motor driver instance."""
         return self._resources.get("motor_driver")
 
-    def get_imu_sensor(self):
+    def get_imu_sensor(self) -> Optional[BNO085Sensor]:
         """Return IMU sensor instance."""
         return self._resources.get("imu")
 
-    def get_avoidance_algorithm(self):
+    def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
         """Return avoidance algorithm instance."""
-        return self._resources.get("obstacle_detection")
+        if (
+            "avoidance_algorithm" not in self._resources
+            or self._resources["avoidance_algorithm"] is None
+        ):
+            try:
+                from mower.obstacle_detection.avoidance_algorithm import (
+                    AvoidanceAlgorithm,
+                )
 
-    def get_navigation_controller(self):
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
+                    self
+                )
+                logger.info("Avoidance algorithm initialized on demand")
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize avoidance algorithm on demand: {e}"
+                )
+                return None
+        return self._resources.get("avoidance_algorithm")
+
+    def get_navigation_controller(self) -> Optional[NavigationController]:
         """Return navigation controller instance."""
         return self._resources.get("navigation")
 
-    def get_ina3221_sensor(self):
+    def get_ina3221_sensor(self) -> Optional[INA3221Sensor]:
         """Return INA3221 power monitoring sensor instance."""
+        # Initialize on first call if needed
+        if (
+            "ina3221" not in self._resources
+            or self._resources["ina3221"] is None
+        ):
+            try:
+                from mower.hardware.ina3221 import INA3221Sensor
+
+                self._resources["ina3221"] = INA3221Sensor(address=0x40)
+                logger.info("INA3221 sensor initialized on demand")
+            except Exception as e:
+                logger.error(f"Failed to initialize INA3221 sensor: {e}")
+                return None
         return self._resources.get("ina3221")
 
-    def get_home_location(self):
+    def get_gps_latest_position(self) -> Optional[Any]:
+        """Return the latest GPS position."""
+        # Initialize on first call if needed
+        if (
+            "gps_latest_position" not in self._resources
+            or self._resources["gps_latest_position"] is None
+        ):
+            try:
+                from mower.interfaces.gps import GpsLatestPosition
+
+                # Get GPS device from resources or initialize
+                gps_device = (
+                    self.get_resource("gps")
+                    if "gps" in self._resources
+                    else None
+                )
+                if not gps_device:
+                    # Initialize GPS device if needed
+                    from mower.hardware.serial_port import (
+                        SerialPort,
+                        GPS_PORT,
+                        GPS_BAUDRATE,
+                    )
+
+                    gps_device = SerialPort(GPS_PORT, GPS_BAUDRATE)
+                    self._resources["gps"] = gps_device
+
+                self._resources["gps_latest_position"] = GpsLatestPosition(
+                    gps_device
+                )
+                logger.info(
+                    "GPS latest position tracker initialized on demand"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Failed to initialize GPS position tracker: {e}"
+                )
+                return None
+        return self._resources.get("gps_latest_position")
+
+    def get_home_location(self) -> dict:
         """Load home location polygon from config."""
         try:
-            with open(self.user_polygon_path, 'r') as f:
+            with open(self.user_polygon_path, "r") as f:
                 data = json.load(f)
             return data
         except Exception as e:
@@ -376,34 +677,34 @@ class ResourceManager:
             return {}
 
     # Stub methods for web UI
-    def get_status(self):
+    def get_status(self) -> dict:
         """Return current status for web UI."""
         return {}
 
-    def get_safety_status(self):
+    def get_safety_status(self) -> dict:
         return {}
 
-    def get_sensor_data(self):
+    def get_sensor_data(self) -> dict:
         return {}
 
-    def get_current_path(self):
+    def get_current_path(self) -> list:
         """Return current planned path."""
         planner = self.get_path_planner()
-        return getattr(planner, 'current_path', [])
+        return getattr(planner, "current_path", [])
 
-    def emergency_stop(self):
+    def emergency_stop(self) -> bool:
         """Perform emergency stop."""
         # attempt to stop operations
-        if 'navigation' in self._resources:
+        if "navigation" in self._resources:
             try:
-                self._resources['navigation'].stop()
+                self._resources["navigation"].stop()
             except Exception:
                 pass
         return True
 
-    def set_mowing_schedule(self, schedule):
+    def set_mowing_schedule(self, schedule: dict) -> bool:
         """Store mowing schedule."""
-        self._resources['schedule'] = schedule
+        self._resources["schedule"] = schedule
         return True
 
 
@@ -439,7 +740,7 @@ class RobotController:
         - For unexpected stops, check sensor readings and obstacle detection
     """
 
-    def __init__(self, resource_manager):
+    def __init__(self, resource_manager: ResourceManager):
         """
         Initialize the robot controller with resource manager and default
         state.
@@ -459,21 +760,23 @@ class RobotController:
 
         # Load home location from configuration
         try:
-            home_config = self._load_config('home_location.json')
-            if home_config and 'location' in home_config:
-                self.home_location = home_config['location']
+            home_config = self._load_config("home_location.json")
+            if home_config and "location" in home_config:
+                self.home_location = home_config["location"]
                 logger.info(f"Loaded home location: {self.home_location}")
         except Exception as e:
             logger.error(f"Failed to load home location: {e}")
 
         logger.info("Robot controller initialized")
 
-    def _load_config(self, filename):
+    def _load_config(self, filename: str) -> dict:
         """Load a configuration file from the standard config location."""
-        config_path = self.resource_manager.user_polygon_path.parent / filename
+        config_path = (
+            self.resource_manager.user_polygon_path.parent / filename
+        )
         if config_path.exists():
             try:
-                with open(config_path, 'r') as f:
+                with open(config_path, "r") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading config file {filename}: {e}")
@@ -512,8 +815,8 @@ class RobotController:
                 self.resource_manager.get_navigation_controller()
             )
 
-            # Start the web interface
-            self.resource_manager.start_web_interface()
+            # Web interface is started in main(), don't start it twice
+            # self.resource_manager.start_web_interface()
 
             # Start primary systems
             self.avoidance_algorithm.start()
@@ -532,7 +835,7 @@ class RobotController:
         finally:
             # Clean up resources when shutting down
             logger.info("Shutting down robot...")
-            if hasattr(self, 'avoidance_algorithm'):
+            if hasattr(self, "avoidance_algorithm"):
                 self.avoidance_algorithm.stop()
             self.resource_manager.cleanup_all_resources()
 
@@ -562,9 +865,7 @@ class RobotController:
                     avoidance_state = self.avoidance_algorithm.current_state
                     if avoidance_state != AvoidanceState.NORMAL:
                         if not self.avoidance_active:
-                            logger.info(
-                                "Avoidance activated, pausing mowing"
-                            )
+                            logger.info("Avoidance activated, pausing mowing")
                             self.avoidance_active = True
                             self.current_state = SystemState.AVOIDING
 
@@ -584,8 +885,8 @@ class RobotController:
                             self.avoidance_algorithm.recovery_attempts
                         )
                         if (
-                            recovery_attempts >=
-                                self.avoidance_algorithm.max_recovery_attempts
+                            recovery_attempts
+                            >= self.avoidance_algorithm.max_recovery_attempts
                         ):
                             logger.error(
                                 "Failed to recover from obstacle after "
@@ -622,7 +923,7 @@ class RobotController:
             self.current_state = SystemState.ERROR
             self.error_condition = str(e)
 
-    def _check_emergency_conditions(self):
+    def _check_emergency_conditions(self) -> bool:
         """
         Check for conditions that would trigger an emergency stop.
 
@@ -653,7 +954,7 @@ class RobotController:
             # Default to emergency stop on error to be safe
             return True
 
-    def _check_at_home(self):
+    def _check_at_home(self) -> bool:
         """
         Check if the robot has reached the home location.
 
@@ -677,12 +978,16 @@ class RobotController:
 
             # Calculate distance to home
             home_lat, home_lng = self.home_location
-            current_lat, current_lng = current_position[1], current_position[2]
+            current_lat, current_lng = (
+                current_position[1],
+                current_position[2],
+            )
 
             # Simple Euclidean distance (for more accurate distance, use
             # haversine formula)
-            distance = ((home_lat - current_lat) ** 2 +
-                        (home_lng - current_lng) ** 2) ** 0.5
+            distance = (
+                (home_lat - current_lat) ** 2 + (home_lng - current_lng) ** 2
+            ) ** 0.5
 
             # Threshold distance to consider "at home" (in coordinate units)
             # This should be converted to meters and set appropriately
@@ -693,7 +998,7 @@ class RobotController:
             logger.error(f"Error checking home position: {e}")
             return False
 
-    def mow_yard(self):
+    def mow_yard(self) -> bool:
         """
         Main mowing operation logic for autonomous mowing.
 
@@ -727,7 +1032,9 @@ class RobotController:
             path_planner = self.resource_manager.get_path_planner()
 
             # Update path planner with current position
-            current_pos = self.resource_manager.get_navigation().get_position()
+            current_pos = (
+                self.resource_manager.get_navigation().get_position()
+            )
             path_planner.pattern_config.start_point = current_pos
 
             # Generate mowing path
@@ -789,11 +1096,13 @@ class RobotController:
 
             return False
 
-    def _navigate_to_waypoint(self, waypoint):
+    def _navigate_to_waypoint(self, waypoint) -> bool:
         """Navigate to a specific waypoint."""
         try:
             navigation = self.resource_manager.get_navigation()
-            obstacle_detection = self.resource_manager.get_obstacle_detection()
+            obstacle_detection = (
+                self.resource_manager.get_obstacle_detection()
+            )
 
             # Set target waypoint
             navigation.set_target(waypoint)
@@ -824,7 +1133,7 @@ class RobotController:
             logger.error(f"Error navigating to waypoint: {e}")
             return False
 
-    def _return_home(self):
+    def _return_home(self) -> bool:
         """
         Navigate back to the home/charging location.
 
@@ -852,7 +1161,7 @@ class RobotController:
             logger.error(f"Error initiating return to home: {e}")
             return False
 
-    def start_manual_control(self):
+    def start_manual_control(self) -> bool:
         """
         Switch to manual control mode.
 
@@ -860,8 +1169,9 @@ class RobotController:
             bool: True if successfully switched to manual mode, False otherwise
         """
         if self.current_state in [
-                SystemState.ERROR,
-                SystemState.EMERGENCY_STOP]:
+            SystemState.ERROR,
+            SystemState.EMERGENCY_STOP,
+        ]:
             logger.warning(
                 f"Cannot start manual control from state "
                 f"{self.current_state}"
@@ -871,9 +1181,10 @@ class RobotController:
         try:
             # Stop any active autonomous operations
             if self.current_state in [
-                    SystemState.MOWING,
-                    SystemState.AVOIDING,
-                    SystemState.RETURNING_HOME]:
+                SystemState.MOWING,
+                SystemState.AVOIDING,
+                SystemState.RETURNING_HOME,
+            ]:
                 self.navigation_controller.stop()
 
             self.current_state = SystemState.MANUAL_CONTROL
@@ -883,7 +1194,7 @@ class RobotController:
             logger.error(f"Error switching to manual control: {e}")
             return False
 
-    def stop_all_operations(self):
+    def stop_all_operations(self) -> bool:
         """
         Stop all operations and return to IDLE state.
 
@@ -897,7 +1208,9 @@ class RobotController:
 
             # Return to IDLE state if not in ERROR or EMERGENCY_STOP
             if self.current_state not in [
-                    SystemState.ERROR, SystemState.EMERGENCY_STOP]:
+                SystemState.ERROR,
+                SystemState.EMERGENCY_STOP,
+            ]:
                 self.current_state = SystemState.IDLE
 
             logger.info("All operations stopped")
@@ -941,8 +1254,7 @@ def main():
         # Using daemon=True ensures thread terminates when main thread
         # exits
         robot_thread = threading.Thread(
-            target=robot_controller.run_robot,
-            daemon=True
+            target=robot_controller.run_robot, daemon=True
         )
         robot_thread.start()
         logger.info("Robot logic thread started.")

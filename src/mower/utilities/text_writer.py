@@ -1,8 +1,6 @@
 import os
 
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 logger = LoggerConfig.get_logger(__name__)
 
@@ -16,9 +14,13 @@ class TextLogger:
     like tuples or arrays as CSV.
     """
 
-    def __init__(self, file_path: str, append: bool = False,
-                 allow_empty_file: bool = False,
-                 allow_empty_line: bool = True):
+    def __init__(
+        self,
+        file_path: str,
+        append: bool = False,
+        allow_empty_file: bool = False,
+        allow_empty_line: bool = True,
+    ):
         self.file_path = file_path
         self.append = append
         self.allow_empty_file = allow_empty_file
@@ -40,8 +42,11 @@ class TextLogger:
         return not self.is_empty()
 
     def get(self, row_index: int):
-        return (self.rows[row_index] if (row_index >= 0) and
-                (row_index < self.length()) else None)
+        return (
+            self.rows[row_index]
+            if (row_index >= 0) and (row_index < self.length())
+            else None
+        )
 
     def reset(self):
         self.rows = []
@@ -62,7 +67,7 @@ class TextLogger:
         convert a string into a row object
         """
         if isinstance(line, str):
-            line = line.rstrip('\n')
+            line = line.rstrip("\n")
             if self.allow_empty_line or len(line) > 0:
                 return line
         return None
@@ -74,7 +79,7 @@ class TextLogger:
                     line = self.row_to_line(row)
                     if line is not None:
                         fp.write(self.row_to_line(row))
-                        fp.write('\n')
+                        fp.write("\n")
             return True
         return False
 
@@ -98,11 +103,19 @@ class CsvLogger(TextLogger):
     The separator can be customized.
     """
 
-    def __init__(self, file_path: str, append: bool = False,
-                 allow_empty_file: bool = False,
-                 allow_empty_line: bool = True, separator: str = ",",
-                 field_count: int = None, trim: bool = True):
-        super().__init__(file_path, append, allow_empty_file, allow_empty_line)
+    def __init__(
+        self,
+        file_path: str,
+        append: bool = False,
+        allow_empty_file: bool = False,
+        allow_empty_line: bool = True,
+        separator: str = ",",
+        field_count: int = None,
+        trim: bool = True,
+    ):
+        super().__init__(
+            file_path, append, allow_empty_file, allow_empty_line
+        )
         self.separator = separator
         self.field_count = field_count
         self.trim = trim
@@ -123,7 +136,7 @@ class CsvLogger(TextLogger):
         """
         row = None
         if isinstance(line, str):
-            row = line.rstrip('\n').split(self.separator)
+            row = line.rstrip("\n").split(self.separator)
             field_count = len(row)
             if self.field_count is None or field_count == self.field_count:
                 if self.trim:
@@ -132,7 +145,7 @@ class CsvLogger(TextLogger):
                 row = None
                 logger.debug(
                     f"CsvLogger: dropping row with field count = {field_count}"
-                    )
+                )
         else:
             logger.error("CsvLogger: line_to_row expected string")
         return row

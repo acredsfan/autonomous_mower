@@ -8,26 +8,23 @@ from dataclasses import dataclass
 import numpy as np
 from shapely.geometry import Point, Polygon
 
-from mower.navigation.gps import (
-    GpsLatestPosition,
-    GpsNmeaPositions
-    )
-from mower.utilities.logger_config import (
-    LoggerConfigInfo as LoggerConfig
-    )
+from mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.constants import (
     max_lat,
     max_lng,
     min_lat,
     min_lng,
-    polygon_coordinates
-    )
+    polygon_coordinates,
+)
 
 
 LoggerConfig.configure_logging()
 logging = LoggerConfig.get_logger(__name__)
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
 
 
 @dataclass
@@ -56,14 +53,15 @@ class Localization:
 
     def __init__(self):
         """Initialize the localization system."""
-        if hasattr(self, '_initialized'):
+        if hasattr(self, "_initialized"):
             return
         self._initialized = True
 
         # Initialize GPS components
         self.position_reader = GpsNmeaPositions(debug=False)
         self.latest_position = GpsLatestPosition(
-            self.position_reader, debug=False)
+            self.position_reader, debug=False
+        )
 
         # Initialize position tracking
         self.position = Position(
@@ -72,8 +70,8 @@ class Localization:
             altitude=0.0,
             heading=0.0,
             accuracy=0.0,
-            last_update=time.time()
-            )
+            last_update=time.time(),
+        )
 
         # Initialize sensor interface and position tracking
         self.sensor_interface = None
@@ -83,11 +81,11 @@ class Localization:
         # Initialize boundaries
         self.yard_boundary = polygon_coordinates
         self.boundaries = {
-            'min_lat': min_lat,
-            'max_lat': max_lat,
-            'min_lng': min_lng,
-            'max_lng': max_lng
-            }
+            "min_lat": min_lat,
+            "max_lat": max_lat,
+            "min_lng": min_lng,
+            "max_lng": max_lng,
+        }
 
         # Kalman filter parameters
         self.kalman_state = None
@@ -99,8 +97,9 @@ class Localization:
         """Get or initialize the enhanced sensor interface."""
         if self.sensor_interface is None:
             from mower.hardware.sensor_interface import (
-                EnhancedSensorInterface
-                )
+                EnhancedSensorInterface,
+            )
+
             self.sensor_interface = EnhancedSensorInterface()
         return self.sensor_interface
 
@@ -119,7 +118,7 @@ class Localization:
             # Get GPS data
             gps_data = self.latest_position.run()
 
-            if gps_data and 'heading' in sensor_data:
+            if gps_data and "heading" in sensor_data:
                 return self._process_sensor_data(gps_data, sensor_data)
             else:
                 return self._handle_limited_data(sensor_data)
@@ -129,10 +128,8 @@ class Localization:
             return (self.position.latitude, self.position.longitude)
 
     def _process_sensor_data(
-            self,
-            gps_data: Dict,
-            sensor_data: Dict
-            ) -> Tuple[float, float]:
+        self, gps_data: Dict, sensor_data: Dict
+    ) -> Tuple[float, float]:
         """
         Process GPS and sensor data for position estimation.
 
@@ -143,9 +140,9 @@ class Localization:
         Returns:
             Tuple[float, float]: Processed latitude and longitude
         """
-        gps_lat = gps_data['latitude']
-        gps_lon = gps_data['longitude']
-        imu_heading = sensor_data['heading']
+        gps_lat = gps_data["latitude"]
+        gps_lon = gps_data["longitude"]
+        imu_heading = sensor_data["heading"]
 
         # Initialize Kalman filter if needed
         if self.kalman_state is None:
@@ -156,18 +153,15 @@ class Localization:
         predicted_pos = self._predict_position(
             self.kalman_state,
             imu_heading,
-            sensor_data.get('speed', 0),
-            time.time() - self.position.last_update
-            )
+            sensor_data.get("speed", 0),
+            time.time() - self.position.last_update,
+        )
 
         # Update Kalman filter
         kalman_gain = self._calculate_kalman_gain()
         self.kalman_state = self._update_kalman_state(
-            predicted_pos,
-            kalman_gain,
-            gps_lat,
-            gps_lon
-            )
+            predicted_pos, kalman_gain, gps_lat, gps_lon
+        )
 
         # Update position data
         self._update_position_data(imu_heading)
@@ -184,13 +178,13 @@ class Localization:
         Returns:
             Tuple[float, float]: Best estimate of position
         """
-        if self.kalman_state is not None and 'heading' in sensor_data:
+        if self.kalman_state is not None and "heading" in sensor_data:
             predicted_pos = self._predict_position(
                 self.kalman_state,
-                sensor_data['heading'],
-                sensor_data.get('speed', 0),
-                time.time() - self.position.last_update
-                )
+                sensor_data["heading"],
+                sensor_data.get("speed", 0),
+                time.time() - self.position.last_update,
+            )
             self.kalman_state = predicted_pos
             self.kalman_covariance += self.process_noise
 
@@ -202,12 +196,12 @@ class Localization:
         return (self.position.latitude, self.position.longitude)
 
     def _predict_position(
-            self,
-            current_pos: np.ndarray,
-            heading: float,
-            speed: float,
-            time_delta: float
-            ) -> np.ndarray:
+        self,
+        current_pos: np.ndarray,
+        heading: float,
+        speed: float,
+        time_delta: float,
+    ) -> np.ndarray:
         """
         Predict next position based on current motion.
 
@@ -230,16 +224,17 @@ class Localization:
 
     def _calculate_kalman_gain(self) -> float:
         """Calculate Kalman gain for position updating."""
-        return (self.kalman_covariance /
-                (self.kalman_covariance + self.measurement_noise))
+        return self.kalman_covariance / (
+            self.kalman_covariance + self.measurement_noise
+        )
 
     def _update_kalman_state(
-            self,
-            predicted_pos: np.ndarray,
-            kalman_gain: float,
-            gps_lat: float,
-            gps_lon: float
-            ) -> np.ndarray:
+        self,
+        predicted_pos: np.ndarray,
+        kalman_gain: float,
+        gps_lat: float,
+        gps_lon: float,
+    ) -> np.ndarray:
         """
         Update Kalman filter state with new measurements.
 
@@ -254,8 +249,8 @@ class Localization:
         """
         measurement = np.array([gps_lat, gps_lon])
         self.kalman_covariance = (
-            (1 - kalman_gain) * self.kalman_covariance + self.process_noise
-            )
+            1 - kalman_gain
+        ) * self.kalman_covariance + self.process_noise
         return predicted_pos + kalman_gain * (measurement - predicted_pos)
 
     def _update_position_data(self, heading: float):
@@ -271,7 +266,7 @@ class Localization:
         self.position.last_update = time.time()
         self.position.accuracy = float(
             np.sqrt(self.kalman_covariance.diagonal().mean())
-            )
+        )
 
     def _update_position_from_kalman(self):
         """Update position object from Kalman state."""
@@ -291,23 +286,22 @@ class Localization:
 
             # Update orientation from IMU
             sensor_data = self.get_sensor_interface().get_sensor_data()
-            if 'heading' in sensor_data:
-                self.position.heading = sensor_data['heading']
+            if "heading" in sensor_data:
+                self.position.heading = sensor_data["heading"]
 
             # Check boundary
             in_bounds = self.is_within_yard(new_lat, new_lon)
             if not in_bounds:
-                logging.warning("Position outside"
-                                "yard boundary!")
+                logging.warning("Position outside" "yard boundary!")
 
             return {
-                'latitude': new_lat,
-                'longitude': new_lon,
-                'heading': self.position.heading,
-                'accuracy': self.position.accuracy,
-                'last_update': self.position.last_update,
-                'in_bounds': in_bounds
-                }
+                "latitude": new_lat,
+                "longitude": new_lon,
+                "heading": self.position.heading,
+                "accuracy": self.position.accuracy,
+                "last_update": self.position.last_update,
+                "in_bounds": in_bounds,
+            }
 
         except Exception as e:
             logging.error(f"Update error: {str(e)}")
@@ -324,14 +318,14 @@ class Localization:
             Dict: Status dictionary with error information
         """
         return {
-            'latitude': self.position.latitude,
-            'longitude': self.position.longitude,
-            'heading': self.position.heading,
-            'accuracy': self.position.accuracy,
-            'last_update': self.position.last_update,
-            'in_bounds': False,
-            'error': error_msg
-            }
+            "latitude": self.position.latitude,
+            "longitude": self.position.longitude,
+            "heading": self.position.heading,
+            "accuracy": self.position.accuracy,
+            "last_update": self.position.last_update,
+            "in_bounds": False,
+            "error": error_msg,
+        }
 
     def is_within_yard(self, lat: float, lon: float) -> bool:
         """
@@ -347,10 +341,13 @@ class Localization:
         try:
             # First check simple rectangular bounds
             in_rectangle = (
-                self.boundaries['min_lat'] <= lat <= self.boundaries['max_lat']
-                and
-                self.boundaries['min_lng'] <= lon <= self.boundaries['max_lng']
-                )
+                self.boundaries["min_lat"]
+                <= lat
+                <= self.boundaries["max_lat"]
+                and self.boundaries["min_lng"]
+                <= lon
+                <= self.boundaries["max_lng"]
+            )
 
             if not in_rectangle:
                 return False
@@ -399,7 +396,7 @@ def main():
                 f"Accuracy: {status['accuracy']:.2f}m\n"
                 f"In Bounds: {status['in_bounds']}\n"
                 f"Update Age: {localization.get_last_update_age():.1f}s"
-                )
+            )
             time.sleep(1)
 
     except KeyboardInterrupt:

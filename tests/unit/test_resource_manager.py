@@ -32,9 +32,17 @@ class TestMainResourceManager:
     @patch("mower.main_controller.SerialPort")
     @patch("mower.main_controller.EnhancedSensorInterface")
     def test_initialize_hardware(
-        self, mock_sensor_interface, mock_serial_port, mock_camera,
-        mock_blade, mock_robohat, mock_tof, mock_ina3221, mock_bme280,
-        mock_imu, mock_gpio
+        self,
+        mock_sensor_interface,
+        mock_serial_port,
+        mock_camera,
+        mock_blade,
+        mock_robohat,
+        mock_tof,
+        mock_ina3221,
+        mock_bme280,
+        mock_imu,
+        mock_gpio,
     ):
         """Test initialization of hardware components."""
         # Create a ResourceManager instance
@@ -80,22 +88,27 @@ class TestMainResourceManager:
     @patch("mower.main_controller.WebInterface")
     @patch("mower.main_controller.get_config")
     def test_initialize_software(
-        self, mock_get_config, mock_web_interface, mock_avoidance,
-        mock_navigation, mock_path_planner, mock_localization
+        self,
+        mock_get_config,
+        mock_web_interface,
+        mock_avoidance,
+        mock_navigation,
+        mock_path_planner,
+        mock_localization,
     ):
         """Test initialization of software components."""
         # Configure mock_get_config to return appropriate values
         mock_get_config.side_effect = lambda key, default=None: {
-            'path_planning.pattern_type': 'PARALLEL',
-            'path_planning.spacing': 0.3,
-            'path_planning.angle': 0.0,
-            'path_planning.overlap': 0.1,
-            'path_planning.learning_rate': 0.1,
-            'path_planning.discount_factor': 0.9,
-            'path_planning.exploration_rate': 0.2,
-            'path_planning.memory_size': 1000,
-            'path_planning.batch_size': 32,
-            'path_planning.update_frequency': 100,
+            "path_planning.pattern_type": "PARALLEL",
+            "path_planning.spacing": 0.3,
+            "path_planning.angle": 0.0,
+            "path_planning.overlap": 0.1,
+            "path_planning.learning_rate": 0.1,
+            "path_planning.discount_factor": 0.9,
+            "path_planning.exploration_rate": 0.2,
+            "path_planning.memory_size": 1000,
+            "path_planning.batch_size": 32,
+            "path_planning.update_frequency": 100,
         }.get(key, default)
 
         # Create a ResourceManager instance with mocked hardware components
@@ -159,9 +172,7 @@ class TestMainResourceManager:
 
         # Verify that cleanup_resources was called with the correct arguments
         mock_cleanup_resources.assert_called_once_with(
-            resource_manager._resources,
-            True,
-            resource_manager._lock
+            resource_manager._resources, True, resource_manager._lock
         )
 
         # Verify that _initialized was set to False
@@ -186,9 +197,18 @@ class TestMowerResourceManager:
     @patch("mower.mower.SerialPort")
     @patch("mower.mower.EnhancedSensorInterface")
     def test_initialize_hardware(
-        self, mock_sensor_interface, mock_serial_port, mock_camera,
-        mock_blade_adapter, mock_blade, mock_robohat, mock_tof, mock_ina3221,
-        mock_bme280, mock_imu, mock_gpio
+        self,
+        mock_sensor_interface,
+        mock_serial_port,
+        mock_camera,
+        mock_blade_adapter,
+        mock_blade,
+        mock_robohat,
+        mock_tof,
+        mock_ina3221,
+        mock_bme280,
+        mock_imu,
+        mock_gpio,
     ):
         """Test initialization of hardware components."""
         # Create a ResourceManager instance
@@ -235,23 +255,27 @@ class TestMowerResourceManager:
     @patch("mower.mower.AvoidanceAlgorithm")
     @patch("mower.mower.get_config")
     def test_initialize_software(
-        self, mock_get_config, mock_avoidance,
-        mock_navigation, mock_path_planner, mock_localization
+        self,
+        mock_get_config,
+        mock_avoidance,
+        mock_navigation,
+        mock_path_planner,
+        mock_localization,
     ):
         """Test initialization of software components."""
         # Configure mock_get_config to return appropriate values
         mock_get_config.side_effect = lambda key, default=None: {
-            'path_planning.pattern_type': 'PARALLEL',
-            'path_planning.spacing': 0.3,
-            'path_planning.angle': 0.0,
-            'path_planning.overlap': 0.1,
-            'path_planning.learning.learning_rate': 0.1,
-            'path_planning.learning.discount_factor': 0.9,
-            'path_planning.learning.exploration_rate': 0.2,
-            'path_planning.learning.memory_size': 1000,
-            'path_planning.learning.batch_size': 32,
-            'path_planning.learning.update_frequency': 100,
-            'path_planning.learning.model_path': 'path/to/model',
+            "path_planning.pattern_type": "PARALLEL",
+            "path_planning.spacing": 0.3,
+            "path_planning.angle": 0.0,
+            "path_planning.overlap": 0.1,
+            "path_planning.learning.learning_rate": 0.1,
+            "path_planning.learning.discount_factor": 0.9,
+            "path_planning.learning.exploration_rate": 0.2,
+            "path_planning.learning.memory_size": 1000,
+            "path_planning.learning.batch_size": 32,
+            "path_planning.learning.update_frequency": 100,
+            "path_planning.learning.model_path": "path/to/model",
         }.get(key, default)
 
         # Create a ResourceManager instance with mocked hardware components
@@ -302,11 +326,13 @@ class TestMowerResourceManager:
 
         # Call _save_config
         result = resource_manager._save_config(
-            "test_config.json", {"test_key": "test_value"})
+            "test_config.json", {"test_key": "test_value"}
+        )
 
         # Verify that save_config was called with the correct arguments
         mock_save_config.assert_called_once_with(
-            "test_config.json", {"test_key": "test_value"})
+            "test_config.json", {"test_key": "test_value"}
+        )
 
         # Verify that the correct result was returned
         assert result is True
@@ -331,7 +357,7 @@ class TestMowerResourceManager:
         mock_cleanup_resources.assert_called_once_with(
             resource_manager._resources,
             resource_manager._initialized,
-            resource_manager._lock
+            resource_manager._lock,
         )
 
         # Verify that cleanup returned True

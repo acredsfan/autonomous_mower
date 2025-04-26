@@ -29,10 +29,8 @@ def main():
                 (1400, 1400),
                 (1500, 1500),
             ]
-            for (st, th) in test_data:
-                line = (
-                    f"{st}, {th}\r\n"
-                )
+            for st, th in test_data:
+                line = f"{st}, {th}\r\n"
                 ser.write(line.encode())
                 print("Sent:", line.strip())
                 time.sleep(0.4)

@@ -40,7 +40,10 @@ from flask_cors import CORS
 from werkzeug.security import check_password_hash
 
 # Import hardware test suite
-from mower.diagnostics.hardware_test import HardwareTestSuite, initialize_resource_manager
+from mower.diagnostics.hardware_test import (
+    HardwareTestSuite,
+    initialize_resource_manager,
+)
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Configure logging
@@ -91,7 +94,9 @@ class RemoteDiagnostics:
             cpu_info = {
                 "usage_percent": psutil.cpu_percent(interval=1),
                 "temperature": self._get_cpu_temperature(),
-                "frequency": psutil.cpu_freq().current if psutil.cpu_freq() else None,
+                "frequency": (
+                    psutil.cpu_freq().current if psutil.cpu_freq() else None
+                ),
             }
 
             # Get memory information
@@ -104,7 +109,7 @@ class RemoteDiagnostics:
             }
 
             # Get disk information
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_info = {
                 "total": disk.total,
                 "used": disk.used,
@@ -129,12 +134,14 @@ class RemoteDiagnostics:
                     network_info[interface]["addresses"] = addresses
 
             # Combine all information
-            system_info.update({
-                "cpu": cpu_info,
-                "memory": memory_info,
-                "disk": disk_info,
-                "network": network_info,
-            })
+            system_info.update(
+                {
+                    "cpu": cpu_info,
+                    "memory": memory_info,
+                    "disk": disk_info,
+                    "network": network_info,
+                }
+            )
 
             return system_info
         except Exception as e:
@@ -160,10 +167,10 @@ class RemoteDiagnostics:
         try:
             # Try to get temperature from vcgencmd (Raspberry Pi specific)
             result = subprocess.run(
-                ['vcgencmd', 'measure_temp'],
+                ["vcgencmd", "measure_temp"],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
             # Parse output like "temp=42.8'C"
             temp_str = result.stdout.strip()
@@ -181,7 +188,9 @@ class RemoteDiagnostics:
             except (AttributeError, KeyError, IndexError):
                 return None
 
-    def run_hardware_tests(self, test_name: Optional[str] = None) -> Dict[str, Any]:
+    def run_hardware_tests(
+        self, test_name: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Run hardware tests.
 
@@ -221,13 +230,13 @@ class RemoteDiagnostics:
         try:
             # Run systemctl status command
             result = subprocess.run(
-                ['systemctl', 'status', 'autonomous-mower.service'],
+                ["systemctl", "status", "autonomous-mower.service"],
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             # Parse the output
-            lines = result.stdout.strip().split('\n')
+            lines = result.stdout.strip().split("\n")
             status_info = {
                 "exit_code": result.returncode,
                 "active": "Active: active" in result.stdout,
@@ -266,12 +275,16 @@ class RemoteDiagnostics:
             for file_path in log_dir.glob("*.log*"):
                 if file_path.is_file():
                     stats = file_path.stat()
-                    log_files.append({
-                        "name": file_path.name,
-                        "path": str(file_path),
-                        "size": stats.st_size,
-                        "modified": datetime.fromtimestamp(stats.st_mtime).isoformat(),
-                    })
+                    log_files.append(
+                        {
+                            "name": file_path.name,
+                            "path": str(file_path),
+                            "size": stats.st_size,
+                            "modified": datetime.fromtimestamp(
+                                stats.st_mtime
+                            ).isoformat(),
+                        }
+                    )
 
             # Sort by modification time (newest first)
             log_files.sort(key=lambda x: x["modified"], reverse=True)
@@ -280,7 +293,9 @@ class RemoteDiagnostics:
             logger.error(f"Error getting log files: {e}")
             return []
 
-    def get_log_content(self, log_file: str, lines: int = 100) -> Tuple[bool, Union[str, bytes]]:
+    def get_log_content(
+        self, log_file: str, lines: int = 100
+    ) -> Tuple[bool, Union[str, bytes]]:
         """
         Get content of a log file.
 
@@ -303,14 +318,14 @@ class RemoteDiagnostics:
             if log_path.stat().st_size > MAX_LOG_SIZE:
                 # Use tail to get the last N lines
                 result = subprocess.run(
-                    ['tail', '-n', str(lines), str(log_path)],
+                    ["tail", "-n", str(lines), str(log_path)],
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 return True, result.stdout
             else:
                 # Read the entire file
-                with open(log_path, 'r') as f:
+                with open(log_path, "r") as f:
                     content = f.read()
                 return True, content
         except Exception as e:
@@ -326,21 +341,40 @@ class RemoteDiagnostics:
         """
         try:
             mower_processes = []
-            for proc in psutil.process_iter(['pid', 'name', 'username', 'cmdline', 'cpu_percent', 'memory_percent', 'create_time']):
+            for proc in psutil.process_iter(
+                [
+                    "pid",
+                    "name",
+                    "username",
+                    "cmdline",
+                    "cpu_percent",
+                    "memory_percent",
+                    "create_time",
+                ]
+            ):
                 try:
                     # Check if this is a mower-related process
-                    if any('mower' in cmd.lower() for cmd in proc.info['cmdline'] if cmd):
+                    if any(
+                        "mower" in cmd.lower()
+                        for cmd in proc.info["cmdline"]
+                        if cmd
+                    ):
                         proc_info = {
-                            "pid": proc.info['pid'],
-                            "name": proc.info['name'],
-                            "username": proc.info['username'],
-                            "cmdline": ' '.join(proc.info['cmdline']),
-                            "cpu_percent": proc.info['cpu_percent'],
-                            "memory_percent": proc.info['memory_percent'],
-                            "running_time": time.time() - proc.info['create_time'],
+                            "pid": proc.info["pid"],
+                            "name": proc.info["name"],
+                            "username": proc.info["username"],
+                            "cmdline": " ".join(proc.info["cmdline"]),
+                            "cpu_percent": proc.info["cpu_percent"],
+                            "memory_percent": proc.info["memory_percent"],
+                            "running_time": time.time()
+                            - proc.info["create_time"],
                         }
                         mower_processes.append(proc_info)
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    psutil.ZombieProcess,
+                ):
                     pass
             return mower_processes
         except Exception as e:
@@ -364,7 +398,7 @@ CORS(app)  # Enable CORS for all routes
 remote_diagnostics = None
 
 
-@app.route('/api/system', methods=['GET'])
+@app.route("/api/system", methods=["GET"])
 def get_system_info():
     """API endpoint to get system information."""
     global remote_diagnostics
@@ -373,7 +407,7 @@ def get_system_info():
     return jsonify(remote_diagnostics.get_system_info())
 
 
-@app.route('/api/hardware-tests', methods=['GET'])
+@app.route("/api/hardware-tests", methods=["GET"])
 def run_hardware_tests():
     """API endpoint to run hardware tests."""
     global remote_diagnostics
@@ -381,11 +415,11 @@ def run_hardware_tests():
         return jsonify({"error": "Remote diagnostics not initialized"}), 500
 
     # Get test name from query parameter
-    test_name = request.args.get('test')
+    test_name = request.args.get("test")
     return jsonify(remote_diagnostics.run_hardware_tests(test_name))
 
 
-@app.route('/api/service-status', methods=['GET'])
+@app.route("/api/service-status", methods=["GET"])
 def get_service_status():
     """API endpoint to get service status."""
     global remote_diagnostics
@@ -394,7 +428,7 @@ def get_service_status():
     return jsonify(remote_diagnostics.get_service_status())
 
 
-@app.route('/api/logs', methods=['GET'])
+@app.route("/api/logs", methods=["GET"])
 def get_log_files():
     """API endpoint to get list of log files."""
     global remote_diagnostics
@@ -403,7 +437,7 @@ def get_log_files():
     return jsonify(remote_diagnostics.get_log_files())
 
 
-@app.route('/api/logs/<log_file>', methods=['GET'])
+@app.route("/api/logs/<log_file>", methods=["GET"])
 def get_log_content(log_file):
     """API endpoint to get content of a log file."""
     global remote_diagnostics
@@ -411,15 +445,15 @@ def get_log_content(log_file):
         return jsonify({"error": "Remote diagnostics not initialized"}), 500
 
     # Get number of lines from query parameter
-    lines = request.args.get('lines', default=100, type=int)
+    lines = request.args.get("lines", default=100, type=int)
     success, content = remote_diagnostics.get_log_content(log_file, lines)
     if success:
-        return Response(content, mimetype='text/plain')
+        return Response(content, mimetype="text/plain")
     else:
         return jsonify({"error": content}), 404
 
 
-@app.route('/api/processes', methods=['GET'])
+@app.route("/api/processes", methods=["GET"])
 def get_process_info():
     """API endpoint to get process information."""
     global remote_diagnostics
@@ -447,21 +481,23 @@ def main():
 
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
-        description='Run remote diagnostics server for the autonomous mower')
+        description="Run remote diagnostics server for the autonomous mower"
+    )
     parser.add_argument(
-        '--port',
+        "--port",
         type=int,
         default=DEFAULT_PORT,
-        help=f'Port to listen on (default: {DEFAULT_PORT})')
+        help=f"Port to listen on (default: {DEFAULT_PORT})",
+    )
     parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Enable debug mode')
+        "--debug", action="store_true", help="Enable debug mode"
+    )
     parser.add_argument(
-        '--host',
+        "--host",
         type=str,
-        default='0.0.0.0',
-        help='Host to listen on (default: 0.0.0.0)')
+        default="0.0.0.0",
+        help="Host to listen on (default: 0.0.0.0)",
+    )
 
     args = parser.parse_args()
 

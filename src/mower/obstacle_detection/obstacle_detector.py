@@ -32,18 +32,18 @@ load_dotenv()
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
-MIN_CONF_THRESHOLD = float(os.getenv('MIN_CONF_THRESHOLD', '0.5'))
-USE_REMOTE_DETECTION = os.getenv(
-    'USE_REMOTE_DETECTION',
-    'False').lower() == 'true'
+MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
+USE_REMOTE_DETECTION = (
+    os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
+)
 
 # Load labels if available
 labels = []
 if LABEL_MAP_PATH and os.path.exists(LABEL_MAP_PATH):
     try:
-        with open(LABEL_MAP_PATH, 'r') as f:
+        with open(LABEL_MAP_PATH, "r") as f:
             labels = [line.strip() for line in f.readlines()]
-        if labels and labels[0] == '???':
+        if labels and labels[0] == "???":
             del labels[0]
         logger.info(f"Loaded {len(labels)} labels from {LABEL_MAP_PATH}")
     except Exception as e:
@@ -124,7 +124,7 @@ class ObstacleDetector:
 
                     if self.input_details and len(self.input_details) > 0:
                         self.floating_model = (
-                            self.input_details[0]['dtype'] == np.float32
+                            self.input_details[0]["dtype"] == np.float32
                         )
                     return
 
@@ -137,11 +137,9 @@ class ObstacleDetector:
             self.interpreter.allocate_tensors()
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
-            self.input_height = self.input_details[0]['shape'][1]
-            self.input_width = self.input_details[0]['shape'][2]
-            self.floating_model = (
-                self.input_details[0]['dtype'] == np.float32
-            )
+            self.input_height = self.input_details[0]["shape"][1]
+            self.input_width = self.input_details[0]["shape"][2]
+            self.floating_model = self.input_details[0]["dtype"] == np.float32
             self.interpreter_type = "CPU"
 
             logger.info(
@@ -216,16 +214,14 @@ class ObstacleDetector:
             # Normalize pixel values
             if self.floating_model:
                 input_data = (
-                    (np.float32(input_data) - self.input_mean) /
-                    self.input_std
-                )
+                    np.float32(input_data) - self.input_mean
+                ) / self.input_std
             else:
                 input_data = np.uint8(input_data)
 
             # Run inference
             self.interpreter.set_tensor(
-                self.input_details[0]['index'],
-                input_data
+                self.input_details[0]["index"], input_data
             )
             start_time = time.time()
             self.interpreter.invoke()
@@ -233,7 +229,7 @@ class ObstacleDetector:
 
             # Get prediction results
             output_data = self.interpreter.get_tensor(
-                self.output_details[0]['index']
+                self.output_details[0]["index"]
             )[0]
 
             # Process results
@@ -249,12 +245,14 @@ class ObstacleDetector:
 
                 score = float(output_data[idx])
                 if score >= MIN_CONF_THRESHOLD:
-                    detected_objects.append({
-                        'name': class_name,
-                        'score': score,
-                        'type': 'ml',
-                        'box': None  # Add bounding box if available
-                    })
+                    detected_objects.append(
+                        {
+                            "name": class_name,
+                            "score": score,
+                            "type": "ml",
+                            "box": None,  # Add bounding box if available
+                        }
+                    )
 
             # Log performance
             logger.debug(
@@ -272,10 +270,14 @@ class ObstacleDetector:
         """Perform basic obstacle detection using OpenCV."""
         try:
             # Check if frame is valid
-            if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
+            if (
+                frame is None
+                or not isinstance(frame, np.ndarray)
+                or frame.size == 0
+            ):
                 logger.warning("Invalid frame provided to OpenCV detector")
                 return []
-                
+
             # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -287,9 +289,7 @@ class ObstacleDetector:
 
             # Find contours
             contours, _ = cv2.findContours(
-                edges,
-                cv2.RETR_EXTERNAL,
-                cv2.CHAIN_APPROX_SIMPLE
+                edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
 
             # Filter contours by size
@@ -302,12 +302,16 @@ class ObstacleDetector:
                     # Calculate bounding box
                     x, y, w, h = cv2.boundingRect(contour)
 
-                    detected_objects.append({
-                        'name': 'obstacle',
-                        'score': min(1.0, area / 10000),  # Normalize score
-                        'type': 'opencv',
-                        'box': [x, y, w, h]
-                    })
+                    detected_objects.append(
+                        {
+                            "name": "obstacle",
+                            "score": min(
+                                1.0, area / 10000
+                            ),  # Normalize score
+                            "type": "opencv",
+                            "box": [x, y, w, h],
+                        }
+                    )
 
             return detected_objects
 
@@ -325,28 +329,28 @@ class ObstacleDetector:
                 image = frame
 
             img_byte_arr = io.BytesIO()
-            image = image.convert('RGB')
-            image.save(img_byte_arr, format='JPEG')
+            image = image.convert("RGB")
+            image.save(img_byte_arr, format="JPEG")
             img_bytes = img_byte_arr.getvalue()
 
             # Send to Pi 5
             response = requests.post(
-                f'http://{PI5_IP}:5000/detect',
-                files={'image': ('image.jpg', img_bytes, 'image/jpeg')},
-                timeout=1
+                f"http://{PI5_IP}:5000/detect",
+                files={"image": ("image.jpg", img_bytes, "image/jpeg")},
+                timeout=1,
             )
 
             if response.status_code == 200:
                 result = response.json()
-                if result.get('detections'):
+                if result.get("detections"):
                     return [
                         {
-                            'name': det['class'],
-                            'score': det['confidence'],
-                            'type': 'remote',
-                            'box': det.get('box')
+                            "name": det["class"],
+                            "score": det["confidence"],
+                            "type": "remote",
+                            "box": det.get("box"),
                         }
-                        for det in result['detections']
+                        for det in result["detections"]
                     ]
 
             return []
@@ -371,9 +375,7 @@ class ObstacleDetector:
 
             # Find contours
             contours, _ = cv2.findContours(
-                thresh,
-                cv2.RETR_EXTERNAL,
-                cv2.CHAIN_APPROX_SIMPLE
+                thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
 
             # Filter and process contours
@@ -384,12 +386,14 @@ class ObstacleDetector:
                 area = cv2.contourArea(contour)
                 if area > min_area:
                     x, y, w, h = cv2.boundingRect(contour)
-                    detected_drops.append({
-                        'name': 'drop',
-                        'score': min(1.0, area / 5000),
-                        'type': 'opencv',
-                        'box': [x, y, w, h]
-                    })
+                    detected_drops.append(
+                        {
+                            "name": "drop",
+                            "score": min(1.0, area / 5000),
+                            "type": "opencv",
+                            "box": [x, y, w, h],
+                        }
+                    )
 
             return detected_drops
 
@@ -397,28 +401,24 @@ class ObstacleDetector:
             logger.error(f"Error detecting drops: {e}")
             return []
 
-    def draw_detections(
-        self,
-        frame,
-        detections: List[dict]
-    ) -> np.ndarray:
+    def draw_detections(self, frame, detections: List[dict]) -> np.ndarray:
         """Draw detection results on frame."""
         try:
             frame_with_detections = frame.copy()
 
             for detection in detections:
                 # Get detection info
-                name = detection['name']
-                score = detection['score']
-                box = detection.get('box')
-                det_type = detection.get('type', 'unknown')
+                name = detection["name"]
+                score = detection["score"]
+                box = detection.get("box")
+                det_type = detection.get("type", "unknown")
 
                 # Choose color based on type
-                if det_type == 'ml':
+                if det_type == "ml":
                     color = (0, 255, 0)  # Green for ML detections
-                elif det_type == 'opencv':
+                elif det_type == "opencv":
                     color = (255, 0, 0)  # Blue for OpenCV detections
-                elif det_type == 'remote':
+                elif det_type == "remote":
                     color = (0, 0, 255)  # Red for remote detections
                 else:
                     color = (255, 255, 0)  # Yellow for unknown
@@ -431,7 +431,7 @@ class ObstacleDetector:
                         (x, y),
                         (x + w, y + h),
                         color,
-                        2
+                        2,
                     )
 
                 # Draw label
@@ -444,7 +444,7 @@ class ObstacleDetector:
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.5,
                         color,
-                        2
+                        2,
                     )
                 else:
                     # If no box, draw at top
@@ -456,7 +456,7 @@ class ObstacleDetector:
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.5,
                         color,
-                        2
+                        2,
                     )
 
             return frame_with_detections
@@ -495,8 +495,7 @@ class ObstacleDetector:
     def start_processing(self):
         """Start continuous frame processing in background thread."""
         self.processing_thread = threading.Thread(
-            target=self._processing_loop,
-            daemon=True
+            target=self._processing_loop, daemon=True
         )
         self.processing_thread.start()
 
