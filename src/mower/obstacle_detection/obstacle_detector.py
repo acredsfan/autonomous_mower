@@ -21,7 +21,7 @@ import requests
 from dotenv import load_dotenv
 from PIL import Image
 
-from mower.hardware.camera_instance import get_camera_instance, capture_frame
+from mower.hardware.camera_instance import get_camera_instance
 from mower.utilities.logger_config import LoggerConfig
 
 # Initialize logger
@@ -164,7 +164,7 @@ class ObstacleDetector:
             List of detected objects with name, confidence, and position.
         """
         if frame is None:
-            frame = capture_frame()
+            frame = self.camera.capture_frame()
             if frame is None:
                 return []
 
@@ -353,7 +353,7 @@ class ObstacleDetector:
     def detect_drops(self, frame=None) -> List[dict]:
         """Detect potential drops/cliffs in the frame."""
         if frame is None:
-            frame = capture_frame()
+            frame = self.camera.capture_frame()
             if frame is None:
                 return []
 
@@ -471,7 +471,7 @@ class ObstacleDetector:
             Tuple of (annotated frame, list of detections)
         """
         if frame is None:
-            frame = capture_frame()
+            frame = self.camera.capture_frame()
             if frame is None:
                 return None, []
 
@@ -500,7 +500,7 @@ class ObstacleDetector:
         while True:
             try:
                 # Capture and process frame
-                frame = capture_frame()
+                frame = self.camera.capture_frame()
                 if frame is not None:
                     processed_frame, detections = self.process_frame(frame)
 
