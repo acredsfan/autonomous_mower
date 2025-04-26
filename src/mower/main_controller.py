@@ -54,6 +54,7 @@ from mower.navigation.navigation import NavigationController, NavigationStatus
 from mower.obstacle_detection.avoidance_algorithm import (
     AvoidanceAlgorithm, AvoidanceState
 )
+from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -159,6 +160,9 @@ class ResourceManager:
                 pattern_config, learning_config
             )
 
+            # Initialize frame-based obstacle detector (camera)
+            self._resources["obstacle_detector"] = ObstacleDetector(self)
+
             # Obtain sensor interface singleton
             sensor_interface = get_sensor_interface()
             self._resources["sensor_interface"] = sensor_interface
@@ -170,9 +174,10 @@ class ResourceManager:
                 sensor_interface
             )
 
-            # Initialize obstacle detection
+            # Initialize obstacle detection logic
             self._resources["obstacle_detection"] = AvoidanceAlgorithm(
-                self._resources["path_planner"]
+                resource_manager=self,
+                pattern_planner=self._resources["path_planner"]
             )
 
             # Initialize web interface
@@ -277,11 +282,19 @@ class ResourceManager:
 
     def get_obstacle_detection(self):
         """Get the obstacle detection instance."""
-        return self._resources.get("obstacle_detection")
+        return self._resources["obstacle_detection"]
 
     def get_web_interface(self):
         """Get the web interface instance."""
         return self._resources.get("web_interface")
+
+    def get_camera(self):
+        """Get the camera instance."""
+        return self._resources.get("camera")
+
+    def get_obstacle_detector(self):
+        """Get the vision-based obstacle detector instance."""
+        return self._resources.get("obstacle_detector")
 
     def start_web_interface(self) -> None:
         """Start the web interface."""
