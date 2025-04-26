@@ -94,6 +94,10 @@ class ResourceManager:
         self._initialized = False
         self._resources = {}
         self._lock = threading.Lock()
+        # Path to user polygon config
+        self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
+        # allow web UI to access resource manager
+        self.resource_manager = self
 
         if config_path:
             self._load_config(config_path)
@@ -336,6 +340,56 @@ class ResourceManager:
 
     def get_model_input_size(self):
         return (0, 0)
+
+    # Expose hardware interfaces for run_robot and web UI
+    def get_blade_controller(self):
+        """Return blade controller instance."""
+        return self._resources.get("blade")
+
+    def get_robohat_driver(self):
+        """Return motor driver instance."""
+        return self._resources.get("motor_driver")
+
+    def get_home_location(self):
+        """Load home location polygon from config."""
+        try:
+            with open(self.user_polygon_path, 'r') as f:
+                data = json.load(f)
+            return data
+        except Exception as e:
+            logger.error(f"Failed to load home location: {e}")
+            return {}
+
+    # Stub methods for web UI
+    def get_status(self):
+        """Return current status for web UI."""
+        return {}
+
+    def get_safety_status(self):
+        return {}
+
+    def get_sensor_data(self):
+        return {}
+
+    def get_current_path(self):
+        """Return current planned path."""
+        planner = self.get_path_planner()
+        return getattr(planner, 'current_path', [])
+
+    def emergency_stop(self):
+        """Perform emergency stop."""
+        # attempt to stop operations
+        if 'navigation' in self._resources:
+            try:
+                self._resources['navigation'].stop()
+            except:
+                pass
+        return True
+
+    def set_mowing_schedule(self, schedule):
+        """Store mowing schedule."""
+        self._resources['schedule'] = schedule
+        return True
 
 
 class RobotController:
