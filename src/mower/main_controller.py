@@ -350,6 +350,10 @@ class ResourceManager:
         """Return motor driver instance."""
         return self._resources.get("motor_driver")
 
+    def get_imu_sensor(self):
+        """Return IMU sensor instance."""
+        return self._resources.get("imu")
+
     def get_home_location(self):
         """Load home location polygon from config."""
         try:
