@@ -354,6 +354,14 @@ class ResourceManager:
         """Return IMU sensor instance."""
         return self._resources.get("imu")
 
+    def get_avoidance_algorithm(self):
+        """Return avoidance algorithm instance."""
+        return self._resources.get("obstacle_detection")
+
+    def get_navigation_controller(self):
+        """Return navigation controller instance."""
+        return self._resources.get("navigation")
+
     def get_home_location(self):
         """Load home location polygon from config."""
         try:
