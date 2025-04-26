@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from PIL import Image
 
 from mower.hardware.camera_instance import get_camera_instance
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
