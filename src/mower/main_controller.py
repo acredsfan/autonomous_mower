@@ -45,6 +45,7 @@ from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.blade_controller import BladeController
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
+from mower.hardware.sensor_interface import get_sensor_interface
 from mower.navigation.localization import Localization
 from mower.navigation.path_planner import (
     PathPlanner, PatternConfig, LearningConfig, PatternType
@@ -158,9 +159,15 @@ class ResourceManager:
                 pattern_config, learning_config
             )
 
-            # Initialize navigation controller
+            # Obtain sensor interface singleton
+            sensor_interface = get_sensor_interface()
+            self._resources["sensor_interface"] = sensor_interface
+            # Initialize NavigationController with gps, motor driver,
+            # and sensor interface
             self._resources["navigation"] = NavigationController(
-                self._resources["localization"]
+                self._resources["localization"],
+                self._resources["motor_driver"],
+                sensor_interface
             )
 
             # Initialize obstacle detection
@@ -194,7 +201,7 @@ class ResourceManager:
 
     def init_all_resources(self) -> bool:
         """
-        Initialize all resources; return True if successful, 
+        Initialize all resources; return True if successful,
         False otherwise.
         """
         try:
