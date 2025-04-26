@@ -271,6 +271,11 @@ class ObstacleDetector:
     def _detect_obstacles_opencv(self, frame) -> List[dict]:
         """Perform basic obstacle detection using OpenCV."""
         try:
+            # Check if frame is valid
+            if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
+                logger.warning("Invalid frame provided to OpenCV detector")
+                return []
+                
             # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 

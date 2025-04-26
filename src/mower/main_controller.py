@@ -38,7 +38,6 @@ from pathlib import Path
 
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
-from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.tof import VL53L0XSensors
 from mower.hardware.robohat import RoboHATDriver
@@ -362,6 +361,10 @@ class ResourceManager:
         """Return navigation controller instance."""
         return self._resources.get("navigation")
 
+    def get_ina3221_sensor(self):
+        """Return INA3221 power monitoring sensor instance."""
+        return self._resources.get("ina3221")
+
     def get_home_location(self):
         """Load home location polygon from config."""
         try:
@@ -394,7 +397,7 @@ class ResourceManager:
         if 'navigation' in self._resources:
             try:
                 self._resources['navigation'].stop()
-            except:
+            except Exception:
                 pass
         return True
 

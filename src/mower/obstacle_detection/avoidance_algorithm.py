@@ -31,6 +31,7 @@ import numpy as np
 from dataclasses import dataclass
 
 from mower.utilities.logger_config import LoggerConfigInfo
+from mower.hardware.sensor_interface import get_sensor_interface
 from mower.constants import (
     AVOIDANCE_DELAY,
     MIN_DISTANCE_THRESHOLD
@@ -265,6 +266,25 @@ class AvoidanceAlgorithm:
             logger.warning("Avoidance algorithm already running")
             return
 
+        # Ensure required components are initialized
+        try:
+            if self.sensor_interface is None:
+                self.sensor_interface = get_sensor_interface()
+                logger.info("Initialized sensor interface for avoidance algorithm")
+            
+            # Initialize path planner if not already done
+            if self.path_planner is None and self._resource_manager:
+                self.path_planner = self._resource_manager.get_path_planner()
+                logger.info("Initialized path planner for avoidance algorithm")
+            
+            # Initialize motor controller if not already done
+            if self.motor_controller is None and self._resource_manager:
+                self.motor_controller = self._resource_manager.get_robohat_driver()
+                logger.info("Initialized motor controller for avoidance algorithm")
+        except Exception as e:
+            logger.error(f"Failed to initialize avoidance algorithm components: {e}")
+            return
+
         with self.thread_lock:
             self.running = True
             self.stop_thread = False
@@ -309,6 +329,11 @@ class AvoidanceAlgorithm:
         the obstacle_left and obstacle_right flags accordingly.
         """
         try:
+            # Check if sensor_interface is initialized
+            if self.sensor_interface is None:
+                logger.error("Sensor interface not initialized")
+                return
+                
             left_distance = self.sensor_interface._read_vl53l0x(
                 'left_distance', float('inf')
             )
