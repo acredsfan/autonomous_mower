@@ -98,13 +98,29 @@ class ResourceManager:
         if config_path:
             self._load_config(config_path)
 
+    def _load_config(self, filename):
+        """Load a configuration file from the standard config location."""
+        config_path = self.user_polygon_path.parent / filename
+        if config_path.exists():
+            try:
+                with open(config_path, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.error(f"Error loading config file {filename}: {e}")
+        return None
+
     def _initialize_hardware(self):
         """Initialize all hardware components."""
         try:
             # Initialize all hardware resources
             self._resources["gpio"] = GPIOManager()
             self._resources["imu"] = BNO085Sensor()
-            self._resources["bme280"] = BME280Sensor()
+            # Initialize BME280 sensor on I2C bus
+            import board
+            import busio
+            from mower.hardware.bme280 import BME280Sensor
+            bme = BME280Sensor._initialize(busio.I2C(board.SCL, board.SDA))
+            self._resources["bme280"] = bme
             self._resources["ina3221"] = INA3221Sensor()
             self._resources["tof"] = VL53L0XSensors()
             self._resources["motor_driver"] = RoboHATDriver()
@@ -180,8 +196,8 @@ class ResourceManager:
                 pattern_planner=self._resources["path_planner"]
             )
 
-            # Initialize web interface
-            self._resources["web_interface"] = WebInterface()
+            # Initialize web interface with resource manager
+            self._resources["web_interface"] = WebInterface(self)
 
             logger.info("All software components initialized successfully")
         except Exception as e:
@@ -303,6 +319,23 @@ class ResourceManager:
             web.start()
         else:
             logger.warning("Web interface resource not available")
+
+    # Interpreter stubs for camera obstacle detection
+    def get_inference_interpreter(self):
+        """Stub for TFLite interpreter dependency."""
+        return None
+
+    def get_interpreter_type(self):
+        return None
+
+    def get_model_input_details(self):
+        return None
+
+    def get_model_output_details(self):
+        return None
+
+    def get_model_input_size(self):
+        return (0, 0)
 
 
 class RobotController:

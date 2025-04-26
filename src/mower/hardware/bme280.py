@@ -12,12 +12,17 @@ class BME280Sensor:
     """Class to handle BME280 sensor"""
 
     @staticmethod
-    def _initialize(i2c):
+    def _initialize(i2c=None):
         """
         Initialize the BME280 sensor with the I2C bus.
         Returns the sensor object if successful, otherwise None.
         """
         try:
+            # Use provided I2C bus or create default
+            if i2c is None:
+                import board
+                import busio
+                i2c = busio.I2C(board.SCL, board.SDA)
             # Initialize the BME280 sensor on the specified I2C bus
             sensor = adafruit_bme280.Adafruit_BME280_I2C(i2c, address=0x76)
             logging.info("BME280 initialized successfully.")
