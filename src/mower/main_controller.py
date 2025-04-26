@@ -62,6 +62,7 @@ from mower.obstacle_detection.avoidance_algorithm import (
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
+from mower.config_management.config_manager import get_config
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -219,16 +220,18 @@ class ResourceManager:
                 self._resources["localization"] = None
 
             # Initialize pattern planner with learning capabilities
+            pattern_cfg = get_config("pattern_config", {})
             pattern_config = PatternConfig(
                 pattern_type=PatternType.PARALLEL,
-                spacing=0.3,  # 30cm spacing between passes
-                angle=0.0,  # Start with parallel to x-axis
-                overlap=0.1,  # 10% overlap between passes
+                spacing=0.5,
+                angle=0.0,
+                overlap=0.1,
                 start_point=(
                     0.0,
                     0.0,
                 ),  # Will be updated with actual position
                 boundary_points=[],  # Will be loaded from config
+                **pattern_cfg
             )
 
             learning_config = LearningConfig(
@@ -815,9 +818,6 @@ class RobotController:
                 self.resource_manager.get_navigation_controller()
             )
 
-            # Web interface is started in main(), don't start it twice
-            # self.resource_manager.start_web_interface()
-
             # Start primary systems
             self.avoidance_algorithm.start()
 
@@ -835,7 +835,7 @@ class RobotController:
         finally:
             # Clean up resources when shutting down
             logger.info("Shutting down robot...")
-            if hasattr(self, "avoidance_algorithm"):
+            if hasattr(self, "avoidance_algorithm") and self.avoidance_algorithm:
                 self.avoidance_algorithm.stop()
             self.resource_manager.cleanup_all_resources()
 

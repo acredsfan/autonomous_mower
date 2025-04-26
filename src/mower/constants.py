@@ -21,19 +21,20 @@ polygon_path = CONFIG_DIR / "user_polygon.json"
 try:
     with open(polygon_path) as f:
         data = json.load(f)
-    # Validate loaded data for list of coordinate dicts
-    if not isinstance(data, list):
+    # Ensure data is always a list (possibly empty)
+    coords = data if isinstance(data, list) else []
+    if not isinstance(coords, list):
         logging.warning(
             (
                 "Invalid polygon_coordinates: expected list, got %s. "
                 "Using empty list."
             ),
-            type(data),
+            type(coords),
         )
         polygon_coordinates = []
     else:
         filtered = []
-        for idx, coord in enumerate(data):
+        for idx, coord in enumerate(coords):
             if isinstance(coord, dict) and "lat" in coord and "lng" in coord:
                 filtered.append(coord)
             else:

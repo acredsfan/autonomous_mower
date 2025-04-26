@@ -31,7 +31,11 @@ logger = LoggerConfig.get_logger(__name__)
 load_dotenv()
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
-LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")  # Path to label map file
+LABEL_MAP_PATH = os.getenv("LABELMAP_PATH")  # Path to label map file
+if not LABEL_MAP_PATH or not os.path.exists(LABEL_MAP_PATH):
+    # Fallback to repo's imagenet_labels.txt
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    LABEL_MAP_PATH = os.path.join(BASE_DIR, "models", "imagenet_labels.txt")
 MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
 USE_REMOTE_DETECTION = (
     os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
@@ -126,27 +130,23 @@ class ObstacleDetector:
                         self.floating_model = (
                             self.input_details[0]["dtype"] == np.float32
                         )
+                    self.interpreter.allocate_tensors()
                     return
-
-            # Fallback to direct initialization
-            import tflite_runtime.interpreter as tflite
-
-            self.interpreter = tflite.Interpreter(
-                model_path=PATH_TO_OBJECT_DETECTION_MODEL
-            )
-            self.interpreter.allocate_tensors()
+            # If not using resource manager, load local model
+            from tflite_runtime.interpreter import Interpreter
+            model_path = PATH_TO_OBJECT_DETECTION_MODEL
+            if not model_path or not os.path.exists(model_path):
+                logger.warning("Model not found at %s, skipping interpreter", model_path)
+                self.interpreter = None
+                return
+            self.interpreter = Interpreter(model_path=model_path)
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
             self.input_height = self.input_details[0]["shape"][1]
             self.input_width = self.input_details[0]["shape"][2]
             self.floating_model = self.input_details[0]["dtype"] == np.float32
-            self.interpreter_type = "CPU"
-
-            logger.info(
-                f"TFLite model loaded with input size: "
-                f"{self.input_height}x{self.input_width}"
-            )
-
+            self.interpreter.allocate_tensors()
+            self.interpreter_type = "tflite"
         except Exception as e:
             logger.error(f"Failed to initialize interpreter: {e}")
             self.interpreter = None

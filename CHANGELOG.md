@@ -17,5 +17,17 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Updated README.md service logs and camera diagnostics sections with expected outputs
 
+## [2025-04-26] - 2025-04-26
+### Fixed
+- 2025-04-26: [#safe-polygon-labelmap-tflite-patternconfig] Implemented the following robustness and config fixes:
+  - Safe polygon loading in constants.py (always a list, never None)
+  - Label map path fallback in obstacle_detector.py (.env LABELMAP_PATH, fallback to models/imagenet_labels.txt)
+  - Guarded TFLite Interpreter loading in obstacle_detector.py (logs warning, never crashes on missing model)
+  - Injected pattern_config from config_manager into PathPlanner
+  - Removed duplicate Web-UI startup in run_robot()
+  - Guarded avoidance_algorithm.stop() against None in run_robot()
+
+  All changes follow PEP8, are modular, and documented. See commit for details.
+
 ## [2025-04-23] - 2025-04-23
 - Initial project setup and CI pipeline
