@@ -14,7 +14,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.10']
+        python-version: ['3.10']
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -49,7 +49,6 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Mock hardware dependencies
       run: |
-        # Create mock modules for hardware-specific dependencies
         mkdir -p mock_modules
         echo "class GPIO: pass" > mock_modules/RPi.py
         echo "def setmode(*args): pass" >> mock_modules/RPi.py
@@ -58,11 +57,12 @@ jobs:
         echo "def cleanup(*args): pass" >> mock_modules/RPi.py
         echo "def input(*args): return 0" >> mock_modules/RPi.py
         echo "class SMBus: pass" > mock_modules/smbus2.py
-        # Add mock modules to Python path
+        echo "class Serial: pass" > mock_modules/serial.py
+        echo "class PiCamera2: pass" > mock_modules/picamera2.py
         echo "PYTHONPATH=$PYTHONPATH:$(pwd)/mock_modules" >> $GITHUB_ENV
     - name: Run unit tests
       run: |
-        pytest tests/unit tests/utilities tests/config_management -v
+        pytest tests/unit -v
     - name: Run simulation tests
       run: |
         pytest tests/simulation -v
@@ -72,12 +72,18 @@ jobs:
     - name: Run obstacle detection tests
       run: |
         pytest tests/obstacle_detection -v
+    - name: Run integration tests
+      run: |
+        pytest tests/integration -v
+    - name: Run regression tests
+      run: |
+        pytest tests/regression -v
     - name: Run benchmarks
       run: |
         pytest tests/benchmarks -v
     - name: Run tests with coverage
       run: |
-        pytest --cov=mower --cov-report=xml --cov-report=html
+        pytest --cov=src/mower --cov-report=xml --cov-report=html
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
@@ -97,7 +103,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
@@ -105,7 +111,6 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Mock hardware dependencies
       run: |
-        # Create mock modules for hardware-specific dependencies
         mkdir -p mock_modules
         echo "class GPIO: pass" > mock_modules/RPi.py
         echo "def setmode(*args): pass" >> mock_modules/RPi.py
@@ -114,9 +119,11 @@ jobs:
         echo "def cleanup(*args): pass" >> mock_modules/RPi.py
         echo "def input(*args): return 0" >> mock_modules/RPi.py
         echo "class SMBus: pass" > mock_modules/smbus2.py
-        # Add mock modules to Python path
+        echo "class Serial: pass" > mock_modules/serial.py
+        echo "class PiCamera2: pass" > mock_modules/picamera2.py
         echo "PYTHONPATH=$PYTHONPATH:$(pwd)/mock_modules" >> $GITHUB_ENV
     - name: Run integration tests and service startup
       run: |
         pytest tests/integration -v
         pytest tests/integration/test_service_startup.py -v
+
