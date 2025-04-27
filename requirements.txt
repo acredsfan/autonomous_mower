@@ -3,73 +3,73 @@ numpy>=1.22.0
 opencv-python>=4.8.1.78
 pillow>=10.3.0
 pyyaml>=5.4.1
-python-dotenv==0.19.0
-smbus2==0.4.1
-RPi.GPIO==0.7.0
-adafruit-circuitpython-mpu6050==1.1.9
-flask==3.0.0
-flask-socketio==5.1.0
-geopy==2.1.0
-imutils==0.5.4
-networkx==2.6.0
-pathfinding==1.0.0
-pyserial==3.5
-rtree==1.0.0
-shapely==2.0.0
-tensorflow==2.13.0
-colorama==0.4.4
-watchdog==5.0.0
+python-dotenv>=0.19.0
+smbus2>=0.4.1
+RPi.GPIO>=0.7.0
+adafruit-circuitpython-mpu6050>=1.1.9
+flask>=3.0.0
+flask-socketio>=5.1.0
+geopy>=2.1.0
+imutils>=0.5.4
+networkx>=2.6.0
+pathfinding>=1.0.0
+pyserial>=3.5
+rtree>=1.0.0
+shapely>=2.0.0
+tensorflow>=2.13.0
+colorama>=0.4.4
+watchdog>=5.0.0
 
 # System monitoring and safety
-psutil==5.9.0
-py3nvml==0.2.7
-pyudev==0.24.0
-systemd-python==234
-python-daemon==3.0.1
-supervisor==4.2.5
-prometheus_client==0.17.0
+psutil>=5.9.0
+py3nvml>=0.2.7
+pyudev>=0.24.0
+systemd-python>=234
+python-daemon>=3.0.1
+supervisor>=4.2.5
+prometheus_client>=0.17.0
 
 # GPS and navigation
-pynmea2==1.18.0
-gpsd-py3==0.3.0
-utm==0.7.0
+pynmea2>=1.18.0
+gpsd-py3>=0.3.0
+utm>=0.7.0
 
 # Sensors and hardware
-adafruit-circuitpython-bme280==3.0.0
-adafruit-circuitpython-bno08x==1.0.0
-barbudor-circuitpython-ina3221==1.0.0
-adafruit-circuitpython-vl53l0x==3.0.0
-picamera2==0.3.12
+adafruit-circuitpython-bme280>=3.0.0
+adafruit-circuitpython-bno08x>=1.0.0
+barbudor-circuitpython-ina3221>=1.0.0
+adafruit-circuitpython-vl53l0x>=3.0.0
+picamera2>=0.3.12
 
 # Coral TPU dependencies
-tflite-runtime==2.5.0
-pycoral==2.0.0
+tflite-runtime>=2.5.0
+pycoral>=2.0.0
 
 # Security
-safety==2.3.0
-bandit==1.7.5
-pyOpenSSL==23.0.0
+safety>=2.3.0
+bandit>=1.7.5
+pyOpenSSL>=23.0.0
 certifi>=2024.7.4
 
 # Monitoring
-grafana-api-client==2.3.0
-statsd==4.0.1
+grafana-api-client>=2.3.0
+statsd>=4.0.1
 
 # Development dependencies
-pytest==6.2.5
+pytest>=6.2.5
 black>=24.3.0
-flake8==3.9.2
-mypy==0.910
-pytest-cov==4.1.0
-pytest-mock==3.12.0
-pytest-asyncio==0.23.5
-pytest-timeout==2.2.0
-pytest-xdist==3.5.0
-coverage==7.4.1
-tox==4.15.0
-sphinx==7.2.6
-sphinx-rtd-theme==2.0.0
-pre-commit==3.6.0
+flake8>=3.9.2
+mypy>=0.910
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+pytest-asyncio>=0.23.5
+pytest-timeout>=2.2.0
+pytest-xdist>=3.5.0
+coverage>=7.4.1
+tox>=4.15.0
+sphinx>=7.2.6
+sphinx-rtd-theme>=2.0.0
+pre-commit>=3.6.0
 
-flask-cors==3.0.10
-scipy==1.10.1
+flask-cors>=3.0.10
+scipy>=1.10.1
