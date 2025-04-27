@@ -83,6 +83,10 @@ class SystemState(Enum):
     DOCKING = "docking"
     ERROR = "error"
     EMERGENCY_STOP = "emergency_stop"
+    MANUAL_CONTROL = "manual_control"
+    AVOIDING = "avoiding"
+    RETURNING_HOME = "returning_home"
+    DOCKED = "docked"
 
 
 class ResourceManager:
@@ -515,38 +519,7 @@ class ResourceManager:
         return self._resources.get("gps_serial")
 
     def get_navigation_controller(self) -> Optional[NavigationController]:
-        """Get the navigation controller instance."""
-        if (
-            "navigation" not in self._resources
-            or self._resources["navigation"] is None
-        ):
-            try:
-                # Try to initialize navigation controller with dependencies
-                localization = self.get_resource("localization")
-                motor_driver = self.get_robohat_driver()
-                sensor_interface = self.get_sensor_interface()
-
-                if localization and motor_driver and sensor_interface:
-                    from mower.navigation.navigation import (
-                        NavigationController,
-                    )
-
-                    self._resources["navigation"] = NavigationController(
-                        localization, motor_driver, sensor_interface
-                    )
-                    logger.info("Navigation controller initialized on demand")
-                else:
-                    logger.error(
-                        "Cannot initialize navigation controller - missing "
-                        "dependencies"
-                    )
-                    return None
-            except Exception as e:
-                logger.error(
-                    f"Failed to initialize navigation controller on "
-                    f"demand: {e}"
-                )
-                return None
+        """Return navigation controller instance."""
         return self._resources.get("navigation")
 
     def start_web_interface(self):
@@ -608,10 +581,6 @@ class ResourceManager:
                 )
                 return None
         return self._resources.get("avoidance_algorithm")
-
-    def get_navigation_controller(self) -> Optional[NavigationController]:
-        """Return navigation controller instance."""
-        return self._resources.get("navigation")
 
     def get_ina3221_sensor(self) -> Optional[INA3221Sensor]:
         """Return INA3221 power monitoring sensor instance."""
@@ -680,37 +649,6 @@ class ResourceManager:
             logger.error(f"Failed to load home location: {e}")
             return {}
 
-    # Stub methods for web UI
-    def get_status(self) -> dict:
-        """Return current status for web UI."""
-        return {}
-
-    def get_safety_status(self) -> dict:
-        return {}
-
-    def get_sensor_data(self) -> dict:
-        return {}
-
-    def get_current_path(self) -> list:
-        """Return current planned path."""
-        planner = self.get_path_planner()
-        return getattr(planner, "current_path", [])
-
-    def emergency_stop(self) -> bool:
-        """Perform emergency stop."""
-        # attempt to stop operations
-        if "navigation" in self._resources:
-            try:
-                self._resources["navigation"].stop()
-            except Exception:
-                pass
-        return True
-
-    def set_mowing_schedule(self, schedule: dict) -> bool:
-        """Store mowing schedule."""
-        self._resources["schedule"] = schedule
-        return True
-
 
 class RobotController:
     """
@@ -761,6 +699,7 @@ class RobotController:
         self.error_condition = None
         self.mowing_paused = False
         self.home_location = None
+        self.avoidance_active = False
 
         # Load home location from configuration
         try:
@@ -820,7 +759,10 @@ class RobotController:
             )
 
             # Start primary systems
-            self.avoidance_algorithm.start()
+            if self.avoidance_algorithm:
+                self.avoidance_algorithm.start()
+            else:
+                logger.error("Avoidance algorithm not available; skipping start.")
 
             # Transition to IDLE state
             self.current_state = SystemState.IDLE
