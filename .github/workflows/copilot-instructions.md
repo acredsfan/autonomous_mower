@@ -1,90 +1,49 @@
-## 1. Context
+# Copilot Custom Instructions for Autonomous Mower Project
 
-- **Role**: You are the AI maintainer & coder for the `autonomous_mower` project.
-- **Stack**:
-  - Core: Python 3.10+ (PEP8, type hints)
-  - Front-end: JS/CSS/HTML in `ui/`
-- **Target**: Raspberry Pi 4B/5 (Bookworm OS, ≥4 GB RAM)
-- **Goal**: Deliver working, user-friendly features without regressions.
+## Project Context
+- You are assisting with the `autonomous_mower` project: a modular Python 3.10+ robot mower running on Raspberry Pi 4B/5 with Bookworm OS.
+- Codebase structure: `src/` for main code, `tests/` for unit/integration/benchmark tests, `models/` for ML assets, `ui/` for web frontend.
+- Hardware includes GPS, IMU, blade controllers, LiDAR, ToF sensors, and web UI components.
+- The goal is clean, modular, production-ready robotics software.
 
-## 2. Code Style & Structure
+## Coding Style and Best Practices
+- Python must follow PEP8, with line length <= 88 characters, using type hints.
+- Use `snake_case` for Python, `camelCase` for JS.
+- Top-level imports only, no dynamic imports unless explicitly documented.
+- Organize code into modular, single-responsibility classes and functions.
+- Default to readability and safety over code golf or cleverness.
 
-- **Python**
-  - Follow PEP8: ≤ 88 chars, `snake_case`, type hints on public APIs.
-  - One module or class per file under `src/`.
-  - Docstrings in Google style.
-- **JS/CSS/HTML**
-  - Use `camelCase` for variables/functions, BEM or Tailwind for CSS.
-  - Modular components in `ui/components/`.
-- **General**
-  - Descriptive names (e.g., `is_obstacle_detected`).
-  - No duplicated logic; extract helpers to `utils/`.
-  - External imports at top of file.
+## Preferred Development Behavior
+- Reference existing modules before creating new code.
+- Preserve public method signatures unless explicitly asked to change them.
+- Log errors clearly, with enough context for hardware troubleshooting.
+- Fail gracefully: if hardware is missing, fallback or warn, never crash.
+- Validate `.env` files and environment variables before usage.
 
-## 3. Documentation & Tracking
+## Error Handling
+- Wrap hardware interactions (sensors, motors, GPS) with try/except when appropriate.
+- If critical models (e.g., TFLite or labelmaps) are missing, degrade gracefully and continue boot sequence.
 
-- **CHANGELOG.md**: Append `YYYY-MM-DD: [#123] Add/fix…` for each PR.
-- **issues.md**: Log new issues with IDs, status, owner.
-- **project_features.md** & **tasks.md**: Sync updates.
-- **README.md**: Keep setup instructions current.
+## How to Handle Uncertainty
+- If structure is ambiguous, default to minimal, additive changes.
+- If unsure whether a file/module/class exists, prefer asking or noting with a `# TODO:` comment.
+- Never invent new hardware modules or sensors unless the import already exists.
 
-## 4. Branching & Commits
+## Testing Requirements
+- New code must not break `pytest` unit, integration, or simulation tests.
+- Coverage target is `src/mower`, with pytest coverage >90% where practical.
+- Mock hardware dependencies during testing when required.
 
-- Work on `improvements/*` branches.
-- Commit per feature/fix; PR titles `[Issue #123] Short description`.
-- Merge flow:
-  1. Code, docs, tests → `improvements/*`
-  2. CI passes → review → merge to `main`
+## Special Instructions
+- Always inject `pattern_config` into `PathPlanner` constructors.
+- Launch the Web UI server immediately after successful hardware init.
+- For camera and obstacle detection, validate model files and label maps exist before loading.
+- Critical path classes (like `RobotController`, `ResourceManager`, `ObstacleDetector`) must remain backward-compatible unless explicitly updating APIs.
 
-## 5. Testing & Validation
-
-- **Unit tests**: pytest, ≥ 95 % coverage.
-- **Integration**: Validate hardware interfaces on Pi or emulator.
-- **UI checks**: Smoke-test Chrome/Firefox.
-
-## 6. CI/CD & Quality Gates
-
-- Lint (`flake8`), type-check (`mypy`), tests must pass in GitHub Actions.
-- Update `.github/workflows/ci.yml` when adding dependencies.
-
-## 7. Proactive Error Handling
-
-- Log all exceptions with meaningful context.
-- Never crash on optional hardware failure; fallback or warn.
-- Validate `.env` files before loading.
-
-## 8. Commit & Push
-
-- After tests pass, auto-commit & push to `improvements/*`.
-- Include issue link, summary, and impact.
-
-## 9. Source-Grounding & Verification
-
-- Search repo before adding new functions.
-- If behavior unclear, state uncertainty.
-- No guessing external services unless told.
-
-## 10. Scope Management
-
-- Limit changes to one module/file unless approved.
-- Chunk large tasks into: design → code → tests → docs.
-
-## 11. Hallucination-Safety Checks
-
-- Cross-check all imports, method names.
-- Run integration tests, not just syntax checks.
-
-## 12. Clarification Questions
-
-- For architecture or major logic changes, ask user confirmation first.
-
-## 13. Special Instructions for GPT-4.5/4o
-
-- Default to "confirm before major changes."
-- Prefer clean, readable code over clever one-liners.
-- Security-first: no leaking secrets in logs.
-- Maintain API stability unless change approved.
+## AI Behavior Tuning
+- Assume GPT-4.1's style: prioritize safe, modular, real-world maintainable code.
+- Avoid hallucination or guessing about code structure or hardware.
+- Be conservative when altering service startup sequences, threading, or GPIO code.
 
 ---
-
-> **Keep it modular, readable, documented, test-driven, and always grounded in the real codebase.**
+> Reminder: **Code for reliability, modularity, safety, and maintainability first.**
