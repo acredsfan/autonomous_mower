@@ -412,21 +412,29 @@ class ResourceManager:
                 raise
 
     def cleanup_all_resources(self):
-        """Clean up all initialized resources."""
+        """Clean up all initialized resources with robust error handling and timeouts."""
+        import threading
+        def cleanup_with_timeout(resource, timeout=5):
+            result = {"done": False}
+            def target():
+                try:
+                    if hasattr(resource, "disconnect"):
+                        resource.disconnect()
+                    elif hasattr(resource, "cleanup"):
+                        resource.cleanup()
+                    elif hasattr(resource, "stop"):
+                        resource.stop()
+                except Exception as e:
+                    logger.error(f"Error cleaning up resource: {e}")
+                result["done"] = True
+            t = threading.Thread(target=target)
+            t.start()
+            t.join(timeout)
+            if not result["done"]:
+                logger.error("Resource cleanup timed out.")
         for name, res in self._resources.items():
-            try:
-                if hasattr(res, "disconnect"):
-                    res.disconnect()
-                elif hasattr(res, "cleanup"):
-                    res.cleanup()
-                elif hasattr(res, "stop"):
-                    res.stop()
-                else:
-                    logger.debug(
-                        f"No cleanup method for resource '{name}'",
-                    )
-            except Exception as e:
-                logger.error(f"Error cleaning up resource '{name}': {e}")
+            if res is not None:
+                cleanup_with_timeout(res)
         self._resources.clear()
         self._initialized = False
 
@@ -457,8 +465,8 @@ class ResourceManager:
         return self._resources.get("navigation")
 
     def get_obstacle_detection(self) -> Optional[ObstacleDetector]:
-        """Get the obstacle detection instance."""
-        return self._resources.get("obstacle_detection")
+        """Get the obstacle detector instance (camera-based)."""
+        return self._resources.get("obstacle_detector")
 
     def get_web_interface(self) -> Optional[WebInterface]:
         """Get the web interface instance."""
@@ -648,6 +656,70 @@ class ResourceManager:
         except Exception as e:
             logger.error(f"Failed to load home location: {e}")
             return {}
+
+    def get_status(self) -> dict:
+        """Aggregate and return system status for the web UI and diagnostics."""
+        status = {}
+        # Defensive: check for None before accessing each resource
+        try:
+            status["state"] = getattr(self, "current_state", None)
+            # Battery/Power
+            ina = self.get_ina3221_sensor()
+            if ina:
+                try:
+                    status["battery"] = {
+                        "voltage": ina.get_battery_voltage() if hasattr(ina, "get_battery_voltage") else None,
+                        "percentage": ina.get_battery_percentage() if hasattr(ina, "get_battery_percentage") else None,
+                        "charging": ina.is_charging() if hasattr(ina, "is_charging") else None,
+                    }
+                except Exception as e:
+                    status["battery"] = {"error": str(e)}
+            # Motors
+            motor = self.get_robohat_driver()
+            if motor and hasattr(motor, "get_status"):
+                try:
+                    status["motors"] = motor.get_status()
+                except Exception as e:
+                    status["motors"] = {"error": str(e)}
+            # Blade
+            blade = self.get_blade_controller()
+            if blade and hasattr(blade, "get_status"):
+                try:
+                    status["blade"] = blade.get_status()
+                except Exception as e:
+                    status["blade"] = {"error": str(e)}
+            # Sensors
+            sensors = {}
+            imu = self.get_imu_sensor()
+            if imu and hasattr(imu, "get_status"):
+                try:
+                    sensors["imu"] = imu.get_status()
+                except Exception as e:
+                    sensors["imu"] = {"error": str(e)}
+            gps = self.get_gps()
+            if gps and hasattr(gps, "get_status"):
+                try:
+                    sensors["gps"] = gps.get_status()
+                except Exception as e:
+                    sensors["gps"] = {"error": str(e)}
+            camera = self.get_camera()
+            if camera and hasattr(camera, "get_status"):
+                try:
+                    sensors["camera"] = camera.get_status()
+                except Exception as e:
+                    sensors["camera"] = {"error": str(e)}
+            status["sensors"] = sensors
+            # Obstacle detection
+            obstacle = self.get_obstacle_detection()
+            if obstacle and hasattr(obstacle, "get_status"):
+                try:
+                    status["obstacle_detection"] = obstacle.get_status()
+                except Exception as e:
+                    status["obstacle_detection"] = {"error": str(e)}
+            # Add more as needed (network, diagnostics, etc.)
+        except Exception as e:
+            status["error"] = f"Status aggregation error: {e}"
+        return status
 
 
 class RobotController:
