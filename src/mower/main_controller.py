@@ -349,7 +349,7 @@ class ResourceManager:
             os.makedirs(CONFIG_DIR, exist_ok=True)
             if not os.path.exists(self.user_polygon_path):
                 logger.warning(
-                    f"User polygon file not found at {self.user_polygon_path}, "
+                    f"User polygon file not found at {self.user_polygon_path} "
                     "creating default"
                 )
                 with open(self.user_polygon_path, "w") as f:
@@ -543,7 +543,8 @@ class ResourceManager:
                     return None
             except Exception as e:
                 logger.error(
-                    f"Failed to initialize navigation controller on demand: {e}"
+                    f"Failed to initialize navigation controller on "
+                    f"demand: {e}"
                 )
                 return None
         return self._resources.get("navigation")
