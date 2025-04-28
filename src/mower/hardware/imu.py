@@ -237,14 +237,23 @@ class BNO085Sensor:
                     try:
                         self.sensor = BNO08X_UART(self.serial_port.ser)
                         self.enable_features(self.sensor)
-                        # Only set connected True after sensor is assigned and features enabled
-                        self.connected = True
-                        init_msg = (
-                            f"BNO085 sensor successfully initialized "
-                            f"on attempt {attempt}"
-                        )
-                        logger.info(init_msg)
-                        return True
+                        # Test read to ensure sensor is actually responsive
+                        try:
+                            _ = self.sensor.acceleration
+                            # If no exception, sensor is ready
+                            self.connected = True
+                            init_msg = (
+                                f"BNO085 sensor successfully initialized "
+                                f"on attempt {attempt}"
+                            )
+                            logger.info(init_msg)
+                            return True
+                        except Exception as test_e:
+                            logger.warning(f"BNO085 sensor not responsive after init: {test_e}")
+                            self.connected = False
+                            self.sensor = None
+                            time.sleep(0.5)
+                            continue
                     except Exception as e:
                         error_msg = (
                             f"Failed to initialize BNO085 sensor on "

@@ -102,3 +102,4 @@ rules.json
 mcp_server.py
 run_mcp_server.sh
 /.venv
+MCP_SERVER.md
