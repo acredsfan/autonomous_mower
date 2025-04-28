@@ -45,6 +45,7 @@ class SerialPort:
         stop_bits: int = 1,
         charset: str = "ascii",
         timeout: float = 0.1,
+        receiver_buffer_size: int = 2048,  # Added for compatibility with IMU
     ):
         self.port = port
         self.baudrate = baudrate
@@ -53,6 +54,7 @@ class SerialPort:
         self.stop_bits = stop_bits
         self.charset = charset
         self.timeout = timeout
+        self.receiver_buffer_size = receiver_buffer_size
         self.ser = None
 
     def start(self):
@@ -66,6 +68,12 @@ class SerialPort:
                 self.stop_bits,
                 timeout=self.timeout,
             )
+            # Set buffer size if supported (Linux only)
+            if hasattr(self.ser, 'set_buffer_size'):
+                try:
+                    self.ser.set_buffer_size(rx_size=self.receiver_buffer_size)
+                except Exception as e:
+                    logger.warning(f"Could not set serial buffer size: {e}")
             logger.debug("Opened serial port " + self.ser.name)
         except Exception as e:
             logger.error(f"Error opening serial port: {e}")
