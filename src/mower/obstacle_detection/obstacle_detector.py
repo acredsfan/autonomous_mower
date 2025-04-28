@@ -33,8 +33,8 @@ PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 LABEL_MAP_PATH = os.getenv("LABELMAP_PATH")  # Path to label map file
 if not LABEL_MAP_PATH or not os.path.exists(LABEL_MAP_PATH):
-    # Fallback to repo's imagenet_labels.txt
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    # Fallback to repo's imagenet_labels.txt (corrected path)
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     LABEL_MAP_PATH = os.path.join(BASE_DIR, "models", "imagenet_labels.txt")
 MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
 USE_REMOTE_DETECTION = (
