@@ -46,7 +46,7 @@ load_dotenv()
 # Get the UART port from the environment variables
 IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA2")
 IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
-RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial communication
+RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial comms.
 
 
 class IMUStatus(Enum):
@@ -237,6 +237,7 @@ class BNO085Sensor:
                     try:
                         self.sensor = BNO08X_UART(self.serial_port.ser)
                         self.enable_features(self.sensor)
+                        # Only set connected True after sensor is assigned and features enabled
                         self.connected = True
                         init_msg = (
                             f"BNO085 sensor successfully initialized "
@@ -262,7 +263,7 @@ class BNO085Sensor:
                 # port
                 if self.serial_port:
                     self.serial_port.stop()
-
+                self.connected = False  # Explicitly set to False on failure
                 failure_count += 1
                 time.sleep(reconnection_delay)
 
@@ -273,7 +274,7 @@ class BNO085Sensor:
                 # Ensure port is closed if initialization fails
                 if self.serial_port:
                     self.serial_port.stop()
-
+                self.connected = False  # Explicitly set to False on failure
                 failure_count += 1
                 time.sleep(reconnection_delay)
 
@@ -679,10 +680,10 @@ class BNO085Sensor:
 
                             # Check if we have the full packet
                             if len(buffer) >= length + 4:
-                                packet = buffer[4 : length + 4]
+                                packet = buffer[4: length + 4]
                                 self._process_packet(channel, packet)
                                 # Remove processed packet
-                                buffer = buffer[length + 4 :]
+                                buffer = buffer[length + 4:]
                             else:
                                 break  # Wait for more data
                     else:
@@ -1122,6 +1123,13 @@ if __name__ == "__main__":
         imu = BNO085Sensor()
         if imu.connect():
             logger.info("BNO085 sensor connected successfully.")
+
+            # Wait until sensor is ready before reading data
+            wait_attempts = 0
+            while (not imu.connected or imu.sensor is None) and wait_attempts < 10:
+                logger.info("Waiting for IMU sensor to be ready...")
+                time.sleep(0.2)
+                wait_attempts += 1
 
             # Main loop to read and display sensor data
             while True:
