@@ -46,6 +46,7 @@ load_dotenv()
 # Get the UART port from the environment variables
 IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA2")
 IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
+RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial communication
 
 
 class IMUStatus(Enum):
@@ -144,6 +145,7 @@ class BNO085Sensor:
         # Serial communication attributes
         self.serial_port_name = serial_port_name
         self.baudrate = baudrate or IMU_BAUDRATE
+        self.receiver_buffer_size = RECEIVER_BUFFER_SIZE
         self.serial_port = None
         self.connected = False
         self.read_thread = None
@@ -213,6 +215,7 @@ class BNO085Sensor:
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
                     baudrate=self.baudrate,
+                    receiver_buffer_size=self.receiver_buffer_size
                 )
                 success = self.serial_port.start()
                 if not success:
@@ -480,6 +483,7 @@ class BNO085Sensor:
                 test_port = serial.Serial(
                     port=port_name,
                     baudrate=self.baudrate,
+                    receiver_buffer_size=self.receiver_buffer_size,
                     bytesize=serial.EIGHTBITS,
                     timeout=1,
                 )
