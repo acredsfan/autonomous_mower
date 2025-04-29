@@ -12,10 +12,10 @@ class INA3221Sensor:
     def init_ina3221(i2c):
         try:
             sensor = INA3221.INA3221(i2c)
-            logging.info("INA3221 initialized successfully.")
+            logger.info("INA3221 initialized successfully.")
             return sensor
         except Exception as e:
-            logging.error(f"Error initializing INA3221: {e}")
+            logger.error(f"Error initializing INA3221: {e}")
             return None
 
     @staticmethod

@@ -107,32 +107,6 @@ class ObstacleDetector:
     def _initialize_interpreter(self):
         """Initialize the TensorFlow Lite interpreter."""
         try:
-            if self.resource_manager:
-                # Try to get interpreter from resource manager
-                self.interpreter = (
-                    self.resource_manager.get_inference_interpreter()
-                )
-                if self.interpreter:
-                    self.interpreter_type = (
-                        self.resource_manager.get_interpreter_type()
-                    )
-                    self.input_details = (
-                        self.resource_manager.get_model_input_details()
-                    )
-                    self.output_details = (
-                        self.resource_manager.get_model_output_details()
-                    )
-                    self.input_height, self.input_width = (
-                        self.resource_manager.get_model_input_size()
-                    )
-
-                    if self.input_details and len(self.input_details) > 0:
-                        self.floating_model = (
-                            self.input_details[0]["dtype"] == np.float32
-                        )
-                    self.interpreter.allocate_tensors()
-                    return
-            # If not using resource manager, load local model
             from tflite_runtime.interpreter import Interpreter
             model_path = PATH_TO_OBJECT_DETECTION_MODEL
             if not model_path or not os.path.exists(model_path):

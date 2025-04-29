@@ -3,6 +3,7 @@
 from flask import Flask, jsonify, render_template, request  # Ensure `flask` is installed
 from flask_cors import CORS  # Ensure `flask_cors` is installed
 from flask_socketio import SocketIO, emit  # Ensure `flask_socketio` is installed
+from flask_babel import Babel
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -24,6 +25,14 @@ def create_app(mower):
     app = Flask(__name__)
     CORS(app)
     socketio = SocketIO(app, cors_allowed_origins="*")
+
+    # Initialize Babel for translations
+    babel = Babel(app)
+
+    @babel.localeselector
+    def get_locale():
+        """Select the best match for supported languages."""
+        return request.accept_languages.best_match(['en', 'es', 'fr'])
 
     # Route handlers
     @app.route("/")

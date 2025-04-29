@@ -527,6 +527,14 @@ class ResourceManager:
         logger.warning("Safety status not available.")
         return {}
 
+    def get_status(self):
+        """Retrieve the current status of the mower."""
+        return {
+            "state": self.current_state.name if self.current_state else "UNKNOWN",
+            "battery": self.get_battery_status(),
+            "location": self.get_gps_location(),
+        }
+
     # Interpreter stubs for camera obstacle detection
     def get_inference_interpreter(self):
         """Stub for TFLite interpreter dependency."""
