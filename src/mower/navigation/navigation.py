@@ -3,13 +3,12 @@ import time
 from math import atan2, cos, radians, sin, sqrt
 from typing import Optional, Tuple, Dict
 
-import utm
+import utm  # Ensure `utm` is installed in your environment
 from dataclasses import dataclass
 
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.gps import GpsLatestPosition, GpsPosition
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-
 
 logger = LoggerConfig.get_logger(__name__)
 
@@ -274,7 +273,7 @@ class NavigationController:
         self,
         current_position: Tuple[float, float],
         target_location: Tuple[float, float],
-        tolerance: float = None,
+        tolerance: Optional[float] = None,
     ) -> bool:
         """
         Check if target location has been reached.
@@ -367,6 +366,12 @@ class NavigationController:
             "heading_error": self.status.heading_error,
             "last_error": self.status.last_error,
         }
+
+    def stop(self):
+        """Stop the navigation process."""
+        self.robohat_driver.run(0, 0)  # Stop the motors
+        self.status.is_moving = False
+        logger.info("Navigation process stopped.")
 
 
 def initialize_navigation():

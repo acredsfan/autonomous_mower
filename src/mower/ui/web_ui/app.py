@@ -1,8 +1,8 @@
 """Flask web interface for the autonomous mower."""
 
-from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+from flask import Flask, jsonify, render_template, request  # Ensure `flask` is installed
+from flask_cors import CORS  # Ensure `flask_cors` is installed
+from flask_socketio import SocketIO, emit  # Ensure `flask_socketio` is installed
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo

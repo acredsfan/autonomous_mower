@@ -136,7 +136,9 @@ class ObstacleDetector:
             from tflite_runtime.interpreter import Interpreter
             model_path = PATH_TO_OBJECT_DETECTION_MODEL
             if not model_path or not os.path.exists(model_path):
-                logger.warning("Model not found at %s, skipping interpreter", model_path)
+                logger.warning(
+                    "Model not found at %s, skipping interpreter", model_path
+                )
                 self.interpreter = None
                 return
             self.interpreter = Interpreter(model_path=model_path)

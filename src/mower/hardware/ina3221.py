@@ -1,4 +1,4 @@
-import barbudor_ina3221.full as INA3221
+import barbudor_ina3221.full as INA3221  # Ensure `barbudor_ina3221` is installed
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
@@ -63,7 +63,7 @@ class INA3221Sensor:
 if __name__ == "__main__":
     # Initialize the INA3221 sensor
     ina3221_sensor = INA3221Sensor()
-    ina3221 = ina3221_sensor.init_ina3221()
+    ina3221 = ina3221_sensor.init_ina3221(i2c)  # Pass the required `i2c` argument
     print(ina3221_sensor.read_ina3221(ina3221, 1))
     print(ina3221_sensor.read_ina3221(ina3221, 3))
     print(ina3221_sensor.battery_charge(ina3221))

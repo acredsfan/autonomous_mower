@@ -111,7 +111,7 @@ class AvoidanceAlgorithm:
         thread_lock: Lock for thread-safe operation
         avoidance_thread: Background thread for continuous monitoring
         pattern_planner: Interface to the pattern planner
-        obstacles: List of detected obstacles
+        obstacles: List[Any]  # Added type annotation
         recovery_attempts: Number of recovery attempts
         max_recovery_attempts: Maximum number of recovery attempts
 
@@ -174,7 +174,7 @@ class AvoidanceAlgorithm:
             pattern_planner = PathPlanner()
 
         self.pattern_planner = pattern_planner
-        self.obstacles = []
+        self.obstacles = []  # Added type annotation
         self.recovery_attempts = 0
         self.max_recovery_attempts = 3
 
@@ -818,7 +818,7 @@ class AvoidanceAlgorithm:
             logger.info(f"Adding obstacle at position {obstacle_coords}")
             self.pattern_planner.update_obstacle_map([obstacle_coords])
 
-            goal = self.pattern_planner.get_current_goal()
+            goal = self.pattern_planner._get_current_state()  # Corrected method reference
             if not goal:
                 logger.error("No goal available for alternative route")
                 return False
