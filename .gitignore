@@ -50,6 +50,9 @@ config/home_location.json
 config/mowing_schedule.json
 old_main.log
 issues.json
+issues.md
+tasks.json
+tasks.md
 
 # Temporary files
 *.tmp
@@ -61,7 +64,7 @@ Thumbs.db
 docs/_build/
 docs/api/
 original_plan.md
-JOURNALCTLOUTPUT.md
+jctl_output.md
 
 # Test coverage
 .coverage
