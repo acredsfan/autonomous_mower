@@ -112,6 +112,18 @@ class ObstacleDetector:
                 )
                 self.interpreter = None
                 return
+            # Validate TFLite file header (should start with b'TFL3')
+            with open(model_path, 'rb') as f:
+                magic = f.read(4)
+            if magic != b'TFL3':
+                logger.error(
+                    (
+                        f"Model at {model_path} is not a valid TFLite file "
+                        f"(header: {magic})"
+                    )
+                )
+                self.interpreter = None
+                return
             self.interpreter = Interpreter(model_path=model_path)
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()

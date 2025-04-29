@@ -29,6 +29,7 @@ def create_app(mower):
     # Initialize Babel for translations
     babel = Babel(app)
 
+    # Flask-Babel >=2.0 uses 'localeselector' (not 'localeselector')
     @babel.localeselector
     def get_locale():
         """Select the best match for supported languages."""

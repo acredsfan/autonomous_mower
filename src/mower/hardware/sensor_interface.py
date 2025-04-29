@@ -75,7 +75,7 @@ class EnhancedSensorInterface:
         """Initialize INA3221 sensor."""
         try:
             with self._locks["i2c"]:
-                return INA3221Sensor.init_ina3221(self._i2c)
+                return INA3221Sensor.init_ina3221()
         except Exception as e:
             _log_error("INA3221 initialization failed", e)
             return None

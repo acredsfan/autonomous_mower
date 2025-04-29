@@ -126,9 +126,7 @@ class ResourceManager:
 
             # Initialize INA3221 sensor
             try:
-                # Assuming I2C is initialized elsewhere
-                i2c = self._resources.get("i2c")
-                self._resources["ina3221"] = INA3221Sensor.init_ina3221(i2c)
+                self._resources["ina3221"] = INA3221Sensor.init_ina3221()
                 logger.info("INA3221 power monitor initialized successfully")
             except Exception as e:
                 logger.warning(f"Error initializing INA3221 sensor: {e}")
