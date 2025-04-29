@@ -1,6 +1,6 @@
 import board
 import busio
-from barbudor_ina3221 import INA3221
+from barbudor_ina3221.lite import INA3221
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
