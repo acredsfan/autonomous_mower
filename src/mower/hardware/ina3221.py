@@ -1,6 +1,6 @@
-import barbudor_ina3221.full as INA3221  # type: ignore[import]
-
-# Ensure logger is initialized at the top of the file
+import board
+import busio
+from barbudor_ina3221 import INA3221
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
@@ -9,9 +9,13 @@ logger = LoggerConfig.get_logger(__name__)
 
 class INA3221Sensor:
     @staticmethod
-    def init_ina3221(i2c):
+    def init_ina3221():
+        """Initialize the INA3221 sensor"""
         try:
-            sensor = INA3221.INA3221(i2c)
+            i2c = busio.I2C(board.SCL, board.SDA)
+
+            # Initialize INA3221 sensor
+            sensor = INA3221(i2c)
             logger.info("INA3221 initialized successfully.")
             return sensor
         except Exception as e:
@@ -20,54 +24,28 @@ class INA3221Sensor:
 
     @staticmethod
     def read_ina3221(sensor, channel):
+        """Read data from the INA3221 sensor for a specific channel."""
         try:
-            if channel in [1, 3]:
-                Voltage = round(sensor.bus_voltage(channel), 1)
-                Shunt_Voltage = round(sensor.shunt_voltage(channel), 1)
-                Current = round(sensor.current(channel), 1)
-                sensor_data = {
-                    "bus_voltage": Voltage,
-                    "current": Current,
-                    "shunt_voltage": Shunt_Voltage,
+            if channel in [1, 2, 3]:
+                bus_voltage = sensor.bus_voltage(channel)
+                shunt_voltage = sensor.shunt_voltage(channel)
+                current = sensor.current(channel)
+                return {
+                    "bus_voltage": round(bus_voltage, 2),
+                    "shunt_voltage": round(shunt_voltage, 2),
+                    "current": round(current, 2),
                 }
-                if channel == 3:
-                    Charge_Level = round(
-                        (Voltage - 11.2) / (14.6 - 11.2) * 100, 1
-                    )
-                    sensor_data["charge_level"] = f"{Charge_Level}%"
-                return sensor_data
             else:
-                raise ValueError(
-                    "Invalid INA3221 channel. Please use 1 or 3."
-                )
+                raise ValueError("Invalid channel. Must be 1, 2, or 3.")
         except Exception as e:
             logger.error(f"Error reading INA3221 data: {e}")
             return {}
 
-    """Function to determine the battery state of charge
-    for a 12.8V 20Ah lithium-ion battery.
-    Variables may need to be changed based on the
-    battery chemistry of the battery being used."""
-
-    @staticmethod
-    def battery_charge(sensor):
-        try:
-            Voltage = round(sensor.bus_voltage(3), 2)
-            Charge_Level = round((Voltage - 11.5) / (13.5 - 11.5) * 100, 1)
-            return f"{Charge_Level}%"
-        except Exception as e:
-            logger.error(f"Error reading battery charge level: {e}")
-            return "Error"
-
 
 if __name__ == "__main__":
-    # Initialize the INA3221 sensor
-    ina3221_sensor = INA3221Sensor()
-    # Initialize the I2C interface (replace with actual initialization code)
-    i2c = INA3221.I2C(1)  # Example: I2C bus number 1
-    # Initialize the INA3221 sensor with the I2C interface
-    ina3221 = ina3221_sensor.init_ina3221(
-        i2c)  # Pass the required `i2c` argument
-    print(ina3221_sensor.read_ina3221(ina3221, 1))
-    print(ina3221_sensor.read_ina3221(ina3221, 3))
-    print(ina3221_sensor.battery_charge(ina3221))
+    # Example usage
+    sensor = INA3221Sensor.init_ina3221()
+    if sensor:
+        for channel in [1, 2, 3]:
+            data = INA3221Sensor.read_ina3221(sensor, channel)
+            print(f"Channel {channel}: {data}")
