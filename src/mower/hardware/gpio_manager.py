@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any
 
 # Try to import RPi.GPIO, but don't fail if not available
 try:
-    import RPi.GPIO as GPIO
+    import RPi.GPIO as GPIO  # type: ignore[import]
 
     RPI_GPIO_AVAILABLE = True
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
