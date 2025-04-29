@@ -7,7 +7,7 @@ from flask_babel import Babel
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
-
+from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -26,14 +26,35 @@ def create_app(mower):
     CORS(app)
     socketio = SocketIO(app, cors_allowed_origins="*")
 
-    # Initialize Babel for translations
-    babel = Babel(app)
+    # Initialize Babel for translations using the version-agnostic approach
+    # This uses the implementation from i18n.py which works with any
+    # Flask-Babel version
+    try:
+        init_babel(app)
+        logger.info("Initialized Babel from i18n module")
+    except Exception as e:
+        # Fallback to legacy initialization if needed
+        logger.warning(f"Could not initialize Babel from i18n module: {e}")
+        babel = Babel(app)
 
-    # Use the correct Flask-Babel >=2.0 decorator
-    @babel.locale_selector
-    def get_locale():
-        """Select the best match for supported languages."""
-        return request.accept_languages.best_match(['en', 'es', 'fr'])
+        # Define locale selector function instead of using decorator
+        def get_locale():
+            """Select the best match for supported languages."""
+            return request.accept_languages.best_match(['en', 'es', 'fr'])
+
+        # Try different Flask-Babel versions' initialization methods
+        try:
+            # Flask-Babel >= 2.0
+            babel.init_app(app, locale_selector=get_locale)
+            logger.info("Initialized Babel with locale_selector parameter")
+        except TypeError:
+            try:
+                # Flask-Babel < 2.0
+                babel.init_app(app)
+                babel.localeselector(get_locale)
+                logger.info("Initialized Babel with localeselector decorator")
+            except Exception as e2:
+                logger.error(f"Failed to initialize Babel: {e2}")
 
     # Route handlers
     @app.route("/")
