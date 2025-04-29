@@ -17,7 +17,7 @@ from typing import List, Tuple
 
 import cv2
 import numpy as np
-import requests
+import requests  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image
 
@@ -107,7 +107,7 @@ class ObstacleDetector:
     def _initialize_interpreter(self):
         """Initialize the TensorFlow Lite interpreter."""
         try:
-            from tflite_runtime.interpreter import Interpreter
+            from tflite_runtime.interpreter import Interpreter  # type: ignore
             model_path = PATH_TO_OBJECT_DETECTION_MODEL
             if not model_path or not os.path.exists(model_path):
                 logger.warning(

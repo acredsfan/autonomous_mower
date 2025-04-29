@@ -97,6 +97,7 @@ class ResourceManager:
         self._initialized = False
         self._resources = {}
         self._lock = threading.Lock()
+        self.current_state = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config
         self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
         # allow web UI to access resource manager
@@ -170,7 +171,7 @@ class ResourceManager:
             # Initialize GPS serial port
             try:
                 self._resources["gps_serial"] = SerialPort(
-                    GPS_PORT, GPS_BAUDRATE
+                    GPS_PORT if GPS_PORT is not None else "COM1", GPS_BAUDRATE
                 )
                 logger.info(
                     f"GPS serial port initialized on {GPS_PORT} at "
@@ -495,7 +496,7 @@ class ResourceManager:
                 )
 
                 self._resources["gps_serial"] = SerialPort(
-                    GPS_PORT, GPS_BAUDRATE
+                    GPS_PORT if GPS_PORT is not None else "COM1", GPS_BAUDRATE
                 )
                 logger.info(
                     f"GPS serial port initialized on demand on {GPS_PORT}"
@@ -530,7 +531,9 @@ class ResourceManager:
     def get_status(self):
         """Retrieve the current status of the mower."""
         return {
-            "state": self.current_state.name if self.current_state else "UNKNOWN",
+            "state": (
+                self.current_state.name if self.current_state else "UNKNOWN"
+            ),
             "battery": self.get_battery_status(),
             "location": self.get_gps_location(),
         }
@@ -630,8 +633,14 @@ class ResourceManager:
         """
         try:
             # Stop navigation and blade
-            self.navigation_controller.stop()
-            self.blade_controller.stop_blade()
+            navigation_controller = self.get_navigation_controller()
+            if navigation_controller:
+                navigation_controller.stop()
+            blade_controller = self.get_blade_controller()
+            if blade_controller:
+                blade_controller.disable()
+            else:
+                logger.warning("Blade controller is not available.")
 
             # Return to IDLE state if not in ERROR or EMERGENCY_STOP
             if self.current_state not in [

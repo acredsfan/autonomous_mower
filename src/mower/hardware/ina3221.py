@@ -1,13 +1,13 @@
-import barbudor_ina3221.full as INA3221  # Ensure `barbudor_ina3221` is installed
+import barbudor_ina3221.full as INA3221  # type: ignore[import]
 
+# Ensure logger is initialized at the top of the file
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logger = LoggerConfig.get_logger(__name__)
 
 
 class INA3221Sensor:
-
     @staticmethod
     def init_ina3221(i2c):
         try:
@@ -41,7 +41,7 @@ class INA3221Sensor:
                     "Invalid INA3221 channel. Please use 1 or 3."
                 )
         except Exception as e:
-            logging.error(f"Error reading INA3221 data: {e}")
+            logger.error(f"Error reading INA3221 data: {e}")
             return {}
 
     """Function to determine the battery state of charge
@@ -56,14 +56,18 @@ class INA3221Sensor:
             Charge_Level = round((Voltage - 11.5) / (13.5 - 11.5) * 100, 1)
             return f"{Charge_Level}%"
         except Exception as e:
-            logging.error(f"Error reading battery charge level: {e}")
+            logger.error(f"Error reading battery charge level: {e}")
             return "Error"
 
 
 if __name__ == "__main__":
     # Initialize the INA3221 sensor
     ina3221_sensor = INA3221Sensor()
-    ina3221 = ina3221_sensor.init_ina3221(i2c)  # Pass the required `i2c` argument
+    # Initialize the I2C interface (replace with actual initialization code)
+    i2c = INA3221.I2C(1)  # Example: I2C bus number 1
+    # Initialize the INA3221 sensor with the I2C interface
+    ina3221 = ina3221_sensor.init_ina3221(
+        i2c)  # Pass the required `i2c` argument
     print(ina3221_sensor.read_ina3221(ina3221, 1))
     print(ina3221_sensor.read_ina3221(ina3221, 3))
     print(ina3221_sensor.battery_charge(ina3221))

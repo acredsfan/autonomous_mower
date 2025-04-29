@@ -818,7 +818,7 @@ class AvoidanceAlgorithm:
             logger.info(f"Adding obstacle at position {obstacle_coords}")
             self.pattern_planner.update_obstacle_map([obstacle_coords])
 
-            goal = self.pattern_planner._get_current_state()  # Corrected method reference
+            goal = self.pattern_planner._get_current_state()
             if not goal:
                 logger.error("No goal available for alternative route")
                 return False
