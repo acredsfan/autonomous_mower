@@ -37,6 +37,9 @@ env/
 logs/
 *.db
 *.sqlite3
+.mypy_cache/
+.pytest_cache/
+.wheels/
 
 # Model files and data
 models/*.tflite
@@ -78,6 +81,7 @@ htmlcov/
 # Custom Rules
 *.mdc
 .junie/
+copilot-instructions.md
 .github/workflows/copilot-instructions.md
 
 # Distribution / packaging
