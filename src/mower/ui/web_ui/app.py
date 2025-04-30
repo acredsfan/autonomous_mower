@@ -4,6 +4,7 @@ from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from flask_babel import Babel
+import os
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -75,7 +76,13 @@ def create_app(mower):
     @app.route("/map")
     def map_view():
         """Render the map view page."""
-        return render_template("map.html")
+        # Use a default API key or retrieve from environment/config
+        # For development purposes, we'll use a placeholder API key
+        google_maps_api_key = os.environ.get(
+            'GOOGLE_MAPS_API_KEY',
+            'AIzaSyBDaeWicvigtP9xPv919E-RNoxfvC-Hqik')
+        return render_template("map.html",
+                               google_maps_api_key=google_maps_api_key)
 
     @app.route("/diagnostics")
     def diagnostics():
@@ -340,13 +347,44 @@ def create_app(mower):
             logger.error(f"Failed to set schedule: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
+    # Language support
+    @app.route("/api/languages", methods=["GET"])
+    def get_languages():
+        """Get available UI languages."""
+        try:
+            # Define supported languages with their display names
+            languages = {
+                "en": {"name": "English", "active": True},
+                "es": {"name": "Español", "active": True},
+                "fr": {"name": "Français", "active": True}
+            }
+
+            # Get current language from request or default to English
+            current_lang = request.accept_languages.best_match(
+                ['en', 'es', 'fr']) or 'en'
+
+            return jsonify({
+                "success": True,
+                "current": current_lang,
+                "available": languages
+            })
+        except Exception as e:
+            logger.error(f"Failed to get languages: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
     # WebSocket event handlers
     @socketio.on("connect")
-    def handle_connect():
+    def handle_connect(auth=None):
         """Handle client connection."""
         logger.info("Client connected")
-        emit("status_update", mower.get_status())
-        emit("path_update", mower.get_current_path())
+        try:
+            emit("status_update", mower.get_status())
+            # Use the path_planner directly instead of calling
+            # get_current_path()
+            path_planner = mower.resource_manager.get_path_planner()
+            emit("path_update", path_planner.current_path)
+        except Exception as e:
+            logger.error(f"Error in handle_connect: {e}")
 
     @socketio.on("disconnect")
     def handle_disconnect():
