@@ -540,8 +540,8 @@ class ResourceManager:
         """Get the battery status information.
 
         Returns:
-            dict: Battery status including percentage, voltage,
-            and charging state
+            dict: Battery status including percentage,
+            voltage, and charging state
         """
         try:
             # Try to get battery information from INA3221 sensor if available
@@ -550,8 +550,8 @@ class ResourceManager:
                 # Assuming channel 1 is battery
                 voltage = ina3221.get_bus_voltage(1)
                 # Simple voltage to percentage conversion
+                # (adjust based on your battery)
                 # Assumes 12V battery where 10.5V is empty and 14.6V is full
-                # Adjust based on your actual battery specs
                 percentage = max(0, min(100, (voltage - 10.5) / 0.025))
                 charging = voltage > 14.6  # Simple charging detection
                 return {
@@ -574,6 +574,30 @@ class ResourceManager:
                 "voltage": 12.0,
                 "charging": False
             }
+
+    def get_gps_location(self):
+        """Get the current GPS location.
+
+        Returns:
+            tuple: (latitude, longitude) coordinates or (0, 0) if unavailable
+        """
+        try:
+            # Try to get location from localization system if available
+            localization = self._resources.get("localization")
+            if localization and hasattr(localization, "get_location"):
+                return localization.get_location()
+
+            # Try to get directly from GPS if available
+            gps = self.get_gps()
+            if gps and hasattr(gps, "get_position"):
+                return gps.get_position()
+
+            # Fallback to a default value if hardware access fails
+            return (0.0, 0.0)  # Default coordinates
+        except Exception as e:
+            logger.error(f"Error getting GPS location: {e}")
+            # Return safe defaults
+            return (0.0, 0.0)
 
     # Interpreter stubs for camera obstacle detection
     def get_inference_interpreter(self):
@@ -604,6 +628,10 @@ class ResourceManager:
     def get_imu_sensor(self) -> Optional[BNO085Sensor]:
         """Return IMU sensor instance."""
         return self._resources.get("imu")
+
+    def get_ina3221_sensor(self) -> Optional[INA3221Sensor]:
+        """Return INA3221 power monitor sensor instance."""
+        return self._resources.get("ina3221")
 
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
         """Return avoidance algorithm instance."""

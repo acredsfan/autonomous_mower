@@ -115,6 +115,7 @@ args = [
     "--aggressive",
     "--aggressive",
     "--aggressive",
+    "--experimental",
 ]
 
 [tool.isort]
