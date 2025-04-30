@@ -33,6 +33,7 @@ Configuration:
 import json
 import os
 import threading
+import time
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
@@ -522,12 +523,81 @@ class ResourceManager:
             logger.warning("Web interface resource not available")
 
     def get_safety_status(self):
-        """Retrieve safety status from the sensor interface."""
-        sensor_interface = self.get_sensor_interface()
-        if sensor_interface and hasattr(sensor_interface, "get_safety_status"):
-            return sensor_interface.get_safety_status()
-        logger.warning("Safety status not available.")
-        return {}
+        """Retrieve safety status from the sensor interface.
+
+        Returns:
+            dict: Safety status information, with fallbacks when unavailable
+        """
+        # Static variables to track warning state and configuration
+        if not hasattr(self.get_safety_status, "_vars"):
+            self.get_safety_status._vars = {
+                "warning_logged": False,
+                "last_warning_time": 0,
+                # Make the warning interval configurable
+                "warning_interval": 30  # seconds
+            }
+        vars = self.get_safety_status._vars
+
+        try:
+            # Try to get safety status from the sensor interface
+            sensor_interface = self.get_sensor_interface()
+            if sensor_interface and hasattr(sensor_interface,
+                                            "get_safety_status"):
+                # Reset warning flag if we successfully get data
+                vars["warning_logged"] = False
+                return sensor_interface.get_safety_status()
+
+            # Try to get safety status directly from the IMU if available
+            imu = self.get_imu_sensor()
+            if imu and hasattr(imu, "get_safety_status"):
+                # Reset warning flag if we successfully get data
+                vars["warning_logged"] = False
+                return imu.get_safety_status()
+
+            # Check if it's time to log a warning
+            current_time = time.time()
+            should_log = (not vars["warning_logged"] or
+                          current_time - vars["last_warning_time"] >
+                          vars["warning_interval"])
+
+            if should_log:
+                logger.warning(
+                    "Safety status not available from sensor interface or IMU."
+                )
+                vars["warning_logged"] = True
+                vars["last_warning_time"] = current_time
+
+                # Add UI notification about limited safety monitoring
+                try:
+                    web_ui = self.get_web_interface()
+                    if web_ui and hasattr(web_ui, "send_alert"):
+                        web_ui.send_alert(
+                            "Limited safety monitoring available",
+                            "warning"
+                        )
+                except Exception as e:
+                    logger.debug(f"Failed to send safety status alert: {e}")
+
+            # Return a structured safety status even without hardware
+            return {
+                "is_safe": True,  # Assume safe by default
+                "tilt_ok": True,
+                "impact_detected": False,
+                "acceleration_ok": True,
+                "hardware_available": False,  # Flag showing hardware status
+                "messages": []
+            }
+        except Exception as e:
+            logger.error(f"Error getting safety status: {e}")
+            # Return safe defaults
+            return {
+                "is_safe": True,  # Assume safe by default
+                "tilt_ok": True,
+                "impact_detected": False,
+                "acceleration_ok": True,
+                "hardware_available": False,
+                "messages": ["Error getting safety data"]
+            }
 
     def get_status(self):
         """Retrieve the current status of the mower."""

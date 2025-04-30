@@ -7,7 +7,7 @@
 - The goal is clean, modular, production-ready robotics software.
 
 ## Coding Style and Best Practices
-- Python must follow PEP8, with line length <= 88 characters, using type hints.
+- Python must follow PEP8, with line length <= 79 characters, using type hints.
 - Use `snake_case` for Python, `camelCase` for JS.
 - Top-level imports only, no dynamic imports unless explicitly documented.
 - Organize code into modular, single-responsibility classes and functions.

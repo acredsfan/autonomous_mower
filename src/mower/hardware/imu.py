@@ -249,7 +249,10 @@ class BNO085Sensor:
                             logger.info(init_msg)
                             return True
                         except Exception as test_e:
-                            logger.warning(f"BNO085 sensor not responsive after init: {test_e}")
+                            logger.warning(
+                                "BNO085 sensor not responsive after init: "
+                                f"{test_e}"
+                            )
                             self.connected = False
                             self.sensor = None
                             time.sleep(0.5)
@@ -1135,7 +1138,10 @@ if __name__ == "__main__":
 
             # Wait until sensor is ready before reading data
             wait_attempts = 0
-            while (not imu.connected or imu.sensor is None) and wait_attempts < 10:
+            while (
+                (not imu.connected or imu.sensor is None)
+                and wait_attempts < 10
+            ):
                 logger.info("Waiting for IMU sensor to be ready...")
                 time.sleep(0.2)
                 wait_attempts += 1
