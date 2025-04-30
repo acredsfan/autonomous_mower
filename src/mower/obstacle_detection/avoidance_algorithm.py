@@ -169,9 +169,22 @@ class AvoidanceAlgorithm:
 
         self.reset_state()
         if pattern_planner is None:
-            from mower.navigation.path_planner import PathPlanner
+            from mower.navigation.path_planner import (
+                PathPlanner,
+                PatternConfig,
+                PatternType,
+            )
 
-            pattern_planner = PathPlanner()
+            # Create a default PatternConfig as required by the PathPlanner
+            pattern_config = PatternConfig(
+                pattern_type=PatternType.PARALLEL,
+                spacing=0.3,
+                angle=0.0,
+                overlap=0.1,
+                start_point=(0.0, 0.0),
+                boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
+            )
+            pattern_planner = PathPlanner(pattern_config=pattern_config)
 
         self.pattern_planner = pattern_planner
         self.obstacles = []  # Added type annotation

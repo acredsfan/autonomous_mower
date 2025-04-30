@@ -92,6 +92,11 @@ def create_app(mower):
         """Render the mowing schedule page."""
         return render_template("schedule.html")
 
+    @app.route("/system_health")
+    def system_health():
+        """Render the system health page."""
+        return render_template("system_health.html")
+
     @app.route("/setup_wizard")
     def setup_wizard():
         """Render the setup wizard page."""
