@@ -25,13 +25,13 @@ logger = logging.getLogger(__name__)
 # YOLOv8 model URLs - These are TFLite versions of YOLOv8 models
 MODEL_URLS = {
     "yolov8n": (
-        "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.tflite"
+        "https://github.com/ultralytics/ultralytics/releases/download/v8.1.0/yolov8n.tflite"
     ),
     "yolov8s": (
-        "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8s.tflite"
+        "https://github.com/ultralytics/ultralytics/releases/download/v8.1.0/yolov8s.tflite"
     ),
     "yolov8m": (
-        "https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8m.tflite"
+        "https://github.com/ultralytics/ultralytics/releases/download/v8.1.0/yolov8m.tflite"
     ),
 }
 
