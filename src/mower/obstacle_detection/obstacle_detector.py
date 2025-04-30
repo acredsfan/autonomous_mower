@@ -29,10 +29,14 @@ logger = LoggerConfig.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
+PATH_TO_OBJECT_DETECTION_MODEL = os.getenv(
+    "OBSTACLE_MODEL_PATH",
+    "/home/pi/mower/obstacle_detection/models/detect.tflite")
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 # Update label map path to the correct location
-LABEL_MAP_PATH = "/home/pi/autonomous_mower/models/imagenet_labels.txt"
+LABEL_MAP_PATH = os.getenv(
+    "LABEL_MAP_PATH",
+    "/home/pi/mower/obstacle_detection/models/labelmap.txt")
 MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
 USE_REMOTE_DETECTION = (
     os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
