@@ -7,9 +7,12 @@
 
 // Global variables
 let map;
+let drawingManager;
 let boundaryLayer;
 let patternLayer;
+let noGoZones = [];
 let homeMarker;
+let geocoder;
 let currentPattern = 'PARALLEL';
 let currentSettings = {
     spacing: 0.5,
@@ -19,15 +22,14 @@ let currentSettings = {
 let boundaryPoints = [];
 let patternPath = [];
 let isSatelliteView = false;
-
-// Map layers
-let osmLayer;
-let satelliteLayer;
+let isDrawingMode = false;
+let currentDrawingMode = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
     loadBoundaryAndSettings();
+    initMapControls();
 
     // Update connection status
     if (typeof updateMapConnectionStatus === 'function') {
@@ -40,7 +42,10 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function initMap() {
     // Default center (will be updated with boundary data)
-    const defaultCenter = { lat: 0, lng: 0 };
+    const defaultCenter = { lat: 37.7749, lng: -122.4194 }; // San Francisco as default
+
+    // Initialize geocoder for address searches
+    geocoder = new google.maps.Geocoder();
 
     // Initialize the map
     map = new google.maps.Map(document.getElementById('map'), {
@@ -52,9 +57,93 @@ function initMap() {
         fullscreenControl: true
     });
 
+    // Initialize the drawing manager for polygon drawing
+    drawingManager = new google.maps.drawing.DrawingManager({
+        drawingMode: null,
+        drawingControl: false,
+        polygonOptions: {
+            editable: true,
+            strokeColor: '#689F38',
+            strokeOpacity: 1.0,
+            strokeWeight: 3,
+            fillColor: '#8BC34A',
+            fillOpacity: 0.2
+        },
+        markerOptions: {
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 2
+            },
+        }
+    });
+    
+    drawingManager.setMap(map);
+
     // Initialize arrays to store boundary and pattern paths
     boundaryLayer = [];
     patternLayer = [];
+    
+    // Event listener for when polygon drawing is complete
+    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+        // After polygon is drawn, exit drawing mode
+        drawingManager.setDrawingMode(null);
+        isDrawingMode = false;
+        
+        if (currentDrawingMode === 'boundary') {
+            // Clear existing boundary
+            clearBoundary();
+            boundaryLayer.push(polygon);
+            
+            // Extract points from polygon
+            boundaryPoints = [];
+            const path = polygon.getPath();
+            for (let i = 0; i < path.getLength(); i++) {
+                const point = path.getAt(i);
+                boundaryPoints.push({
+                    lat: point.lat(),
+                    lng: point.lng()
+                });
+            }
+
+            // Listen for changes in the polygon
+            google.maps.event.addListener(path, 'set_at', updateBoundaryPoints);
+            google.maps.event.addListener(path, 'insert_at', updateBoundaryPoints);
+            
+            // Calculate and display area
+            const area = calculatePolygonArea(boundaryPoints);
+            document.getElementById('totalArea').textContent = area.toFixed(1) + ' m²';
+            
+            // Generate pattern based on new boundary
+            generatePattern(currentPattern, currentSettings);
+            
+        } else if (currentDrawingMode === 'nogo') {
+            // Add to no-go zones
+            noGoZones.push(polygon);
+            
+            // Set different color for no-go zones
+            polygon.setOptions({
+                strokeColor: '#FF0000',
+                fillColor: '#FF0000'
+            });
+        }
+    });
+    
+    // Event listener for marker placement (home location)
+    google.maps.event.addListener(drawingManager, 'markercomplete', function(marker) {
+        // Set home marker
+        if (homeMarker) {
+            homeMarker.setMap(null);
+        }
+        homeMarker = marker;
+        
+        // Exit drawing mode
+        drawingManager.setDrawingMode(null);
+        isDrawingMode = false;
+    });
 
     // Toggle satellite/street view
     document.getElementById('toggle-satellite').addEventListener('click', function() {
@@ -67,6 +156,228 @@ function initMap() {
         }
         isSatelliteView = !isSatelliteView;
     });
+}
+
+/**
+ * Update boundary points when the polygon is edited
+ */
+function updateBoundaryPoints() {
+    if (boundaryLayer.length === 0) return;
+    
+    const polygon = boundaryLayer[0];
+    const path = polygon.getPath();
+    
+    boundaryPoints = [];
+    for (let i = 0; i < path.getLength(); i++) {
+        const point = path.getAt(i);
+        boundaryPoints.push({
+            lat: point.lat(),
+            lng: point.lng()
+        });
+    }
+    
+    // Update area calculation
+    const area = calculatePolygonArea(boundaryPoints);
+    document.getElementById('totalArea').textContent = area.toFixed(1) + ' m²';
+    
+    // Regenerate pattern
+    generatePattern(currentPattern, currentSettings);
+}
+
+/**
+ * Initialize map control buttons
+ */
+function initMapControls() {
+    // Draw boundary button
+    document.getElementById('draw-boundary').addEventListener('click', function() {
+        currentDrawingMode = 'boundary';
+        startDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    });
+    
+    // Draw no-go zone button
+    document.getElementById('draw-nogo').addEventListener('click', function() {
+        currentDrawingMode = 'nogo';
+        startDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+    });
+    
+    // Set home location button
+    document.getElementById('set-home').addEventListener('click', function() {
+        currentDrawingMode = 'home';
+        startDrawingMode(google.maps.drawing.OverlayType.MARKER);
+    });
+    
+    // Clear all button
+    document.getElementById('clear-all').addEventListener('click', function() {
+        clearBoundary();
+        clearNoGoZones();
+        clearHomeLocation();
+        boundaryPoints = [];
+        document.getElementById('totalArea').textContent = '-- m²';
+        // Clear pattern
+        clearPattern();
+    });
+    
+    // Address search button
+    document.getElementById('search-address').addEventListener('click', function() {
+        const address = document.getElementById('address-input').value;
+        if (address) {
+            geocodeAddress(address);
+        }
+    });
+    
+    // Also allow pressing Enter in the input field
+    document.getElementById('address-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const address = this.value;
+            if (address) {
+                geocodeAddress(address);
+            }
+        }
+    });
+    
+    // Save map changes button
+    document.getElementById('save-map-changes').addEventListener('click', function() {
+        saveMapChanges();
+    });
+}
+
+/**
+ * Start drawing mode on the map
+ */
+function startDrawingMode(drawingMode) {
+    // Exit any current drawing mode
+    drawingManager.setDrawingMode(null);
+    
+    // Set new drawing mode
+    drawingManager.setDrawingMode(drawingMode);
+    isDrawingMode = true;
+}
+
+/**
+ * Clear the yard boundary
+ */
+function clearBoundary() {
+    for (let i = 0; i < boundaryLayer.length; i++) {
+        boundaryLayer[i].setMap(null);
+    }
+    boundaryLayer = [];
+}
+
+/**
+ * Clear all no-go zones
+ */
+function clearNoGoZones() {
+    for (let i = 0; i < noGoZones.length; i++) {
+        noGoZones[i].setMap(null);
+    }
+    noGoZones = [];
+}
+
+/**
+ * Clear home location marker
+ */
+function clearHomeLocation() {
+    if (homeMarker) {
+        homeMarker.setMap(null);
+        homeMarker = null;
+    }
+}
+
+/**
+ * Clear the pattern layer
+ */
+function clearPattern() {
+    for (let i = 0; i < patternLayer.length; i++) {
+        patternLayer[i].setMap(null);
+    }
+    patternLayer = [];
+    patternPath = [];
+}
+
+/**
+ * Geocode an address and center the map on it
+ */
+function geocodeAddress(address) {
+    geocoder.geocode({ 'address': address }, function(results, status) {
+        if (status === 'OK') {
+            map.setCenter(results[0].geometry.location);
+            map.setZoom(18); // Zoom in to show the property
+            
+            // Show a temporary marker at the address
+            const marker = new google.maps.Marker({
+                map: map,
+                position: results[0].geometry.location,
+                animation: google.maps.Animation.DROP
+            });
+            
+            // Remove marker after a few seconds
+            setTimeout(() => {
+                marker.setMap(null);
+            }, 3000);
+            
+            showAlert('Address found! You can now draw your yard boundary.', 'success');
+        } else {
+            showAlert('Geocode was not successful: ' + status, 'warning');
+        }
+    });
+}
+
+/**
+ * Save all map changes (boundary, no-go zones, home location)
+ */
+function saveMapChanges() {
+    // Save boundary
+    if (boundaryPoints.length >= 3) {
+        sendCommand('save_area', { coordinates: boundaryPoints }, function(response) {
+            if (response.success) {
+                showAlert('Yard boundary saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save yard boundary: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        });
+    } else {
+        showAlert('Please draw a valid yard boundary before saving.', 'warning');
+        return;
+    }
+    
+    // Save home location
+    if (homeMarker) {
+        const homeLocation = {
+            lat: homeMarker.getPosition().lat(),
+            lng: homeMarker.getPosition().lng()
+        };
+        
+        sendCommand('set_home', { location: homeLocation }, function(response) {
+            if (response.success) {
+                showAlert('Home location saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save home location: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        });
+    }
+    
+    // Save no-go zones
+    if (noGoZones.length > 0) {
+        const zones = noGoZones.map(zone => {
+            const path = zone.getPath();
+            const points = [];
+            for (let i = 0; i < path.getLength(); i++) {
+                points.push({
+                    lat: path.getAt(i).lat(),
+                    lng: path.getAt(i).lng()
+                });
+            }
+            return points;
+        });
+        
+        sendCommand('save_no_go_zones', { zones: zones }, function(response) {
+            if (response.success) {
+                showAlert('No-go zones saved successfully!', 'success');
+            } else {
+                showAlert('Failed to save no-go zones: ' + (response.error || 'Unknown error'), 'danger');
+            }
+        });
+    }
 }
 
 /**
@@ -88,17 +399,22 @@ function loadBoundaryAndSettings() {
                 map.fitBounds(bounds);
             }
 
-            // Load home location
-            sendCommand('get_home', {}, function(homeResponse) {
-                if (homeResponse.success && homeResponse.location) {
-                    displayHomeLocation(homeResponse.location);
-                }
-            });
-
             // Generate initial pattern
             generatePattern(currentPattern, currentSettings);
-        } else {
-            showAlert('No mowing area defined. Please define an area first.', 'warning');
+        }
+    });
+
+    // Load home location
+    sendCommand('get_home', {}, function(response) {
+        if (response.success && response.location) {
+            displayHomeLocation(response.location);
+        }
+    });
+    
+    // Load no-go zones
+    sendCommand('get_boundary', {}, function(response) {
+        if (response.success && response.no_go_zones) {
+            displayNoGoZones(response.no_go_zones);
         }
     });
 
@@ -150,12 +466,9 @@ function loadBoundaryAndSettings() {
  */
 function displayBoundary(points) {
     // Clear previous boundary
-    for (let i = 0; i < boundaryLayer.length; i++) {
-        boundaryLayer[i].setMap(null);
-    }
-    boundaryLayer = [];
+    clearBoundary();
 
-    if (points.length < 3) return;
+    if (!points || points.length < 3) return;
 
     // Convert points to Google Maps LatLng objects
     const path = points.map(p => {
@@ -173,12 +486,17 @@ function displayBoundary(points) {
         strokeWeight: 3,
         fillColor: '#8BC34A',
         fillOpacity: 0.2,
-        map: map
+        map: map,
+        editable: true
     });
 
     // Add to boundary layer
     boundaryLayer.push(polygon);
 
+    // Add listeners for boundary editing
+    google.maps.event.addListener(polygon.getPath(), 'set_at', updateBoundaryPoints);
+    google.maps.event.addListener(polygon.getPath(), 'insert_at', updateBoundaryPoints);
+    
     // Fit map to boundary
     const bounds = new google.maps.LatLngBounds();
     path.forEach(point => bounds.extend(point));
@@ -187,6 +505,45 @@ function displayBoundary(points) {
     // Calculate and display area
     const area = calculatePolygonArea(points);
     document.getElementById('totalArea').textContent = area.toFixed(1) + ' m²';
+}
+
+/**
+ * Display no-go zones on the map
+ * 
+ * @param {Array} zones - Array of arrays of {lat, lng} objects
+ */
+function displayNoGoZones(zones) {
+    // Clear previous no-go zones
+    clearNoGoZones();
+    
+    if (!zones || zones.length === 0) return;
+    
+    zones.forEach(zonePoints => {
+        if (zonePoints.length < 3) return;
+        
+        // Convert points to Google Maps LatLng objects
+        const path = zonePoints.map(p => {
+            return { 
+                lat: typeof p.lat === 'number' ? p.lat : parseFloat(p.lat), 
+                lng: typeof p.lng === 'number' ? p.lng : parseFloat(p.lng) 
+            };
+        });
+        
+        // Create polygon for no-go zone
+        const polygon = new google.maps.Polygon({
+            paths: path,
+            strokeColor: '#FF0000',
+            strokeOpacity: 1.0,
+            strokeWeight: 2,
+            fillColor: '#FF0000',
+            fillOpacity: 0.3,
+            map: map,
+            editable: true
+        });
+        
+        // Add to no-go zones array
+        noGoZones.push(polygon);
+    });
 }
 
 /**
@@ -199,7 +556,7 @@ function displayHomeLocation(location) {
         homeMarker.setMap(null);
     }
 
-    // Create a custom marker for home
+    // Create a marker for home
     homeMarker = new google.maps.Marker({
         position: {
             lat: typeof location.lat === 'number' ? location.lat : parseFloat(location.lat),
@@ -214,7 +571,8 @@ function displayHomeLocation(location) {
             strokeColor: '#FFFFFF',
             strokeWeight: 2
         },
-        title: 'Home Location'
+        title: 'Home Location',
+        draggable: true  // Allow the home marker to be draggable
     });
 }
 

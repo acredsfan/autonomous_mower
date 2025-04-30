@@ -4,6 +4,7 @@
 
 {% block head_extra %}
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=drawing,geometry"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 <style>
     .pattern-selector {
         display: flex;
@@ -91,6 +92,52 @@
             min-width: 150px;
         }
     }
+
+    /* New styles for map editing controls */
+    .map-controls {
+        margin-bottom: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .control-group {
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 10px;
+        background-color: var(--white);
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .control-group h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+
+    .drawing-controls button {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .address-search {
+        margin-bottom: 10px;
+    }
+    
+    .address-search input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    /* Custom icon for markers */
+    .home-icon {
+        color: #4285F4;
+        font-size: 24px;
+    }
 </style>
 {% endblock %}
 
@@ -153,6 +200,36 @@
                 </div>
             </div>
             <div class="card-body">
+                <div class="map-controls">
+                    <div class="control-group">
+                        <h4>Address Search</h4>
+                        <div class="address-search">
+                            <input type="text" id="address-input" placeholder="Enter your address" class="form-control">
+                            <button id="search-address" class="btn btn-primary mt-2">
+                                <i class="fas fa-search"></i> Find Address
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <h4>Drawing Tools</h4>
+                        <div class="drawing-controls">
+                            <button id="draw-boundary" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-draw-polygon"></i> Draw Yard Boundary
+                            </button>
+                            <button id="draw-nogo" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-ban"></i> Add No-Go Zone
+                            </button>
+                            <button id="set-home" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-home"></i> Set Home Location
+                            </button>
+                            <button id="clear-all" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-trash"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="map" class="map-container"></div>
                 <div class="coverage-info mt-2">
                     <span>Coverage:</span>
@@ -160,6 +237,12 @@
                         <div class="coverage-progress" id="coverageProgress"></div>
                     </div>
                     <span id="coveragePercent">0%</span>
+                </div>
+                
+                <div class="mt-3">
+                    <button id="save-map-changes" class="btn btn-success">
+                        <i class="fas fa-save"></i> Save Map Changes
+                    </button>
                 </div>
             </div>
         </div>
