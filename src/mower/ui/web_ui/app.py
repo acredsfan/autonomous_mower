@@ -1,6 +1,6 @@
 """Flask web interface for the autonomous mower."""
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from flask_babel import Babel
@@ -79,8 +79,7 @@ def create_app(mower):
         # Use a default API key or retrieve from environment/config
         # For development purposes, we'll use a placeholder API key
         google_maps_api_key = os.environ.get(
-            'GOOGLE_MAPS_API_KEY',
-            'AIzaSyBDaeWicvigtP9xPv919E-RNoxfvC-Hqik')
+            'GOOGLE_MAPS_API_KEY')
         return render_template("map.html",
                                google_maps_api_key=google_maps_api_key)
 
@@ -113,6 +112,47 @@ def create_app(mower):
     def camera():
         """Render the camera feed page."""
         return render_template("camera.html")
+
+    @app.route("/video_feed")
+    def video_feed():
+        """Stream camera feed as multipart response."""
+        try:
+            camera = mower.resource_manager.get_camera()
+
+            def generate_frames():
+                """Generate camera frames."""
+                while True:
+                    # Get frame from camera
+                    frame = camera.get_frame()
+                    if frame is None:
+                        continue
+
+                    # Convert frame to JPEG
+                    import cv2
+                    import numpy as np
+                    _, buffer = cv2.imencode('.jpg', frame)
+                    frame_bytes = buffer.tobytes()
+
+                    # Yield the frame in multipart response
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+                    # Add a small delay
+                    socketio.sleep(0.05)
+
+            return Response(
+                generate_frames(),
+                mimetype='multipart/x-mixed-replace; boundary=frame')
+
+        except Exception as e:
+            logger.error(f"Failed to stream video: {e}")
+            # Return a placeholder image instead of failing
+            placeholder_img = os.path.join(
+                app.static_folder, 'images/camera-placeholder.jpg')
+            if os.path.exists(placeholder_img):
+                return send_file(placeholder_img, mimetype='image/jpeg')
+            else:
+                return "Video stream unavailable", 503
 
     @app.route("/api/get-settings", methods=["GET"])
     def get_settings():
@@ -479,6 +519,70 @@ def create_app(mower):
                 socketio.sleep(1)  # Wait longer on error
 
     socketio.start_background_task(send_updates)
+
+    @app.route("/api/<command>", methods=["POST"])
+    def handle_command(command):
+        """Generic handler for commands sent from the frontend."""
+        try:
+            data = request.get_json() or {}
+
+            # Map frontend commands to mower methods
+            command_handlers = {
+                'generate_pattern': lambda params: {
+                    'success': True,
+                    'path': mower.resource_manager.get_path_planner().generate_pattern(
+                        params.get('pattern_type', 'PARALLEL'),
+                        params.get('settings', {})
+                    ),
+                    'coverage': 0.85  # Example coverage value
+                },
+                'save_area': lambda params: {
+                    'success': mower.resource_manager.get_path_planner().set_boundary_points(
+                        params.get('coordinates', [])
+                    )
+                },
+                'set_home': lambda params: {
+                    'success': mower.set_home_location(params.get('location', {}))
+                },
+                'save_no_go_zones': lambda params: {
+                    'success': mower.save_no_go_zones(params.get('zones', []))
+                },
+                'get_area': lambda params: {
+                    'success': True,
+                    'data': {
+                        'boundary_points': mower.resource_manager.get_path_planner().pattern_config.boundary_points
+                    }
+                },
+                'get_home': lambda params: {
+                    'success': True,
+                    'location': mower.get_home_location()
+                },
+                'get_settings': lambda params: {
+                    'success': True,
+                    'data': {
+                        'mowing': {
+                            'pattern': mower.resource_manager.get_path_planner().pattern_config.pattern_type.name,
+                            'spacing': mower.resource_manager.get_path_planner().pattern_config.spacing,
+                            'angle': mower.resource_manager.get_path_planner().pattern_config.angle,
+                            'overlap': mower.resource_manager.get_path_planner().pattern_config.overlap,
+                        }
+                    }
+                }
+            }
+
+            # Execute the command if it exists
+            if command in command_handlers:
+                logger.info(f"Executing command: {command}")
+                result = command_handlers[command](data)
+                return jsonify(result)
+            else:
+                logger.warning(f"Unknown command: {command}")
+                return jsonify(
+                    {"success": False, "error": f"Unknown command: {command}"}), 400
+
+        except Exception as e:
+            logger.error(f"Error handling command {command}: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
 
     return app, socketio
 

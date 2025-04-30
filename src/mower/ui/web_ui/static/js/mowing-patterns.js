@@ -47,15 +47,31 @@ function initMap() {
     // Initialize geocoder for address searches
     geocoder = new google.maps.Geocoder();
 
-    // Initialize the map
+    // Initialize the map - default to satellite view
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 18,
         center: defaultCenter,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        mapTypeControl: false,
+        mapTypeId: google.maps.MapTypeId.SATELLITE, // Default to satellite view
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT,
+            mapTypeIds: [
+                google.maps.MapTypeId.ROADMAP,
+                google.maps.MapTypeId.SATELLITE,
+                google.maps.MapTypeId.HYBRID,
+                google.maps.MapTypeId.TERRAIN
+            ]
+        },
         streetViewControl: false,
         fullscreenControl: true
     });
+    
+    // Set satellite view flag
+    isSatelliteView = true;
+    
+    // Update button text to reflect current state
+    document.getElementById('toggle-satellite').innerHTML = '<i class="fas fa-map"></i> Toggle Street';
 
     // Initialize the drawing manager for polygon drawing
     drawingManager = new google.maps.drawing.DrawingManager({
