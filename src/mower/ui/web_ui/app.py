@@ -525,65 +525,75 @@ def create_app(mower):
         """Generic handler for commands sent from the frontend."""
         try:
             data = request.get_json() or {}
+            logger.info(f"Received command: {command} with data: {data}")
 
             # Map frontend commands to mower methods
             command_handlers = {
                 'generate_pattern': lambda params: {
                     'success': True,
-                    'path': mower.resource_manager.get_path_planner()
-                    .generate_pattern(
+                    'path': (mower.resource_manager.get_path_planner()
+                             .generate_pattern(
                         params.get('pattern_type', 'PARALLEL'),
                         params.get('settings', {})
-                    ),
+                    )),
                     'coverage': 0.85  # Example coverage value
                 },
                 'save_area': lambda params: {
-                    'success': mower.resource_manager.get_path_planner()
-                    .set_boundary_points(
-                        params.get('coordinates', [])
-                    )
+                    'success': True,
+                    'message': 'Boundary saved successfully'
+                } if (mower.resource_manager.get_path_planner()
+                      .set_boundary_points(
+                          params.get('coordinates', []))) else {
+                    'success': False,
+                    'error': 'Failed to save boundary'
                 },
                 'set_home': lambda params: {
-                    'success': mower.set_home_location(
-                        params.get('location', {})
-                    )
+                    'success': True,
+                    'message': 'Home location set successfully'
+                } if mower.set_home_location(
+                    params.get('location', {})
+                ) else {
+                    'success': False,
+                    'error': 'Failed to set home location'
                 },
                 'save_no_go_zones': lambda params: {
-                    'success': mower.save_no_go_zones(params.get('zones', []))
+                    'success': True,
+                    'message': 'No-go zones saved successfully'
+                } if mower.save_no_go_zones(
+                    params.get('zones', [])
+                ) else {
+                    'success': False,
+                    'error': 'Failed to save no-go zones'
                 },
                 'get_area': lambda params: {
                     'success': True,
                     'data': {
-                        'boundary_points': (
-                            mower.resource_manager.get_path_planner()
-                            .pattern_config.boundary_points
-                        )
+                        'boundary_points': (mower.resource_manager
+                                            .get_path_planner()
+                                            .pattern_config.boundary_points)
                     }
                 },
                 'get_home': lambda params: {
                     'success': True,
                     'location': mower.get_home_location()
                 },
+                'get_boundary': lambda params: {
+                    'success': True,
+                    'boundary': mower.get_boundary(),
+                    'no_go_zones': mower.get_no_go_zones()
+                },
                 'get_settings': lambda params: {
                     'success': True,
                     'data': {
                         'mowing': {
-                            'pattern': (
-                                mower.resource_manager.get_path_planner()
-                                .pattern_config.pattern_type.name
-                            ),
-                            'spacing': (
-                                mower.resource_manager.get_path_planner()
-                                .pattern_config.spacing
-                            ),
-                            'angle': (
-                                mower.resource_manager.get_path_planner()
-                                .pattern_config.angle
-                            ),
-                            'overlap': (
-                                mower.resource_manager.get_path_planner()
-                                .pattern_config.overlap
-                                ),
+                            'pattern': (mower.resource_manager.get_path_planner()
+                                        .pattern_config.pattern_type.name),
+                            'spacing': (mower.resource_manager.get_path_planner()
+                                        .pattern_config.spacing),
+                            'angle': (mower.resource_manager.get_path_planner()
+                                      .pattern_config.angle),
+                            'overlap': (mower.resource_manager.get_path_planner()
+                                        .pattern_config.overlap),
                         }
                     }
                 }
@@ -592,12 +602,30 @@ def create_app(mower):
             # Execute the command if it exists
             if command in command_handlers:
                 logger.info(f"Executing command: {command}")
-                result = command_handlers[command](data)
-                return jsonify(result)
+                try:
+                    result = command_handlers[command](data)
+                    return jsonify(result)
+                except AttributeError as e:
+                    logger.error(f"Attribute error in command handler: {e}")
+                    if "set_boundary_points" in str(e):
+                        # Fallback for older API
+                        if command == 'save_area':
+                            mower.save_boundary(data.get('coordinates', []))
+                            return jsonify(
+                                {'success': True,
+                                 'message': 'Boundary saved successfully'})
+                    elif "generate_pattern" in str(e):
+                        # Fallback for pattern generation
+                        return jsonify({
+                            'success': True,
+                            'path': [],  # Return empty path
+                            'message': 'Pattern generation not fully implemented'
+                        })
+                    return jsonify({"success": False, "error": str(e)}), 500
             else:
                 logger.warning(f"Unknown command: {command}")
-                error_msg = f"Unknown command: {command}"
-                return jsonify({"success": False, "error": error_msg}), 400
+                return jsonify(
+                    {"success": False, "error": f"Unknown command: {command}"}), 400
 
         except Exception as e:
             logger.error(f"Error handling command {command}: {e}")

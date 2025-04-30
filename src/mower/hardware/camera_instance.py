@@ -166,6 +166,34 @@ class CameraInstance:
             logging.error(f"Frame capture failed: {e}")
             return None
 
+    def get_frame(self) -> Optional[Union[bytes, None]]:
+        """
+        Get a frame from the camera. This method is used by the web interface
+        video streaming feature.
+
+        Returns:
+            Optional[bytes]: Raw frame data (not JPEG encoded) or None if
+                capture fails
+        """
+        if not self._is_initialized:
+            if not self.initialize():
+                return None
+
+        try:
+            with self._frame_lock:
+                if self._is_picamera:
+                    frame = self._camera.capture_array()
+                    return frame
+                else:
+                    ret, frame = self._camera.read()
+                    if not ret:
+                        return None
+                    return frame
+
+        except Exception as e:
+            logging.error(f"Frame capture failed: {e}")
+            return None
+
     def get_last_frame(self) -> Optional[bytes]:
         """
         Get the last captured frame without capturing a new one.

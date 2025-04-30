@@ -161,6 +161,32 @@ setup_emergency_stop() {
     print_info "Button should be normally closed (NC) for fail-safe operation"
 }
 
+# Function to setup YOLOv8 models
+setup_yolov8() {
+    print_info "Setting up YOLOv8 for obstacle detection..."
+    
+    # Create models directory if it doesn't exist
+    mkdir -p src/mower/obstacle_detection/models
+    check_command "Creating models directory" || exit 1
+    
+    # Run the setup script
+    print_info "Running YOLOv8 setup script..."
+    python3 scripts/setup_yolov8.py --model yolov8n
+    check_command "Setting up YOLOv8 models" || exit 1
+    
+    # Verify installation
+    if [ -f src/mower/obstacle_detection/models/yolov8n.tflite ]; then
+        print_success "YOLOv8 model successfully downloaded"
+    else
+        print_warning "YOLOv8 model not found. Setup may have failed."
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+}
+
 # Main installation starts here
 print_info "Starting installation with safety checks..."
 
@@ -231,8 +257,20 @@ python3 -m pip install --break-system-packages --no-cache-dir \
     barbudor-circuitpython-ina3221 \
     adafruit-circuitpython-vl53l0x \
     RPi.GPIO \
-    picamera2
+    picamera2 \
+    opencv-python \
+    pillow \
+    numpy \
+    requests \
+    tqdm
 check_command "Installing additional packages" || exit 1
+
+# Set up YOLOv8 models
+read -p "Do you want to install YOLOv8 models for improved obstacle detection? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_yolov8
+fi
 
 # Ask if user wants to install Coral TPU support
 read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
@@ -294,7 +332,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     check_command "Downloading Edge TPU model" || exit 1
     
     wget -O src/mower/obstacle_detection/models/detect.tflite \
-        https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite
+        https://storage.googleapis.com/download.tflite/models/ssd_mobilenet_v2_coco_quant_postprocess.tflite
     check_command "Downloading standard model" || exit 1
     
     wget -O src/mower/obstacle_detection/models/labelmap.txt \

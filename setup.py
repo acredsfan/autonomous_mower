@@ -49,6 +49,11 @@ setup(
             "tflite-runtime>=2.5.0",
             "pycoral>=2.0.0",
         ],
+        "yolo": [
+            "ultralytics>=8.1.0",
+            "onnx>=1.15.0",
+            "onnxruntime>=1.16.0",
+        ],
         "ddns": [
             "requests>=2.26.0",
             "schedule>=1.1.0",

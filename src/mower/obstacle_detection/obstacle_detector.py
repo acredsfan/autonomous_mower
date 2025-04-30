@@ -6,6 +6,7 @@ This module provides comprehensive obstacle detection capabilities using:
 2. OpenCV for basic image processing and drop detection
 3. Support for both local and remote (Pi 5) detection
 4. Integration with Edge TPU when available
+5. YOLOv8 models for improved detection performance
 """
 
 import io
@@ -42,6 +43,14 @@ USE_REMOTE_DETECTION = (
     os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
 )
 
+# YOLOv8 specific environment variables
+YOLOV8_MODEL_PATH = os.getenv(
+    "YOLOV8_MODEL_PATH",
+    "/home/pi/mower/obstacle_detection/models/yolov8n.tflite")
+USE_YOLOV8 = (
+    os.getenv("USE_YOLOV8", "True").lower() == "true"
+)
+
 # Load labels if available
 labels = []
 if LABEL_MAP_PATH and os.path.exists(LABEL_MAP_PATH):
@@ -67,6 +76,7 @@ class ObstacleDetector:
     3. Drop detection for safety
     4. Remote detection capability with Pi 5
     5. Support for Edge TPU acceleration
+    6. YOLOv8 model support for improved detection
     """
 
     def __init__(self, resource_manager=None):
@@ -92,17 +102,23 @@ class ObstacleDetector:
         # Remote detection settings
         self.use_remote_detection = USE_REMOTE_DETECTION
 
+        # YOLOv8 detector
+        self.yolov8_detector = None
+        self.use_yolov8 = USE_YOLOV8
+
         # Thread synchronization
         self.frame_condition = Condition()
         self.frame = None
         self.frame_lock = threading.Lock()
 
-        # Initialize interpreter
+        # Initialize interpreters
         self._initialize_interpreter()
+        self._initialize_yolov8()
 
         logger.info(
             f"ObstacleDetector initialized with {self.interpreter_type} "
-            "interpreter"
+            "interpreter" +
+            (", YOLOv8 enabled" if self.yolov8_detector else "")
         )
 
     def _initialize_interpreter(self):
@@ -140,6 +156,36 @@ class ObstacleDetector:
             logger.error(f"Failed to initialize interpreter: {e}")
             self.interpreter = None
 
+    def _initialize_yolov8(self):
+        """Initialize the YOLOv8 detector if enabled."""
+        if not self.use_yolov8:
+            logger.info("YOLOv8 detector disabled")
+            return
+
+        try:
+            # Import YOLOv8 detector class
+            from mower.obstacle_detection.yolov8_detector import (
+                YOLOv8TFLiteDetector
+            )
+
+            # Check if model exists
+            if not os.path.exists(YOLOV8_MODEL_PATH):
+                logger.warning(
+                    f"YOLOv8 model not found at {YOLOV8_MODEL_PATH}, skipping")
+                return
+
+            # Initialize detector
+            self.yolov8_detector = YOLOv8TFLiteDetector(
+                model_path=YOLOV8_MODEL_PATH,
+                label_path=LABEL_MAP_PATH,
+                conf_threshold=MIN_CONF_THRESHOLD
+            )
+            logger.info("YOLOv8 detector initialized successfully")
+        except ImportError:
+            logger.error("Failed to import YOLOv8TFLiteDetector class")
+        except Exception as e:
+            logger.error(f"Failed to initialize YOLOv8 detector: {e}")
+
     def detect_obstacles(self, frame=None) -> List[dict]:
         """
         Detect obstacles using all available methods.
@@ -151,7 +197,7 @@ class ObstacleDetector:
             List of detected objects with name, confidence, and position.
         """
         if frame is None:
-            frame = self.camera.capture_frame()
+            frame = self.camera.get_frame()
             if frame is None:
                 return []
 
@@ -170,12 +216,24 @@ class ObstacleDetector:
                 )
                 self.use_remote_detection = False
 
-        # Local ML-based detection
+        # YOLOv8-based detection (preferred if available)
+        if self.yolov8_detector:
+            try:
+                yolo_objects = self.yolov8_detector.detect(frame)
+                if yolo_objects:
+                    detected_objects.extend(yolo_objects)
+                    # If YOLOv8 detection successful, return results
+                    if len(detected_objects) > 0:
+                        return detected_objects
+            except Exception as e:
+                logger.warning(f"YOLOv8 detection failed, falling back: {e}")
+
+        # Local ML-based detection (fallback)
         if self.interpreter:
             ml_objects = self._detect_obstacles_ml(frame)
             detected_objects.extend(ml_objects)
 
-        # OpenCV-based detection
+        # OpenCV-based detection (always run as backup/supplement)
         cv_objects = self._detect_obstacles_opencv(frame)
         detected_objects.extend(cv_objects)
 
@@ -351,7 +409,7 @@ class ObstacleDetector:
     def detect_drops(self, frame=None) -> List[dict]:
         """Detect potential drops/cliffs in the frame."""
         if frame is None:
-            frame = self.camera.capture_frame()
+            frame = self.camera.get_frame()
             if frame is None:
                 return []
 
@@ -393,6 +451,17 @@ class ObstacleDetector:
     def draw_detections(self, frame, detections: List[dict]) -> np.ndarray:
         """Draw detection results on frame."""
         try:
+            # Use YOLOv8 detector's draw function for YOLOv8 detections
+            yolo_detections = [
+                d for d in detections if d.get("type") == "yolov8"]
+            if self.yolov8_detector and yolo_detections:
+                frame = self.yolov8_detector.draw_detections(
+                    frame, yolo_detections)
+                # Filter out YOLOv8 detections since they're already drawn
+                detections = [
+                    d for d in detections if d.get("type") != "yolov8"]
+
+            # Continue with normal drawing for other detection types
             frame_with_detections = frame.copy()
 
             for detection in detections:
@@ -465,7 +534,7 @@ class ObstacleDetector:
             Tuple of (annotated frame, list of detections)
         """
         if frame is None:
-            frame = self.camera.capture_frame()
+            frame = self.camera.get_frame()
             if frame is None:
                 return None, []
 
@@ -493,7 +562,7 @@ class ObstacleDetector:
         while True:
             try:
                 # Capture and process frame
-                frame = self.camera.capture_frame()
+                frame = self.camera.get_frame()
                 if frame is not None:
                     processed_frame, detections = self.process_frame(frame)
 

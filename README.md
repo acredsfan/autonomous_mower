@@ -10,6 +10,7 @@ An autonomous lawn mower system built for Raspberry Pi, featuring advanced navig
 - Weather-aware scheduling
 - Safety features and emergency stop
 - Support for Google Coral Edge TPU acceleration
+- Support for YOLOv8 object detection models
 - Remote monitoring and control
 - Multiple remote access options (DDNS, Cloudflare, NGROK)
 - Automatic startup on boot via systemd service
@@ -80,14 +81,19 @@ sudo ./install_requirements.sh
 ```
 
 The installation script will:
+
 - Install required system packages
 - Install required Python packages system-wide
 - Set up the systemd service
 - Configure hardware interfaces
 - Set up the watchdog timer
+- Optionally install YOLOv8 models for improved object detection
+- Optionally set up Google Coral TPU if available
 
 #### Note on Python Package Installation
+
 This project uses system-wide Python package installation with the `--break-system-packages` flag to bypass PEP 668 restrictions. This is because:
+
 1. The mower requires direct access to hardware interfaces (GPIO, I2C, etc.)
 2. It's a dedicated device running only the mower software
 3. System-wide installation ensures proper permissions and access to hardware resources
@@ -96,6 +102,7 @@ This project uses system-wide Python package installation with the `--break-syst
 The installation uses the `--break-system-packages` flag to bypass PEP 668 restrictions, which is appropriate for this dedicated device. This approach has been tested and documented in our issues tracking system.
 
 You may see the message "Defaulting to user installation because normal site-packages is not writeable" during installation. This is normal and expected on modern Linux systems due to PEP 668. Our installation script handles this by:
+
 1. Using `--break-system-packages` to ensure system-wide installation
 2. Installing packages in the correct location for hardware access
 3. Setting proper permissions for the installed packages
@@ -118,6 +125,7 @@ sudo systemctl status autonomous-mower
 ### Monitoring Logs
 
 The mower logs are stored in `/var/log/autonomous-mower/`:
+
 ```bash
 # View service log
 tail -f /var/log/autonomous-mower/service.log
@@ -136,22 +144,26 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 ### Required Hardware Connections
 
 1. **Camera Module**
+
    - Connect to CSI port
    - Enable camera in raspi-config
    - Test with: `raspistill -v -o test.jpg`
 
 2. **GPS Module**
+
    - Connect to UART pins (GPIO 14/15)
    - Enable serial in raspi-config
    - Test with: `gpsmon /dev/ttyAMA0`
 
 3. **IMU Sensor**
+
    - Connect to UART pins (GPIO 8/10, i.e., TXD0/RXD0 or as configured)
    - Enable serial/UART in raspi-config
    - Test with: `python3 -m mower.hardware.imu` (shows live IMU data if connected)
    - Ensure your `.env` or environment variables specify the correct UART port (eg., `IMU_SERIAL_PORT=/dev/ttyAMA2`)
 
 4. **Emergency Stop Button**
+
    - Connect between GPIO7 and GND
    - Button should be normally closed (NC)
    - Test with: `gpio read 7`
@@ -161,7 +173,26 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    - Configure in .env file
    - Test with manual control in UI
 
-### Coral TPU Setup (Optional)
+### Object Detection Setup
+
+#### YOLOv8 Setup (Recommended)
+
+1. During installation, choose to install YOLOv8 models when prompted
+2. Alternatively, run the setup script manually:
+   ```bash
+   python3 scripts/setup_yolov8.py --model yolov8n
+   ```
+3. Configure detection in .env file:
+   ```
+   USE_YOLOV8=True
+   YOLOV8_MODEL_PATH=/path/to/yolov8n.tflite
+   ```
+4. Test with:
+   ```bash
+   python3 -m mower.obstacle_detection.yolov8_detector
+   ```
+
+#### Coral TPU Setup (Optional)
 
 1. Connect Coral USB Accelerator
 2. Install Coral runtime during installation
@@ -191,6 +222,7 @@ See `.env.example` for detailed descriptions of each setting.
 ## Safety Features
 
 1. **Emergency Stop Button**
+
    - Available in the UI
    - Sensor override controls for testing
    - Battery monitoring and low-battery alerts
@@ -220,21 +252,26 @@ Common issues and their solutions:
 ### Service Won't Start
 
 1. Check log directory permissions:
+
 ```bash
 ls -l /var/log/autonomous-mower
 ```
+
 If permissions are wrong, run:
+
 ```bash
 sudo chown -R pi:pi /var/log/autonomous-mower
 sudo chmod 755 /var/log/autonomous-mower
 ```
 
 2. Check service logs:
+
 ```bash
 sudo journalctl -u autonomous-mower -n 50 --no-pager
 ```
 
 3. Verify Python environment:
+
 ```bash
 python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ```
@@ -242,20 +279,43 @@ python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ### Camera Issues
 
 1. Check camera connection and enable:
+
 ```bash
 vcgencmd get_camera
 libcamera-hello -t 5000
 ```
 
 2. Verify camera devices:
+
 ```bash
 ls /dev/video*
 ```
 
 3. Check camera permissions:
+
 ```bash
 groups | grep video
 sudo usermod -aG video pi  # If 'video' group missing
+```
+
+### Object Detection Issues
+
+1. Check YOLOv8 model exists:
+
+```bash
+ls -l src/mower/obstacle_detection/models/yolov8n.tflite
+```
+
+2. Reinstall YOLOv8 model if missing:
+
+```bash
+python3 scripts/setup_yolov8.py --model yolov8n
+```
+
+3. Check environment variables:
+
+```bash
+grep YOLOV8 .env
 ```
 
 ## Contributing
@@ -273,5 +333,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Google Coral team for Edge TPU support
+- Ultralytics for the YOLOv8 models
 - Raspberry Pi Foundation for hardware platform
 - OpenCV community for computer vision tools

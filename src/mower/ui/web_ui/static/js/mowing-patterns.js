@@ -63,7 +63,7 @@ function initMap() {
         google.maps.MapTypeId.TERRAIN,
       ],
     },
-    streetViewControl: false,
+    streetViewControl: true,
     fullscreenControl: true,
   });
 

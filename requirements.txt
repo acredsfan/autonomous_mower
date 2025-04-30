@@ -20,6 +20,11 @@ tensorflow>=2.13.0
 colorama>=0.4.4
 watchdog>=5.0.0
 
+# YOLOv8 dependencies
+ultralytics>=8.1.0
+onnx>=1.15.0
+onnxruntime>=1.16.0
+
 # System monitoring and safety
 psutil>=5.9.0
 py3nvml>=0.2.7
