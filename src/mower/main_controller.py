@@ -104,6 +104,13 @@ class ResourceManager:
         # allow web UI to access resource manager
         self.resource_manager = self
 
+        # Initialize safety status tracking variables
+        self._safety_status_vars = {
+            "warning_logged": False,
+            "last_warning_time": 0,
+            "warning_interval": 30  # seconds, configurable
+        }
+
         if config_path:
             self._load_config(config_path)
 
@@ -528,15 +535,8 @@ class ResourceManager:
         Returns:
             dict: Safety status information, with fallbacks when unavailable
         """
-        # Static variables to track warning state and configuration
-        if not hasattr(self.get_safety_status, "_vars"):
-            self.get_safety_status._vars = {
-                "warning_logged": False,
-                "last_warning_time": 0,
-                # Make the warning interval configurable
-                "warning_interval": 30  # seconds
-            }
-        vars = self.get_safety_status._vars
+        # Use the class-level variable we initialized in __init__
+        vars = self._safety_status_vars
 
         try:
             # Try to get safety status from the sensor interface
