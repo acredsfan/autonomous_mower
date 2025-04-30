@@ -41,7 +41,7 @@ def create_app(mower):
         # Define locale selector function instead of using decorator
         def get_locale():
             """Select the best match for supported languages."""
-            return request.accept_languages.best_match(['en', 'es', 'fr'])
+            return request.accept_languages.best_match(["en", "es", "fr"])
 
         # Try different Flask-Babel versions' initialization methods
         try:
@@ -78,10 +78,8 @@ def create_app(mower):
         """Render the map view page."""
         # Use a default API key or retrieve from environment/config
         # For development purposes, we'll use a placeholder API key
-        google_maps_api_key = os.environ.get(
-            'GOOGLE_MAPS_API_KEY')
-        return render_template("map.html",
-                               google_maps_api_key=google_maps_api_key)
+        google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+        return render_template("map.html", google_maps_api_key=google_maps_api_key)
 
     @app.route("/diagnostics")
     def diagnostics():
@@ -123,34 +121,86 @@ def create_app(mower):
                 """Generate camera frames."""
                 while True:
                     # Get frame from camera
-                    frame = camera.get_frame()
+                    try:
+                        # Try get_frame() first (returns raw frame)
+                        frame = camera.get_frame()
+                    except (AttributeError, TypeError):
+                        try:
+                            # Fall back to capture_frame() (returns JPEG bytes)
+                            jpeg_bytes = camera.capture_frame()
+                            if jpeg_bytes is None:
+                                continue
+
+                            # If we got JPEG bytes directly, yield them
+                            yield (
+                                b"--frame\r\n"
+                                b"Content-Type: image/jpeg\r\n\r\n"
+                                + jpeg_bytes
+                                + b"\r\n"
+                            )
+
+                            # Add a small delay
+                            socketio.sleep(0.05)
+                            continue
+                        except Exception:
+                            # If both methods fail, try get_last_frame()
+                            try:
+                                jpeg_bytes = camera.get_last_frame()
+                                if jpeg_bytes is None:
+                                    continue
+
+                                # If we got JPEG bytes directly, yield them
+                                yield (
+                                    b"--frame\r\n"
+                                    b"Content-Type: image/jpeg\r\n\r\n"
+                                    + jpeg_bytes
+                                    + b"\r\n"
+                                )
+
+                                # Add a small delay
+                                socketio.sleep(0.05)
+                                continue
+                            except Exception:
+                                logger.error("All camera frame methods failed")
+                                socketio.sleep(1)  # Longer delay on error
+                                continue
+
                     if frame is None:
+                        socketio.sleep(0.1)
                         continue
 
                     # Convert frame to JPEG
-                    import cv2
-                    _, buffer = cv2.imencode('.jpg', frame)
-                    frame_bytes = buffer.tobytes()
+                    try:
+                        import cv2
 
-                    # Yield the frame in multipart response
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' +
-                           frame_bytes + b'\r\n')
+                        _, buffer = cv2.imencode(".jpg", frame)
+                        frame_bytes = buffer.tobytes()
 
-                    # Add a small delay
-                    socketio.sleep(0.05)
+                        # Yield the frame in multipart response
+                        yield (
+                            b"--frame\r\n"
+                            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                        )
+
+                        # Add a small delay
+                        socketio.sleep(0.05)
+                    except Exception as e:
+                        logger.error(f"Error encoding frame: {e}")
+                        socketio.sleep(0.5)  # Delay on error
 
             return Response(
                 generate_frames(),
-                mimetype='multipart/x-mixed-replace; boundary=frame')
+                mimetype="multipart/x-mixed-replace; boundary=frame",
+            )
 
         except Exception as e:
             logger.error(f"Failed to stream video: {e}")
             # Return a placeholder image instead of failing
             placeholder_img = os.path.join(
-                app.static_folder, 'images/camera-placeholder.jpg')
+                app.static_folder, "images/camera-placeholder.jpg"
+            )
             if os.path.exists(placeholder_img):
-                return send_file(placeholder_img, mimetype='image/jpeg')
+                return send_file(placeholder_img, mimetype="image/jpeg")
             else:
                 return "Video stream unavailable", 503
 
@@ -204,9 +254,7 @@ def create_app(mower):
         """Get the current mowing area configuration."""
         try:
             path_planner = mower.resource_manager.get_path_planner()
-            area_data = {
-                "boundary_points": path_planner.pattern_config.boundary_points
-            }
+            area_data = {"boundary_points": path_planner.pattern_config.boundary_points}
             return jsonify({"success": True, "data": area_data})
         except Exception as e:
             logger.error(f"Failed to get mowing area: {e}")
@@ -220,9 +268,7 @@ def create_app(mower):
             coordinates = data.get("coordinates")
             if not coordinates:
                 return (
-                    jsonify(
-                        {"success": False, "error": "No coordinates provided"}
-                    ),
+                    jsonify({"success": False, "error": "No coordinates provided"}),
                     400,
                 )
 
@@ -396,18 +442,21 @@ def create_app(mower):
             languages = {
                 "en": {"name": "English", "active": True},
                 "es": {"name": "Español", "active": True},
-                "fr": {"name": "Français", "active": True}
+                "fr": {"name": "Français", "active": True},
             }
 
             # Get current language from request or default to English
-            current_lang = request.accept_languages.best_match(
-                ['en', 'es', 'fr']) or 'en'
+            current_lang = (
+                request.accept_languages.best_match(["en", "es", "fr"]) or "en"
+            )
 
-            return jsonify({
-                "success": True,
-                "current": current_lang,
-                "available": languages
-            })
+            return jsonify(
+                {
+                    "success": True,
+                    "current": current_lang,
+                    "available": languages,
+                }
+            )
         except Exception as e:
             logger.error(f"Failed to get languages: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
@@ -529,74 +578,83 @@ def create_app(mower):
 
             # Map frontend commands to mower methods
             command_handlers = {
-                'generate_pattern': lambda params: {
-                    'success': True,
-                    'path': (mower.resource_manager.get_path_planner()
-                             .generate_pattern(
-                        params.get('pattern_type', 'PARALLEL'),
-                        params.get('settings', {})
-                    )),
-                    'coverage': 0.85  # Example coverage value
+                "generate_pattern": lambda params: {
+                    "success": True,
+                    "path": (
+                        mower.resource_manager.get_path_planner().generate_pattern(
+                            params.get("pattern_type", "PARALLEL"),
+                            params.get("settings", {}),
+                        )
+                    ),
+                    "coverage": 0.85,  # Example coverage value
                 },
-                'save_area': lambda params: {
-                    'success': True,
-                    'message': 'Boundary saved successfully'
-                } if (mower.resource_manager.get_path_planner()
-                      .set_boundary_points(
-                          params.get('coordinates', []))) else {
-                    'success': False,
-                    'error': 'Failed to save boundary'
-                },
-                'set_home': lambda params: {
-                    'success': True,
-                    'message': 'Home location set successfully'
-                } if mower.set_home_location(
-                    params.get('location', {})
-                ) else {
-                    'success': False,
-                    'error': 'Failed to set home location'
-                },
-                'save_no_go_zones': lambda params: {
-                    'success': True,
-                    'message': 'No-go zones saved successfully'
-                } if mower.save_no_go_zones(
-                    params.get('zones', [])
-                ) else {
-                    'success': False,
-                    'error': 'Failed to save no-go zones'
-                },
-                'get_area': lambda params: {
-                    'success': True,
-                    'data': {
-                        'boundary_points': (mower.resource_manager
-                                            .get_path_planner()
-                                            .pattern_config.boundary_points)
+                "save_area": lambda params: (
+                    {"success": True, "message": "Boundary saved successfully"}
+                    if (
+                        mower.resource_manager.get_path_planner().set_boundary_points(
+                            params.get("coordinates", [])
+                        )
+                    )
+                    else {"success": False, "error": "Failed to save boundary"}
+                ),
+                "set_home": lambda params: (
+                    {
+                        "success": True,
+                        "message": "Home location set successfully",
                     }
+                    if mower.set_home_location(params.get("location", {}))
+                    else {
+                        "success": False,
+                        "error": "Failed to set home location",
+                    }
+                ),
+                "save_no_go_zones": lambda params: (
+                    {
+                        "success": True,
+                        "message": "No-go zones saved successfully",
+                    }
+                    if mower.save_no_go_zones(params.get("zones", []))
+                    else {
+                        "success": False,
+                        "error": "Failed to save no-go zones",
+                    }
+                ),
+                "get_area": lambda params: {
+                    "success": True,
+                    "data": {
+                        "boundary_points": (
+                            mower.resource_manager.get_path_planner().pattern_config.boundary_points
+                        )
+                    },
                 },
-                'get_home': lambda params: {
-                    'success': True,
-                    'location': mower.get_home_location()
+                "get_home": lambda params: {
+                    "success": True,
+                    "location": mower.get_home_location(),
                 },
-                'get_boundary': lambda params: {
-                    'success': True,
-                    'boundary': mower.get_boundary(),
-                    'no_go_zones': mower.get_no_go_zones()
+                "get_boundary": lambda params: {
+                    "success": True,
+                    "boundary": mower.get_boundary(),
+                    "no_go_zones": mower.get_no_go_zones(),
                 },
-                'get_settings': lambda params: {
-                    'success': True,
-                    'data': {
-                        'mowing': {
-                            'pattern': (mower.resource_manager.get_path_planner()
-                                        .pattern_config.pattern_type.name),
-                            'spacing': (mower.resource_manager.get_path_planner()
-                                        .pattern_config.spacing),
-                            'angle': (mower.resource_manager.get_path_planner()
-                                      .pattern_config.angle),
-                            'overlap': (mower.resource_manager.get_path_planner()
-                                        .pattern_config.overlap),
+                "get_settings": lambda params: {
+                    "success": True,
+                    "data": {
+                        "mowing": {
+                            "pattern": (
+                                mower.resource_manager.get_path_planner().pattern_config.pattern_type.name
+                            ),
+                            "spacing": (
+                                mower.resource_manager.get_path_planner().pattern_config.spacing
+                            ),
+                            "angle": (
+                                mower.resource_manager.get_path_planner().pattern_config.angle
+                            ),
+                            "overlap": (
+                                mower.resource_manager.get_path_planner().pattern_config.overlap
+                            ),
                         }
-                    }
-                }
+                    },
+                },
             }
 
             # Execute the command if it exists
@@ -609,23 +667,35 @@ def create_app(mower):
                     logger.error(f"Attribute error in command handler: {e}")
                     if "set_boundary_points" in str(e):
                         # Fallback for older API
-                        if command == 'save_area':
-                            mower.save_boundary(data.get('coordinates', []))
+                        if command == "save_area":
+                            mower.save_boundary(data.get("coordinates", []))
                             return jsonify(
-                                {'success': True,
-                                 'message': 'Boundary saved successfully'})
+                                {
+                                    "success": True,
+                                    "message": "Boundary saved successfully",
+                                }
+                            )
                     elif "generate_pattern" in str(e):
                         # Fallback for pattern generation
-                        return jsonify({
-                            'success': True,
-                            'path': [],  # Return empty path
-                            'message': 'Pattern generation not fully implemented'
-                        })
+                        return jsonify(
+                            {
+                                "success": True,
+                                "path": [],  # Return empty path
+                                "message": "Pattern generation not fully implemented",
+                            }
+                        )
                     return jsonify({"success": False, "error": str(e)}), 500
             else:
                 logger.warning(f"Unknown command: {command}")
-                return jsonify(
-                    {"success": False, "error": f"Unknown command: {command}"}), 400
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": f"Unknown command: {command}",
+                        }
+                    ),
+                    400,
+                )
 
         except Exception as e:
             logger.error(f"Error handling command {command}: {e}")

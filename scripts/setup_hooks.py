@@ -3,7 +3,8 @@
 Setup script for pre-commit hooks.
 
 This script installs pre-commit and sets up the hooks for the autonomous_mower project.
-It checks if pre-commit is installed, installs it if needed, and then installs the hooks.
+It checks if pre-commit is installed, installs it if needed,
+and then installs the hooks.
 """
 
 import os
@@ -27,11 +28,18 @@ def check_pre_commit_installed():
 
 
 def install_pre_commit():
-    """Install pre-commit using pip."""
-    print("Installing pre-commit...")
+    """Install pre-commit using pip with --break-system-packages."""
+    # Check if pip is available and install pre-commit
     try:
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", "pre-commit"],
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--break-system-packages",
+                "pre-commit",
+            ],
             check=True,
         )
         print("pre-commit installed successfully.")
@@ -60,8 +68,19 @@ def install_dev_dependencies():
     """Install development dependencies."""
     print("Installing development dependencies...")
     try:
+        # Use pip to install with --break-system-packages
+        # to avoid permission issues on some systems
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-e", ".[dev]"],
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--break-system-packages",
+                "-e",
+                ".",
+                "[dev]",
+            ],
             check=True,
         )
         print("Development dependencies installed successfully.")
