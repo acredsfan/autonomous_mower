@@ -41,7 +41,7 @@
 - Critical path classes (like `RobotController`, `ResourceManager`, `ObstacleDetector`) must remain backward-compatible unless explicitly updating APIs.
 
 ## AI Behavior Tuning
-- Assume GPT-4.1's style: prioritize safe, modular, real-world maintainable code.
+- Prioritize safe, modular, real-world maintainable code.
 - Avoid hallucination or guessing about code structure or hardware.
 - Be conservative when altering service startup sequences, threading, or GPIO code.
 

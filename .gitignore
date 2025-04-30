@@ -78,7 +78,7 @@ htmlcov/
 # Custom Rules
 *.mdc
 .junie/
-*copilot-instructions.md
+.github/workflows/copilot-instructions.md
 
 # Distribution / packaging
 .Python
