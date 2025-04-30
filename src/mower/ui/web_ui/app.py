@@ -129,13 +129,13 @@ def create_app(mower):
 
                     # Convert frame to JPEG
                     import cv2
-                    import numpy as np
                     _, buffer = cv2.imencode('.jpg', frame)
                     frame_bytes = buffer.tobytes()
 
                     # Yield the frame in multipart response
                     yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                           b'Content-Type: image/jpeg\r\n\r\n' +
+                           frame_bytes + b'\r\n')
 
                     # Add a small delay
                     socketio.sleep(0.05)
@@ -530,19 +530,23 @@ def create_app(mower):
             command_handlers = {
                 'generate_pattern': lambda params: {
                     'success': True,
-                    'path': mower.resource_manager.get_path_planner().generate_pattern(
+                    'path': mower.resource_manager.get_path_planner()
+                    .generate_pattern(
                         params.get('pattern_type', 'PARALLEL'),
                         params.get('settings', {})
                     ),
                     'coverage': 0.85  # Example coverage value
                 },
                 'save_area': lambda params: {
-                    'success': mower.resource_manager.get_path_planner().set_boundary_points(
+                    'success': mower.resource_manager.get_path_planner()
+                    .set_boundary_points(
                         params.get('coordinates', [])
                     )
                 },
                 'set_home': lambda params: {
-                    'success': mower.set_home_location(params.get('location', {}))
+                    'success': mower.set_home_location(
+                        params.get('location', {})
+                    )
                 },
                 'save_no_go_zones': lambda params: {
                     'success': mower.save_no_go_zones(params.get('zones', []))
@@ -550,7 +554,10 @@ def create_app(mower):
                 'get_area': lambda params: {
                     'success': True,
                     'data': {
-                        'boundary_points': mower.resource_manager.get_path_planner().pattern_config.boundary_points
+                        'boundary_points': (
+                            mower.resource_manager.get_path_planner()
+                            .pattern_config.boundary_points
+                        )
                     }
                 },
                 'get_home': lambda params: {
@@ -561,10 +568,22 @@ def create_app(mower):
                     'success': True,
                     'data': {
                         'mowing': {
-                            'pattern': mower.resource_manager.get_path_planner().pattern_config.pattern_type.name,
-                            'spacing': mower.resource_manager.get_path_planner().pattern_config.spacing,
-                            'angle': mower.resource_manager.get_path_planner().pattern_config.angle,
-                            'overlap': mower.resource_manager.get_path_planner().pattern_config.overlap,
+                            'pattern': (
+                                mower.resource_manager.get_path_planner()
+                                .pattern_config.pattern_type.name
+                            ),
+                            'spacing': (
+                                mower.resource_manager.get_path_planner()
+                                .pattern_config.spacing
+                            ),
+                            'angle': (
+                                mower.resource_manager.get_path_planner()
+                                .pattern_config.angle
+                            ),
+                            'overlap': (
+                                mower.resource_manager.get_path_planner()
+                                .pattern_config.overlap
+                                ),
                         }
                     }
                 }
@@ -577,8 +596,8 @@ def create_app(mower):
                 return jsonify(result)
             else:
                 logger.warning(f"Unknown command: {command}")
-                return jsonify(
-                    {"success": False, "error": f"Unknown command: {command}"}), 400
+                error_msg = f"Unknown command: {command}"
+                return jsonify({"success": False, "error": error_msg}), 400
 
         except Exception as e:
             logger.error(f"Error handling command {command}: {e}")
