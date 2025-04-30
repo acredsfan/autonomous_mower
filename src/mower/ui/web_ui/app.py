@@ -87,6 +87,11 @@ def create_app(mower):
         """Render the settings page."""
         return render_template("settings.html")
 
+    @app.route("/setup_wizard")
+    def setup_wizard():
+        """Render the setup wizard page."""
+        return render_template("setup_wizard.html")
+
     @app.route("/camera")
     def camera():
         """Render the camera feed page."""
