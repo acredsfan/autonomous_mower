@@ -86,7 +86,12 @@ def create_app(mower):
     def settings():
         """Render the settings page."""
         return render_template("settings.html")
-
+        
+    @app.route("/schedule")
+    def schedule():
+        """Render the mowing schedule page."""
+        return render_template("schedule.html")
+        
     @app.route("/setup_wizard")
     def setup_wizard():
         """Render the setup wizard page."""
