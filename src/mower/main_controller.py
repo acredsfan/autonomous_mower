@@ -536,6 +536,45 @@ class ResourceManager:
             "location": self.get_gps_location(),
         }
 
+    def get_battery_status(self):
+        """Get the battery status information.
+
+        Returns:
+            dict: Battery status including percentage, voltage,
+            and charging state
+        """
+        try:
+            # Try to get battery information from INA3221 sensor if available
+            ina3221 = self.get_ina3221_sensor()
+            if ina3221 and hasattr(ina3221, "get_bus_voltage"):
+                # Assuming channel 1 is battery
+                voltage = ina3221.get_bus_voltage(1)
+                # Simple voltage to percentage conversion
+                # Assumes 12V battery where 10.5V is empty and 14.6V is full
+                # Adjust based on your actual battery specs
+                percentage = max(0, min(100, (voltage - 10.5) / 0.025))
+                charging = voltage > 14.6  # Simple charging detection
+                return {
+                    "percentage": percentage,
+                    "voltage": voltage,
+                    "charging": charging
+                }
+
+            # Fallback to a default value if hardware access fails
+            return {
+                "percentage": 50,  # Default to 50%
+                "voltage": 12.0,   # Default voltage
+                "charging": False  # Default to not charging
+            }
+        except Exception as e:
+            logger.error(f"Error getting battery status: {e}")
+            # Return safe defaults
+            return {
+                "percentage": 50,
+                "voltage": 12.0,
+                "charging": False
+            }
+
     # Interpreter stubs for camera obstacle detection
     def get_inference_interpreter(self):
         """Stub for TFLite interpreter dependency."""

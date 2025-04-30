@@ -87,6 +87,11 @@ def create_app(mower):
         """Render the settings page."""
         return render_template("settings.html")
 
+    @app.route("/camera")
+    def camera():
+        """Render the camera feed page."""
+        return render_template("camera.html")
+
     @app.route("/api/get-settings", methods=["GET"])
     def get_settings():
         """Get current mower settings."""

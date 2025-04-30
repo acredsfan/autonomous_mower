@@ -1,6 +1,128 @@
 {% extends "base.html" %}
 
+{% block title %}Camera Feed - Autonomous Mower{% endblock %}
+
 {% block content %}
-    <h1>Camera Stream</h1>
-    <img id="video_feed" alt="Loading video stream...">
+<div class="dashboard-header">
+    <h1>Camera Feed</h1>
+    <div class="d-flex align-center">
+        <span class="status-indicator" id="cameraConnectionStatus"></span>
+        <span id="cameraStatusText" class="mr-2">Connected</span>
+        <button id="refreshCameraBtn" class="btn btn-primary btn-sm">
+            <i class="fas fa-sync-alt"></i> Refresh Feed
+        </button>
+    </div>
+</div>
+
+<div class="camera-page">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3>Live Feed</h3>
+            <div class="card-header-actions">
+                <button id="captureImageBtn" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-camera"></i> Capture
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="camera-container">
+                <img id="cameraFeed" src="/video_feed" alt="Camera Feed" class="camera-feed">
+                <div class="camera-overlay" id="cameraOverlay">
+                    <div class="camera-status">Camera feed not available</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize camera status based on global connection status
+        updateCameraStatus();
+        
+        // Refresh button handler
+        const refreshBtn = document.getElementById('refreshCameraBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                const cameraFeed = document.getElementById('cameraFeed');
+                if (cameraFeed) {
+                    // Add timestamp to prevent caching
+                    cameraFeed.src = `/video_feed?t=${Date.now()}`;
+                    showAlert('Refreshing camera feed...', 'info');
+                }
+            });
+        }
+        
+        // Handle camera feed events
+        const cameraFeed = document.getElementById('cameraFeed');
+        const overlay = document.getElementById('cameraOverlay');
+        
+        if (cameraFeed && overlay) {
+            cameraFeed.onload = function() {
+                overlay.style.display = 'none';
+            };
+            
+            cameraFeed.onerror = function() {
+                overlay.style.display = 'flex';
+            };
+        }
+    });
+    
+    // Update camera connection status
+    function updateCameraStatus() {
+        const statusIndicator = document.getElementById('cameraConnectionStatus');
+        const statusText = document.getElementById('cameraStatusText');
+        
+        if (statusIndicator && statusText) {
+            if (typeof isConnected !== 'undefined' && isConnected) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Connected';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+    }
+</script>
+
+<style>
+    .camera-page {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .camera-container {
+        position: relative;
+        width: 100%;
+        height: 0;
+        padding-bottom: 75%;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .camera-feed {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .camera-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+    }
+</style>
 {% endblock %}
