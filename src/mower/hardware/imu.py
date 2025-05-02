@@ -215,7 +215,7 @@ class BNO085Sensor:
                 self.serial_port = SerialPort(
                     port=self.serial_port_name or IMU_SERIAL_PORT,
                     baudrate=self.baudrate,
-                    receiver_buffer_size=self.receiver_buffer_size
+                    receiver_buffer_size=self.receiver_buffer_size,
                 )
                 success = self.serial_port.start()
                 if not success:
@@ -250,8 +250,7 @@ class BNO085Sensor:
                             return True
                         except Exception as test_e:
                             logger.warning(
-                                "BNO085 sensor not responsive after init: "
-                                f"{test_e}"
+                                "BNO085 sensor not responsive after init: " f"{test_e}"
                             )
                             self.connected = False
                             self.sensor = None
@@ -280,9 +279,7 @@ class BNO085Sensor:
                 time.sleep(reconnection_delay)
 
             except Exception as e:
-                logger.error(
-                    f"Error during BNO085 sensor initialization: {e}"
-                )
+                logger.error(f"Error during BNO085 sensor initialization: {e}")
                 # Ensure port is closed if initialization fails
                 if self.serial_port:
                     self.serial_port.stop()
@@ -336,8 +333,17 @@ class BNO085Sensor:
         try:
             accel_x, accel_y, accel_z = self.sensor.acceleration
             return {"x": accel_x, "y": accel_y, "z": accel_z}
-        except Exception as e:
-            logger.error(f"Error reading BNO085 accelerometer: {e}")
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error reading BNO085 accelerometer: {e}")
+            # Consider attempting reconnection or marking as disconnected
+            # self.connected = False
+            return {}
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error reading BNO085 accelerometer: {e}")
             return {}
 
     def read_bno085_gyro(self):
@@ -349,8 +355,16 @@ class BNO085Sensor:
         try:
             gyro_x, gyro_y, gyro_z = self.sensor.gyro
             return {"x": gyro_x, "y": gyro_y, "z": gyro_z}
-        except Exception as e:
-            logger.error(f"Error reading BNO085 gyroscope: {e}")
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error reading BNO085 gyroscope: {e}")
+            # self.connected = False
+            return {}
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error reading BNO085 gyroscope: {e}")
             return {}
 
     def read_bno085_magnetometer(self):
@@ -362,23 +376,37 @@ class BNO085Sensor:
         try:
             mag_x, mag_y, mag_z = self.sensor.magnetic
             return {"x": mag_x, "y": mag_y, "z": mag_z}
-        except Exception as e:
-            logger.error(f"Error reading BNO085 magnetometer: {e}")
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error reading BNO085 magnetometer: {e}")
+            # self.connected = False
+            return {}
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error reading BNO085 magnetometer: {e}")
             return {}
 
     def calculate_quaternion(self):
         """Calculate Quaternion based on BNO085 rotation vector data."""
         if not self.connected or not self.sensor:
-            logger.warning(
-                "Cannot calculate quaternion: BNO085 not connected"
-            )
+            logger.warning("Cannot calculate quaternion: BNO085 not connected")
             return {}
 
         try:
             q0, q1, q2, q3 = self.sensor.quaternion
             return {"q0": q0, "q1": q1, "q2": q2, "q3": q3}
-        except Exception as e:
-            logger.error(f"Error calculating Quaternion: {e}")
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error calculating Quaternion: {e}")
+            # self.connected = False
+            return {}
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error calculating Quaternion: {e}")
             return {}
 
     def calculate_heading(self):
@@ -388,13 +416,21 @@ class BNO085Sensor:
             return -1
 
         try:
-            x, y, z = self.sensor.magnetic
+            x, y, z = self.sensor.magnetic  # Potential hardware read
             heading = math.degrees(math.atan2(y, x))
             if heading < 0:
                 heading += 360
             return heading
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error calculating heading: {e}")
+            # self.connected = False
+            return -1
         except Exception as e:
-            logger.error(f"Error calculating heading: {e}")
+            logger.error(f"Unexpected error calculating heading: {e}")
             return -1
 
     def calculate_pitch(self):
@@ -404,12 +440,20 @@ class BNO085Sensor:
             return -1
 
         try:
-            x, y, z = self.sensor.acceleration
+            x, y, z = self.sensor.acceleration  # Potential hardware read
             x = max(min(x, 1.0), -1.0)  # Clamp x to the range [-1, 1]
             pitch = math.degrees(math.asin(-x))
             return pitch
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error calculating pitch: {e}")
+            # self.connected = False
+            return -1
         except Exception as e:
-            logger.error(f"Error calculating pitch: {e}")
+            logger.error(f"Unexpected error calculating pitch: {e}")
             return -1
 
     def calculate_roll(self):
@@ -419,12 +463,20 @@ class BNO085Sensor:
             return -1
 
         try:
-            x, y, z = self.sensor.acceleration
+            x, y, z = self.sensor.acceleration  # Potential hardware read
             y = max(min(y, 1.0), -1.0)  # Clamp y to the range [-1, 1]
             roll = math.degrees(math.asin(y))
             return roll
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error calculating roll: {e}")
+            # self.connected = False
+            return -1
         except Exception as e:
-            logger.error(f"Error calculating roll: {e}")
+            logger.error(f"Unexpected error calculating roll: {e}")
             return -1
 
     def calculate_speed(self):
@@ -434,11 +486,19 @@ class BNO085Sensor:
             return -1
 
         try:
-            x, y, z = self.sensor.acceleration
+            x, y, z = self.sensor.acceleration  # Potential hardware read
             speed = math.sqrt(x**2 + y**2 + z**2)
             return speed
+        except (
+            OSError,
+            RuntimeError,
+            serial.SerialException,
+        ) as e:  # Catch specific hardware/comm errors
+            logger.error(f"Hardware/Comm error calculating speed: {e}")
+            # self.connected = False
+            return -1
         except Exception as e:
-            logger.error(f"Error calculating speed: {e}")
+            logger.error(f"Unexpected error calculating speed: {e}")
             return -1
 
     def cleanup(self, sensor=None):
@@ -481,9 +541,7 @@ class BNO085Sensor:
 
         # Get list of available ports
         available_ports = list(serial.tools.list_ports.comports())
-        logger.info(
-            f"Available ports: {[port.device for port in available_ports]}"
-        )
+        logger.info(f"Available ports: {[port.device for port in available_ports]}")
 
         for port_info in available_ports:
             port_name = port_info.device
@@ -502,7 +560,7 @@ class BNO085Sensor:
                 )
 
                 # Try to establish communication
-                test_port.write(b"\x7E")  # Send any byte to wake up device
+                test_port.write(b"\x7e")  # Send any byte to wake up device
                 time.sleep(0.1)
 
                 # Read response (if any)
@@ -546,9 +604,7 @@ class BNO085Sensor:
             time.sleep(0.5)
 
             # Request product ID to verify communication
-            self._send_command(
-                CHANNEL_COMMAND, [SHTP_REPORT_PRODUCT_ID_REQUEST]
-            )
+            self._send_command(CHANNEL_COMMAND, [SHTP_REPORT_PRODUCT_ID_REQUEST])
             time.sleep(0.1)
 
             # Flush any pending data
@@ -660,9 +716,7 @@ class BNO085Sensor:
                 if not self.connected:
                     # Try to reconnect
                     if self.connect_attempts < self.max_connect_attempts:
-                        logger.info(
-                            "IMU disconnected. Attempting to reconnect..."
-                        )
+                        logger.info("IMU disconnected. Attempting to reconnect...")
                         time.sleep(self.reconnection_delay)
                         self.connect()
                     else:
@@ -671,17 +725,13 @@ class BNO085Sensor:
                             f"{self.max_connect_attempts} attempts"
                         )
                         time.sleep(5)  # Wait before trying again
-                        self.connect_attempts = (
-                            0  # Reset counter to try again
-                        )
+                        self.connect_attempts = 0  # Reset counter to try again
                     continue
 
                 # Read available data
                 if self.serial_port and self.serial_port.is_open:
                     if self.serial_port.in_waiting > 0:
-                        chunk = self.serial_port.read(
-                            self.serial_port.in_waiting
-                        )
+                        chunk = self.serial_port.read(self.serial_port.in_waiting)
                         buffer.extend(chunk)
 
                         # Process complete packets
@@ -692,10 +742,10 @@ class BNO085Sensor:
 
                             # Check if we have the full packet
                             if len(buffer) >= length + 4:
-                                packet = buffer[4: length + 4]
+                                packet = buffer[4 : length + 4]
                                 self._process_packet(channel, packet)
                                 # Remove processed packet
-                                buffer = buffer[length + 4:]
+                                buffer = buffer[length + 4 :]
                             else:
                                 break  # Wait for more data
                     else:
@@ -732,10 +782,7 @@ class BNO085Sensor:
         report_id = packet[0]
 
         # Process based on channel and report type
-        if (
-            channel == CHANNEL_REPORTS
-            and report_id == SENSOR_REPORTID_ROTATION_VECTOR
-        ):
+        if channel == CHANNEL_REPORTS and report_id == SENSOR_REPORTID_ROTATION_VECTOR:
             # Parse rotation vector (quaternion)
             if len(packet) >= 17:
                 with self.lock:
@@ -755,9 +802,7 @@ class BNO085Sensor:
 
                     # Extract accuracy estimate if available
                     if len(packet) >= 18:
-                        accuracy = (
-                            struct.unpack("<h", packet[10:12])[0] / 16.0
-                        )
+                        accuracy = struct.unpack("<h", packet[10:12])[0] / 16.0
                         self.calibration_status = min(
                             3, int(accuracy / 30)
                         )  # Convert to 0-3 scale
@@ -786,8 +831,7 @@ class BNO085Sensor:
         safety_status = self.check_safety_conditions()
         if not safety_status["is_safe"]:
             logger.warning(
-                "Unsafe condition detected: "
-                f"{', '.join(safety_status['messages'])}"
+                "Unsafe condition detected: " f"{', '.join(safety_status['messages'])}"
             )
 
     def _update_euler_angles(self):
@@ -998,15 +1042,11 @@ class BNO085Sensor:
             # Convert G to m/s²
             if accel_magnitude > self.impact_threshold * 9.81:
                 current_time = time.time()
-                if (
-                    current_time - self.last_impact_time
-                    > self.impact_cooldown
-                ):
+                if current_time - self.last_impact_time > self.impact_cooldown:
                     status["is_safe"] = False
                     status["impact_detected"] = True
                     status["messages"].append(
-                        "Impact detected! Acceleration: "
-                        f"{accel_magnitude:.1f} m/s²"
+                        "Impact detected! Acceleration: " f"{accel_magnitude:.1f} m/s²"
                     )
                     self.last_impact_time = current_time
 
@@ -1138,10 +1178,7 @@ if __name__ == "__main__":
 
             # Wait until sensor is ready before reading data
             wait_attempts = 0
-            while (
-                (not imu.connected or imu.sensor is None)
-                and wait_attempts < 10
-            ):
+            while (not imu.connected or imu.sensor is None) and wait_attempts < 10:
                 logger.info("Waiting for IMU sensor to be ready...")
                 time.sleep(0.2)
                 wait_attempts += 1

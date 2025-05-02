@@ -18,13 +18,19 @@ class INA3221Sensor:
             sensor = INA3221(i2c)
             logger.info("INA3221 initialized successfully.")
             return sensor
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:  # Catch potential I2C errors
             logger.error(f"Error initializing INA3221: {e}")
+            return None
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error initializing INA3221: {e}")
             return None
 
     @staticmethod
     def read_ina3221(sensor, channel):
         """Read data from the INA3221 sensor for a specific channel."""
+        if sensor is None:
+            logger.error("INA3221 sensor is not initialized.")
+            return {}
         try:
             if channel in [1, 2, 3]:
                 bus_voltage = sensor.bus_voltage(channel)
@@ -36,9 +42,16 @@ class INA3221Sensor:
                     "current": round(current, 2),
                 }
             else:
-                raise ValueError("Invalid channel. Must be 1, 2, or 3.")
-        except Exception as e:
-            logger.error(f"Error reading INA3221 data: {e}")
+                # Log the error instead of raising ValueError immediately
+                logger.error(
+                    f"Invalid channel for INA3221: {channel}. Must be 1, 2, or 3."
+                )
+                return {}  # Return empty dict for invalid channel
+        except (OSError, RuntimeError) as e:  # Catch potential I2C read errors
+            logger.error(f"I2C Error reading INA3221 channel {channel}: {e}")
+            return {}
+        except Exception as e:  # Catch any other unexpected errors
+            logger.error(f"Unexpected error reading INA3221 channel {channel}: {e}")
             return {}
 
 

@@ -9,10 +9,10 @@ works with both CPU and Coral TPU when available.
 import os
 import time
 import numpy as np
+import cv2
 from typing import List, Dict
 
-from PIL import Image
-import cv2
+from PIL import Image, ImageDraw, ImageFont
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -65,7 +65,7 @@ class YOLOv8TFLiteDetector:
                     labels = [line.strip() for line in f.readlines()]
                 logger.info(f"Loaded {len(labels)} labels from {self.label_path}")
             except Exception as e:
-                logger.error(f"Error loading labels: {e}")
+                logger.error(f"Error loading label file {self.label_path}: {e}")
         else:
             logger.warning(f"Label file not found at {self.label_path}")
 
@@ -79,7 +79,7 @@ class YOLOv8TFLiteDetector:
 
             # Check if model exists
             if not os.path.exists(self.model_path):
-                logger.error(f"Model not found at {self.model_path}")
+                logger.error(f"Model file not found at {self.model_path}")
                 return False
 
             # Load interpreter
@@ -101,15 +101,25 @@ class YOLOv8TFLiteDetector:
             num_outputs = len(self.output_details)
 
             # Check output shapes to determine format
+            # Standard YOLOv8 TFLite export often has one output tensor:
+            # Shape [1, num_boxes, num_classes + 5] (x, y, w, h, conf, class_probs...)
+            # Or sometimes [1, num_classes + 5, num_boxes]
             if num_outputs >= 1:
-                # YOLOv8 TFLite detection format
-                if (
-                    len(self.output_details[0]["shape"]) == 3
-                    and self.output_details[0]["shape"][2] > 5
+                output_shape = self.output_details[0]["shape"]
+                # Check if the second-to-last dimension matches num_classes + 5
+                # or if the last dimension matches num_classes + 5
+                if len(output_shape) == 3 and (
+                    output_shape[2] == len(self.labels) + 5
+                    or output_shape[1] == len(self.labels) + 5
                 ):
-                    # Shape is [1, num_detections, 5+num_classes] or similar
                     self.has_detect_output = True
-                    logger.info("YOLOv8 detection output format detected")
+                    logger.info("Detected YOLOv8 output format.")
+                else:
+                    logger.warning(
+                        "Output tensor shape doesn't match expected YOLOv8 format. "
+                        "Falling back to classification processing."
+                    )
+                    self.has_detect_output = False
 
             logger.info(
                 f"YOLOv8 TFLite detector initialized: "
@@ -203,44 +213,52 @@ class YOLOv8TFLiteDetector:
     def _process_yolov8_output(self) -> List[Dict]:
         """Process YOLOv8 detection output format."""
         # Get output tensor - format depends on the model
-        # For YOLOv8 TFLite, output tensor has shape [1, num_boxes, num_classes+5]
-        # where 5 represents [x, y, w, h, confidence]
-        output = self.interpreter.get_tensor(self.output_details[0]["index"])
+        # Shape [num_boxes, num_classes+5] or [num_classes+5, num_boxes]
+        output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
 
-        # Get original image dimensions
-        original_height, original_width = 0, 0
-        if len(self.input_details[0]["shape"]) == 4:
-            original_height, original_width = (
-                self.input_height,
-                self.input_width,
-            )
+        # Check if we need to transpose
+        if output_data.shape[0] == len(self.labels) + 5:
+            output_data = output_data.T  # Transpose to [num_boxes, num_classes+5]
+
+        # Get original image dimensions (use input size as reference)
+        original_height, original_width = self.input_height, self.input_width
 
         detections = []
-        for i in range(output.shape[1]):  # For each detection
-            # Extract values
-            confidence = output[0, i, 4]
+        num_boxes = output_data.shape[0]
+
+        for i in range(num_boxes):  # For each detection
+            # Extract values [x, y, w, h, confidence, class_probs...]
+            box_data = output_data[i]
+            confidence = box_data[4]
 
             # Skip low confidence detections
             if confidence < self.conf_threshold:
                 continue
 
             # Calculate class scores
-            class_scores = output[0, i, 5:]
+            class_scores = box_data[5:]
             class_id = np.argmax(class_scores)
-            class_score = class_scores[class_id]
+            class_score = class_scores[class_id] * confidence  # Combined score
 
             # Skip low class confidence
             if class_score < self.conf_threshold:
                 continue
 
-            # Calculate bounding box
-            x, y, w, h = output[0, i, 0:4]
+            # Calculate bounding box (center_x, center_y, width, height)
+            x, y, w, h = box_data[0:4]
 
-            # Convert to [0, 1] range and then to pixel values
-            xmin = max(0.0, x - w / 2) * original_width
-            ymin = max(0.0, y - h / 2) * original_height
-            xmax = min(1.0, x + w / 2) * original_width
-            ymax = min(1.0, y + h / 2) * original_height
+            # Convert from center coords to [xmin, ymin, xmax, ymax] relative
+            # to input size
+            xmin = int((x - w / 2) * original_width)
+            ymin = int((y - h / 2) * original_height)
+            xmax = int((x + w / 2) * original_width)
+            ymax = int((y + h / 2) * original_height)
+
+            # Clamp coordinates to image bounds
+            xmin = max(0, xmin)
+            ymin = max(0, ymin)
+            xmax = min(original_width - 1, xmax)
+            ymax = min(original_height - 1, ymax)
 
             # Get class name
             if class_id < len(self.labels):
@@ -251,19 +269,16 @@ class YOLOv8TFLiteDetector:
             # Create detection dict
             detections.append(
                 {
-                    "name": class_name,
-                    "class_id": int(class_id),
-                    "score": float(class_score),
-                    "confidence": float(confidence),
-                    "box": [
-                        float(xmin),
-                        float(ymin),
-                        float(xmax - xmin),
-                        float(ymax - ymin),
-                    ],
-                    "type": "yolov8",
+                    "class_name": class_name,
+                    "confidence": float(class_score),
+                    # Use xmin, ymin, xmax, ymax format
+                    "box": [xmin, ymin, xmax, ymax],
+                    "type": "yolov8_tflite",
                 }
             )
+
+        # TODO: Add Non-Max Suppression (NMS) if the exported model doesn't include it
+        # detections = self.non_max_suppression(detections)
 
         return detections
 
@@ -279,24 +294,15 @@ class YOLOv8TFLiteDetector:
         detections = []
         for idx in top_indices:
             score = float(output[idx])
-            if score < self.conf_threshold:
-                continue
-
-            if idx < len(self.labels):
-                class_name = self.labels[idx]
-            else:
-                class_name = f"Class {idx}"
-
-            detections.append(
-                {
-                    "name": class_name,
-                    "class_id": int(idx),
-                    "score": score,
-                    "confidence": score,
-                    "box": None,  # No bounding box for classification
-                    "type": "yolov8-class",
-                }
-            )
+            if score >= self.conf_threshold and idx < len(self.labels):
+                detections.append(
+                    {
+                        "class_name": self.labels[idx],
+                        "confidence": score,
+                        "box": None,  # No bounding box for classification
+                        "type": "classification_tflite",
+                    }
+                )
 
         return detections
 
@@ -305,7 +311,7 @@ class YOLOv8TFLiteDetector:
         Draw detection boxes and labels on the image.
 
         Args:
-            image: Source image as numpy array
+            image: Source image as numpy array (BGR format expected by OpenCV)
             detections: List of detection dictionaries
 
         Returns:
@@ -313,46 +319,107 @@ class YOLOv8TFLiteDetector:
         """
         # Make a copy of the image
         image_with_boxes = image.copy()
+        height, width, _ = image_with_boxes.shape
+
+        try:
+            font = ImageFont.truetype("arial.ttf", 15)  # Or a default font
+        except IOError:
+            font = ImageFont.load_default()
+
+        # Convert to PIL Image for drawing text
+        pil_image = Image.fromarray(cv2.cvtColor(image_with_boxes, cv2.COLOR_BGR2RGB))
+        draw = ImageDraw.Draw(pil_image)
 
         # Draw each detection
         for detection in detections:
-            # Extract info
-            name = detection["name"]
-            score = detection["score"]
             box = detection.get("box")
+            class_name = detection["class_name"]
+            confidence = detection["confidence"]
 
-            # Skip if no box
-            if box is None:
-                continue
+            if box:
+                xmin, ymin, xmax, ymax = map(int, box)
 
-            # Convert to integers
-            x, y, w, h = [int(v) for v in box]
+                # Scale box if needed (assuming box coords are relative to
+                # model input size)
+                # This might not be necessary if _process_yolov8_output already
+                # scales them
+                # xmin = int(xmin * width / self.input_width)
+                # ymin = int(ymin * height / self.input_height)
+                # xmax = int(xmax * width / self.input_width)
+                # ymax = int(ymax * height / self.input_height)
 
-            # Draw box
-            cv2.rectangle(image_with_boxes, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # Draw rectangle
+                draw.rectangle([(xmin, ymin), (xmax, ymax)], outline="red", width=2)
 
-            # Draw label background
-            label = f"{name}: {int(score * 100)}%"
-            (label_w, label_h), baseline = cv2.getTextSize(
-                label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2
-            )
-            cv2.rectangle(
-                image_with_boxes,
-                (x, y - label_h - 5),
-                (x + label_w, y),
-                (0, 255, 0),
-                -1,
-            )
+                # Draw label background
+                label = f"{class_name}: {confidence:.2f}"
+                text_width, text_height = font.getsize(label)
+                draw.rectangle(
+                    [(xmin, ymin - text_height - 2), (xmin + text_width + 2, ymin)],
+                    fill="red",
+                )
+                # Draw label text
+                draw.text(
+                    (xmin + 1, ymin - text_height - 1), label, fill="white", font=font
+                )
+            else:
+                # Handle classification output (draw text somewhere)
+                label = f"{class_name}: {confidence:.2f}"
+                draw.text(
+                    (10, 10 + detections.index(detection) * 20),
+                    label,
+                    fill="red",
+                    font=font,
+                )
 
-            # Draw label text
-            cv2.putText(
-                image_with_boxes,
-                label,
-                (x, y - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 0),
-                2,
-            )
+        # Convert back to OpenCV format (BGR)
+        image_with_boxes = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
         return image_with_boxes
+
+
+# Helper function (consider moving to utils if needed elsewhere)
+def non_max_suppression(
+    detections: List[Dict], iou_threshold: float = 0.5
+) -> List[Dict]:
+    """Apply Non-Maximum Suppression."""
+    if not detections:
+        return []
+
+    # Sort by confidence score (descending)
+    detections.sort(key=lambda x: x["confidence"], reverse=True)
+
+    keep_detections = []
+    while detections:
+        best_detection = detections.pop(0)
+        keep_detections.append(best_detection)
+
+        # Remove overlapping boxes
+        remaining_detections = []
+        for det in detections:
+            iou = calculate_iou(best_detection["box"], det["box"])
+            if iou < iou_threshold:
+                remaining_detections.append(det)
+        detections = remaining_detections
+
+    return keep_detections
+
+
+def calculate_iou(box1, box2):
+    """Calculate Intersection over Union."""
+    xmin1, ymin1, xmax1, ymax1 = box1
+    xmin2, ymin2, xmax2, ymax2 = box2
+
+    inter_xmin = max(xmin1, xmin2)
+    inter_ymin = max(ymin1, ymin2)
+    inter_xmax = min(xmax1, xmax2)
+    inter_ymax = min(ymax1, ymax2)
+
+    inter_area = max(0, inter_xmax - inter_xmin) * max(0, inter_ymax - inter_ymin)
+    area1 = (xmax1 - xmin1) * (ymax1 - ymin1)
+    area2 = (xmax2 - xmin2) * (ymax2 - ymin2)
+    union_area = area1 + area2 - inter_area
+
+    if union_area == 0:
+        return 0.0
+    return inter_area / union_area

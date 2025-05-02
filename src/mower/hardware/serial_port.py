@@ -69,22 +69,42 @@ class SerialPort:
                 timeout=self.timeout,
             )
             # Set buffer size if supported (Linux only)
-            if hasattr(self.ser, 'set_buffer_size'):
+            if hasattr(self.ser, "set_buffer_size"):
                 try:
                     self.ser.set_buffer_size(rx_size=self.receiver_buffer_size)
                 except Exception as e:
                     logger.warning(f"Could not set serial buffer size: {e}")
-            logger.debug("Opened serial port " + self.ser.name)
+            logger.info(
+                f"Successfully opened serial port {self.ser.name}"
+            )  # Changed to info
+        except serial.SerialException as e:  # Catch specific serial exception
+            logger.error(f"SerialException opening port {self.port}: {e}")
+            self.ser = None  # Ensure ser is None on failure
+            # Re-raise or handle as appropriate for the application startup
+            # For now, let's re-raise to make startup failure explicit
+            raise
         except Exception as e:
-            logger.error(f"Error opening serial port: {e}")
+            logger.error(f"Unexpected error opening serial port {self.port}: {e}")
+            self.ser = None
             raise
         return self
 
     def stop(self):
-        if self.ser is not None:
-            sp = self.ser
-            self.ser = None
-            sp.close()
+        if self.ser is not None and self.ser.is_open:  # Check if open
+            logger.debug(f"Closing serial port {self.port}")
+            try:
+                sp = self.ser
+                self.ser = None
+                sp.close()
+                logger.info(f"Closed serial port {self.port}")
+            except serial.SerialException as e:
+                logger.error(f"SerialException closing port {self.port}: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error closing serial port {self.port}: {e}")
+        elif self.ser is None:
+            logger.debug(f"Serial port {self.port} was already None, nothing to close.")
+        else:  # Not None but not open
+            logger.debug(f"Serial port {self.port} was not open, nothing to close.")
         return self
 
     @staticmethod
@@ -130,7 +150,10 @@ class SerialPort:
                        blank if count bytes are not available
         """
         if self.ser is None or not self.ser.is_open:
-            return (False, b"")
+            logger.warning(
+                f"Attempted to read from closed/uninitialized port {self.port}"
+            )
+            return (False, b"")  # Return empty bytes if port not open
 
         try:
             waiting = self.buffered() >= count
@@ -161,7 +184,10 @@ class SerialPort:
                      blank if not read
         """
         if self.ser is None or not self.ser.is_open:
-            return (False, "")
+            logger.warning(
+                f"Attempted to readline from closed/uninitialized port {self.port}"
+            )
+            return (False, "")  # Return empty string if port not open
 
         try:
             waiting = self.buffered() > 0
@@ -200,9 +226,7 @@ class SerialLineReader:
 
     _instance = None
 
-    def __init__(
-        self, serial: SerialPort, max_lines: int = 0, debug: bool = False
-    ):
+    def __init__(self, serial: SerialPort, max_lines: int = 0, debug: bool = False):
         self.serial = serial
         self.max_lines = max_lines
         self.debug = debug
@@ -327,10 +351,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.samples < 0:
-        print(
-            "Samples per read cycle,"
-            "greater than zero OR zero for unlimited"
-        )
+        print("Samples per read cycle," "greater than zero OR zero for unlimited")
         parser.print_help()
         sys.exit(0)
 
@@ -351,9 +372,7 @@ if __name__ == "__main__":
         )
 
         if args.threaded:
-            update_thread = threading.Thread(
-                target=line_reader.update, args=()
-            )
+            update_thread = threading.Thread(target=line_reader.update, args=())
             update_thread.start()
 
         def read_lines():

@@ -16,7 +16,7 @@ pathfinding>=1.0.0
 pyserial>=3.5
 rtree>=1.0.0
 shapely>=2.0.0
-tensorflow>=2.13.0
+# tensorflow>=2.13.0 # Commented out: Full TF likely not needed on Pi, tflite-runtime is used.
 colorama>=0.4.4
 watchdog>=5.0.0
 
