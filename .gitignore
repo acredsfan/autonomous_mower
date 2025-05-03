@@ -84,6 +84,7 @@ htmlcov/
 .junie/
 copilot-instructions.md
 .github/workflows/copilot-instructions.md
+.roo/
 
 # Distribution / packaging
 .Python
@@ -113,3 +114,4 @@ server.py
 run_mcp_server.sh
 /.venv
 MCP_SERVER.md
+.blackboxrules
