@@ -201,6 +201,9 @@ class YOLOv8TFLiteDetector:
             # Fallback for classification models
             detections = self._process_classification_output()
 
+        # Apply Non-Max Suppression (NMS) to filter overlapping detections
+        detections = non_max_suppression(detections, iou_threshold=0.5)
+
         # Log performance
         logger.debug(
             f"YOLOv8 inference: {inference_time:.2f}s "

@@ -1,417 +1,442 @@
-{% extends 'base.html' %}
-
-{% block title %}Dashboard - Autonomous Mower{% endblock %}
-
-{% block head_extra %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% extends 'base.html' %} {% block title %}Dashboard - Autonomous Mower{%
+endblock %} {% block head_extra %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="dashboard-header">
-    <h1>Mower Dashboard</h1>
-    <div class="d-flex align-center">
-        <span id="timeDisplay" class="mr-2">--:--:--</span>
-        <button id="refreshBtn" class="btn btn-secondary btn-sm">
-            <i class="fas fa-sync-alt"></i> Refresh
-        </button>
-    </div>
+  <h1>Mower Dashboard</h1>
+  <div class="d-flex align-center">
+    <span id="timeDisplay" class="mr-2">--:--:--</span>
+    <button id="refreshBtn" class="btn btn-secondary btn-sm">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
 </div>
 
 <!-- Quick status overview -->
 <div class="card mb-3">
-    <div class="card-header">
-        <h3>System Status</h3>
-        <div class="card-header-actions">
-            <span id="lastUpdated">Last updated: --:--:--</span>
-        </div>
+  <div class="card-header">
+    <h3>System Status</h3>
+    <div class="card-header-actions">
+      <span id="lastUpdated">Last updated: --:--:--</span>
     </div>
-    <div class="card-body">
-        <div class="dashboard-grid">
-            <!-- Mower State -->
-            <div class="status-card">
-                <div class="status-card-header">Mower State</div>
-                <div class="status-card-value" id="mowerStateDisplay">Idle</div>
-                <div class="status-card-footer" id="currentAction">Ready</div>
-            </div>
+  </div>
+  <div class="card-body">
+    <div class="dashboard-grid">
+      <!-- Mower State -->
+      <div class="status-card">
+        <div class="status-card-header">Mower State</div>
+        <div class="status-card-value" id="mowerStateDisplay">Idle</div>
+        <div class="status-card-footer" id="currentAction">Ready</div>
+      </div>
 
-            <!-- Battery Status -->
-            <div class="status-card">
-                <div class="status-card-header">Battery</div>
-                <div class="status-card-value" id="batteryDisplay">---%</div>
-                <div class="status-card-footer">
-                    <span id="batteryVoltage">--.- V</span>
-                    <span id="chargingStatus"></span>
-                </div>
-            </div>
-
-            <!-- GPS Status -->
-            <div class="status-card">
-                <div class="status-card-header">GPS</div>
-                <div class="status-card-value" id="gpsStatusDisplay">No Fix</div>
-                <div class="status-card-footer" id="satelliteCount">0 satellites</div>
-            </div>
-
-            <!-- Mowing Progress -->
-            <div class="status-card">
-                <div class="status-card-header">Mowing Progress</div>
-                <div class="status-card-value" id="mowingProgress">0%</div>
-                <div class="status-card-footer" id="areaStatus">0 m² / 0 m²</div>
-            </div>
+      <!-- Battery Status -->
+      <div class="status-card">
+        <div class="status-card-header">Battery</div>
+        <div class="status-card-value" id="batteryDisplay">---%</div>
+        <div class="status-card-footer">
+          <span id="batteryVoltage">--.- V</span>
+          <span id="chargingStatus"></span>
         </div>
+      </div>
+
+      <!-- GPS Status -->
+      <div class="status-card">
+        <div class="status-card-header">GPS</div>
+        <div class="status-card-value" id="gpsStatusDisplay">No Fix</div>
+        <div class="status-card-footer" id="satelliteCount">0 satellites</div>
+      </div>
+
+      <!-- Mowing Progress -->
+      <div class="status-card">
+        <div class="status-card-header">Mowing Progress</div>
+        <div class="status-card-value" id="mowingProgress">0%</div>
+        <div class="status-card-footer" id="areaStatus">0 m² / 0 m²</div>
+      </div>
+
+      <!-- Weather Information -->
+      <div class="status-card">
+        <div class="status-card-header">Weather</div>
+        <div class="status-card-value" id="weatherCondition">Loading...</div>
+        <div class="status-card-footer">
+          <span id="temperature">--°C</span>
+          <span id="humidity">--%</span>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Dashboard main content -->
 <div class="dashboard-layout">
-    <!-- Left column - Map and controls -->
-    <div class="dashboard-column">
-        <!-- Map preview -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Map</h3>
-                <div class="card-header-actions">
-                    <a href="{{ url_for('map_view') }}" class="btn btn-sm btn-primary">Full Map</a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="mapPreview" class="map-preview"></div>
-                <div class="map-coordinates mt-2">
-                    <div>Current Position: <span id="position_latitude">0.000000</span>, <span id="position_longitude">0.000000</span></div>
-                </div>
-            </div>
+  <!-- Left column - Map and controls -->
+  <div class="dashboard-column">
+    <!-- Map preview -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Map</h3>
+        <div class="card-header-actions">
+          <a href="{{ url_for('map_view') }}" class="btn btn-sm btn-primary"
+            >Full Map</a
+          >
         </div>
-
-        <!-- Quick Controls -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Quick Controls</h3>
-            </div>
-            <div class="card-body">
-                <div class="control-buttons">
-                    <button class="btn btn-primary" id="dashboardStartMowingBtn">
-                        <i class="fas fa-play"></i> Start Mowing
-                    </button>
-                    <button class="btn btn-danger" id="dashboardStopBtn">
-                        <i class="fas fa-stop"></i> Stop
-                    </button>
-                    <button class="btn btn-success" id="dashboardReturnHomeBtn">
-                        <i class="fas fa-home"></i> Return Home
-                    </button>
-                    <button class="btn btn-secondary" id="dashboardManualBtn">
-                        <i class="fas fa-gamepad"></i> Manual Control
-                    </button>
-                    <a href="{{ url_for('setup_wizard') }}" class="btn btn-info">
-                        <i class="fas fa-magic"></i> Setup Wizard
-                    </a>
-                    <a href="{{ url_for('schedule') }}" class="btn btn-info">
-                        <i class="fas fa-calendar-alt"></i> Schedule
-                    </a>
-                    <a href="{{ url_for('system_health') }}" class="btn btn-info">
-                        <i class="fas fa-heartbeat"></i> System Health
-                    </a>
-                </div>
-            </div>
+      </div>
+      <div class="card-body">
+        <div id="mapPreview" class="map-preview"></div>
+        <div class="map-coordinates mt-2">
+          <div>
+            Current Position: <span id="position_latitude">0.000000</span>,
+            <span id="position_longitude">0.000000</span>
+          </div>
         </div>
+      </div>
     </div>
 
-    <!-- Right column - Sensor data and system info -->
-    <div class="dashboard-column">
-        <!-- Sensor readings -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Sensor Readings</h3>
-            </div>
-            <div class="card-body">
-                <div class="sensor-readings">
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_temperature">--.-</div>
-                        <div class="sensor-label">Temperature (°C)</div>
-                    </div>
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_humidity">--.-</div>
-                        <div class="sensor-label">Humidity (%)</div>
-                    </div>
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_pressure">----</div>
-                        <div class="sensor-label">Pressure (hPa)</div>
-                    </div>
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_heading">---°</div>
-                        <div class="sensor-label">Heading</div>
-                    </div>
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_leftDistance">--.-</div>
-                        <div class="sensor-label">Left Distance (cm)</div>
-                    </div>
-                    <div class="sensor-item">
-                        <div class="sensor-value" id="sensor_rightDistance">--.-</div>
-                        <div class="sensor-label">Right Distance (cm)</div>
-                    </div>
-                </div>
-            </div>
+    <!-- Quick Controls -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Quick Controls</h3>
+      </div>
+      <div class="card-body">
+        <div class="control-buttons">
+          <button class="btn btn-primary" id="dashboardStartMowingBtn">
+            <i class="fas fa-play"></i> Start Mowing
+          </button>
+          <button class="btn btn-danger" id="dashboardStopBtn">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+          <button class="btn btn-success" id="dashboardReturnHomeBtn">
+            <i class="fas fa-home"></i> Return Home
+          </button>
+          <button class="btn btn-secondary" id="dashboardManualBtn">
+            <i class="fas fa-gamepad"></i> Manual Control
+          </button>
+          <a href="{{ url_for('setup_wizard') }}" class="btn btn-info">
+            <i class="fas fa-magic"></i> Setup Wizard
+          </a>
+          <a href="{{ url_for('schedule') }}" class="btn btn-info">
+            <i class="fas fa-calendar-alt"></i> Schedule
+          </a>
+          <a href="{{ url_for('system_health') }}" class="btn btn-info">
+            <i class="fas fa-heartbeat"></i> System Health
+          </a>
         </div>
-
-        <!-- System information -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>System Information</h3>
-            </div>
-            <div class="card-body">
-                <div class="system-info">
-                    <div class="info-item">
-                        <div class="info-label">Uptime:</div>
-                        <div class="info-value" id="systemUptime">-- : -- : --</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">CPU Load:</div>
-                        <div class="info-value" id="cpuLoad">--%</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Memory Usage:</div>
-                        <div class="info-value" id="memoryUsage">-- MB / -- MB</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Disk Space:</div>
-                        <div class="info-value" id="diskSpace">-- GB / -- GB</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Mode:</div>
-                        <div class="info-value" id="modeIndicator">Manual</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Error alerts -->
-        <div class="card card-error mb-3" id="errorCard" style="display: none;">
-            <div class="card-header bg-danger text-white">
-                <h3>System Error</h3>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-danger" id="errorMessage"></div>
-                <button class="btn btn-secondary" id="clearErrorBtn">
-                    <i class="fas fa-check"></i> Acknowledge
-                </button>
-            </div>
-        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Right column - Sensor data and system info -->
+  <div class="dashboard-column">
+    <!-- Sensor readings -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Sensor Readings</h3>
+      </div>
+      <div class="card-body">
+        <div class="sensor-readings">
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_temperature">--.-</div>
+            <div class="sensor-label">Temperature (°C)</div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_humidity">--.-</div>
+            <div class="sensor-label">Humidity (%)</div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_pressure">----</div>
+            <div class="sensor-label">Pressure (hPa)</div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_heading">---°</div>
+            <div class="sensor-label">Heading</div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_leftDistance">--.-</div>
+            <div class="sensor-label">Left Distance (cm)</div>
+          </div>
+          <div class="sensor-item">
+            <div class="sensor-value" id="sensor_rightDistance">--.-</div>
+            <div class="sensor-label">Right Distance (cm)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System information -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>System Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="system-info">
+          <div class="info-item">
+            <div class="info-label">Uptime:</div>
+            <div class="info-value" id="systemUptime">-- : -- : --</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">CPU Load:</div>
+            <div class="info-value" id="cpuLoad">--%</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Memory Usage:</div>
+            <div class="info-value" id="memoryUsage">-- MB / -- MB</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Disk Space:</div>
+            <div class="info-value" id="diskSpace">-- GB / -- GB</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Mode:</div>
+            <div class="info-value" id="modeIndicator">Manual</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error alerts -->
+    <div class="card card-error mb-3" id="errorCard" style="display: none">
+      <div class="card-header bg-danger text-white">
+        <h3>System Error</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-danger" id="errorMessage"></div>
+        <button class="btn btn-secondary" id="clearErrorBtn">
+          <i class="fas fa-check"></i> Acknowledge
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-    let map;
-    let currentPositionMarker;
-    let homePositionMarker;
-    let pathLine;
+  let map;
+  let currentPositionMarker;
+  let homePositionMarker;
+  let pathLine;
 
-    // Initialize map when the page loads
-    function initializeMap() {
-        map = L.map('mapPreview').setView([0, 0], 18);
+  // Initialize map when the page loads
+  function initializeMap() {
+    map = L.map("mapPreview").setView([0, 0], 18);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
 
-        // Create markers but don't add them yet
-        currentPositionMarker = L.marker([0, 0], {
-            icon: L.divIcon({
-                className: 'mower-marker',
-                html: '<i class="fas fa-robot"></i>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            })
-        });
-
-        homePositionMarker = L.marker([0, 0], {
-            icon: L.divIcon({
-                className: 'home-marker',
-                html: '<i class="fas fa-home"></i>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            })
-        });
-
-        // Create path line but don't add it yet
-        pathLine = L.polyline([], {
-            color: 'var(--grass-medium)',
-            weight: 3,
-            opacity: 0.7
-        });
-    }
-
-    // Update map with new position data
-    function updateMap(data) {
-        if (!map) return;
-
-        // Update current position marker
-        if (data.currentPosition) {
-            const [lat, lng] = data.currentPosition;
-            currentPositionMarker.setLatLng([lat, lng]).addTo(map);
-            map.setView([lat, lng], map.getZoom());
-        }
-
-        // Update home position marker
-        if (data.homePosition) {
-            const [lat, lng] = data.homePosition;
-            homePositionMarker.setLatLng([lat, lng]).addTo(map);
-        }
-
-        // Update path line
-        if (data.waypoints && data.waypoints.length > 0) {
-            const pathPoints = data.waypoints.map(wp => [wp.lat, wp.lng]);
-            pathLine.setLatLngs(pathPoints).addTo(map);
-
-            // Fit map to path if needed
-            if (pathPoints.length > 1) {
-                map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
-            }
-        }
-    }
-
-    // Update time display
-    function updateTimeDisplay() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString();
-        document.getElementById('timeDisplay').textContent = timeString;
-    }
-
-    // Initialize page-specific elements
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize map
-        initializeMap();
-
-        // Update time every second
-        updateTimeDisplay();
-        setInterval(updateTimeDisplay, 1000);
-
-        // Set up dashboard-specific buttons
-        document.getElementById('dashboardStartMowingBtn').addEventListener('click', function() {
-            sendCommand('start_mowing');
-        });
-
-        document.getElementById('dashboardStopBtn').addEventListener('click', function() {
-            sendCommand('stop');
-        });
-
-        document.getElementById('dashboardReturnHomeBtn').addEventListener('click', function() {
-            sendCommand('return_home');
-        });
-
-        document.getElementById('dashboardManualBtn').addEventListener('click', function() {
-            window.location.href = "{{ url_for('control') }}";
-        });
-
-        document.getElementById('refreshBtn').addEventListener('click', function() {
-            socket.emit('request_data', { type: 'all' });
-            showAlert('Refreshing data...', 'info', 2000);
-            document.getElementById('lastUpdated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
-        });
-
-        // Set up error acknowledgment
-        document.getElementById('clearErrorBtn').addEventListener('click', function() {
-            document.getElementById('errorCard').style.display = 'none';
-            sendCommand('acknowledge_error');
-        });
+    // Create markers but don't add them yet
+    currentPositionMarker = L.marker([0, 0], {
+      icon: L.divIcon({
+        className: "mower-marker",
+        html: '<i class="fas fa-robot"></i>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+      }),
     });
+
+    homePositionMarker = L.marker([0, 0], {
+      icon: L.divIcon({
+        className: "home-marker",
+        html: '<i class="fas fa-home"></i>',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+      }),
+    });
+
+    // Create path line but don't add it yet
+    pathLine = L.polyline([], {
+      color: "var(--grass-medium)",
+      weight: 3,
+      opacity: 0.7,
+    });
+  }
+
+  // Update map with new position data
+  function updateMap(data) {
+    if (!map) return;
+
+    // Update current position marker
+    if (data.currentPosition) {
+      const [lat, lng] = data.currentPosition;
+      currentPositionMarker.setLatLng([lat, lng]).addTo(map);
+      map.setView([lat, lng], map.getZoom());
+    }
+
+    // Update home position marker
+    if (data.homePosition) {
+      const [lat, lng] = data.homePosition;
+      homePositionMarker.setLatLng([lat, lng]).addTo(map);
+    }
+
+    // Update path line
+    if (data.waypoints && data.waypoints.length > 0) {
+      const pathPoints = data.waypoints.map((wp) => [wp.lat, wp.lng]);
+      pathLine.setLatLngs(pathPoints).addTo(map);
+
+      // Fit map to path if needed
+      if (pathPoints.length > 1) {
+        map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
+      }
+    }
+  }
+
+  // Update time display
+  function updateTimeDisplay() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    document.getElementById("timeDisplay").textContent = timeString;
+  }
+
+  // Initialize page-specific elements
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize map
+    initializeMap();
+
+    // Update time every second
+    updateTimeDisplay();
+    setInterval(updateTimeDisplay, 1000);
+
+    // Set up dashboard-specific buttons
+    document
+      .getElementById("dashboardStartMowingBtn")
+      .addEventListener("click", function () {
+        sendCommand("start_mowing");
+      });
+
+    document
+      .getElementById("dashboardStopBtn")
+      .addEventListener("click", function () {
+        sendCommand("stop");
+      });
+
+    document
+      .getElementById("dashboardReturnHomeBtn")
+      .addEventListener("click", function () {
+        sendCommand("return_home");
+      });
+
+    document
+      .getElementById("dashboardManualBtn")
+      .addEventListener("click", function () {
+        window.location.href = "{{ url_for('control') }}";
+      });
+
+    document
+      .getElementById("refreshBtn")
+      .addEventListener("click", function () {
+        socket.emit("request_data", { type: "all" });
+        showAlert("Refreshing data...", "info", 2000);
+        document.getElementById("lastUpdated").textContent =
+          "Last updated: " + new Date().toLocaleTimeString();
+      });
+
+    // Set up error acknowledgment
+    document
+      .getElementById("clearErrorBtn")
+      .addEventListener("click", function () {
+        document.getElementById("errorCard").style.display = "none";
+        sendCommand("acknowledge_error");
+      });
+  });
 </script>
 
 <style>
-    /* Dashboard specific styles */
-    .dashboard-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
+  /* Dashboard specific styles */
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
 
+  .dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .map-preview {
+    height: 300px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .status-card {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-small);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .status-card-header {
+    font-size: 0.875rem;
+    color: var(--gray);
+    margin-bottom: 0.5rem;
+  }
+
+  .status-card-value {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--dirt-dark);
+  }
+
+  .status-card-footer {
+    font-size: 0.875rem;
+    color: var(--dirt-medium);
+    margin-top: auto;
+  }
+
+  .sensor-item {
+    text-align: center;
+    padding: 1rem;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--dirt-pale);
+  }
+
+  .info-item:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-weight: 500;
+  }
+
+  /* Map markers */
+  .mower-marker {
+    background-color: var(--grass-medium);
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    color: white;
+  }
+
+  .home-marker {
+    background-color: var(--dirt-medium);
+    border-radius: 50%;
+    text-align: center;
+    line-height: 30px;
+    color: white;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 992px) {
     .dashboard-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
+      grid-template-columns: 1fr;
     }
-
-    .map-preview {
-        height: 300px;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-    }
-
-    .status-card {
-        background-color: var(--white);
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        box-shadow: var(--shadow-small);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .status-card-header {
-        font-size: 0.875rem;
-        color: var(--gray);
-        margin-bottom: 0.5rem;
-    }
-
-    .status-card-value {
-        font-size: 1.5rem;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-        color: var(--dirt-dark);
-    }
-
-    .status-card-footer {
-        font-size: 0.875rem;
-        color: var(--dirt-medium);
-        margin-top: auto;
-    }
-
-    .sensor-item {
-        text-align: center;
-        padding: 1rem;
-        background-color: var(--light-gray);
-        border-radius: var(--border-radius);
-    }
-
-    .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 0.5rem 0;
-        border-bottom: 1px solid var(--dirt-pale);
-    }
-
-    .info-item:last-child {
-        border-bottom: none;
-    }
-
-    .info-label {
-        font-weight: 500;
-    }
-
-    /* Map markers */
-    .mower-marker {
-        background-color: var(--grass-medium);
-        border-radius: 50%;
-        text-align: center;
-        line-height: 30px;
-        color: white;
-    }
-
-    .home-marker {
-        background-color: var(--dirt-medium);
-        border-radius: 50%;
-        text-align: center;
-        line-height: 30px;
-        color: white;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 992px) {
-        .dashboard-layout {
-            grid-template-columns: 1fr;
-        }
-    }
+  }
 </style>
 {% endblock %}

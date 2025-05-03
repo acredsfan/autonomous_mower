@@ -58,9 +58,7 @@ class MowerState(Enum):
     @property
     def display_name(self) -> str:
         """Get a human-readable display name for this state."""
-        return _STATE_DISPLAY_NAMES.get(
-            self, self.value.replace("_", " ").title()
-        )
+        return _STATE_DISPLAY_NAMES.get(self, self.value.replace("_", " ").title())
 
     @property
     def description(self) -> str:
@@ -71,6 +69,10 @@ class MowerState(Enum):
     def allowed_transitions(self) -> Set["MowerState"]:
         """Get the set of states that this state can transition to."""
         return _STATE_TRANSITIONS.get(self, set())
+
+    def is_emergency(self) -> bool:
+        """Check if the state is an emergency state."""
+        return self == MowerState.EMERGENCY_STOP
 
 
 # Define state categories

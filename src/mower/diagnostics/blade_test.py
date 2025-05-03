@@ -15,6 +15,7 @@ allow for calibration of the PWM values if needed.
 import time
 import argparse
 from typing import Tuple
+from dotenv import set_key
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.main_controller import ResourceManager
@@ -127,10 +128,7 @@ def calibrate_blade_pwm(
 
         # Find minimum PWM
         print("\n--- Finding minimum PWM value ---")
-        print(
-            "The PWM value will slowly increase until the blade starts "
-            "moving."
-        )
+        print("The PWM value will slowly increase until the blade starts " "moving.")
         input("Press Enter to begin...")
 
         min_pwm = 0.0
@@ -167,9 +165,7 @@ def calibrate_blade_pwm(
             print(f"Testing PWM value: {max_pwm:.2f}")
             time.sleep(1)
 
-            response = input(
-                "Is this the maximum safe speed? (y/n/q to quit): "
-            )
+            response = input("Is this the maximum safe speed? (y/n/q to quit): ")
             if response.lower() == "y":
                 print(f"Maximum PWM value set: {max_pwm:.2f}")
                 break
@@ -186,12 +182,16 @@ def calibrate_blade_pwm(
         print("\nCalibration completed.")
         print(f"Recommended PWM range: {min_pwm:.2f} to {max_pwm:.2f}")
 
-        # Save to configuration if desired
+        # Save to .env configuration if desired
         save = input("Save these values to configuration? (y/n): ")
         if save.lower() == "y":
-            # TODO: Implement saving to configuration file
-            print("Values will be saved to configuration.")
-
+            try:
+                env_path = ".env"
+                set_key(env_path, "BLADE_MIN_PWM", str(min_pwm))
+                set_key(env_path, "BLADE_MAX_PWM", str(max_pwm))
+                print(f"Values saved to {env_path}.")
+            except Exception as save_error:
+                logging.error(f"Failed to save calibration values: {save_error}")
         return (min_pwm, max_pwm)
 
     except Exception as e:
@@ -213,9 +213,7 @@ def main():
         --test: Run the speed test
         --calibrate: Run the PWM calibration
     """
-    parser = argparse.ArgumentParser(
-        description="Blade motor testing and calibration"
-    )
+    parser = argparse.ArgumentParser(description="Blade motor testing and calibration")
     parser.add_argument(
         "--test", action="store_true", help="Test blade at different speeds"
     )

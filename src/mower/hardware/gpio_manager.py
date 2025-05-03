@@ -33,6 +33,14 @@ class GPIOManager:
     simulation mode when hardware is not available.
     """
 
+    PIN_CONFIG = {
+        "BLADE_ENABLE": 17,
+        "BLADE_DIRECTION": 27,
+        "EMERGENCY_STOP": 7,
+        "MOTOR_LEFT": 22,
+        "MOTOR_RIGHT": 23,
+    }
+
     def __init__(self):
         """
         Initialize the GPIO manager.
@@ -149,9 +157,7 @@ class GPIOManager:
                 GPIO.output(pin, gpio_value)
                 return True
             else:
-                logging.warning(
-                    f"Cannot set pin {pin}, not set up as output."
-                )
+                logging.warning(f"Cannot set pin {pin}, not set up as output.")
                 return False
         except Exception as e:
             logging.error(f"Error setting GPIO pin {pin}: {e}")
@@ -172,9 +178,7 @@ class GPIOManager:
                 return self._simulated_values.get(pin, 0)
             else:
                 # Correct indentation and formatting
-                logging.warning(
-                    f"Cannot get simulated pin {pin}, not set up."
-                )
+                logging.warning(f"Cannot get simulated pin {pin}, not set up.")
                 return None
 
         try:
@@ -209,3 +213,15 @@ class GPIOManager:
                     logging.error(f"Error getting state for pin {pin}: {e}")
 
         return state
+
+    def initialize_pins(self):
+        """Initialize all GPIO pins based on predefined configuration."""
+        for name, pin in self.PIN_CONFIG.items():
+            try:
+                if name == "EMERGENCY_STOP":
+                    self.setup_pin(pin, direction="in")
+                else:
+                    self.setup_pin(pin, direction="out", initial=0)
+                logging.info(f"Initialized GPIO pin {pin} for {name}")
+            except Exception as e:
+                logging.error(f"Error initializing GPIO pin {pin} for {name}: {e}")

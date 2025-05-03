@@ -219,29 +219,29 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ### Raspberry Pi GPIO Connections
 
-| Component | Connection | Function |
-|-----------|------------|----------|
-| RoboHAT | Various GPIO pins | Motor control, RC inputs, encoder inputs |
-| GPS Module (RTK) | USB Port | Serial communication |
-| IMU Sensor | Second UART (/dev/ttyAMA2) | Orientation data |
-| VL53L0X Sensors | GPIO2/3 | I2C (shared bus, addresses 0x29 and 0x30) |
-| IBT-4 Motor Driver | Various GPIO pins | Blade motor control |
-| INA3221 Power Monitor | GPIO pins | Battery/Power Monitoring |
-| Emergency Stop (Optional) | GPIO7 | Input (NC) |
+| Component                 | Connection                 | Function                                  |
+| ------------------------- | -------------------------- | ----------------------------------------- |
+| RoboHAT                   | Various GPIO pins          | Motor control, RC inputs, encoder inputs  |
+| GPS Module (RTK)          | USB Port                   | Serial communication                      |
+| IMU Sensor                | Second UART (/dev/ttyAMA2) | Orientation data                          |
+| VL53L0X Sensors           | GPIO2/3                    | I2C (shared bus, addresses 0x29 and 0x30) |
+| IBT-4 Motor Driver        | Various GPIO pins          | Blade motor control                       |
+| INA3221 Power Monitor     | GPIO pins                  | Battery/Power Monitoring                  |
+| Emergency Stop (Optional) | GPIO7                      | Input (NC)                                |
 
 ### RoboHAT Connections
 
-| Terminal | Connection |
-|----------|------------|
-| VIN | Battery Positive |
-| GND | Battery Negative |
-| ENC1 | Left Motor Hall Sensor |
-| ENC2 | Right Motor Hall Sensor |
+| Terminal | Connection              |
+| -------- | ----------------------- |
+| VIN      | Battery Positive        |
+| GND      | Battery Negative        |
+| ENC1     | Left Motor Hall Sensor  |
+| ENC2     | Right Motor Hall Sensor |
 
 ### MDDRC10 Motor Driver Connections
 
 | Terminal | Connection          |
-|----------|---------------------|
+| -------- | ------------------- |
 | IN1      | RoboHAT RC Throttle |
 | IN2      | RoboHAT RC Steering |
 | M1       | Left Drive Motor    |
@@ -251,23 +251,37 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ### IBT-4 Motor Driver Connections
 
-| Terminal | Connection |
-|----------|------------|
-| PWM Input | RoboHAT RC3 output |
+| Terminal     | Connection         |
+| ------------ | ------------------ |
+| PWM Input    | RoboHAT RC3 output |
 | Motor Output | 997 DC Blade Motor |
-| VIN | Battery Positive |
-| GND | Battery Negative |
+| VIN          | Battery Positive   |
+| GND          | Battery Negative   |
 
 ### Solar Charging Connections
 
-| Component | Connection |
-|-----------|------------|
-| Solar Panel + | Charge Controller Solar Input + |
-| Solar Panel - | Charge Controller Solar Input - |
-| Charge Controller Battery + | Battery Positive |
-| Charge Controller Battery - | Battery Negative |
-| Charge Controller Load + | RoboHAT VIN (optional) |
-| Charge Controller Load - | RoboHAT GND (optional) |
+| Component                   | Connection                      |
+| --------------------------- | ------------------------------- |
+| Solar Panel +               | Charge Controller Solar Input + |
+| Solar Panel -               | Charge Controller Solar Input - |
+| Charge Controller Battery + | Battery Positive                |
+| Charge Controller Battery - | Battery Negative                |
+| Charge Controller Load +    | RoboHAT VIN (optional)          |
+| Charge Controller Load -    | RoboHAT GND (optional)          |
+
+## GPIO Pin Configuration
+
+The following table lists the GPIO pin assignments for the Autonomous Mower:
+
+| Component           | GPIO Pin | Direction | Description                    |
+| ------------------- | -------- | --------- | ------------------------------ |
+| Blade Enable        | 17       | Output    | Controls the blade motor       |
+| Blade Direction     | 27       | Output    | Sets the blade motor direction |
+| Emergency Stop      | 7        | Input     | Emergency stop button (NC)     |
+| Left Motor Control  | 22       | Output    | Controls the left drive motor  |
+| Right Motor Control | 23       | Output    | Controls the right drive motor |
+
+Ensure these pins are connected as per the wiring diagram and configured in the software.
 
 ## Testing the Hardware
 
@@ -337,11 +351,13 @@ After completing the assembly, perform the following tests to ensure everything 
 Regular maintenance is essential for reliable operation:
 
 1. **Weekly**:
+
    - Clean the blade and blade guard
    - Check all sensors for debris
    - Inspect wiring for damage
 
 2. **Monthly**:
+
    - Check battery connections
    - Tighten any loose screws
    - Lubricate wheel bearings if necessary

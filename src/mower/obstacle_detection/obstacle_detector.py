@@ -31,25 +31,21 @@ logger = LoggerConfig.get_logger(__name__)
 # Load environment variables
 load_dotenv()
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv(
-    "OBSTACLE_MODEL_PATH",
-    "/home/pi/mower/obstacle_detection/models/detect.tflite")
+    "OBSTACLE_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/detect.tflite"
+)
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 # Update label map path to the correct location
 LABEL_MAP_PATH = os.getenv(
-    "LABEL_MAP_PATH",
-    "/home/pi/mower/obstacle_detection/models/labelmap.txt")
-MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
-USE_REMOTE_DETECTION = (
-    os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
+    "LABEL_MAP_PATH", "/home/pi/mower/obstacle_detection/models/labelmap.txt"
 )
+MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
+USE_REMOTE_DETECTION = os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
 
 # YOLOv8 specific environment variables
 YOLOV8_MODEL_PATH = os.getenv(
-    "YOLOV8_MODEL_PATH",
-    "/home/pi/mower/obstacle_detection/models/yolov8n.tflite")
-USE_YOLOV8 = (
-    os.getenv("USE_YOLOV8", "True").lower() == "true"
+    "YOLOV8_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/yolov8n.tflite"
 )
+USE_YOLOV8 = os.getenv("USE_YOLOV8", "True").lower() == "true"
 
 # Load labels if available
 labels = []
@@ -117,14 +113,14 @@ class ObstacleDetector:
 
         logger.info(
             f"ObstacleDetector initialized with {self.interpreter_type} "
-            "interpreter" +
-            (", YOLOv8 enabled" if self.yolov8_detector else "")
+            "interpreter" + (", YOLOv8 enabled" if self.yolov8_detector else "")
         )
 
     def _initialize_interpreter(self):
         """Initialize the TensorFlow Lite interpreter."""
         try:
             from tflite_runtime.interpreter import Interpreter  # type: ignore
+
             model_path = PATH_TO_OBJECT_DETECTION_MODEL
             if not model_path or not os.path.exists(model_path):
                 logger.warning(
@@ -133,9 +129,9 @@ class ObstacleDetector:
                 self.interpreter = None
                 return
             # Validate TFLite file header (should start with b'TFL3')
-            with open(model_path, 'rb') as f:
+            with open(model_path, "rb") as f:
                 magic = f.read(4)
-            if magic != b'TFL3':
+            if magic != b"TFL3":
                 logger.error(
                     (
                         f"Model at {model_path} is not a valid TFLite file "
@@ -164,21 +160,20 @@ class ObstacleDetector:
 
         try:
             # Import YOLOv8 detector class
-            from mower.obstacle_detection.yolov8_detector import (
-                YOLOv8TFLiteDetector
-            )
+            from mower.obstacle_detection.yolov8_detector import YOLOv8TFLiteDetector
 
             # Check if model exists
             if not os.path.exists(YOLOV8_MODEL_PATH):
                 logger.warning(
-                    f"YOLOv8 model not found at {YOLOV8_MODEL_PATH}, skipping")
+                    f"YOLOv8 model not found at {YOLOV8_MODEL_PATH}, skipping"
+                )
                 return
 
             # Initialize detector
             self.yolov8_detector = YOLOv8TFLiteDetector(
                 model_path=YOLOV8_MODEL_PATH,
                 label_path=LABEL_MAP_PATH,
-                conf_threshold=MIN_CONF_THRESHOLD
+                conf_threshold=MIN_CONF_THRESHOLD,
             )
             logger.info("YOLOv8 detector initialized successfully")
         except ImportError:
@@ -211,9 +206,7 @@ class ObstacleDetector:
                     detected_objects.extend(remote_objects)
                     return detected_objects
             except Exception as e:
-                logger.warning(
-                    f"Remote detection failed, falling back to local: {e}"
-                )
+                logger.warning(f"Remote detection failed, falling back to local: {e}")
                 self.use_remote_detection = False
 
         # YOLOv8-based detection (preferred if available)
@@ -249,9 +242,7 @@ class ObstacleDetector:
                 image = frame
 
             # Preprocess image
-            image_resized = image.resize(
-                (self.input_width, self.input_height)
-            )
+            image_resized = image.resize((self.input_width, self.input_height))
             input_data = np.expand_dims(image_resized, axis=0)
 
             # Handle different channel formats
@@ -260,24 +251,20 @@ class ObstacleDetector:
 
             # Normalize pixel values
             if self.floating_model:
-                input_data = (
-                    np.float32(input_data) - self.input_mean
-                ) / self.input_std
+                input_data = (np.float32(input_data) - self.input_mean) / self.input_std
             else:
                 input_data = np.uint8(input_data)
 
             # Run inference
-            self.interpreter.set_tensor(
-                self.input_details[0]["index"], input_data
-            )
+            self.interpreter.set_tensor(self.input_details[0]["index"], input_data)
             start_time = time.time()
             self.interpreter.invoke()
             inference_time = time.time() - start_time
 
             # Get prediction results
-            output_data = self.interpreter.get_tensor(
-                self.output_details[0]["index"]
-            )[0]
+            output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[
+                0
+            ]
 
             # Process results
             detected_objects = []
@@ -317,11 +304,7 @@ class ObstacleDetector:
         """Perform basic obstacle detection using OpenCV."""
         try:
             # Check if frame is valid
-            if (
-                frame is None
-                or not isinstance(frame, np.ndarray)
-                or frame.size == 0
-            ):
+            if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
                 logger.warning("Invalid frame provided to OpenCV detector")
                 return []
 
@@ -352,9 +335,7 @@ class ObstacleDetector:
                     detected_objects.append(
                         {
                             "name": "obstacle",
-                            "score": min(
-                                1.0, area / 10000
-                            ),  # Normalize score
+                            "score": min(1.0, area / 10000),  # Normalize score
                             "type": "opencv",
                             "box": [x, y, w, h],
                         }
@@ -407,7 +388,15 @@ class ObstacleDetector:
             raise
 
     def detect_drops(self, frame=None) -> List[dict]:
-        """Detect potential drops/cliffs in the frame."""
+        """
+        Detect potential drops/cliffs in the frame.
+
+        Args:
+            frame: Optional frame to process. If None, captures from camera.
+
+        Returns:
+            List of detected drops with position and confidence.
+        """
         if frame is None:
             frame = self.camera.get_frame()
             if frame is None:
@@ -417,32 +406,40 @@ class ObstacleDetector:
             # Convert to grayscale
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            # Apply threshold for dark areas
-            _, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY)
+            # Apply Gaussian blur to reduce noise
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-            # Find contours
+            # Use Canny edge detection to find edges
+            edges = cv2.Canny(blurred, 50, 150)
+
+            # Find contours from edges
             contours, _ = cv2.findContours(
-                thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
 
-            # Filter and process contours
-            detected_drops = []
-            min_area = 2000
+            drops = []
 
             for contour in contours:
+                # Approximate the contour to reduce complexity
+                epsilon = 0.02 * cv2.arcLength(contour, True)
+                approx = cv2.approxPolyDP(contour, epsilon, True)
+
+                # Calculate bounding box and area
+                x, y, w, h = cv2.boundingRect(approx)
                 area = cv2.contourArea(contour)
-                if area > min_area:
-                    x, y, w, h = cv2.boundingRect(contour)
-                    detected_drops.append(
+
+                # Heuristic: Consider as drop if area is large and aspect ratio is unusual
+                aspect_ratio = w / float(h)
+                if area > 500 and (aspect_ratio < 0.5 or aspect_ratio > 2.0):
+                    drops.append(
                         {
-                            "name": "drop",
-                            "score": min(1.0, area / 5000),
-                            "type": "opencv",
-                            "box": [x, y, w, h],
+                            "position": (x, y, w, h),
+                            "confidence": 0.8,  # Placeholder confidence value
+                            "type": "drop",
                         }
                     )
 
-            return detected_drops
+            return drops
 
         except Exception as e:
             logger.error(f"Error detecting drops: {e}")
@@ -452,14 +449,11 @@ class ObstacleDetector:
         """Draw detection results on frame."""
         try:
             # Use YOLOv8 detector's draw function for YOLOv8 detections
-            yolo_detections = [
-                d for d in detections if d.get("type") == "yolov8"]
+            yolo_detections = [d for d in detections if d.get("type") == "yolov8"]
             if self.yolov8_detector and yolo_detections:
-                frame = self.yolov8_detector.draw_detections(
-                    frame, yolo_detections)
+                frame = self.yolov8_detector.draw_detections(frame, yolo_detections)
                 # Filter out YOLOv8 detections since they're already drawn
-                detections = [
-                    d for d in detections if d.get("type") != "yolov8"]
+                detections = [d for d in detections if d.get("type") != "yolov8"]
 
             # Continue with normal drawing for other detection types
             frame_with_detections = frame.copy()

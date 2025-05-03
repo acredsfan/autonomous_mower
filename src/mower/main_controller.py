@@ -37,6 +37,7 @@ import time
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional
+from dotenv import load_dotenv
 
 from mower.hardware.gpio_manager import GPIOManager
 from mower.hardware.imu import BNO085Sensor
@@ -60,6 +61,9 @@ from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.config_management.config_manager import get_config
+
+# Load environment variables
+load_dotenv()
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -108,7 +112,7 @@ class ResourceManager:
         self._safety_status_vars = {
             "warning_logged": False,
             "last_warning_time": 0,
-            "warning_interval": 30  # seconds, configurable
+            "warning_interval": 30,  # seconds, configurable
         }
 
         if config_path:
@@ -125,93 +129,91 @@ class ResourceManager:
                 logger.error(f"Error loading config file {filename}: {e}")
         return None
 
+    def _initialize_sensors(self):
+        """Consolidate sensor initialization logic."""
+        try:
+            self._resources["ina3221"] = INA3221Sensor.init_ina3221()
+            logger.info("INA3221 power monitor initialized successfully")
+        except Exception as e:
+            logger.warning(f"Error initializing INA3221 sensor: {e}")
+            self._resources["ina3221"] = None
+
+        try:
+            self._resources["tof"] = VL53L0XSensors()
+            logger.info("VL53L0X time-of-flight sensors initialized successfully")
+        except Exception as e:
+            logger.warning(f"Error initializing VL53L0X sensors: {e}")
+            self._resources["tof"] = None
+
+        try:
+            self._resources["imu"] = BNO085Sensor()
+            logger.info("IMU sensor initialized successfully")
+        except Exception as e:
+            logger.warning(f"Error initializing IMU sensor: {e}")
+            self._resources["imu"] = None
+
     def _initialize_hardware(self):
         """Initialize all hardware components."""
+        self._resources["gpio"] = GPIOManager()
+        self._initialize_sensors()
+
         try:
-            # Initialize all hardware resources
-            self._resources["gpio"] = GPIOManager()
-            self._resources["imu"] = BNO085Sensor()
-
-            # Initialize INA3221 sensor
-            try:
-                self._resources["ina3221"] = INA3221Sensor.init_ina3221()
-                logger.info("INA3221 power monitor initialized successfully")
-            except Exception as e:
-                logger.warning(f"Error initializing INA3221 sensor: {e}")
-                self._resources["ina3221"] = None
-
-            # Initialize ToF (VL53L0X) sensors
-            try:
-                self._resources["tof"] = VL53L0XSensors()
-                logger.info(
-                    "VL53L0X time-of-flight sensors initialized successfully"
-                )
-            except Exception as e:
-                logger.warning(f"Error initializing VL53L0X sensors: {e}")
-                self._resources["tof"] = None
-
-            # Initialize motor controller
-            try:
-                self._resources["motor_driver"] = RoboHATDriver()
-                logger.info("RoboHAT motor driver initialized successfully")
-            except Exception as e:
-                logger.error(f"Error initializing motor driver: {e}")
-                self._resources["motor_driver"] = None
-
-            # Initialize blade controller
-            try:
-                self._resources["blade"] = BladeController()
-                logger.info("Blade controller initialized successfully")
-            except Exception as e:
-                logger.warning(f"Error initializing blade controller: {e}")
-                self._resources["blade"] = None
-
-            # Initialize camera
-            try:
-                self._resources["camera"] = get_camera_instance()
-                logger.info("Camera initialized successfully")
-            except Exception as e:
-                logger.warning(f"Error initializing camera: {e}")
-                self._resources["camera"] = None
-
-            # Initialize GPS serial port
-            try:
-                self._resources["gps_serial"] = SerialPort(
-                    GPS_PORT if GPS_PORT is not None else "COM1", GPS_BAUDRATE
-                )
-                logger.info(
-                    f"GPS serial port initialized on {GPS_PORT} at "
-                    f"{GPS_BAUDRATE} baud"
-                )
-            except Exception as e:
-                logger.warning(f"Error initializing GPS serial port: {e}")
-                self._resources["gps_serial"] = None
-
-            # Initialize each resource if possible
-            for name, res in list(self._resources.items()):
-                if res is None:
-                    continue
-
-                if hasattr(res, "initialize"):
-                    try:
-                        res.initialize()
-                    except Exception as e:
-                        logger.error(f"Error initializing {name}: {e}")
-                        self._resources[name] = None
-                elif hasattr(res, "_initialize"):
-                    try:
-                        res._initialize()
-                    except Exception as e:
-                        logger.error(f"Error initializing {name}: {e}")
-                        self._resources[name] = None
-
+            min_pwm = float(os.getenv("BLADE_MIN_PWM", "0.0"))
+            max_pwm = float(os.getenv("BLADE_MAX_PWM", "1.0"))
+            self._resources["blade"] = BladeController(min_pwm=min_pwm, max_pwm=max_pwm)
             logger.info(
-                "Hardware components initialized with fallbacks for any "
-                "failures"
+                "Blade controller initialized successfully with calibration values."
             )
         except Exception as e:
-            logger.error(f"Critical error in hardware initialization: {e}")
-            raise
+            logger.warning(f"Error initializing blade controller: {e}")
+            self._resources["blade"] = None
+
+        try:
+            self._resources["motor_driver"] = RoboHATDriver()
+            logger.info("RoboHAT motor driver initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing motor driver: {e}")
+            self._resources["motor_driver"] = None
+
+        try:
+            self._resources["camera"] = get_camera_instance()
+            logger.info("Camera initialized successfully")
+        except Exception as e:
+            logger.warning(f"Error initializing camera: {e}")
+            self._resources["camera"] = None
+
+        try:
+            self._resources["gps_serial"] = SerialPort(
+                GPS_PORT if GPS_PORT is not None else "COM1", GPS_BAUDRATE
+            )
+            logger.info(
+                f"GPS serial port initialized on {GPS_PORT} at " f"{GPS_BAUDRATE} baud"
+            )
+        except Exception as e:
+            logger.warning(f"Error initializing GPS serial port: {e}")
+            self._resources["gps_serial"] = None
+
+        # Initialize each resource if possible
+        for name, res in list(self._resources.items()):
+            if res is None:
+                continue
+
+            if hasattr(res, "initialize"):
+                try:
+                    res.initialize()
+                except Exception as e:
+                    logger.error(f"Error initializing {name}: {e}")
+                    self._resources[name] = None
+            elif hasattr(res, "_initialize"):
+                try:
+                    res._initialize()
+                except Exception as e:
+                    logger.error(f"Error initializing {name}: {e}")
+                    self._resources[name] = None
+
+        logger.info(
+            "Hardware components initialized with fallbacks for any " "failures"
+        )
 
     def _initialize_software(self):
         """Initialize all software components."""
@@ -233,7 +235,7 @@ class ResourceManager:
                 overlap=0.1,
                 start_point=(0.0, 0.0),
                 boundary_points=[],  # Will be loaded from config
-                **pattern_cfg
+                **pattern_cfg,
             )
 
             learning_config = LearningConfig(
@@ -243,9 +245,7 @@ class ResourceManager:
                 memory_size=1000,
                 batch_size=32,
                 update_frequency=100,
-                model_path=str(
-                    CONFIG_DIR / "models" / "pattern_planner.json"
-                ),
+                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json"),
             )
 
             try:
@@ -286,9 +286,7 @@ class ResourceManager:
                     self._resources["navigation"] = NavigationController(
                         localization, motor_driver, sensor_interface
                     )
-                    logger.info(
-                        "Navigation controller initialized successfully"
-                    )
+                    logger.info("Navigation controller initialized successfully")
                 else:
                     missing = []
                     if not localization:
@@ -303,17 +301,13 @@ class ResourceManager:
                     )
                     self._resources["navigation"] = None
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize navigation controller: {e}"
-                )
+                logger.error(f"Failed to initialize navigation controller: {e}")
                 self._resources["navigation"] = None
 
             # Initialize the avoidance algorithm
             try:
                 # Initialize with resource manager for dependency resolution
-                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
-                    self
-                )
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(self)
                 logger.info("Avoidance algorithm initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize avoidance algorithm: {e}")
@@ -333,8 +327,7 @@ class ResourceManager:
                 self._resources["web_interface"] = None
 
             logger.info(
-                "Software components initialized with fallbacks for any "
-                "failures"
+                "Software components initialized with fallbacks for any " "failures"
             )
         except Exception as e:
             logger.error(f"Critical error in software initialization: {e}")
@@ -370,9 +363,7 @@ class ResourceManager:
             self._initialize_software()
 
             self._initialized = True
-            logger.info(
-                "All resources initialized with fallbacks for any failures"
-            )
+            logger.info("All resources initialized with fallbacks for any failures")
         except Exception as e:
             logger.error(f"Failed to initialize resources: {e}")
             self._initialized = False
@@ -485,18 +476,13 @@ class ResourceManager:
                 self._resources["sensor_interface"] = get_sensor_interface()
                 logger.info("Sensor interface initialized on demand")
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize sensor interface on demand: {e}"
-                )
+                logger.error(f"Failed to initialize sensor interface on demand: {e}")
                 return None
         return self._resources.get("sensor_interface")
 
     def get_gps(self) -> Optional[SerialPort]:
         """Get the GPS serial port instance."""
-        if (
-            "gps_serial" not in self._resources
-            or self._resources["gps_serial"] is None
-        ):
+        if "gps_serial" not in self._resources or self._resources["gps_serial"] is None:
             try:
                 from mower.hardware.serial_port import (
                     SerialPort,
@@ -507,13 +493,9 @@ class ResourceManager:
                 self._resources["gps_serial"] = SerialPort(
                     GPS_PORT if GPS_PORT is not None else "COM1", GPS_BAUDRATE
                 )
-                logger.info(
-                    f"GPS serial port initialized on demand on {GPS_PORT}"
-                )
+                logger.info(f"GPS serial port initialized on demand on {GPS_PORT}")
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize GPS serial port on demand: {e}"
-                )
+                logger.error(f"Failed to initialize GPS serial port on demand: {e}")
                 return None
         return self._resources.get("gps_serial")
 
@@ -541,8 +523,7 @@ class ResourceManager:
         try:
             # Try to get safety status from the sensor interface
             sensor_interface = self.get_sensor_interface()
-            if sensor_interface and hasattr(sensor_interface,
-                                            "get_safety_status"):
+            if sensor_interface and hasattr(sensor_interface, "get_safety_status"):
                 # Reset warning flag if we successfully get data
                 vars["warning_logged"] = False
                 return sensor_interface.get_safety_status()
@@ -556,9 +537,10 @@ class ResourceManager:
 
             # Check if it's time to log a warning
             current_time = time.time()
-            should_log = (not vars["warning_logged"] or
-                          current_time - vars["last_warning_time"] >
-                          vars["warning_interval"])
+            should_log = (
+                not vars["warning_logged"]
+                or current_time - vars["last_warning_time"] > vars["warning_interval"]
+            )
 
             if should_log:
                 logger.warning(
@@ -572,8 +554,7 @@ class ResourceManager:
                     web_ui = self.get_web_interface()
                     if web_ui and hasattr(web_ui, "send_alert"):
                         web_ui.send_alert(
-                            "Limited safety monitoring available",
-                            "warning"
+                            "Limited safety monitoring available", "warning"
                         )
                 except Exception as e:
                     logger.debug(f"Failed to send safety status alert: {e}")
@@ -585,7 +566,7 @@ class ResourceManager:
                 "impact_detected": False,
                 "acceleration_ok": True,
                 "hardware_available": False,  # Flag showing hardware status
-                "messages": []
+                "messages": [],
             }
         except Exception as e:
             logger.error(f"Error getting safety status: {e}")
@@ -596,15 +577,13 @@ class ResourceManager:
                 "impact_detected": False,
                 "acceleration_ok": True,
                 "hardware_available": False,
-                "messages": ["Error getting safety data"]
+                "messages": ["Error getting safety data"],
             }
 
     def get_status(self):
         """Retrieve the current status of the mower."""
         return {
-            "state": (
-                self.current_state.name if self.current_state else "UNKNOWN"
-            ),
+            "state": (self.current_state.name if self.current_state else "UNKNOWN"),
             "battery": self.get_battery_status(),
             "location": self.get_gps_location(),
         }
@@ -630,23 +609,19 @@ class ResourceManager:
                 return {
                     "percentage": percentage,
                     "voltage": voltage,
-                    "charging": charging
+                    "charging": charging,
                 }
 
             # Fallback to a default value if hardware access fails
             return {
                 "percentage": 50,  # Default to 50%
-                "voltage": 12.0,   # Default voltage
-                "charging": False  # Default to not charging
+                "voltage": 12.0,  # Default voltage
+                "charging": False,  # Default to not charging
             }
         except Exception as e:
             logger.error(f"Error getting battery status: {e}")
             # Return safe defaults
-            return {
-                "percentage": 50,
-                "voltage": 12.0,
-                "charging": False
-            }
+            return {"percentage": 50, "voltage": 12.0, "charging": False}
 
     def get_gps_location(self):
         """Get the current GPS location.
@@ -688,16 +663,11 @@ class ResourceManager:
                 try:
                     sensor_data["imu"] = {
                         "heading": (
-                            imu.get_heading() if hasattr(imu, "get_heading")
-                            else 0.0
+                            imu.get_heading() if hasattr(imu, "get_heading") else 0.0
                         ),
-                        "roll": (
-                            imu.get_roll() if hasattr(imu, "get_roll")
-                            else 0.0
-                        ),
+                        "roll": (imu.get_roll() if hasattr(imu, "get_roll") else 0.0),
                         "pitch": (
-                            imu.get_pitch() if hasattr(imu, "get_pitch")
-                            else 0.0
+                            imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0
                         ),
                         "calibration": (
                             imu.get_calibration()
@@ -708,7 +678,7 @@ class ResourceManager:
                             imu.get_safety_status()
                             if hasattr(imu, "get_safety_status")
                             else {}
-                        )
+                        ),
                     }
                 except Exception as e:
                     logger.warning(f"Error getting IMU data: {e}")
@@ -737,11 +707,7 @@ class ResourceManager:
                         sensor_data["gps"].update(gps_info)
             except Exception as e:
                 logger.warning(f"Error getting GPS data: {e}")
-                sensor_data["gps"] = {
-                    "latitude": 0.0,
-                    "longitude": 0.0,
-                    "fix": False
-                }
+                sensor_data["gps"] = {"latitude": 0.0, "longitude": 0.0, "fix": False}
 
             # Get motor data if available
             try:
@@ -753,14 +719,14 @@ class ResourceManager:
                     sensor_data["motors"] = {
                         "leftSpeed": 0.0,
                         "rightSpeed": 0.0,
-                        "bladeSpeed": 0.0
+                        "bladeSpeed": 0.0,
                     }
             except Exception as e:
                 logger.warning(f"Error getting motor data: {e}")
                 sensor_data["motors"] = {
                     "leftSpeed": 0.0,
                     "rightSpeed": 0.0,
-                    "bladeSpeed": 0.0
+                    "bladeSpeed": 0.0,
                 }
 
             # Get environment data if available (e.g., from BME280)
@@ -782,20 +748,20 @@ class ResourceManager:
                             bme280.get_pressure()
                             if hasattr(bme280, "get_pressure")
                             else 0.0
-                        )
+                        ),
                     }
                 else:
                     sensor_data["environment"] = {
                         "temperature": 0.0,
                         "humidity": 0.0,
-                        "pressure": 0.0
+                        "pressure": 0.0,
                     }
             except Exception as e:
                 logger.warning(f"Error getting environment data: {e}")
                 sensor_data["environment"] = {
                     "temperature": 0.0,
                     "humidity": 0.0,
-                    "pressure": 0.0
+                    "pressure": 0.0,
                 }
 
             # Get ToF sensor data if available
@@ -817,17 +783,9 @@ class ResourceManager:
             return {
                 "imu": {},
                 "gps": {"latitude": 0.0, "longitude": 0.0, "fix": False},
-                "motors": {
-                    "leftSpeed": 0.0,
-                    "rightSpeed": 0.0,
-                    "bladeSpeed": 0.0
-                },
-                "environment": {
-                    "temperature": 0.0,
-                    "humidity": 0.0,
-                    "pressure": 0.0
-                },
-                "tof": {"left": 0, "right": 0, "front": 0}
+                "motors": {"leftSpeed": 0.0, "rightSpeed": 0.0, "bladeSpeed": 0.0},
+                "environment": {"temperature": 0.0, "humidity": 0.0, "pressure": 0.0},
+                "tof": {"left": 0, "right": 0, "front": 0},
             }
 
     # Interpreter stubs for camera obstacle detection
@@ -875,16 +833,39 @@ class ResourceManager:
                     AvoidanceAlgorithm,
                 )
 
-                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
-                    self
-                )
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(self)
                 logger.info("Avoidance algorithm initialized on demand")
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize avoidance algorithm on demand: {e}"
-                )
+                logger.error(f"Failed to initialize avoidance algorithm on demand: {e}")
                 return None
         return self._resources.get("avoidance_algorithm")
+
+    def _start_watchdog(self):
+        """Start a watchdog thread to monitor system health."""
+
+        def watchdog_loop():
+            while self._running:
+                try:
+                    # Example: Check critical system metrics
+                    if not self._resources["gpio"].get_pin(
+                        GPIOManager.PIN_CONFIG["EMERGENCY_STOP"]
+                    ):
+                        logger.warning("Emergency stop button pressed!")
+                        self.emergency_stop()
+
+                    # Add more health checks as needed
+                    time.sleep(1)  # Adjust interval as necessary
+                except Exception as e:
+                    logger.error(f"Watchdog encountered an error: {e}")
+
+        self._watchdog_thread = threading.Thread(target=watchdog_loop, daemon=True)
+        self._watchdog_thread.start()
+
+    def start(self):
+        """Start the main controller."""
+        self._running = True
+        self._start_watchdog()
+        logger.info("Main controller started.")
 
     def start_manual_control(self) -> bool:
         """
@@ -898,8 +879,7 @@ class ResourceManager:
             SystemState.EMERGENCY_STOP,
         ]:
             logger.warning(
-                f"Cannot start manual control from state "
-                f"{self.current_state}"
+                f"Cannot start manual control from state " f"{self.current_state}"
             )
             return False
 
@@ -950,6 +930,18 @@ class ResourceManager:
         except Exception as e:
             logger.error(f"Error stopping operations: {e}")
             return False
+
+    def emergency_stop(self):
+        """Trigger an emergency stop to halt all operations."""
+        logger.warning("Emergency stop activated!")
+        self._resources["gpio"].set_pin(GPIOManager.PIN_CONFIG["EMERGENCY_STOP"], 1)
+        self._state = MowerState.EMERGENCY_STOP
+        # Additional actions like stopping motors, disabling blades, etc.
+        if "motor_driver" in self._resources:
+            self._resources["motor_driver"].stop_all()
+        if "blade" in self._resources:
+            self._resources["blade"].disable()
+        logger.info("All systems halted due to emergency stop.")
 
 
 def main():

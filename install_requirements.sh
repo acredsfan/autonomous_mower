@@ -187,6 +187,29 @@ setup_yolov8() {
     fi
 }
 
+# Function to install all dependencies and set up the environment
+setup_environment() {
+    print_info "Installing system dependencies..."
+    sudo apt-get update && sudo apt-get install -y \
+        python3 python3-pip python3-venv \
+        libatlas-base-dev libopenjp2-7 libtiff5 \
+        i2c-tools git
+
+    print_info "Setting up Python virtual environment..."
+    python3 -m venv venv
+    source venv/bin/activate
+
+    print_info "Installing Python dependencies..."
+    pip install --upgrade pip
+    pip install -r requirements.txt
+
+    print_info "Configuring GPIO permissions..."
+    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
+    sudo udevadm control --reload-rules && sudo udevadm trigger
+
+    print_success "Environment setup complete."
+}
+
 # Main installation starts here
 print_info "Starting installation with safety checks..."
 
@@ -317,135 +340,4 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
-    sudo pip3 install -e ".[coral]" --break-system-packages
-    check_command "Installing Coral dependencies" || exit 1
-    
-    # Create models directory with proper permissions
-    print_info "Setting up models directory..."
-    mkdir -p src/mower/obstacle_detection/models
-    check_command "Creating models directory" || exit 1
-    
-    # Download model files
-    print_info "Downloading model files..."
-    wget -O src/mower/obstacle_detection/models/detect_edgetpu.tflite \
-        https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite
-    check_command "Downloading Edge TPU model" || exit 1
-    
-    wget -O src/mower/obstacle_detection/models/detect.tflite \
-        https://storage.googleapis.com/download.tflite/models/ssd_mobilenet_v2_coco_quant_postprocess.tflite
-    check_command "Downloading standard model" || exit 1
-    
-    wget -O src/mower/obstacle_detection/models/labelmap.txt \
-        https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt
-    check_command "Downloading label map" || exit 1
-    
-    print_info "Coral TPU setup complete!"
-    print_info "Notes:"
-    print_info "1. Using standard performance mode for thermal stability"
-    print_info "2. To switch to max performance mode: sudo apt-get install libedgetpu1-max"
-    print_info "3. After connecting USB Accelerator, run: sudo udevadm trigger"
-fi
-
-# Create necessary directories
-print_info "Creating necessary directories..."
-mkdir -p logs
-check_command "Creating logs directory" || exit 1
-mkdir -p data
-check_command "Creating data directory" || exit 1
-mkdir -p config
-check_command "Creating config directory" || exit 1
-
-# Set proper permissions
-print_info "Setting directory permissions..."
-chmod 755 logs data config
-check_command "Setting directory permissions" || exit 1
-
-# Setup watchdog before systemd service
-print_info "Setting up watchdog service (required for autonomous-mower.service)..."
-setup_watchdog
-check_command "Setting up watchdog" || exit 1
-
-# Verify watchdog is running
-if ! systemctl is-active --quiet watchdog.service; then
-    print_error "Watchdog service failed to start. Please check system logs."
-    exit 1
-fi
-
-# --- Add Systemd Service Setup ---
-print_info "Setting up systemd service..."
-SERVICE_FILE="autonomous-mower.service"
-SYSTEMD_DIR="/etc/systemd/system"
-
-if [ -f "$SERVICE_FILE" ]; then
-    print_info "Copying $SERVICE_FILE to $SYSTEMD_DIR..."
-    sudo cp "$SERVICE_FILE" "$SYSTEMD_DIR/"
-    check_command "Copying service file" || exit 1
-
-    print_info "Reloading systemd daemon..."
-    sudo systemctl daemon-reload
-    check_command "Reloading systemd daemon" || exit 1
-
-    print_info "Enabling $SERVICE_FILE to start on boot..."
-    sudo systemctl enable "$SERVICE_FILE"
-    check_command "Enabling service" || exit 1
-
-    print_success "Systemd service '$SERVICE_FILE' installed and enabled."
-
-    # Start the service
-    print_info "Starting the service..."
-    sudo systemctl start "$SERVICE_FILE"
-    check_command "Starting service" || exit 1
-
-    # Verify the service is running with no errors
-    print_info "Verifying the service is running with no errors..."
-    sudo systemctl status "$SERVICE_FILE"
-    if [ $? -ne 0 ]; then
-        print_error "Service failed to start. Please check the logs."
-        sudo systemctl stop "$SERVICE_FILE"
-        exit 1
-    fi
-
-    print_info "You can manage the service using:"
-    print_info "  sudo systemctl start $SERVICE_FILE"
-    print_info "  sudo systemctl stop $SERVICE_FILE"
-    print_info "  sudo systemctl status $SERVICE_FILE"
-else
-    print_warning "$SERVICE_FILE not found. Skipping systemd setup."
-fi
-# --- End Systemd Service Setup ---
-
-# Configure hardware interfaces
-print_info "Configuring hardware interfaces..."
-# Enable I2C
-if ! grep -q "i2c-dev" /etc/modules; then
-    echo "i2c-dev" >> /etc/modules
-fi
-
-# Enable serial port
-if ! grep -q "enable_uart=1" /boot/config.txt; then
-    echo "enable_uart=1" >> /boot/config.txt
-fi
-
-# Enable camera
-if ! grep -q "start_x=1" /boot/config.txt; then
-    echo "start_x=1" >> /boot/config.txt
-fi
-
-# Set up watchdog
-print_info "Setting up watchdog..."
-if ! grep -q "bcm2835_wdt" /etc/modules; then
-    echo "bcm2835_wdt" >> /etc/modules
-fi
-
-# Create log directory
-print_info "Creating log directory..."
-mkdir -p /var/log/autonomous-mower
-chown -R pi:pi /var/log/autonomous-mower
-chmod 755 /var/log/autonomous-mower
-
-# Success message
-print_success "Installation completed successfully!"
-
-# Remove trap and exit successfully
-trap - EXIT
-exit 0
+    sudo pip3 install -e ".[coral]" --break-system_pack
