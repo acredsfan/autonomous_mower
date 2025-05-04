@@ -615,7 +615,9 @@ def create_app(mower):
                         "success": True,
                         "message": "Home location set successfully",
                     }
-                    if mower.set_home_location(params.get("location", {}))
+                    if mower.resource_manager.set_home_location(
+                        params.get("location", {})
+                    )
                     else {
                         "success": False,
                         "error": "Failed to set home location",

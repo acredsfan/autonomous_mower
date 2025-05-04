@@ -182,6 +182,52 @@ def get_web_interface():
     return _resource_manager.get_web_interface()
 
 
+def get_home_location():
+    """Get the home location coordinates."""
+    _warn_deprecated("get_home_location")
+    return _resource_manager.get_home_location()
+
+
+def set_home_location(location):
+    """Set the home location coordinates."""
+    _warn_deprecated("set_home_location")
+    return _resource_manager.set_home_location(location)
+
+
+def get_path():
+    """Get the current mowing path."""
+    _warn_deprecated("get_path")
+    path_planner = _resource_manager.get_path_planner()
+    if path_planner and hasattr(path_planner, "current_path"):
+        return path_planner.current_path
+    return []
+
+
+def save_no_go_zones(zones):
+    """Save no-go zones for mower operations."""
+    _warn_deprecated("save_no_go_zones")
+    # Currently a stub - to be implemented
+    return True
+
+
+def get_safety_status():
+    """Get the current safety status."""
+    _warn_deprecated("get_safety_status")
+    return _resource_manager.get_safety_status()
+
+
+def get_gps_location():
+    """Get the current GPS location."""
+    _warn_deprecated("get_gps_location")
+    return _resource_manager.get_gps_location()
+
+
+def get_sensor_data():
+    """Get all sensor data for the web UI and diagnostics."""
+    _warn_deprecated("get_sensor_data")
+    return _resource_manager.get_sensor_data()
+
+
 if __name__ == "__main__":
     try:
         init_resources()

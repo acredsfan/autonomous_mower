@@ -105,6 +105,8 @@ class ResourceManager:
         self.current_state = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config
         self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
+        # Path to home location config
+        self.home_location_path = CONFIG_DIR / "home_location.json"
         # allow web UI to access resource manager
         self.resource_manager = self
 
@@ -510,6 +512,61 @@ class ResourceManager:
             web.start()
         else:
             logger.warning("Web interface resource not available")
+
+    def get_home_location(self):
+        """
+        Get the currently configured home location.
+
+        Returns:
+            tuple or list: The home location as [lat, lng] coordinates,
+                 or [0.0, 0.0] if not configured
+        """
+        try:
+            if self.home_location_path.exists():
+                with open(self.home_location_path, "r") as f:
+                    data = json.load(f)
+                    return data.get("location", [0.0, 0.0])
+            else:
+                logger.warning(
+                    f"Home location file not found: {self.home_location_path}"
+                )
+                return [0.0, 0.0]
+        except Exception as e:
+            logger.error(f"Error loading home location: {e}")
+            return [0.0, 0.0]
+
+    def set_home_location(self, location):
+        """
+        Set and save the home location.
+
+        Args:
+            location: The location coordinates as [lat, lng] array or
+                {"lat": lat, "lng": lng} dict
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Process the input data which might be in different formats
+            if isinstance(location, dict):
+                lat = float(location.get("lat", 0.0))
+                lng = float(location.get("lng", 0.0))
+                coords = [lat, lng]
+            elif isinstance(location, (list, tuple)) and len(location) >= 2:
+                coords = [float(location[0]), float(location[1])]
+            else:
+                logger.error(f"Invalid location format: {location}")
+                return False
+
+            # Save the location to the config file
+            with open(self.home_location_path, "w") as f:
+                json.dump({"location": coords}, f, indent=2)
+
+            logger.info(f"Home location saved: {coords}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving home location: {e}")
+            return False
 
     def get_safety_status(self):
         """Retrieve safety status from the sensor interface.
@@ -975,6 +1032,25 @@ class ResourceManager:
                 speed = float(params["speed"])
                 blade.set_speed(speed)
                 return {"status": f"Blade speed set to {speed}"}
+        elif command == "save_area":
+            # Save mowing area boundary
+            if params and "coordinates" in params:
+                path_planner = self.get_path_planner()
+                if path_planner:
+                    success = path_planner.set_boundary_points(params["coordinates"])
+                    if success:
+                        return {"status": "Boundary area saved successfully"}
+                    return {"error": "Failed to save boundary area"}
+                return {"error": "Path planner not available"}
+            return {"error": "Missing coordinates parameter"}
+        elif command == "set_home":
+            # Save home location
+            if params and "location" in params:
+                success = self.set_home_location(params["location"])
+                if success:
+                    return {"status": "Home location saved successfully"}
+                return {"error": "Failed to save home location"}
+            return {"error": "Missing location parameter"}
         elif command == "start_mowing":
             # Implement start mowing logic
             return {"status": "Mowing started"}
