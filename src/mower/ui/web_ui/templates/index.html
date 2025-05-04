@@ -217,7 +217,6 @@ endblock %} {% block head_extra %}
   let currentPositionMarker;
   let homePositionMarker;
   let pathLine;
-
   // Initialize map when the page loads
   function initializeMap() {
     map = L.map("mapPreview").setView([0, 0], 18);
@@ -254,32 +253,75 @@ endblock %} {% block head_extra %}
       opacity: 0.7,
     });
   }
-
   // Update map with new position data
   function updateMap(data) {
     if (!map) return;
 
+    console.log("Updating map with data:", data);
+
     // Update current position marker
     if (data.currentPosition) {
       const [lat, lng] = data.currentPosition;
-      currentPositionMarker.setLatLng([lat, lng]).addTo(map);
-      map.setView([lat, lng], map.getZoom());
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        currentPositionMarker.setLatLng([lat, lng]).addTo(map);
+        map.setView([lat, lng], map.getZoom());
+
+        // Update the UI with these coordinates
+        const latElement = document.getElementById("position_latitude");
+        const lngElement = document.getElementById("position_longitude");
+        if (latElement) latElement.textContent = lat.toFixed(6);
+        if (lngElement) lngElement.textContent = lng.toFixed(6);
+      }
     }
 
     // Update home position marker
     if (data.homePosition) {
-      const [lat, lng] = data.homePosition;
-      homePositionMarker.setLatLng([lat, lng]).addTo(map);
+      let lat, lng;
+      // Handle different formats of home position data
+      if (Array.isArray(data.homePosition) && data.homePosition.length >= 2) {
+        [lat, lng] = data.homePosition;
+      } else if (typeof data.homePosition === "object") {
+        lat = parseFloat(
+          data.homePosition.latitude || data.homePosition.lat || 0
+        );
+        lng = parseFloat(
+          data.homePosition.longitude || data.homePosition.lng || 0
+        );
+      }
+
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        homePositionMarker.setLatLng([lat, lng]).addTo(map);
+      }
     }
 
     // Update path line
     if (data.waypoints && data.waypoints.length > 0) {
-      const pathPoints = data.waypoints.map((wp) => [wp.lat, wp.lng]);
-      pathLine.setLatLngs(pathPoints).addTo(map);
+      // Handle different formats of waypoints
+      const pathPoints = data.waypoints
+        .map((wp) => {
+          if (Array.isArray(wp) && wp.length >= 2) {
+            return [wp[0], wp[1]];
+          } else {
+            return [
+              parseFloat(wp.latitude || wp.lat || 0),
+              parseFloat(wp.longitude || wp.lng || 0),
+            ];
+          }
+        })
+        .filter(
+          (point) =>
+            !isNaN(point[0]) &&
+            !isNaN(point[1]) &&
+            (point[0] !== 0 || point[1] !== 0)
+        );
 
-      // Fit map to path if needed
-      if (pathPoints.length > 1) {
-        map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
+      if (pathPoints.length > 0) {
+        pathLine.setLatLngs(pathPoints).addTo(map);
+
+        // Fit map to path if needed
+        if (pathPoints.length > 1) {
+          map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
+        }
       }
     }
   }
@@ -358,9 +400,8 @@ endblock %} {% block head_extra %}
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
   }
-
   .map-preview {
-    height: 300px;
+    height: 450px;
     border-radius: var(--border-radius);
     overflow: hidden;
   }

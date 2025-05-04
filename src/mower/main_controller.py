@@ -934,14 +934,100 @@ class ResourceManager:
     def emergency_stop(self):
         """Trigger an emergency stop to halt all operations."""
         logger.warning("Emergency stop activated!")
-        self._resources["gpio"].set_pin(GPIOManager.PIN_CONFIG["EMERGENCY_STOP"], 1)
-        self._state = MowerState.EMERGENCY_STOP
+        if "gpio" in self._resources and self._resources["gpio"]:
+            self._resources["gpio"].set_pin(GPIOManager.PIN_CONFIG["EMERGENCY_STOP"], 1)
+        self.current_state = SystemState.EMERGENCY_STOP
         # Additional actions like stopping motors, disabling blades, etc.
-        if "motor_driver" in self._resources:
-            self._resources["motor_driver"].stop_all()
-        if "blade" in self._resources:
+        if "motor_driver" in self._resources and self._resources["motor_driver"]:
+            self._resources["motor_driver"].stop()
+        if "blade" in self._resources and self._resources["blade"]:
             self._resources["blade"].disable()
         logger.info("All systems halted due to emergency stop.")
+
+    def execute_command(self, command, params=None):
+        """
+        Execute a command received from the web UI.
+
+        Args:
+            command: The command name (string)
+            params: Command parameters (dict)
+
+        Returns:
+            dict: Command result
+        """
+        logger.info(f"Executing command: {command} with params: {params}")
+
+        if command == "manual_drive":
+            return self._handle_manual_drive(params)
+        elif command == "blade_on":
+            blade = self.get_blade_controller()
+            if blade:
+                blade.enable()
+                return {"status": "Blade enabled"}
+        elif command == "blade_off":
+            blade = self.get_blade_controller()
+            if blade:
+                blade.disable()
+                return {"status": "Blade disabled"}
+        elif command == "set_blade_speed":
+            blade = self.get_blade_controller()
+            if blade and "speed" in params:
+                speed = float(params["speed"])
+                blade.set_speed(speed)
+                return {"status": f"Blade speed set to {speed}"}
+        elif command == "start_mowing":
+            # Implement start mowing logic
+            return {"status": "Mowing started"}
+        elif command == "stop":
+            # Stop all movement
+            motor = self.get_robohat_driver()
+            if motor:
+                motor.stop()
+            return {"status": "Motors stopped"}
+        elif command == "return_home":
+            # Implement return home logic
+            return {"status": "Returning home"}
+        else:
+            logger.warning(f"Unknown command: {command}")
+            return {"error": f"Unknown command: {command}"}
+
+    def _handle_manual_drive(self, params):
+        """
+        Handle manual drive commands from the joystick.
+
+        Args:
+            params: Dict containing 'forward' and 'turn' values between -1.0 and 1.0
+
+        Returns:
+            dict: Command result
+        """
+        if params is None or "forward" not in params or "turn" not in params:
+            return {"error": "Missing required parameters"}
+
+        try:
+            forward = float(params["forward"])
+            turn = float(params["turn"])
+
+            # Ensure values are within allowed range
+            forward = max(-1.0, min(1.0, forward))
+            turn = max(-1.0, min(1.0, turn))
+
+            motor = self.get_robohat_driver()
+            if motor:
+                # Set the state to MANUAL when manual drive is used
+                if forward != 0.0 or turn != 0.0:
+                    self.current_state = SystemState.MANUAL_CONTROL
+
+                # Convert joystick values to steering/throttle for the motor driver
+                motor.run(turn, forward)
+                logger.debug(f"Manual drive: forward={forward}, turn={turn}")
+                return {"status": "ok", "forward": forward, "turn": turn}
+            else:
+                logger.error("Motor driver not available")
+                return {"error": "Motor driver not available"}
+        except Exception as e:
+            logger.error(f"Error in manual drive: {e}")
+            return {"error": f"Error in manual drive: {str(e)}"}
 
 
 def main():

@@ -92,14 +92,10 @@ class PathPlanner:
                 self.learning_config
                 and np.random.random() < self.learning_config.exploration_rate
             ):
-                self.pattern_config.pattern_type = np.random.choice(
-                    list(PatternType)
-                )
+                self.pattern_config.pattern_type = np.random.choice(list(PatternType))
             elif self.learning_config:
                 state = self._get_current_state()
-                self.pattern_config.pattern_type = self._get_best_action(
-                    state
-                )
+                self.pattern_config.pattern_type = self._get_best_action(state)
 
             # Generate path based on selected pattern
             path = self._generate_pattern_path()
@@ -108,17 +104,10 @@ class PathPlanner:
             if self.learning_config and path:
                 state = self._get_current_state()
                 reward = self._calculate_reward(path)
-                self._update_q_table(
-                    state, self.pattern_config.pattern_type, reward
-                )
-                self._store_experience(
-                    state, self.pattern_config.pattern_type, reward
-                )
+                self._update_q_table(state, self.pattern_config.pattern_type, reward)
+                self._store_experience(state, self.pattern_config.pattern_type, reward)
 
-                if (
-                    self.step_count % self.learning_config.update_frequency
-                    == 0
-                ):
+                if self.step_count % self.learning_config.update_frequency == 0:
                     self._update_model()
 
                 self.step_count += 1
@@ -143,9 +132,7 @@ class PathPlanner:
                 PatternType.CUSTOM: self._generate_custom_path,
             }
 
-            generator = pattern_generators.get(
-                self.pattern_config.pattern_type
-            )
+            generator = pattern_generators.get(self.pattern_config.pattern_type)
             if not generator:
                 logger.error(
                     f"Unknown pattern type: {self.pattern_config.pattern_type}"
@@ -173,9 +160,7 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * (
-                1 - self.pattern_config.overlap
-            )
+            spacing = self.pattern_config.spacing * (1 - self.pattern_config.overlap)
             num_passes = int(np.ceil(width / spacing))
 
             # Generate pass lines
@@ -228,9 +213,7 @@ class PathPlanner:
                 path.extend(zip(x, y))
 
                 # Increase radius
-                r += self.pattern_config.spacing * (
-                    1 - self.pattern_config.overlap
-                )
+                r += self.pattern_config.spacing * (1 - self.pattern_config.overlap)
 
             return path
 
@@ -253,9 +236,7 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * (
-                1 - self.pattern_config.overlap
-            )
+            spacing = self.pattern_config.spacing * (1 - self.pattern_config.overlap)
             num_passes = int(np.ceil(width / spacing))
 
             # Generate zigzag points
@@ -339,9 +320,7 @@ class PathPlanner:
 
             while y <= max_y:
                 x_points = np.linspace(min_x, max_x, 100)
-                y_points = y + amplitude * np.sin(
-                    2 * np.pi * x_points / wave_length
-                )
+                y_points = y + amplitude * np.sin(2 * np.pi * x_points / wave_length)
 
                 # Add points that fall within boundary
                 for x, wave_y in zip(x_points, y_points):
@@ -388,9 +367,7 @@ class PathPlanner:
                     if self._point_in_polygon(point, boundary):
                         path.append((px, py))
 
-                r -= self.pattern_config.spacing * (
-                    1 - self.pattern_config.overlap
-                )
+                r -= self.pattern_config.spacing * (1 - self.pattern_config.overlap)
 
             return path
 
@@ -423,9 +400,7 @@ class PathPlanner:
 
             # Sort intersections by distance from start
             if intersections:
-                intersections.sort(
-                    key=lambda p: np.linalg.norm(np.array(p) - start)
-                )
+                intersections.sort(key=lambda p: np.linalg.norm(np.array(p) - start))
 
             return intersections
 
@@ -472,9 +447,7 @@ class PathPlanner:
             logger.error(f"Error calculating line intersection: {e}")
             return None
 
-    def _point_in_polygon(
-        self, point: np.ndarray, polygon: np.ndarray
-    ) -> bool:
+    def _point_in_polygon(self, point: np.ndarray, polygon: np.ndarray) -> bool:
         """Check if a point is inside a polygon."""
         x, y = point
         n = len(polygon)
@@ -494,9 +467,7 @@ class PathPlanner:
 
         return inside
 
-    def update_obstacle_map(
-        self, obstacles: List[Tuple[float, float]]
-    ) -> None:
+    def update_obstacle_map(self, obstacles: List[Tuple[float, float]]) -> None:
         """Update the obstacle map."""
         self.obstacles = obstacles
 
@@ -505,8 +476,7 @@ class PathPlanner:
         try:
             # Convert boundary points to string representation
             boundary_str = "_".join(
-                f"{x:.2f},{y:.2f}"
-                for x, y in self.pattern_config.boundary_points
+                f"{x:.2f},{y:.2f}" for x, y in self.pattern_config.boundary_points
             )
 
             # Include other relevant state information
@@ -557,9 +527,7 @@ class PathPlanner:
             logger.error(f"Error calculating reward: {e}")
             return 0.0
 
-    def _calculate_path_distance(
-        self, path: List[Tuple[float, float]]
-    ) -> float:
+    def _calculate_path_distance(self, path: List[Tuple[float, float]]) -> float:
         """Calculate total distance of path."""
         try:
             if len(path) < 2:
@@ -620,9 +588,7 @@ class PathPlanner:
                 v2 = p3 - p2
 
                 # Calculate angle between vectors
-                cos_angle = np.dot(v1, v2) / (
-                    np.linalg.norm(v1) * np.linalg.norm(v2)
-                )
+                cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
                 angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
                 angles.append(angle)
 
@@ -635,28 +601,20 @@ class PathPlanner:
             logger.error(f"Error calculating smoothness: {e}")
             return 0.0
 
-    def _update_q_table(
-        self, state: str, action: PatternType, reward: float
-    ) -> None:
+    def _update_q_table(self, state: str, action: PatternType, reward: float) -> None:
         """Update Q-table with new experience."""
         try:
             if state not in self.q_table:
-                self.q_table[state] = {
-                    pattern: 0.0 for pattern in PatternType
-                }
+                self.q_table[state] = {pattern: 0.0 for pattern in PatternType}
 
             # Get current Q-value
             current_q = self.q_table[state][action]
 
             # Calculate new Q-value
             next_state = self._get_current_state()
-            max_next_q = max(
-                self.q_table.get(next_state, {}).values(), default=0.0
-            )
+            max_next_q = max(self.q_table.get(next_state, {}).values(), default=0.0)
             new_q = current_q + self.learning_config.learning_rate * (
-                reward
-                + self.learning_config.discount_factor * max_next_q
-                - current_q
+                reward + self.learning_config.discount_factor * max_next_q - current_q
             )
 
             # Update Q-table
@@ -664,9 +622,7 @@ class PathPlanner:
         except Exception as e:
             logger.error(f"Error updating Q-table: {e}")
 
-    def _store_experience(
-        self, state: str, action: PatternType, reward: float
-    ) -> None:
+    def _store_experience(self, state: str, action: PatternType, reward: float) -> None:
         """Store experience in replay buffer."""
         try:
             experience = {
@@ -718,9 +674,7 @@ class PathPlanner:
 
             # Convert Q-table to serializable format
             q_table_serializable = {
-                state: {
-                    pattern.name: value for pattern, value in actions.items()
-                }
+                state: {pattern.name: value for pattern, value in actions.items()}
                 for state, actions in self.q_table.items()
             }
 
@@ -759,3 +713,61 @@ class PathPlanner:
             logger.error(f"Error loading model: {e}")
             self.q_table = {}
             self.step_count = 0
+
+    def set_boundary_points(self, boundary_points: List) -> bool:
+        """
+        Set the boundary points from UI input.
+
+        Args:
+            boundary_points: List of points defining the boundary
+                (can be dict objects from JSON)
+
+        Returns:
+            bool: True if boundary points were set successfully, False otherwise
+        """
+        try:
+            # Process the input data which might be in different formats
+            processed_points = []
+
+            for point in boundary_points:
+                # Handle dictionary format from JSON (e.g., {"lat": 123, "lng": 456})
+                if isinstance(point, dict):
+                    lat = None
+                    lng = None
+
+                    # Get latitude
+                    if "lat" in point:
+                        lat = float(point["lat"])
+                    elif "latitude" in point:
+                        lat = float(point["latitude"])
+
+                    # Get longitude
+                    if "lng" in point:
+                        lng = float(point["lng"])
+                    elif "lon" in point or "longitude" in point:
+                        lng = float(point.get("lon") or point.get("longitude"))
+
+                    if lat is not None and lng is not None:
+                        processed_points.append((lng, lat))
+
+                # Handle tuple format
+                elif isinstance(point, (list, tuple)) and len(point) >= 2:
+                    processed_points.append((float(point[0]), float(point[1])))
+
+            # Only update if we have at least 3 points to form a polygon
+            if len(processed_points) >= 3:
+                self.pattern_config.boundary_points = processed_points
+                self.current_path = self.generate_path()
+                logger.info(
+                    f"Boundary points updated with {len(processed_points)} points"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"Not enough valid boundary points: {len(processed_points)}"
+                )
+                return False
+
+        except Exception as e:
+            logger.error(f"Error setting boundary points: {e}")
+            return False

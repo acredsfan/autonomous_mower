@@ -6,6 +6,7 @@ Each resource is initialized in a separate function to allow on-demand setup.
 
 from mower.main_controller import ResourceManager
 import warnings
+from mower.state_management.states import MowerState
 
 # Singleton ResourceManager instance for the whole application
 _resource_manager = ResourceManager()
@@ -33,16 +34,38 @@ def start_web_interface():
 def start_robot_logic():
     from mower.main_controller import RobotController
     import threading
+
     robot_controller = RobotController(_resource_manager)
-    robot_thread = threading.Thread(
-        target=robot_controller.run_robot, daemon=True)
+    robot_thread = threading.Thread(target=robot_controller.run_robot, daemon=True)
     robot_thread.start()
+
+
+def execute_command(command, params=None):
+    """
+    Execute a command received from the web UI.
+
+    Args:
+        command: The command name (string)
+        params: Command parameters (dict)
+
+    Returns:
+        dict: Command result
+    """
+    return _resource_manager.execute_command(command, params)
+
+
+def emergency_stop():
+    """Trigger an emergency stop to halt all operations."""
+    _resource_manager.emergency_stop()
 
 
 # --- Legacy API: Deprecated global resource getters (for compatibility) ---
 def _warn_deprecated(name):
-    warnings.warn(f"{name}() is deprecated. Use ResourceManager instead.",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        f"{name}() is deprecated. Use ResourceManager instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 
 def get_blade_controller():
@@ -166,6 +189,7 @@ if __name__ == "__main__":
         start_web_interface()
     except KeyboardInterrupt:
         import logging
+
         logging.info("Exiting")
     finally:
         cleanup_resources()
