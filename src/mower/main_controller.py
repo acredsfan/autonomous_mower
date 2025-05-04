@@ -105,8 +105,6 @@ class ResourceManager:
         self.current_state = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config
         self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
-        # Path to home location config
-        self.home_location_path = CONFIG_DIR / "home_location.json"
         # allow web UI to access resource manager
         self.resource_manager = self
 
@@ -512,61 +510,6 @@ class ResourceManager:
             web.start()
         else:
             logger.warning("Web interface resource not available")
-
-    def get_home_location(self):
-        """
-        Get the currently configured home location.
-
-        Returns:
-            tuple or list: The home location as [lat, lng] coordinates,
-                 or [0.0, 0.0] if not configured
-        """
-        try:
-            if self.home_location_path.exists():
-                with open(self.home_location_path, "r") as f:
-                    data = json.load(f)
-                    return data.get("location", [0.0, 0.0])
-            else:
-                logger.warning(
-                    f"Home location file not found: {self.home_location_path}"
-                )
-                return [0.0, 0.0]
-        except Exception as e:
-            logger.error(f"Error loading home location: {e}")
-            return [0.0, 0.0]
-
-    def set_home_location(self, location):
-        """
-        Set and save the home location.
-
-        Args:
-            location: The location coordinates as [lat, lng] array or
-                {"lat": lat, "lng": lng} dict
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            # Process the input data which might be in different formats
-            if isinstance(location, dict):
-                lat = float(location.get("lat", 0.0))
-                lng = float(location.get("lng", 0.0))
-                coords = [lat, lng]
-            elif isinstance(location, (list, tuple)) and len(location) >= 2:
-                coords = [float(location[0]), float(location[1])]
-            else:
-                logger.error(f"Invalid location format: {location}")
-                return False
-
-            # Save the location to the config file
-            with open(self.home_location_path, "w") as f:
-                json.dump({"location": coords}, f, indent=2)
-
-            logger.info(f"Home location saved: {coords}")
-            return True
-        except Exception as e:
-            logger.error(f"Error saving home location: {e}")
-            return False
 
     def get_safety_status(self):
         """Retrieve safety status from the sensor interface.
@@ -991,119 +934,14 @@ class ResourceManager:
     def emergency_stop(self):
         """Trigger an emergency stop to halt all operations."""
         logger.warning("Emergency stop activated!")
-        if "gpio" in self._resources and self._resources["gpio"]:
-            self._resources["gpio"].set_pin(GPIOManager.PIN_CONFIG["EMERGENCY_STOP"], 1)
-        self.current_state = SystemState.EMERGENCY_STOP
+        self._resources["gpio"].set_pin(GPIOManager.PIN_CONFIG["EMERGENCY_STOP"], 1)
+        self._state = MowerState.EMERGENCY_STOP
         # Additional actions like stopping motors, disabling blades, etc.
-        if "motor_driver" in self._resources and self._resources["motor_driver"]:
-            self._resources["motor_driver"].stop()
-        if "blade" in self._resources and self._resources["blade"]:
+        if "motor_driver" in self._resources:
+            self._resources["motor_driver"].stop_all()
+        if "blade" in self._resources:
             self._resources["blade"].disable()
         logger.info("All systems halted due to emergency stop.")
-
-    def execute_command(self, command, params=None):
-        """
-        Execute a command received from the web UI.
-
-        Args:
-            command: The command name (string)
-            params: Command parameters (dict)
-
-        Returns:
-            dict: Command result
-        """
-        logger.info(f"Executing command: {command} with params: {params}")
-
-        if command == "manual_drive":
-            return self._handle_manual_drive(params)
-        elif command == "blade_on":
-            blade = self.get_blade_controller()
-            if blade:
-                blade.enable()
-                return {"status": "Blade enabled"}
-        elif command == "blade_off":
-            blade = self.get_blade_controller()
-            if blade:
-                blade.disable()
-                return {"status": "Blade disabled"}
-        elif command == "set_blade_speed":
-            blade = self.get_blade_controller()
-            if blade and "speed" in params:
-                speed = float(params["speed"])
-                blade.set_speed(speed)
-                return {"status": f"Blade speed set to {speed}"}
-        elif command == "save_area":
-            # Save mowing area boundary
-            if params and "coordinates" in params:
-                path_planner = self.get_path_planner()
-                if path_planner:
-                    success = path_planner.set_boundary_points(params["coordinates"])
-                    if success:
-                        return {"status": "Boundary area saved successfully"}
-                    return {"error": "Failed to save boundary area"}
-                return {"error": "Path planner not available"}
-            return {"error": "Missing coordinates parameter"}
-        elif command == "set_home":
-            # Save home location
-            if params and "location" in params:
-                success = self.set_home_location(params["location"])
-                if success:
-                    return {"status": "Home location saved successfully"}
-                return {"error": "Failed to save home location"}
-            return {"error": "Missing location parameter"}
-        elif command == "start_mowing":
-            # Implement start mowing logic
-            return {"status": "Mowing started"}
-        elif command == "stop":
-            # Stop all movement
-            motor = self.get_robohat_driver()
-            if motor:
-                motor.stop()
-            return {"status": "Motors stopped"}
-        elif command == "return_home":
-            # Implement return home logic
-            return {"status": "Returning home"}
-        else:
-            logger.warning(f"Unknown command: {command}")
-            return {"error": f"Unknown command: {command}"}
-
-    def _handle_manual_drive(self, params):
-        """
-        Handle manual drive commands from the joystick.
-
-        Args:
-            params: Dict containing 'forward' and 'turn' values between -1.0 and 1.0
-
-        Returns:
-            dict: Command result
-        """
-        if params is None or "forward" not in params or "turn" not in params:
-            return {"error": "Missing required parameters"}
-
-        try:
-            forward = float(params["forward"])
-            turn = float(params["turn"])
-
-            # Ensure values are within allowed range
-            forward = max(-1.0, min(1.0, forward))
-            turn = max(-1.0, min(1.0, turn))
-
-            motor = self.get_robohat_driver()
-            if motor:
-                # Set the state to MANUAL when manual drive is used
-                if forward != 0.0 or turn != 0.0:
-                    self.current_state = SystemState.MANUAL_CONTROL
-
-                # Convert joystick values to steering/throttle for the motor driver
-                motor.run(turn, forward)
-                logger.debug(f"Manual drive: forward={forward}, turn={turn}")
-                return {"status": "ok", "forward": forward, "turn": turn}
-            else:
-                logger.error("Motor driver not available")
-                return {"error": "Motor driver not available"}
-        except Exception as e:
-            logger.error(f"Error in manual drive: {e}")
-            return {"error": f"Error in manual drive: {str(e)}"}
 
 
 def main():

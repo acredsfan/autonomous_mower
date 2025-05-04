@@ -569,7 +569,7 @@ img {
 
 /* Map container */
 .map-container {
-    height: 600px;
+    height: 400px;
     border-radius: var(--border-radius);
     overflow: hidden;
     box-shadow: var(--shadow-small);

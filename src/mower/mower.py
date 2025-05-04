@@ -6,7 +6,6 @@ Each resource is initialized in a separate function to allow on-demand setup.
 
 from mower.main_controller import ResourceManager
 import warnings
-from mower.state_management.states import MowerState
 
 # Singleton ResourceManager instance for the whole application
 _resource_manager = ResourceManager()
@@ -34,38 +33,16 @@ def start_web_interface():
 def start_robot_logic():
     from mower.main_controller import RobotController
     import threading
-
     robot_controller = RobotController(_resource_manager)
-    robot_thread = threading.Thread(target=robot_controller.run_robot, daemon=True)
+    robot_thread = threading.Thread(
+        target=robot_controller.run_robot, daemon=True)
     robot_thread.start()
-
-
-def execute_command(command, params=None):
-    """
-    Execute a command received from the web UI.
-
-    Args:
-        command: The command name (string)
-        params: Command parameters (dict)
-
-    Returns:
-        dict: Command result
-    """
-    return _resource_manager.execute_command(command, params)
-
-
-def emergency_stop():
-    """Trigger an emergency stop to halt all operations."""
-    _resource_manager.emergency_stop()
 
 
 # --- Legacy API: Deprecated global resource getters (for compatibility) ---
 def _warn_deprecated(name):
-    warnings.warn(
-        f"{name}() is deprecated. Use ResourceManager instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
+    warnings.warn(f"{name}() is deprecated. Use ResourceManager instead.",
+                  DeprecationWarning, stacklevel=2)
 
 
 def get_blade_controller():
@@ -182,52 +159,6 @@ def get_web_interface():
     return _resource_manager.get_web_interface()
 
 
-def get_home_location():
-    """Get the home location coordinates."""
-    _warn_deprecated("get_home_location")
-    return _resource_manager.get_home_location()
-
-
-def set_home_location(location):
-    """Set the home location coordinates."""
-    _warn_deprecated("set_home_location")
-    return _resource_manager.set_home_location(location)
-
-
-def get_path():
-    """Get the current mowing path."""
-    _warn_deprecated("get_path")
-    path_planner = _resource_manager.get_path_planner()
-    if path_planner and hasattr(path_planner, "current_path"):
-        return path_planner.current_path
-    return []
-
-
-def save_no_go_zones(zones):
-    """Save no-go zones for mower operations."""
-    _warn_deprecated("save_no_go_zones")
-    # Currently a stub - to be implemented
-    return True
-
-
-def get_safety_status():
-    """Get the current safety status."""
-    _warn_deprecated("get_safety_status")
-    return _resource_manager.get_safety_status()
-
-
-def get_gps_location():
-    """Get the current GPS location."""
-    _warn_deprecated("get_gps_location")
-    return _resource_manager.get_gps_location()
-
-
-def get_sensor_data():
-    """Get all sensor data for the web UI and diagnostics."""
-    _warn_deprecated("get_sensor_data")
-    return _resource_manager.get_sensor_data()
-
-
 if __name__ == "__main__":
     try:
         init_resources()
@@ -235,7 +166,6 @@ if __name__ == "__main__":
         start_web_interface()
     except KeyboardInterrupt:
         import logging
-
         logging.info("Exiting")
     finally:
         cleanup_resources()

@@ -548,8 +548,9 @@ def create_app(mower):
             "Error received from client - Type: {}, Message: {}".format(
                 error_type, error_msg
             )
-        )  # Background task for sending updates
+        )
 
+    # Background task for sending updates
     def send_updates():
         """Send periodic updates to connected clients."""
         while True:
@@ -559,23 +560,9 @@ def create_app(mower):
                 safety_status = mower.get_safety_status()
                 sensor_data = mower.get_sensor_data()
 
-                # Get location data for map updates
-                location = mower.get_gps_location()
-                position_data = {
-                    "gps": {
-                        "latitude": location[0],
-                        "longitude": location[1],
-                        "fix": location != (0.0, 0.0),
-                    },
-                    "currentPosition": location,
-                    "homePosition": mower.get_home_location(),
-                    "waypoints": mower.get_path() if hasattr(mower, "get_path") else [],
-                }
-
                 socketio.emit("status_update", status)
                 socketio.emit("safety_status", safety_status)
                 socketio.emit("sensor_data", sensor_data)
-                socketio.emit("position_update", position_data)
             except Exception as e:
                 logger.error(f"Error in update loop: {e}")
                 socketio.sleep(1)  # Wait longer on error
@@ -615,9 +602,7 @@ def create_app(mower):
                         "success": True,
                         "message": "Home location set successfully",
                     }
-                    if mower.resource_manager.set_home_location(
-                        params.get("location", {})
-                    )
+                    if mower.set_home_location(params.get("location", {}))
                     else {
                         "success": False,
                         "error": "Failed to set home location",
