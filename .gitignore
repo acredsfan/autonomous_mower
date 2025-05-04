@@ -115,3 +115,4 @@ run_mcp_server.sh
 /.venv
 MCP_SERVER.md
 .blackboxrules
+roo_models.json
