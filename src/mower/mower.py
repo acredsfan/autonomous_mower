@@ -159,6 +159,18 @@ def get_web_interface():
     return _resource_manager.get_web_interface()
 
 
+def get_home_location():
+    """Get the home location from resource manager."""
+    _warn_deprecated("get_home_location")
+    return _resource_manager.get_home_location()
+
+
+def set_home_location(location):
+    """Set the home location using resource manager."""
+    _warn_deprecated("set_home_location")
+    return _resource_manager.set_home_location(location)
+
+
 if __name__ == "__main__":
     try:
         init_resources()

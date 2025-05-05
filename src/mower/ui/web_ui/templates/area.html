@@ -7,13 +7,127 @@
 <style>
     /* Custom styles for Google Maps */
     .map-container {
-        height: 400px;
+        height: 600px;
         width: 100%;
         border-radius: var(--border-radius);
     }
     .home-marker {
         color: var(--primary);
         font-size: 24px;
+    }
+    
+    /* Pattern Selection Styles */
+    .pattern-grid {
+        dis    function loadExistingArea() {
+        // Use boundary_points endpoint
+        axios.post("/api/boundary_points")
+        .then(function(response) {
+            if (response.data && response.data.success && response.data.coordinates && response.data.coordinates.length) {
+                // Clear any existing polygons
+                clearPolygons();
+
+                // Convert coordinates to Google Maps LatLng objects
+                const coordinates = response.data.coordinates;
+                const path = coordinates.map(function(coord) {
+                    // Handle both [lat, lng] array format and {lat, lng} object format
+                    if (Array.isArray(coord)) {
+                        return {
+                            lat: typeof coord[0] === "number" ? coord[0] : parseFloat(coord[0]),
+                            lng: typeof coord[1] === "number" ? coord[1] : parseFloat(coord[1])
+                        };
+                    } else {
+                        return {
+                            lat: typeof coord.lat === "number" ? coord.lat : parseFloat(coord.lat),
+                            lng: typeof coord.lng === "number" ? coord.lng : parseFloat(coord.lng)
+                        };
+                    }
+                });
+
+                // Create a polygon from the coordinates
+                const polygon = new google.maps.Polygon({
+                    paths: path,
+                    strokeColor: "#689F38",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3,
+                    fillColor: "#8BC34A",
+                    fillOpacity: 0.5,
+                    editable: true
+                });
+
+                // Add the polygon to the map and our array
+                polygon.setMap(map);
+                drawnItems.push(polygon);
+
+                // Fit the map to the polygon
+                const bounds = new google.maps.LatLngBounds();
+                path.forEach(function(point) {
+                    bounds.extend(point);
+                });
+                map.fitBounds(bounds);
+
+                isPolygonComplete = true;
+                document.getElementById("confirm-area-button").disabled = false;
+                document.getElementById("confirm-home-button").disabled = false;
+
+                showAlert("Loaded existing mowing area.", "success", 3000);
+                showNotification("Map Updated", "Loaded saved boundary from server", "info");
+            }
+        })
+        .catch(function(error) {
+            console.error("Error loading boundary:", error);
+        });
+    } grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .pattern-option {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .pattern-option:hover {
+        border-color: #aaa;
+        transform: translateY(-2px);
+    }
+    
+    .pattern-option.active {
+        border-color: var(--primary);
+        background-color: rgba(var(--primary-rgb), 0.1);
+    }
+    
+    .pattern-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+        color: #555;
+    }
+    
+    .pattern-option.active .pattern-icon {
+        color: var(--primary);
+    }
+    
+    .pattern-label {
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .pattern-path {
+        stroke: #4285F4;
+        stroke-width: 2;
+        fill: none;
+        stroke-dasharray: 5, 5;
+    }
+    
+    /* Toast notification styles */
+    .toast-container {
+        z-index: 9999;
     }
 </style>
 {% endblock %}
@@ -105,6 +219,106 @@
         </button>
     </div>
 </div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h3>Pattern Configuration</h3>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-12">
+        <h4>Select Mowing Pattern</h4>
+        <div class="pattern-selection">
+          <div class="pattern-grid">
+            <div class="pattern-option" data-pattern="PARALLEL">
+              <div class="pattern-icon">
+                <i class="fas fa-grip-lines"></i>
+              </div>
+              <div class="pattern-label">Parallel</div>
+            </div>
+            <div class="pattern-option" data-pattern="SPIRAL">
+              <div class="pattern-icon">
+                <i class="fas fa-circle-notch"></i>
+              </div>
+              <div class="pattern-label">Spiral</div>
+            </div>
+            <div class="pattern-option" data-pattern="ZIGZAG">
+              <div class="pattern-icon">
+                <i class="fas fa-exchange-alt"></i>
+              </div>
+              <div class="pattern-label">Zigzag</div>
+            </div>
+            <div class="pattern-option" data-pattern="CHECKERBOARD">
+              <div class="pattern-icon">
+                <i class="fas fa-th-large"></i>
+              </div>
+              <div class="pattern-label">Checkerboard</div>
+            </div>
+            <div class="pattern-option" data-pattern="DIAMOND">
+              <div class="pattern-icon">
+                <i class="fas fa-diamond"></i>
+              </div>
+              <div class="pattern-label">Diamond</div>
+            </div>
+            <div class="pattern-option" data-pattern="WAVES">
+              <div class="pattern-icon">
+                <i class="fas fa-water"></i>
+              </div>
+              <div class="pattern-label">Waves</div>
+            </div>
+            <div class="pattern-option" data-pattern="CONCENTRIC">
+              <div class="pattern-icon">
+                <i class="fas fa-bullseye"></i>
+              </div>
+              <div class="pattern-label">Concentric</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label for="pattern-spacing">Spacing (meters):</label>
+        <input type="range" id="pattern-spacing" class="form-range" min="0.1" max="2" step="0.1" value="0.5">
+        <div class="d-flex justify-content-between">
+          <small>0.1m</small>
+          <small id="spacing-value">0.5m</small>
+          <small>2.0m</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="pattern-angle">Angle (degrees):</label>
+        <input type="range" id="pattern-angle" class="form-range" min="0" max="90" step="5" value="0">
+        <div class="d-flex justify-content-between">
+          <small>0°</small>
+          <small id="angle-value">0°</small>
+          <small>90°</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="pattern-overlap">Overlap:</label>
+        <input type="range" id="pattern-overlap" class="form-range" min="0" max="0.5" step="0.05" value="0.1">
+        <div class="d-flex justify-content-between">
+          <small>0%</small>
+          <small id="overlap-value">10%</small>
+          <small>50%</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col-md-12">
+        <button id="generate-pattern-button" class="btn btn-primary" disabled>
+          <i class="fas fa-route"></i> Generate Pattern
+        </button>
+        <button id="clear-pattern-button" class="btn btn-secondary" disabled>
+          <i class="fas fa-eraser"></i> Clear Pattern
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -115,6 +329,10 @@
     let homeMarker;
     let isPolygonComplete = false;
     let isSatelliteView = false;
+    let selectedPattern = null;
+    let patternPath = null;
+    let selectedPattern = null;
+    let patternPath = null;
 
     // Initialize map when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
@@ -122,8 +340,140 @@
         initControls();
         updateAreaConnectionStatus();
         initCameraControls();
+        loadHomeLocation();
     });
 
+    // Show notification toast
+    function showNotification(title, message, type = "info") {
+        // Create toast container if it doesn't exist
+        if (!document.getElementById('toast-container')) {
+            const toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+
+        // Create a unique ID for this toast
+        const toastId = 'toast-' + new Date().getTime();
+        
+        // Create toast HTML
+        const toastHtml = `
+            <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header bg-${type} text-white">
+                    <strong class="me-auto">${title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    ${message}
+                </div>
+            </div>
+        `;
+        
+        // Add toast to container
+        document.getElementById('toast-container').innerHTML += toastHtml;
+        
+        // Initialize and show the toast
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        toast.show();
+        
+        // Remove toast from DOM after it's hidden
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
+
+    function loadHomeLocation() {
+        // Use home_location endpoint
+        axios.post("/api/home_location")
+        .then(function(response) {
+            if (response.data && response.data.success && response.data.location && 
+                Array.isArray(response.data.location) && response.data.location.length === 2) {
+                
+                const homeLocation = {
+                    lat: response.data.location[0],
+                    lng: response.data.location[1]
+                };
+                
+                setHomeMarker(homeLocation);
+                showNotification("Home Location", "Loaded saved home location", "info");
+            }
+        })
+        .catch(function(error) {
+            console.error("Error loading home location:", error);
+        });
+    }
+
+    function setHomeMarker(location) {
+        // Remove existing home marker if it exists
+        if (homeMarker) {
+            homeMarker.setMap(null);
+        }
+        
+        // Create a custom marker for home
+        homeMarker = new google.maps.Marker({
+            position: location,
+            map: map,
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 10,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: '#FFFFFF',
+                strokeWeight: 2
+            },
+            title: 'Home Location'
+        });
+    }
+
+    // Function to clear any existing pattern
+    function clearPattern() {
+        if (patternPath) {
+            patternPath.setMap(null);
+            patternPath = null;
+        }
+        document.getElementById('clear-pattern-button').disabled = true;
+    }
+    
+    // Function to draw pattern on map
+    function drawPatternOnMap(pathCoordinates) {
+        // Convert path to Google Maps LatLng objects
+        const path = pathCoordinates.map(coord => {
+            return new google.maps.LatLng(
+                typeof coord[0] === 'number' ? coord[0] : parseFloat(coord[0]),
+                typeof coord[1] === 'number' ? coord[1] : parseFloat(coord[1])
+            );
+        });
+        
+        // Create a polyline for the path
+        patternPath = new google.maps.Polyline({
+            path: path,
+            geodesic: true,
+            strokeColor: "#4285F4",
+            strokeOpacity: 1.0,
+            strokeWeight: 3,
+            strokePattern: [
+                {
+                    offset: '0',
+                    repeat: '10px',
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 3,
+                        fillOpacity: 1,
+                        strokeWeight: 0
+                    }
+                }
+            ]
+        });
+        
+        // Add the path to the map
+        patternPath.setMap(map);
+    }
+
+    // Initialize map when DOM is loaded
     function initMap() {
         // Default center (will be updated with GPS)
         const defaultCenter = { lat: 0, lng: 0 };
@@ -339,18 +689,146 @@
             document.getElementById('confirm-home-button').disabled = true;
             document.getElementById('coordinatesCard').style.display = 'none';
         });
+
+        // Pattern configuration controls        // Pattern option click
+        document.querySelectorAll('.pattern-option').forEach(option => {
+            option.addEventListener('click', function() {
+                // Deselect all options
+                document.querySelectorAll('.pattern-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+
+                // Select the clicked pattern
+                this.classList.add('active');
+                selectedPattern = this.getAttribute('data-pattern');
+
+                // Enable the generate button if a pattern is selected
+                document.getElementById('generate-pattern-button').disabled = !selectedPattern;
+                
+                // Show feedback
+                showNotification("Pattern Selected", `${selectedPattern} pattern selected`, "info");
+            });
+        });
+
+        // Spacing slider input
+        document.getElementById('pattern-spacing').addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            document.getElementById('spacing-value').textContent = value.toFixed(1) + 'm';
+        });
+
+        // Angle slider input
+        document.getElementById('pattern-angle').addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            document.getElementById('angle-value').textContent = value.toFixed(0) + '°';
+        });
+
+        // Overlap slider input
+        document.getElementById('pattern-overlap').addEventListener('input', function() {
+            const value = parseFloat(this.value);
+            document.getElementById('overlap-value').textContent = (value * 100).toFixed(0) + '%';
+        });        // Generate pattern button
+        document.getElementById('generate-pattern-button').addEventListener('click', function() {
+            if (!isPolygonComplete) {
+                showAlert("Please define a mowing area first.", "warning");
+                return;
+            }
+            
+            if (!selectedPattern) {
+                showAlert("Please select a pattern type first.", "warning");
+                return;
+            }
+            
+            // Get settings from sliders
+            const settings = {
+                spacing: parseFloat(document.getElementById('pattern-spacing').value),
+                angle: parseFloat(document.getElementById('pattern-angle').value),
+                overlap: parseFloat(document.getElementById('pattern-overlap').value)
+            };
+            
+            // Show loading notification
+            showNotification("Generating Pattern", "Please wait while the pattern is generated...", "info");
+            
+            // Make API call to generate pattern
+            axios.post("/api/generate_pattern", {
+                pattern_type: selectedPattern,
+                settings: settings
+            })
+            .then(function(response) {
+                console.log("Pattern generation response:", response.data);
+                if (response.data && response.data.success && response.data.path) {
+                    // Clear any existing pattern
+                    clearPattern();
+                    
+                    // Draw the pattern on the map
+                    drawPatternOnMap(response.data.path);
+                    
+                    // Enable clear button
+                    document.getElementById('clear-pattern-button').disabled = false;
+                    
+                    // Show success message
+                    showNotification("Success", "Pattern generated successfully", "success");
+                } else {
+                    showAlert(
+                        "Failed to generate pattern: " + 
+                        (response.data?.error || "Unknown error"),
+                        "danger"
+                    );
+                }
+            })
+            .catch(function(error) {
+                console.error("Error generating pattern:", error);
+                showAlert(
+                    "Error",
+                    "Failed to generate pattern: " + 
+                    (error.response?.data?.error || "Server error"),
+                    "danger"
+                );
+            });
+        });        // Clear pattern button
+        document.getElementById('clear-pattern-button').addEventListener('click', function() {
+            clearPattern();
+            showNotification('Pattern Cleared', 'The mowing pattern has been cleared.', 'info');
+        });
+    }    function loadHomeLocation() {
+        // Use home_location endpoint
+        axios.post("/api/home_location")
+        .then(function(response) {
+            if (response.data && response.data.success && response.data.location && 
+                Array.isArray(response.data.location) && response.data.location.length === 2) {
+                
+                const homeLocation = {
+                    lat: response.data.location[0],
+                    lng: response.data.location[1]
+                };
+                
+                setHomeMarker(homeLocation);
+                showNotification("Home Location", "Loaded saved home location", "info");
+            }
+        })
+        .catch(function(error) {
+            console.error("Error loading home location:", error);
+        });
     }
 
     function loadExistingArea() {
-        sendCommand('get_area', {}, function(response) {
-            if (response.success && response.data.coordinates && response.data.coordinates.length > 0) {
+        // Use boundary_points endpoint
+        axios.post("/api/boundary_points")
+        .then(function (response) {
+            if (response.data && response.data.success && response.data.coordinates && response.data.coordinates.length) {
                 // Clear any existing polygons
                 clearPolygons();
 
                 // Convert coordinates to Google Maps LatLng objects
                 const coordinates = response.data.coordinates;
-                const path = coordinates.map(coord => {
-                    return { 
+                const path = coordinates.map((coord) => {
+                    // Handle both [lat, lng] array format and {lat, lng} object format
+                    if (Array.isArray(coord)) {
+                        return {
+                            lat: typeof coord[0] === "number" ? coord[0] : parseFloat(coord[0]),
+                            lng: typeof coord[1] === "number" ? coord[1] : parseFloat(coord[1])
+                        };
+                    } else {
+                        return {
                         lat: typeof coord.lat === 'number' ? coord.lat : parseFloat(coord.lat), 
                         lng: typeof coord.lng === 'number' ? coord.lng : parseFloat(coord.lng) 
                     };
@@ -461,6 +939,10 @@
         }
     }
 
+    // Global variables for pattern generation
+    let selectedPattern = null;
+    let patternPath = null;
+
     // Clean up when navigating away
     window.addEventListener('beforeunload', function() {
         if (map) {
@@ -539,6 +1021,35 @@
     .camera-status {
         font-size: 1.2rem;
         text-align: center;
+    }
+
+    /* Pattern configuration styles */
+    .pattern-selection {
+        margin-top: 1rem;
+    }
+
+    .pattern-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 1rem;
+    }
+
+    .pattern-option {
+        cursor: pointer;
+        padding: 1rem;
+        border: 2px solid transparent;
+        border-radius: var(--border-radius);
+        text-align: center;
+        transition: border-color 0.3s;
+    }
+
+    .pattern-option.selected {
+        border-color: var(--primary);
+    }
+
+    .pattern-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
     }
 
     /* Responsive adjustments */

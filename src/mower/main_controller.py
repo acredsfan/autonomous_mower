@@ -511,6 +511,57 @@ class ResourceManager:
         else:
             logger.warning("Web interface resource not available")
 
+    def get_home_location(self):
+        """
+        Get the home location.
+
+        Returns:
+            list or tuple: [latitude, longitude] of home location
+                          or [0.0, 0.0] if not set
+        """
+        try:
+            # Try to load from configuration file
+            try:
+                with open(self.user_polygon_path, "r") as f:
+                    data = json.load(f)
+                    if "home" in data:
+                        return data["home"]
+            except Exception as e:
+                logger.warning(f"Error reading home location from file: {e}")
+
+            # Default location if not found
+            return [0.0, 0.0]
+        except Exception as e:
+            logger.error(f"Error getting home location: {e}")
+            return [0.0, 0.0]
+
+    def get_boundary_points(self):
+        """
+        Get the currently configured boundary points.
+
+        Returns:
+            list: The boundary points as a list of [lat, lng] coordinates,
+                 or empty list if not configured
+        """
+        try:
+            path_planner = self.get_path_planner()
+            if path_planner and hasattr(path_planner, "pattern_config"):
+                return path_planner.pattern_config.boundary_points
+
+            # Try to load from configuration file if not in path_planner
+            try:
+                with open(self.user_polygon_path, "r") as f:
+                    data = json.load(f)
+                    if "boundary" in data:
+                        return data["boundary"]
+            except Exception as e:
+                logger.warning(f"Error reading boundary from file: {e}")
+
+            return []
+        except Exception as e:
+            logger.error(f"Error getting boundary points: {e}")
+            return []
+
     def get_safety_status(self):
         """Retrieve safety status from the sensor interface.
 
@@ -942,6 +993,59 @@ class ResourceManager:
         if "blade" in self._resources:
             self._resources["blade"].disable()
         logger.info("All systems halted due to emergency stop.")
+
+    def get_gps_coordinates(self):
+        """Get current GPS coordinates."""
+        sensor_data = self.get_sensor_data()
+        if "gps" in sensor_data:
+            return sensor_data["gps"].get("latitude", 0.0), sensor_data["gps"].get(
+                "longitude", 0.0
+            )
+        return 0.0, 0.0
+
+    def set_home_location(self, location):
+        """
+        Set the home location and save it to configuration.
+
+        Args:
+            location: The location as [lat, lng] or {lat, lng}
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Normalize location format - handle both array and object formats
+            if isinstance(location, dict) and "lat" in location and "lng" in location:
+                normalized_location = [location["lat"], location["lng"]]
+            elif isinstance(location, (list, tuple)) and len(location) == 2:
+                normalized_location = location
+            else:
+                logger.error(f"Invalid location format: {location}")
+                return False
+
+            # Load existing data
+            data = {}
+            try:
+                with open(self.user_polygon_path, "r") as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Error reading config file, creating new: {e}")
+
+            # Update home location
+            data["home"] = normalized_location
+
+            # Save to configuration file
+            try:
+                with open(self.user_polygon_path, "w") as f:
+                    json.dump(data, f)
+                logger.info(f"Home location saved: {normalized_location}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to save home location: {e}")
+                return False
+        except Exception as e:
+            logger.error(f"Error setting home location: {e}")
+            return False
 
 
 def main():

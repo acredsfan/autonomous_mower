@@ -759,3 +759,91 @@ class PathPlanner:
             logger.error(f"Error loading model: {e}")
             self.q_table = {}
             self.step_count = 0
+
+    def _get_model_output_shapes(self):
+        """Get model output shapes for prediction."""
+        return [(1, 10)]  # Example output shape
+
+    def generate_pattern(
+        self, pattern_type_str: str, settings: dict
+    ) -> List[Tuple[float, float]]:
+        """
+        Generate a mowing pattern based on the given pattern type and settings.
+
+        Args:
+            pattern_type_str: String representation of the pattern type
+            settings: Dictionary of pattern settings (spacing, angle, overlap)
+
+        Returns:
+            List of (lat, lng) coordinates representing the path
+        """
+        try:
+            # Convert string pattern type to enum
+            try:
+                pattern_type = PatternType[pattern_type_str.upper()]
+            except (KeyError, AttributeError):
+                logger.error(f"Invalid pattern type: {pattern_type_str}")
+                return []
+
+            # Save original pattern config
+            original_config = self.pattern_config
+
+            # Create new pattern config with the requested settings
+            new_config = PatternConfig(
+                pattern_type=pattern_type,
+                spacing=settings.get("spacing", 0.5),
+                angle=settings.get("angle", 0),
+                overlap=settings.get("overlap", 0.1),
+                start_point=original_config.start_point,
+                boundary_points=original_config.boundary_points,
+            )
+
+            # Apply the new config
+            self.pattern_config = new_config
+
+            # Generate the path
+            path = self._generate_pattern_path()
+
+            # Store the path
+            self.current_path = path
+
+            # Restore original config
+            self.pattern_config = original_config
+
+            return path
+
+        except Exception as e:
+            logger.error(f"Error in generate_pattern: {e}")
+            return []
+
+    def set_boundary_points(self, boundary_points) -> bool:
+        """
+        Set the boundary points for the path planner.
+
+        Args:
+            boundary_points: List of boundary points [(lat, lon), ...]
+
+        Returns:
+            bool: True if boundary points are set successfully, False otherwise
+        """
+        try:
+            # Validate boundary points format
+            if not all(
+                isinstance(point, (tuple, list)) and len(point) == 2
+                for point in boundary_points
+            ):
+                logger.error("Invalid boundary points format")
+                return False
+
+            # Update boundary points in pattern config
+            self.pattern_config.boundary_points = [
+                (float(lat), float(lon)) for lat, lon in boundary_points
+            ]
+
+            logger.info(
+                f"Boundary points updated: {self.pattern_config.boundary_points}"
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error setting boundary points: {e}")
+            return False
