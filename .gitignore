@@ -116,3 +116,5 @@ run_mcp_server.sh
 MCP_SERVER.md
 .blackboxrules
 roo_models.json
+check_conflicts.ps1
+scripts/delete_dependabot_branches.cmd
