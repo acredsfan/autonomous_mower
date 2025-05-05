@@ -33,16 +33,19 @@ def start_web_interface():
 def start_robot_logic():
     from mower.main_controller import RobotController
     import threading
+
     robot_controller = RobotController(_resource_manager)
-    robot_thread = threading.Thread(
-        target=robot_controller.run_robot, daemon=True)
+    robot_thread = threading.Thread(target=robot_controller.run_robot, daemon=True)
     robot_thread.start()
 
 
 # --- Legacy API: Deprecated global resource getters (for compatibility) ---
 def _warn_deprecated(name):
-    warnings.warn(f"{name}() is deprecated. Use ResourceManager instead.",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        f"{name}() is deprecated. Use ResourceManager instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 
 def get_blade_controller():
@@ -178,6 +181,7 @@ if __name__ == "__main__":
         start_web_interface()
     except KeyboardInterrupt:
         import logging
+
         logging.info("Exiting")
     finally:
         cleanup_resources()
