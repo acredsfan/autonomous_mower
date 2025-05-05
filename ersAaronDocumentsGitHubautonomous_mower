@@ -1,0 +1,25 @@
+[33mcommit df6140938ef543a44c2922f03a8d209b6aed5cbd[m
+Author: acredsfan <65324894+acredsfan@users.noreply.github.com>
+Date:   Sun May 4 18:21:00 2025 -0400
+
+    Add unit tests for configuration management and UART communication
+    
+    - Created `test_config_management.py` to test loading, saving, and accessing configuration values.
+    - Implemented assertions to verify the functionality of `get_config` and `set_config`.
+    - Added file handling to save and load configuration from a JSON file.
+    - Created `test_uart.py` to test UART communication with the RP2040.
+    - Implemented commands to disable and enable real RC, and send servo commands with responses.
+
+[33mcommit 4c5aad3584137f0af987e0ac207e687b8e841edb[m
+Author: acredsfan <65324894+acredsfan@users.noreply.github.com>
+Date:   Sat May 3 23:27:22 2025 -0400
+
+    Refactor code structure for improved readability and maintainability
+
+[33mcommit 49f2df7b37640e831e43553d34eb4395833413b2[m
+Author: acredsfan <65324894+acredsfan@users.noreply.github.com>
+Date:   Tue Apr 22 17:24:24 2025 -0400
+
+    Switch from Leaflet to Google Maps in web UI.
+    
+    Replaced Leaflet with Google Maps for rendering and drawing areas and patterns. Adjusted styling, interactions, and event handlers to support Google Maps API. This change improves scalability and integrates additional mapping functionalities like editable polygons and customized markers.

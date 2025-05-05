@@ -515,57 +515,98 @@ class ResourceManager:
 
     def get_home_location(self):
         """
-        Get the currently configured home location.
-
+        Get the home location.
+        
         Returns:
-            tuple or list: The home location as [lat, lng] coordinates,
-                 or [0.0, 0.0] if not configured
+            list or tuple: [latitude, longitude] of home location
+                          or [0.0, 0.0] if not set
         """
         try:
-            if self.home_location_path.exists():
-                with open(self.home_location_path, "r") as f:
+            # Try to load from configuration file
+            try:
+                with open(self.user_polygon_path, "r") as f:
                     data = json.load(f)
-                    return data.get("location", [0.0, 0.0])
-            else:
-                logger.warning(
-                    f"Home location file not found: {self.home_location_path}"
-                )
-                return [0.0, 0.0]
-        except Exception as e:
-            logger.error(f"Error loading home location: {e}")
+                    if "home" in data:
+                        return data["home"]
+            except Exception as e:
+                logger.warning(f"Error reading home location from file: {e}")
+            
+            # Default location if not found
             return [0.0, 0.0]
+        except Exception as e:
+            logger.error(f"Error getting home location: {e}")
+            return [0.0, 0.0]
+    
+    def get_boundary_points(self):
+        """
+        Get the currently configured boundary points.
+        
+        Returns:
+            list: The boundary points as a list of [lat, lng] coordinates,
+                 or empty list if not configured
+        """
+        try:
+            path_planner = self.get_path_planner()
+            if path_planner and hasattr(path_planner, "pattern_config"):
+                return path_planner.pattern_config.boundary_points
+            
+            # Try to load from configuration file if not in path_planner
+            try:
+                with open(self.user_polygon_path, "r") as f:
+                    data = json.load(f)
+                    if "boundary" in data:
+                        return data["boundary"]
+            except Exception as e:
+                logger.warning(f"Error reading boundary from file: {e}")
+                
+            return []
+        except Exception as e:
+            logger.error(f"Error getting boundary points: {e}")
+            return []
 
     def set_home_location(self, location):
         """
-        Set and save the home location.
-
+        Set the home location and save it to configuration.
+        
         Args:
-            location: The location coordinates as [lat, lng] array or
-                {"lat": lat, "lng": lng} dict
-
+            location: The location as [lat, lng] or {lat, lng}
+            
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            # Process the input data which might be in different formats
-            if isinstance(location, dict):
-                lat = float(location.get("lat", 0.0))
-                lng = float(location.get("lng", 0.0))
-                coords = [lat, lng]
-            elif isinstance(location, (list, tuple)) and len(location) >= 2:
-                coords = [float(location[0]), float(location[1])]
+            # Normalize location format - handle both array and object formats
+            if isinstance(location, dict) and 'lat' in location and 'lng' in location:
+                normalized_location = [location['lat'], location['lng']]
+            elif isinstance(location, (list, tuple)) and len(location) == 2:
+                normalized_location = location
             else:
                 logger.error(f"Invalid location format: {location}")
                 return False
-
-            # Save the location to the config file
-            with open(self.home_location_path, "w") as f:
-                json.dump({"location": coords}, f, indent=2)
-
-            logger.info(f"Home location saved: {coords}")
-            return True
+                
+            # Load existing data
+            data = {}
+            try:
+                with open(self.user_polygon_path, "r") as f:
+                    data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Error reading config file, creating new: {e}")
+                
+            # Update home location
+            data["home"] = normalized_location
+            
+            # Save to configuration file
+            try:
+                with open(self.user_polygon_path, "w") as f:
+                    json.dump(data, f)
+                logger.info(f"Home location saved: {normalized_location}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to save home location: {e}")
+                return False
+                
         except Exception as e:
-            logger.error(f"Error saving home location: {e}")
+            logger.error(f"Error setting home location: {e}")
             return False
 
     def get_safety_status(self):
@@ -1036,8 +1077,7 @@ class ResourceManager:
             # Save mowing area boundary
             if params and "coordinates" in params:
                 path_planner = self.get_path_planner()
-                if path_planner:
-                    success = path_planner.set_boundary_points(params["coordinates"])
+                if path_planner:                    success = path_planner.set_boundary_points(params["coordinates"])
                     if success:
                         return {"status": "Boundary area saved successfully"}
                     return {"error": "Failed to save boundary area"}
@@ -1051,6 +1091,27 @@ class ResourceManager:
                     return {"status": "Home location saved successfully"}
                 return {"error": "Failed to save home location"}
             return {"error": "Missing location parameter"}
+        elif command == "generate_pattern":
+            # Generate mowing pattern
+            if params and "pattern_type" in params:
+                path_planner = self.get_path_planner()
+                if path_planner:
+                    try:
+                        pattern_type = params.get("pattern_type", "PARALLEL")
+                        settings = params.get("settings", {})
+                        pattern = path_planner.generate_pattern(pattern_type, settings)
+                        if pattern:
+                            return {
+                                "status": "Pattern generated successfully",
+                                "path": pattern,
+                                "coverage": 0.85  # Example coverage value
+                            }
+                        return {"error": "Failed to generate pattern"}
+                    except Exception as e:
+                        logger.error(f"Error generating pattern: {e}")
+                        return {"error": f"Error generating pattern: {str(e)}"}
+                return {"error": "Path planner not available"}
+            return {"error": "Missing pattern_type parameter"}
         elif command == "start_mowing":
             # Implement start mowing logic
             return {"status": "Mowing started"}

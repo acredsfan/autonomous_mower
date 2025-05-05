@@ -12,6 +12,57 @@ endblock %} {% block head_extra %}
     color: var(--primary);
     font-size: 24px;
   }
+
+  /* Pattern Selection Styles */
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+
+  .pattern-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pattern-option:hover {
+    border-color: #aaa;
+    transform: translateY(-2px);
+  }
+
+  .pattern-option.active {
+    border-color: var(--primary);
+    background-color: rgba(var(--primary-rgb), 0.1);
+  }
+
+  .pattern-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: #555;
+  }
+
+  .pattern-option.active .pattern-icon {
+    color: var(--primary);
+  }
+
+  .pattern-label {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .pattern-path {
+    stroke: #4285f4;
+    stroke-width: 2;
+    fill: none;
+    stroke-dasharray: 5, 5;
+  }
 </style>
 {% endblock %} {% block content %}
 <div class="dashboard-header">
@@ -116,6 +167,130 @@ endblock %} {% block head_extra %}
     </button>
   </div>
 </div>
+
+<div class="card mb-3">
+  <div class="card-header">
+    <h3>Pattern Configuration</h3>
+  </div>
+  <div class="card-body">
+    <div class="row mb-3">
+      <div class="col-md-12">
+        <h4>Select Mowing Pattern</h4>
+        <div class="pattern-selection">
+          <div class="pattern-grid">
+            <div class="pattern-option" data-pattern="PARALLEL">
+              <div class="pattern-icon">
+                <i class="fas fa-grip-lines"></i>
+              </div>
+              <div class="pattern-label">Parallel</div>
+            </div>
+            <div class="pattern-option" data-pattern="SPIRAL">
+              <div class="pattern-icon">
+                <i class="fas fa-circle-notch"></i>
+              </div>
+              <div class="pattern-label">Spiral</div>
+            </div>
+            <div class="pattern-option" data-pattern="ZIGZAG">
+              <div class="pattern-icon">
+                <i class="fas fa-exchange-alt"></i>
+              </div>
+              <div class="pattern-label">Zigzag</div>
+            </div>
+            <div class="pattern-option" data-pattern="CHECKERBOARD">
+              <div class="pattern-icon">
+                <i class="fas fa-th-large"></i>
+              </div>
+              <div class="pattern-label">Checkerboard</div>
+            </div>
+            <div class="pattern-option" data-pattern="DIAMOND">
+              <div class="pattern-icon">
+                <i class="fas fa-diamond"></i>
+              </div>
+              <div class="pattern-label">Diamond</div>
+            </div>
+            <div class="pattern-option" data-pattern="WAVES">
+              <div class="pattern-icon">
+                <i class="fas fa-water"></i>
+              </div>
+              <div class="pattern-label">Waves</div>
+            </div>
+            <div class="pattern-option" data-pattern="CONCENTRIC">
+              <div class="pattern-icon">
+                <i class="fas fa-bullseye"></i>
+              </div>
+              <div class="pattern-label">Concentric</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <label for="pattern-spacing">Spacing (meters):</label>
+        <input
+          type="range"
+          id="pattern-spacing"
+          class="form-range"
+          min="0.1"
+          max="2"
+          step="0.1"
+          value="0.5"
+        />
+        <div class="d-flex justify-content-between">
+          <small>0.1m</small>
+          <small id="spacing-value">0.5m</small>
+          <small>2.0m</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="pattern-angle">Angle (degrees):</label>
+        <input
+          type="range"
+          id="pattern-angle"
+          class="form-range"
+          min="0"
+          max="90"
+          step="5"
+          value="0"
+        />
+        <div class="d-flex justify-content-between">
+          <small>0°</small>
+          <small id="angle-value">0°</small>
+          <small>90°</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <label for="pattern-overlap">Overlap:</label>
+        <input
+          type="range"
+          id="pattern-overlap"
+          class="form-range"
+          min="0"
+          max="0.5"
+          step="0.05"
+          value="0.1"
+        />
+        <div class="d-flex justify-content-between">
+          <small>0%</small>
+          <small id="overlap-value">10%</small>
+          <small>50%</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-12">
+        <button id="generate-pattern-button" class="btn btn-primary" disabled>
+          <i class="fas fa-route"></i> Generate Pattern
+        </button>
+        <button id="clear-pattern-button" class="btn btn-secondary" disabled>
+          <i class="fas fa-eraser"></i> Clear Pattern
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %} {% block scripts %}
 <script>
   let map;
@@ -124,6 +299,10 @@ endblock %} {% block head_extra %}
   let homeMarker;
   let isPolygonComplete = false;
   let isSatelliteView = false;
+
+  // Global variables for pattern generation
+  let selectedPattern = null;
+  let patternPath = null;
 
   // Initialize map when DOM is loaded
   document.addEventListener("DOMContentLoaded", function () {
@@ -389,6 +568,130 @@ endblock %} {% block head_extra %}
         document.getElementById("confirm-home-button").disabled = true;
         document.getElementById("coordinatesCard").style.display = "none";
       });
+
+    // Pattern selection
+    document.querySelectorAll(".pattern-option").forEach((option) => {
+      option.addEventListener("click", function () {
+        // Remove active class from all options
+        document.querySelectorAll(".pattern-option").forEach((opt) => {
+          opt.classList.remove("active");
+        });
+
+        // Add active class to selected option
+        this.classList.add("active");
+
+        // Store selected pattern type
+        selectedPattern = this.getAttribute("data-pattern");
+        console.log("Selected pattern:", selectedPattern);
+
+        // Enable generate button if we have a boundary
+        if (isPolygonComplete) {
+          document.getElementById("generate-pattern-button").disabled = false;
+        }
+
+        showAlert(`Selected ${selectedPattern} pattern`, "info");
+      });
+    });
+
+    // Update slider value displays
+    document
+      .getElementById("pattern-spacing")
+      .addEventListener("input", function () {
+        document.getElementById("spacing-value").textContent = this.value + "m";
+      });
+
+    document
+      .getElementById("pattern-angle")
+      .addEventListener("input", function () {
+        document.getElementById("angle-value").textContent = this.value + "°";
+      });
+
+    document
+      .getElementById("pattern-overlap")
+      .addEventListener("input", function () {
+        const overlap = (this.value * 100).toFixed(0);
+        document.getElementById("overlap-value").textContent = overlap + "%";
+      });
+
+    // Generate pattern
+    document
+      .getElementById("generate-pattern-button")
+      .addEventListener("click", function () {
+        if (!selectedPattern) {
+          showAlert("Please select a mowing pattern first.", "warning");
+          return;
+        }
+
+        if (!isPolygonComplete) {
+          showAlert("Please define a mowing area first.", "warning");
+          return;
+        }
+
+        // Get pattern settings
+        const settings = {
+          spacing: parseFloat(document.getElementById("pattern-spacing").value),
+          angle: parseFloat(document.getElementById("pattern-angle").value),
+          overlap: parseFloat(document.getElementById("pattern-overlap").value),
+        };
+
+        // Show loading notification
+        showNotification(
+          "Generating Pattern",
+          `Creating ${selectedPattern} mowing pattern...`,
+          "info"
+        );
+
+        // Send request to generate pattern
+        axios
+          .post("/api/generate_pattern", {
+            pattern_type: selectedPattern,
+            settings: settings,
+          })
+          .then(function (response) {
+            console.log("Pattern generation response:", response.data);
+
+            if (response.data.success && response.data.path) {
+              // Clear any existing pattern
+              clearPattern();
+
+              // Draw the pattern on the map
+              drawPatternOnMap(response.data.path);
+
+              // Show success message
+              showNotification(
+                "Success",
+                `${selectedPattern} pattern generated successfully`,
+                "success"
+              );
+              document.getElementById("clear-pattern-button").disabled = false;
+            } else {
+              showAlert("Failed to generate pattern.", "danger");
+              showNotification("Error", "Failed to generate pattern", "danger");
+            }
+          })
+          .catch(function (error) {
+            console.error("Error generating pattern:", error);
+            showAlert(
+              "Error generating pattern: " +
+                (error.response?.data?.error || "Unknown error"),
+              "danger"
+            );
+            showNotification(
+              "Error",
+              "Failed to generate pattern: " +
+                (error.response?.data?.error || "Server error"),
+              "danger"
+            );
+          });
+      });
+
+    // Clear pattern
+    document
+      .getElementById("clear-pattern-button")
+      .addEventListener("click", function () {
+        clearPattern();
+        showAlert("Pattern cleared", "info");
+      });
   }
 
   function loadExistingArea() {
@@ -528,6 +831,96 @@ endblock %} {% block head_extra %}
       map.remove();
     }
   });
+
+  // Function to clear any existing pattern
+  function clearPattern() {
+    if (patternPath) {
+      patternPath.setMap(null);
+      patternPath = null;
+    }
+    document.getElementById("clear-pattern-button").disabled = true;
+  }
+
+  // Function to draw pattern on map
+  function drawPatternOnMap(pathCoordinates) {
+    // Convert path to Google Maps LatLng objects
+    const path = pathCoordinates.map((coord) => {
+      return new google.maps.LatLng(
+        typeof coord[0] === "number" ? coord[0] : parseFloat(coord[0]),
+        typeof coord[1] === "number" ? coord[1] : parseFloat(coord[1])
+      );
+    });
+
+    // Create a polyline for the path
+    patternPath = new google.maps.Polyline({
+      path: path,
+      geodesic: true,
+      strokeColor: "#4285F4",
+      strokeOpacity: 1.0,
+      strokeWeight: 3,
+      strokePattern: [
+        {
+          offset: "0",
+          repeat: "10px",
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 3,
+            fillOpacity: 1,
+            strokeWeight: 0,
+          },
+        },
+      ],
+    });
+
+    // Add the path to the map
+    patternPath.setMap(map);
+  }
+
+  // Show notification toast
+  function showNotification(title, message, type = "info") {
+    // Create toast container if it doesn't exist
+    if (!document.getElementById("toast-container")) {
+      const toastContainer = document.createElement("div");
+      toastContainer.id = "toast-container";
+      toastContainer.className =
+        "toast-container position-fixed bottom-0 end-0 p-3";
+      document.body.appendChild(toastContainer);
+    }
+
+    // Create a unique ID for this toast
+    const toastId = "toast-" + new Date().getTime();
+
+    // Create toast HTML
+    const toastHtml = `
+      <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-${type} text-white">
+          <strong class="me-auto">${title}</strong>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+          ${message}
+        </div>
+      </div>
+    `;
+
+    // Add toast to container
+    document.getElementById("toast-container").innerHTML += toastHtml;
+
+    // Initialize and show the toast
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+      autohide: true,
+      delay: 5000,
+    });
+    toast.show();
+
+    // Remove toast from DOM after it's hidden
+    toastElement.addEventListener("hidden.bs.toast", function () {
+      toastElement.remove();
+    });
+  }
+
+  // Global variables for pattern generation
 </script>
 
 <style>
@@ -600,6 +993,38 @@ endblock %} {% block head_extra %}
   .camera-status {
     font-size: 1.2rem;
     text-align: center;
+  }
+
+  /* Pattern configuration styles */
+  .pattern-selection {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+  }
+
+  .pattern-option {
+    background-color: var(--light);
+    border: 1px solid var(--primary);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+
+  .pattern-option:hover {
+    background-color: var(--primary);
+    color: var(--light);
+  }
+
+  .pattern-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
   }
 
   /* Responsive adjustments */

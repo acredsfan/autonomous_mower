@@ -594,12 +594,16 @@ def create_app(mower):
                 "generate_pattern": lambda params: {
                     "success": True,
                     "path": (
-                        mower.resource_manager.get_path_planner().generate_pattern(
-                            params.get("pattern_type", "PARALLEL"),
-                            params.get("settings", {}),
-                        )
+                        mower.resource_manager.execute_command(
+                            "generate_pattern",
+                            {
+                                "pattern_type": params.get("pattern_type", "PARALLEL"),
+                                "settings": params.get("settings", {}),
+                            },
+                        ).get("path", [])
                     ),
                     "coverage": 0.85,  # Example coverage value
+                    "message": "Pattern generated successfully",
                 },
                 "save_area": lambda params: (
                     {"success": True, "message": "Boundary saved successfully"}
@@ -634,6 +638,14 @@ def create_app(mower):
                         "error": "Failed to save no-go zones",
                     }
                 ),
+                "boundary_points": lambda params: {
+                    "success": True,
+                    "coordinates": mower.resource_manager.get_boundary_points(),
+                },
+                "home_location": lambda params: {
+                    "success": True,
+                    "location": mower.resource_manager.get_home_location(),
+                },
                 "get_area": lambda params: {
                     "success": True,
                     "data": {

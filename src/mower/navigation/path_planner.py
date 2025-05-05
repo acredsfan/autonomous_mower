@@ -714,17 +714,60 @@ class PathPlanner:
             self.q_table = {}
             self.step_count = 0
 
-    def set_boundary_points(self, boundary_points: List) -> bool:
+    def generate_pattern(
+        self, pattern_type_str: str, settings: dict
+    ) -> List[Tuple[float, float]]:
         """
-        Set the boundary points from UI input.
+        Generate a mowing pattern based on the given pattern type and settings.
 
         Args:
-            boundary_points: List of points defining the boundary
-                (can be dict objects from JSON)
+            pattern_type_str: String representation of the pattern type
+            settings: Dictionary of pattern settings (spacing, angle, overlap)
 
         Returns:
-            bool: True if boundary points were set successfully, False otherwise
+            List of (lat, lng) coordinates representing the path
         """
+        try:
+            # Convert string pattern type to enum
+            try:
+                pattern_type = PatternType[pattern_type_str.upper()]
+            except (KeyError, AttributeError):
+                logger.error(f"Invalid pattern type: {pattern_type_str}")
+                return []
+
+            # Save original pattern config
+            original_config = self.pattern_config
+
+            # Create new pattern config with the requested settings
+            new_config = PatternConfig(
+                pattern_type=pattern_type,
+                spacing=settings.get("spacing", 0.5),
+                angle=settings.get("angle", 0),
+                overlap=settings.get("overlap", 0.1),
+                start_point=original_config.start_point,
+                boundary_points=original_config.boundary_points,
+            )
+
+            # Apply the new config
+            self.pattern_config = new_config
+
+            # Generate the path
+            path = self._generate_pattern_path()
+
+            # Store the path
+            self.current_path = path
+
+            # Restore original config
+            self.pattern_config = original_config
+
+            return path
+
+        except Exception as e:
+            logger.error(f"Error in generate_pattern: {e}")
+            return []
+
+    def set_boundary_points(self, boundary_points) -> bool:
+        """Set the boundary points for the mowing area."""
         try:
             # Process the input data which might be in different formats
             processed_points = []
