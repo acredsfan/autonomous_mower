@@ -61,6 +61,7 @@ from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.ui.web_ui import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.config_management.config_manager import get_config
+from mower.state_management.states import MowerState
 
 # Load environment variables
 load_dotenv()
