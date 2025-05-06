@@ -700,73 +700,82 @@ class ResourceManager:
             return (0.0, 0.0)
 
     def get_sensor_data(self):
-        """Get all sensor data for the web UI and diagnostics.
-
-        Returns:
-            dict: Sensor data including IMU, GPS, environment sensors, etc.
+        """
+        Get all sensor data from various hardware sensors and collate into a dictionary.
+        Returns a standardized dictionary of sensor values that can be sent to the UI.
         """
         try:
-            # Initialize an empty dictionary to store all sensor data
             sensor_data = {}
 
             # Get IMU data if available
-            imu = self.get_imu_sensor()
-            if imu:
-                try:
+            try:
+                imu = self._resources.get("imu")
+                if imu:
                     sensor_data["imu"] = {
                         "heading": (
                             imu.get_heading() if hasattr(imu, "get_heading") else 0.0
                         ),
-                        "roll": (imu.get_roll() if hasattr(imu, "get_roll") else 0.0),
-                        "pitch": (
-                            imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0
-                        ),
-                        "calibration": (
-                            imu.get_calibration()
-                            if hasattr(imu, "get_calibration")
-                            else "Unknown"
-                        ),
+                        "roll": imu.get_roll() if hasattr(imu, "get_roll") else 0.0,
+                        "pitch": imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0,
                         "safety_status": (
                             imu.get_safety_status()
                             if hasattr(imu, "get_safety_status")
                             else {}
                         ),
                     }
-                except Exception as e:
-                    logger.warning(f"Error getting IMU data: {e}")
-                    sensor_data["imu"] = {}
-            else:
-                sensor_data["imu"] = {}
-
-            # Get GPS data
-            try:
-                gps = self.get_gps()
-                location = self.get_gps_location()
-                sensor_data["gps"] = {
-                    "latitude": location[0],
-                    "longitude": location[1],
-                    # Simple check if we have a valid fix
-                    "fix": location != (0.0, 0.0),
-                    "satellites": 0,  # Default value
-                    # Default value (high dilution of precision)
-                    "hdop": 99.9,
+                else:
+                    sensor_data["imu"] = {
+                        "heading": 0.0,
+                        "roll": 0.0,
+                        "pitch": 0.0,
+                        "safety_status": {},
+                    }
+            except Exception as e:
+                logger.warning(f"Error getting IMU data: {e}")
+                sensor_data["imu"] = {
+                    "heading": 0.0,
+                    "roll": 0.0,
+                    "pitch": 0.0,
+                    "safety_status": {},
                 }
 
-                # Try to get more detailed GPS data if available
-                if gps and hasattr(gps, "get_info"):
-                    gps_info = gps.get_info()
-                    if gps_info:
-                        sensor_data["gps"].update(gps_info)
+            # Get GPS data if available
+            try:
+                gps = self._resources.get("gps")
+                if gps and hasattr(gps, "get_position"):
+                    position = gps.get_position()
+                    sensor_data["gps"] = position
+                else:
+                    sensor_data["gps"] = {
+                        "latitude": 0.0,
+                        "longitude": 0.0,
+                        "fix": False,
+                    }
             except Exception as e:
                 logger.warning(f"Error getting GPS data: {e}")
                 sensor_data["gps"] = {"latitude": 0.0, "longitude": 0.0, "fix": False}
 
             # Get motor data if available
             try:
-                motor_driver = self.get_robohat_driver()
-                if motor_driver and hasattr(motor_driver, "get_status"):
-                    motor_status = motor_driver.get_status()
-                    sensor_data["motors"] = motor_status
+                motors = self._resources.get("motors")
+                if motors:
+                    sensor_data["motors"] = {
+                        "leftSpeed": (
+                            motors.get_left_speed()
+                            if hasattr(motors, "get_left_speed")
+                            else 0.0
+                        ),
+                        "rightSpeed": (
+                            motors.get_right_speed()
+                            if hasattr(motors, "get_right_speed")
+                            else 0.0
+                        ),
+                        "bladeSpeed": (
+                            motors.get_blade_speed()
+                            if hasattr(motors, "get_blade_speed")
+                            else 0.0
+                        ),
+                    }
                 else:
                     sensor_data["motors"] = {
                         "leftSpeed": 0.0,
@@ -823,10 +832,10 @@ class ResourceManager:
                     distances = tof_sensors.get_distances()
                     sensor_data["tof"] = distances
                 else:
-                    sensor_data["tof"] = {"left": 0, "right": 0, "front": 0}
+                    sensor_data["tof"] = {"left": 0, "right": 0}
             except Exception as e:
                 logger.warning(f"Error getting ToF sensor data: {e}")
-                sensor_data["tof"] = {"left": 0, "right": 0, "front": 0}
+                sensor_data["tof"] = {"left": 0, "right": 0}
 
             return sensor_data
         except Exception as e:
@@ -837,7 +846,7 @@ class ResourceManager:
                 "gps": {"latitude": 0.0, "longitude": 0.0, "fix": False},
                 "motors": {"leftSpeed": 0.0, "rightSpeed": 0.0, "bladeSpeed": 0.0},
                 "environment": {"temperature": 0.0, "humidity": 0.0, "pressure": 0.0},
-                "tof": {"left": 0, "right": 0, "front": 0},
+                "tof": {"left": 0, "right": 0},
             }
 
     # Interpreter stubs for camera obstacle detection

@@ -74,7 +74,7 @@
 ## Diagnostics Tab
 
 - [✅] Diagnostics page loads correctly
-- [❌] Sensor data displays and updates
+- [✅] Sensor data displays and updates
 - [❌] System logs can be viewed
 - [❌] Hardware status information is shown
 - [❌] Error history is available

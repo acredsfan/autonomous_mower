@@ -5,13 +5,27 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from flask_babel import Babel
 import os
+import platform
 
 from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
+from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
+
+# Check if we should use simulation mode (on Windows or via env variable)
+import platform
+import os
+
+USE_SIMULATION = platform.system() == "Windows" or os.environ.get(
+    "USE_SIMULATION", ""
+).lower() in ("true", "1", "yes")
+if USE_SIMULATION:
+    logger.info("Running in simulation mode - using simulated sensor data")
+else:
+    logger.info("Running in hardware mode - using real sensor data")
 
 
 def create_app(mower):
@@ -477,13 +491,32 @@ def create_app(mower):
 
     def handle_disconnect():
         """Handle client disconnection."""
-        logger.info("Client disconnected from web interface")
+        logger.info("Client disconnected from web interface") @ socketio.on(
+            "request_data"
+        )
 
-    @socketio.on("request_data")
     def handle_data_request(data):
         """Handle data request from client."""
         try:
             data_type = data.get("type", "")
+
+            # For simulation mode, generate simulated data when needed
+            if USE_SIMULATION:
+                sim_data = get_simulated_sensor_data()
+
+                if data_type == "safety":
+                    emit("safety_status", sim_data["imu"]["safety_status"])
+                    return
+                elif data_type == "sensor_data":
+                    emit("sensor_data", sim_data)
+                    return
+                elif data_type == "all":
+                    emit("status_update", mower.get_status())
+                    emit("safety_status", sim_data["imu"]["safety_status"])
+                    emit("sensor_data", sim_data)
+                    return
+
+            # Standard data handling when not in simulation mode
             if data_type == "safety":
                 emit("safety_status", mower.get_safety_status())
             elif data_type == "sensor_data":
@@ -503,9 +536,9 @@ def create_app(mower):
             elif data_type == "calibration_status":
                 # Get calibration status
                 calibration_status = {
-                    "imu": "Uncalibrated",  # Should come from actual system status
-                    "blade": "Uncalibrated",  # Should come from actual system status
-                    "gps": "Not Set",  # Should come from actual system status
+                    "imu": "Uncalibrated" if not USE_SIMULATION else "Simulated",
+                    "blade": "Uncalibrated" if not USE_SIMULATION else "Simulated",
+                    "gps": "Not Set" if not USE_SIMULATION else "Simulated",
                 }
                 emit("calibration_update", calibration_status)
             elif data_type == "all":
@@ -604,21 +637,31 @@ def create_app(mower):
             "Error received from client - Type: {}, Message: {}".format(
                 error_type, error_msg
             )
-        )
+        )  # Background task for sending updates
 
-    # Background task for sending updates
     def send_updates():
         """Send periodic updates to connected clients."""
         while True:
             try:
                 socketio.sleep(0.1)  # 100ms interval
-                status = mower.get_status()
-                safety_status = mower.get_safety_status()
-                sensor_data = mower.get_sensor_data()
 
+                # Get status data
+                status = mower.get_status()
+
+                # Get safety status - use real or simulated based on mode
+                if USE_SIMULATION:
+                    sim_data = get_simulated_sensor_data()
+                    safety_status = sim_data["imu"]["safety_status"]
+                    sensor_data = sim_data
+                else:
+                    safety_status = mower.get_safety_status()
+                    sensor_data = mower.get_sensor_data()
+
+                # Send all updates to connected clients
                 socketio.emit("status_update", status)
                 socketio.emit("safety_status", safety_status)
                 socketio.emit("sensor_data", sensor_data)
+
             except Exception as e:
                 logger.error(f"Error in update loop: {e}")
                 socketio.sleep(1)  # Wait longer on error
