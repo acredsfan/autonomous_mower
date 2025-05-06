@@ -473,9 +473,8 @@ def create_app(mower):
             path_planner = mower.resource_manager.get_path_planner()
             emit("path_update", path_planner.current_path)
         except Exception as e:
-            logger.error(f"Error in handle_connect: {e}")
+            logger.error(f"Error in handle_connect: {e}") @ socketio.on("disconnect")
 
-    @socketio.on("disconnect")
     def handle_disconnect():
         """Handle client disconnection."""
         logger.info("Client disconnected from web interface")
@@ -484,9 +483,32 @@ def create_app(mower):
     def handle_data_request(data):
         """Handle data request from client."""
         try:
-            if data.get("type") == "safety":
+            data_type = data.get("type", "")
+            if data_type == "safety":
                 emit("safety_status", mower.get_safety_status())
-            elif data.get("type") == "all":
+            elif data_type == "sensor_data":
+                emit("sensor_data", mower.get_sensor_data())
+            elif data_type == "system_info":
+                # Get system information like uptime, CPU temperature, etc.
+                system_info = {
+                    "softwareVersion": "1.0.0",
+                    "hardwareModel": "Autonomous Mower v1",
+                    "uptime": "0d 0h 0m",  # Should be calculated from system uptime
+                    "cpuTemp": "45",  # Should come from actual system monitoring
+                    "cpuUsage": "10",  # Should come from actual system monitoring
+                    "memoryUsage": "25",  # Should come from actual system monitoring
+                    "diskUsage": "30",  # Should come from actual system monitoring
+                }
+                emit("system_info", system_info)
+            elif data_type == "calibration_status":
+                # Get calibration status
+                calibration_status = {
+                    "imu": "Uncalibrated",  # Should come from actual system status
+                    "blade": "Uncalibrated",  # Should come from actual system status
+                    "gps": "Not Set",  # Should come from actual system status
+                }
+                emit("calibration_update", calibration_status)
+            elif data_type == "all":
                 emit("status_update", mower.get_status())
                 emit("safety_status", mower.get_safety_status())
                 emit("sensor_data", mower.get_sensor_data())
@@ -511,6 +533,40 @@ def create_app(mower):
                         "message": "Emergency stop activated",
                     },
                 )
+            elif command == "save_settings":
+                # Special case for save_settings using the same logic as the REST endpoint
+                try:
+                    settings = params.get("settings", {})
+                    mowing = settings.get("mowing", {})
+
+                    path_planner = mower.resource_manager.get_path_planner()
+
+                    # Update pattern planner settings
+                    if "pattern" in mowing:
+                        path_planner.pattern_config.pattern_type = PatternType[
+                            mowing["pattern"]
+                        ]
+                    if "spacing" in mowing:
+                        path_planner.pattern_config.spacing = float(mowing["spacing"])
+                    if "angle" in mowing:
+                        path_planner.pattern_config.angle = float(mowing["angle"])
+                    if "overlap" in mowing:
+                        path_planner.pattern_config.overlap = float(mowing["overlap"])
+
+                    emit(
+                        "command_response",
+                        {
+                            "command": command,
+                            "success": True,
+                            "message": "Settings saved successfully",
+                        },
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to save settings: {e}")
+                    emit(
+                        "command_response",
+                        {"command": command, "success": False, "error": str(e)},
+                    )
             else:
                 # Handle other commands...
                 result = mower.execute_command(command, params)

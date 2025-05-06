@@ -1,978 +1,1220 @@
-{% extends "base.html" %}
-
-{% block title %}Diagnostics - Autonomous Mower{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Diagnostics - Autonomous Mower{%
+endblock %} {% block content %}
 <div class="dashboard-header">
-    <h1>System Diagnostics</h1>
-    <div class="d-flex align-center">
-        <span class="status-indicator" id="connStatusIndicator"></span>
-        <span id="connectionLabel">Connection Status</span>
-    </div>
+  <h1>System Diagnostics</h1>
+  <div class="d-flex align-center">
+    <span class="status-indicator" id="connStatusIndicator"></span>
+    <span id="connectionLabel">Connection Status</span>
+  </div>
 </div>
 
 <div class="diagnostics-layout">
-    <!-- Left column - Hardware Tests -->
-    <div class="diagnostics-column">
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Hardware Tests</h3>
-            </div>
-            <div class="card-body">
-                <div class="test-buttons">
-                    <button class="btn test-btn" id="testAllBtn" data-test="all">
-                        <i class="fas fa-check-circle"></i> Run All Tests
-                    </button>
-                    <button class="btn test-btn" id="testCameraBtn" data-test="camera">
-                        <i class="fas fa-camera"></i> Camera Test
-                    </button>
-                    <button class="btn test-btn" id="testMotorsBtn" data-test="motors">
-                        <i class="fas fa-cog"></i> Motors Test
-                    </button>
-                    <button class="btn test-btn" id="testBladeBtn" data-test="blade">
-                        <i class="fas fa-cut"></i> Blade Test
-                    </button>
-                    <button class="btn test-btn" id="testGPSBtn" data-test="gps">
-                        <i class="fas fa-satellite"></i> GPS Test
-                    </button>
-                    <button class="btn test-btn" id="testIMUBtn" data-test="imu">
-                        <i class="fas fa-compass"></i> IMU Test
-                    </button>
-                    <button class="btn test-btn" id="testSensorsBtn" data-test="sensors">
-                        <i class="fas fa-microchip"></i> Sensors Test
-                    </button>
-                    <button class="btn test-btn" id="testPowerBtn" data-test="power">
-                        <i class="fas fa-battery-three-quarters"></i> Power Test
-                    </button>
-                </div>
-            </div>
+  <!-- Left column - Hardware Tests -->
+  <div class="diagnostics-column">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Hardware Tests</h3>
+      </div>
+      <div class="card-body">
+        <div class="test-buttons">
+          <button class="btn test-btn" id="testAllBtn" data-test="all">
+            <i class="fas fa-check-circle"></i> Run All Tests
+          </button>
+          <button class="btn test-btn" id="testCameraBtn" data-test="camera">
+            <i class="fas fa-camera"></i> Camera Test
+          </button>
+          <button class="btn test-btn" id="testMotorsBtn" data-test="motors">
+            <i class="fas fa-cog"></i> Motors Test
+          </button>
+          <button class="btn test-btn" id="testBladeBtn" data-test="blade">
+            <i class="fas fa-cut"></i> Blade Test
+          </button>
+          <button class="btn test-btn" id="testGPSBtn" data-test="gps">
+            <i class="fas fa-satellite"></i> GPS Test
+          </button>
+          <button class="btn test-btn" id="testIMUBtn" data-test="imu">
+            <i class="fas fa-compass"></i> IMU Test
+          </button>
+          <button class="btn test-btn" id="testSensorsBtn" data-test="sensors">
+            <i class="fas fa-microchip"></i> Sensors Test
+          </button>
+          <button class="btn test-btn" id="testPowerBtn" data-test="power">
+            <i class="fas fa-battery-three-quarters"></i> Power Test
+          </button>
         </div>
-        
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>System Information</h3>
-            </div>
-            <div class="card-body">
-                <div class="system-info">
-                    <div class="info-item">
-                        <div class="info-label">Software Version:</div>
-                        <div class="info-value" id="softwareVersion">1.0.0</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Hardware Model:</div>
-                        <div class="info-value" id="hardwareModel">Autonomous Mower v1</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Uptime:</div>
-                        <div class="info-value" id="uptime">0d 0h 0m</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">CPU Temperature:</div>
-                        <div class="info-value" id="cpuTemp">0°C</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">CPU Usage:</div>
-                        <div class="info-value" id="cpuUsage">0%</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Memory Usage:</div>
-                        <div class="info-value" id="memoryUsage">0%</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Disk Usage:</div>
-                        <div class="info-value" id="diskUsage">0%</div>
-                    </div>
-                    <div class="mt-3">
-                        <h6>GPS Status</h6>
-                        <div class="d-flex justify-content-between">
-                            <span>Fix Quality:</span>
-                            <span id="gps-fix-quality" class="text-muted">Loading...</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Satellites:</span>
-                            <span id="gps-satellites" class="text-muted">Loading...</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>HDOP:</span>
-                            <span id="gps-hdop" class="text-muted">Loading...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    
-    <!-- Right column - Test Results & Calibration -->
-    <div class="diagnostics-column">
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Test Results</h3>
-                <div class="card-header-actions">
-                    <button class="btn btn-sm" id="clearResultsBtn">
-                        <i class="fas fa-trash-alt"></i> Clear
-                    </button>
-                </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>System Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="system-info">
+          <div class="info-item">
+            <div class="info-label">Software Version:</div>
+            <div class="info-value" id="softwareVersion">1.0.0</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Hardware Model:</div>
+            <div class="info-value" id="hardwareModel">Autonomous Mower v1</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Uptime:</div>
+            <div class="info-value" id="uptime">0d 0h 0m</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">CPU Temperature:</div>
+            <div class="info-value" id="cpuTemp">0°C</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">CPU Usage:</div>
+            <div class="info-value" id="cpuUsage">0%</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Memory Usage:</div>
+            <div class="info-value" id="memoryUsage">0%</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Disk Usage:</div>
+            <div class="info-value" id="diskUsage">0%</div>
+          </div>
+          <div class="mt-3">
+            <h6>GPS Status</h6>
+            <div class="d-flex justify-content-between">
+              <span>Fix Quality:</span>
+              <span id="gps-fix-quality" class="text-muted">Loading...</span>
             </div>
-            <div class="card-body">
-                <div class="test-results-container">
-                    <div id="testResults" class="test-results">
-                        <div class="test-placeholder">Run a test to see results here.</div>
-                    </div>
-                </div>
+            <div class="d-flex justify-content-between">
+              <span>Satellites:</span>
+              <span id="gps-satellites" class="text-muted">Loading...</span>
             </div>
+            <div class="d-flex justify-content-between">
+              <span>HDOP:</span>
+              <span id="gps-hdop" class="text-muted">Loading...</span>
+            </div>
+          </div>
         </div>
-        
-        <div class="card mb-3">
-            <div class="card-header">
-                <h3>Calibration</h3>
-            </div>
-            <div class="card-body">
-                <div class="calibration-options">
-                    <div class="calibration-item">
-                        <div class="calibration-header">
-                            <h4>IMU Calibration</h4>
-                        </div>
-                        <div class="calibration-content">
-                            <p>Calibrate the Inertial Measurement Unit (gyroscope, accelerometer, magnetometer).</p>
-                            <div class="calibration-status">
-                                <span class="status-label">Status:</span>
-                                <span class="status-value" id="imuCalibrationStatus">Uncalibrated</span>
-                            </div>
-                            <button class="btn btn-primary" id="calibrateIMUBtn">
-                                <i class="fas fa-compass"></i> Calibrate IMU
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Add Safety Monitoring Section -->
-                    <div class="calibration-item">
-                        <div class="calibration-header">
-                            <h4>Safety Monitoring</h4>
-                        </div>
-                        <div class="calibration-content">
-                            <p>Real-time safety status from IMU sensor.</p>
-                            <div class="safety-status">
-                                <div class="status-row">
-                                    <span class="status-label">Overall Safety:</span>
-                                    <span class="status-value" id="overallSafetyStatus">
-                                        <i class="fas fa-check-circle text-success"></i> Safe
-                                    </span>
-                                </div>
-                                <div class="status-row">
-                                    <span class="status-label">Tilt Status:</span>
-                                    <span class="status-value" id="tiltStatus">
-                                        <i class="fas fa-check-circle text-success"></i> Normal
-                                    </span>
-                                </div>
-                                <div class="status-row">
-                                    <span class="status-label">Impact Detection:</span>
-                                    <span class="status-value" id="impactStatus">
-                                        <i class="fas fa-check-circle text-success"></i> No Impact
-                                    </span>
-                                </div>
-                                <div class="status-row">
-                                    <span class="status-label">Acceleration:</span>
-                                    <span class="status-value" id="accelerationStatus">
-                                        <i class="fas fa-check-circle text-success"></i> Normal
-                                    </span>
-                                </div>
-                                <div class="status-row">
-                                    <span class="status-label">Last Event:</span>
-                                    <span class="status-value" id="lastSafetyEvent">None</span>
-                                </div>
-                            </div>
-                            <div class="safety-thresholds mt-3">
-                                <h5>Safety Thresholds</h5>
-                                <div class="threshold-row">
-                                    <span class="threshold-label">Max Tilt:</span>
-                                    <span class="threshold-value" id="maxTiltThreshold">45°</span>
-                                </div>
-                                <div class="threshold-row">
-                                    <span class="threshold-label">Impact Threshold:</span>
-                                    <span class="threshold-value" id="impactThreshold">2.0 G</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="calibration-item">
-                        <div class="calibration-header">
-                            <h4>Blade Motor Calibration</h4>
-                        </div>
-                        <div class="calibration-content">
-                            <p>Calibrate the blade motor for optimal speed control.</p>
-                            <div class="calibration-status">
-                                <span class="status-label">Status:</span>
-                                <span class="status-value" id="bladeCalibrationStatus">Uncalibrated</span>
-                            </div>
-                            <button class="btn btn-primary" id="calibrateBladeBtn">
-                                <i class="fas fa-cut"></i> Calibrate Blade
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="calibration-item">
-                        <div class="calibration-header">
-                            <h4>GPS Baseline</h4>
-                        </div>
-                        <div class="calibration-content">
-                            <p>Set the GPS baseline for improved positioning accuracy.</p>
-                            <div class="calibration-status">
-                                <span class="status-label">Status:</span>
-                                <span class="status-value" id="gpsCalibrationStatus">Not Set</span>
-                            </div>
-                            <button class="btn btn-primary" id="calibrateGPSBtn">
-                                <i class="fas fa-satellite"></i> Set GPS Baseline
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- Add Sensor Data Card -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Sensor Readings</h3>
+        <div class="card-header-actions">
+          <button class="btn btn-sm refresh-btn" id="refreshSensorsBtn">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="sensor-readings">
+          <div class="sensor-group">
+            <h5>Environmental</h5>
+            <div class="sensor-item">
+              <div class="sensor-label">Temperature:</div>
+              <div class="sensor-value" id="sensor_temperature">--°C</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Humidity:</div>
+              <div class="sensor-value" id="sensor_humidity">--%</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Pressure:</div>
+              <div class="sensor-value" id="sensor_pressure">-- hPa</div>
+            </div>
+          </div>
+
+          <div class="sensor-group">
+            <h5>IMU Data</h5>
+            <div class="sensor-item">
+              <div class="sensor-label">Heading:</div>
+              <div class="sensor-value" id="sensor_heading">--°</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Roll:</div>
+              <div class="sensor-value" id="sensor_roll">--°</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Pitch:</div>
+              <div class="sensor-value" id="sensor_pitch">--°</div>
+            </div>
+          </div>
+
+          <div class="sensor-group">
+            <h5>Distance Sensors</h5>
+            <div class="sensor-item">
+              <div class="sensor-label">Left Distance:</div>
+              <div class="sensor-value" id="sensor_leftDistance">-- cm</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Right Distance:</div>
+              <div class="sensor-value" id="sensor_rightDistance">-- cm</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Front Distance:</div>
+              <div class="sensor-value" id="sensor_frontDistance">-- cm</div>
+            </div>
+          </div>
+
+          <div class="sensor-group">
+            <h5>Motor Status</h5>
+            <div class="sensor-item">
+              <div class="sensor-label">Left Motor:</div>
+              <div class="sensor-value" id="motor_left">--%</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Right Motor:</div>
+              <div class="sensor-value" id="motor_right">--%</div>
+            </div>
+            <div class="sensor-item">
+              <div class="sensor-label">Blade Motor:</div>
+              <div class="sensor-value" id="motor_blade">--%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column - Test Results & Calibration -->
+  <div class="diagnostics-column">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Test Results</h3>
+        <div class="card-header-actions">
+          <button class="btn btn-sm" id="clearResultsBtn">
+            <i class="fas fa-trash-alt"></i> Clear
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="test-results-container">
+          <div id="testResults" class="test-results">
+            <div class="test-placeholder">Run a test to see results here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3>Calibration</h3>
+      </div>
+      <div class="card-body">
+        <div class="calibration-options">
+          <div class="calibration-item">
+            <div class="calibration-header">
+              <h4>IMU Calibration</h4>
+            </div>
+            <div class="calibration-content">
+              <p>
+                Calibrate the Inertial Measurement Unit (gyroscope,
+                accelerometer, magnetometer).
+              </p>
+              <div class="calibration-status">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="imuCalibrationStatus"
+                  >Uncalibrated</span
+                >
+              </div>
+              <button class="btn btn-primary" id="calibrateIMUBtn">
+                <i class="fas fa-compass"></i> Calibrate IMU
+              </button>
+            </div>
+          </div>
+
+          <!-- Add Safety Monitoring Section -->
+          <div class="calibration-item">
+            <div class="calibration-header">
+              <h4>Safety Monitoring</h4>
+            </div>
+            <div class="calibration-content">
+              <p>Real-time safety status from IMU sensor.</p>
+              <div class="safety-status">
+                <div class="status-row">
+                  <span class="status-label">Overall Safety:</span>
+                  <span class="status-value" id="overallSafetyStatus">
+                    <i class="fas fa-check-circle text-success"></i> Safe
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Tilt Status:</span>
+                  <span class="status-value" id="tiltStatus">
+                    <i class="fas fa-check-circle text-success"></i> Normal
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Impact Detection:</span>
+                  <span class="status-value" id="impactStatus">
+                    <i class="fas fa-check-circle text-success"></i> No Impact
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Acceleration:</span>
+                  <span class="status-value" id="accelerationStatus">
+                    <i class="fas fa-check-circle text-success"></i> Normal
+                  </span>
+                </div>
+                <div class="status-row">
+                  <span class="status-label">Last Event:</span>
+                  <span class="status-value" id="lastSafetyEvent">None</span>
+                </div>
+              </div>
+              <div class="safety-thresholds mt-3">
+                <h5>Safety Thresholds</h5>
+                <div class="threshold-row">
+                  <span class="threshold-label">Max Tilt:</span>
+                  <span class="threshold-value" id="maxTiltThreshold">45°</span>
+                </div>
+                <div class="threshold-row">
+                  <span class="threshold-label">Impact Threshold:</span>
+                  <span class="threshold-value" id="impactThreshold"
+                    >2.0 G</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="calibration-item">
+            <div class="calibration-header">
+              <h4>Blade Motor Calibration</h4>
+            </div>
+            <div class="calibration-content">
+              <p>Calibrate the blade motor for optimal speed control.</p>
+              <div class="calibration-status">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="bladeCalibrationStatus"
+                  >Uncalibrated</span
+                >
+              </div>
+              <button class="btn btn-primary" id="calibrateBladeBtn">
+                <i class="fas fa-cut"></i> Calibrate Blade
+              </button>
+            </div>
+          </div>
+
+          <div class="calibration-item">
+            <div class="calibration-header">
+              <h4>GPS Baseline</h4>
+            </div>
+            <div class="calibration-content">
+              <p>Set the GPS baseline for improved positioning accuracy.</p>
+              <div class="calibration-status">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="gpsCalibrationStatus"
+                  >Not Set</span
+                >
+              </div>
+              <button class="btn btn-primary" id="calibrateGPSBtn">
+                <i class="fas fa-satellite"></i> Set GPS Baseline
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Calibration Modal -->
 <div class="modal" id="calibrationModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="calibrationModalTitle">Calibration</h2>
-            <span class="close-modal" id="closeCalibrationModal">&times;</span>
-        </div>
-        <div class="modal-body" id="calibrationModalBody">
-            <!-- Content will be populated dynamically -->
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelCalibrationBtn">Cancel</button>
-            <button class="btn btn-primary" id="startCalibrationBtn">Start Calibration</button>
-        </div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="calibrationModalTitle">Calibration</h2>
+      <span class="close-modal" id="closeCalibrationModal">&times;</span>
     </div>
+    <div class="modal-body" id="calibrationModalBody">
+      <!-- Content will be populated dynamically -->
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="cancelCalibrationBtn">
+        Cancel
+      </button>
+      <button class="btn btn-primary" id="startCalibrationBtn">
+        Start Calibration
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Camera Test Modal -->
 <div class="modal" id="cameraTestModal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <h2>Camera Test</h2>
-            <span class="close-modal" id="closeCameraModal">&times;</span>
-        </div>
-        <div class="modal-body">
-            <div class="camera-test-container">
-                <div class="camera-feed-container">
-                    <img id="cameraTestImage" src="{{ url_for('static', filename='images/camera-placeholder.jpg') }}" alt="Camera Feed">
-                </div>
-                <div class="camera-controls">
-                    <button class="btn btn-primary" id="refreshCameraBtn">
-                        <i class="fas fa-sync"></i> Refresh
-                    </button>
-                    <button class="btn btn-success" id="captureCameraBtn">
-                        <i class="fas fa-camera"></i> Capture
-                    </button>
-                </div>
-            </div>
-        </div>
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h2>Camera Test</h2>
+      <span class="close-modal" id="closeCameraModal">&times;</span>
     </div>
+    <div class="modal-body">
+      <div class="camera-test-container">
+        <div class="camera-feed-container">
+          <img
+            id="cameraTestImage"
+            src="{{ url_for('static', filename='images/camera-placeholder.jpg') }}"
+            alt="Camera Feed"
+          />
+        </div>
+        <div class="camera-controls">
+          <button class="btn btn-primary" id="refreshCameraBtn">
+            <i class="fas fa-sync"></i> Refresh
+          </button>
+          <button class="btn btn-success" id="captureCameraBtn">
+            <i class="fas fa-camera"></i> Capture
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
+{% endblock %} {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize socket connection for test results
-        const socket = io();
-        
-        // Test buttons event handlers
-        const testButtons = document.querySelectorAll('.test-btn');
-        testButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const testType = this.getAttribute('data-test');
-                runDiagnosticTest(testType);
-            });
-        });
-        
-        // Calibration buttons event handlers
-        document.getElementById('calibrateIMUBtn').addEventListener('click', function() {
-            showCalibrationModal('IMU Calibration', 
-                'This will guide you through calibrating the IMU sensor. You will need to position the mower in different orientations during the process.');
-        });
-        
-        document.getElementById('calibrateBladeBtn').addEventListener('click', function() {
-            showCalibrationModal('Blade Motor Calibration', 
-                'This will calibrate the blade motor for optimal performance. The blade will spin during calibration, so ensure the mower is in a safe position.');
-        });
-        
-        document.getElementById('calibrateGPSBtn').addEventListener('click', function() {
-            showCalibrationModal('GPS Baseline Calibration', 
-                'This will set the GPS baseline for improved positioning. Place the mower in an open area with a clear view of the sky and keep it stationary during calibration.');
-        });
-        
-        // Modal control
-        document.getElementById('closeCalibrationModal').addEventListener('click', closeCalibrationModal);
-        document.getElementById('cancelCalibrationBtn').addEventListener('click', closeCalibrationModal);
-        document.getElementById('startCalibrationBtn').addEventListener('click', startCalibration);
-        
-        // Camera test modal
-        document.getElementById('closeCameraModal').addEventListener('click', function() {
-            document.getElementById('cameraTestModal').style.display = 'none';
-        });
-        
-        document.getElementById('refreshCameraBtn').addEventListener('click', refreshCameraFeed);
-        document.getElementById('captureCameraBtn').addEventListener('click', captureImage);
-        
-        // Clear results button
-        document.getElementById('clearResultsBtn').addEventListener('click', function() {
-            document.getElementById('testResults').innerHTML = '<div class="test-placeholder">Run a test to see results here.</div>';
-        });
-        
-        // Socket event listeners
-        socket.on('connect', function() {
-            updateConnectionStatus(true);
-        });
-        
-        socket.on('disconnect', function() {
-            updateConnectionStatus(false);
-        });
-        
-        socket.on('diagnostic_result', function(data) {
-            displayTestResult(data);
-        });
-        
-        socket.on('system_info', function(data) {
-            updateSystemInfo(data);
-        });
-        
-        socket.on('calibration_update', function(data) {
-            updateCalibrationStatus(data);
-        });
-        
-        // Update GPS status when sensor data is received
-        socket.on('sensor_data', function(data) {
-            if (data && data.gps) {
-                // Update GPS information
-                const fixQuality = data.gps.fix_quality || 'unknown';
-                const satellites = data.gps.satellites || 0;
-                const hdop = data.gps.hdop || 'N/A';
-                
-                // Display GPS information
-                $('#gps-fix-quality').text(fixQuality);
-                $('#gps-satellites').text(satellites);
-                $('#gps-hdop').text(hdop);
-                
-                // Set color based on fix quality
-                if (fixQuality === 'rtk' || fixQuality === 'dgps') {
-                    $('#gps-fix-quality').removeClass('text-danger text-warning text-muted').addClass('text-success');
-                } else if (fixQuality === '3d' || fixQuality === '2d') {
-                    $('#gps-fix-quality').removeClass('text-danger text-success text-muted').addClass('text-warning');
-                } else {
-                    $('#gps-fix-quality').removeClass('text-success text-warning text-muted').addClass('text-danger');
-                }
-                
-                // Set color based on satellite count
-                if (satellites >= 10) {
-                    $('#gps-satellites').removeClass('text-danger text-warning text-muted').addClass('text-success');
-                } else if (satellites >= 5) {
-                    $('#gps-satellites').removeClass('text-danger text-success text-muted').addClass('text-warning');
-                } else {
-                    $('#gps-satellites').removeClass('text-success text-warning text-muted').addClass('text-danger');
-                }
-                
-                // Set color based on HDOP (lower is better)
-                if (hdop <= 1.0) {
-                    $('#gps-hdop').removeClass('text-danger text-warning text-muted').addClass('text-success');
-                } else if (hdop <= 2.0) {
-                    $('#gps-hdop').removeClass('text-danger text-success text-muted').addClass('text-warning');
-                } else {
-                    $('#gps-hdop').removeClass('text-success text-warning text-muted').addClass('text-danger');
-                }
-            }
-        });
-        
-        // Initial system information request
-        socket.emit('request_data', {type: 'system_info'});
-        
-        // Request calibration status
-        socket.emit('request_data', {type: 'calibration_status'});
-        
-        // Start polling for system information
-        setInterval(function() {
-            socket.emit('request_data', {type: 'system_info'});
-        }, 5000);
-        
-        // Functions
-        function updateConnectionStatus(connected) {
-            const indicator = document.getElementById('connStatusIndicator');
-            const label = document.getElementById('connectionLabel');
-            
-            if (connected) {
-                indicator.className = 'status-indicator status-online';
-                label.textContent = 'Connected';
-            } else {
-                indicator.className = 'status-indicator status-offline';
-                label.textContent = 'Disconnected';
-            }
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize socket connection for test results
+    const socket = io();
+
+    // Test buttons event handlers
+    const testButtons = document.querySelectorAll(".test-btn");
+    testButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const testType = this.getAttribute("data-test");
+        runDiagnosticTest(testType);
+      });
+    });
+
+    // Calibration buttons event handlers
+    document
+      .getElementById("calibrateIMUBtn")
+      .addEventListener("click", function () {
+        showCalibrationModal(
+          "IMU Calibration",
+          "This will guide you through calibrating the IMU sensor. You will need to position the mower in different orientations during the process."
+        );
+      });
+
+    document
+      .getElementById("calibrateBladeBtn")
+      .addEventListener("click", function () {
+        showCalibrationModal(
+          "Blade Motor Calibration",
+          "This will calibrate the blade motor for optimal performance. The blade will spin during calibration, so ensure the mower is in a safe position."
+        );
+      });
+
+    document
+      .getElementById("calibrateGPSBtn")
+      .addEventListener("click", function () {
+        showCalibrationModal(
+          "GPS Baseline Calibration",
+          "This will set the GPS baseline for improved positioning. Place the mower in an open area with a clear view of the sky and keep it stationary during calibration."
+        );
+      });
+
+    // Modal control
+    document
+      .getElementById("closeCalibrationModal")
+      .addEventListener("click", closeCalibrationModal);
+    document
+      .getElementById("cancelCalibrationBtn")
+      .addEventListener("click", closeCalibrationModal);
+    document
+      .getElementById("startCalibrationBtn")
+      .addEventListener("click", startCalibration);
+
+    // Camera test modal
+    document
+      .getElementById("closeCameraModal")
+      .addEventListener("click", function () {
+        document.getElementById("cameraTestModal").style.display = "none";
+      });
+
+    document
+      .getElementById("refreshCameraBtn")
+      .addEventListener("click", refreshCameraFeed);
+    document
+      .getElementById("captureCameraBtn")
+      .addEventListener("click", captureImage);
+
+    // Clear results button
+    document
+      .getElementById("clearResultsBtn")
+      .addEventListener("click", function () {
+        document.getElementById("testResults").innerHTML =
+          '<div class="test-placeholder">Run a test to see results here.</div>';
+      });
+
+    // Add refresh button handler for sensor data
+    document
+      .getElementById("refreshSensorsBtn")
+      .addEventListener("click", function () {
+        socket.emit("request_data", { type: "sensor_data" });
+        this.querySelector("i").classList.add("fa-spin");
+        setTimeout(() => {
+          this.querySelector("i").classList.remove("fa-spin");
+        }, 1000);
+      });
+
+    // Socket event listeners
+    socket.on("connect", function () {
+      updateConnectionStatus(true);
+    });
+
+    socket.on("disconnect", function () {
+      updateConnectionStatus(false);
+    });
+
+    socket.on("diagnostic_result", function (data) {
+      displayTestResult(data);
+    });
+
+    socket.on("system_info", function (data) {
+      updateSystemInfo(data);
+    });
+
+    socket.on("calibration_update", function (data) {
+      updateCalibrationStatus(data);
+    });
+    // Update GPS status and all sensor data when sensor data is received
+    socket.on("sensor_data", function (data) {
+      // Call the main sensor data update function in main.js
+      updateSensorData(data);
+
+      // Update GPS-specific UI information
+      if (data && data.gps) {
+        const fixQuality = data.gps.fix_quality || "unknown";
+        const satellites = data.gps.satellites || 0;
+        const hdop = data.gps.hdop || "N/A";
+
+        // Display GPS information
+        $("#gps-fix-quality").text(fixQuality);
+        $("#gps-satellites").text(satellites);
+        $("#gps-hdop").text(hdop);
+
+        // Set color based on fix quality
+        if (fixQuality === "rtk" || fixQuality === "dgps") {
+          $("#gps-fix-quality")
+            .removeClass("text-danger text-warning text-muted")
+            .addClass("text-success");
+        } else if (fixQuality === "3d" || fixQuality === "2d") {
+          $("#gps-fix-quality")
+            .removeClass("text-danger text-success text-muted")
+            .addClass("text-warning");
+        } else {
+          $("#gps-fix-quality")
+            .removeClass("text-success text-warning text-muted")
+            .addClass("text-danger");
         }
-        
-        function runDiagnosticTest(testType) {
-            const resultsContainer = document.getElementById('testResults');
-            resultsContainer.innerHTML = '<div class="test-running"><i class="fas fa-spinner fa-spin"></i> Running test...</div>';
-            
-            socket.emit('run_diagnostic', {test: testType});
-            
-            // Show camera test modal if camera test is selected
-            if (testType === 'camera') {
-                document.getElementById('cameraTestModal').style.display = 'block';
-                refreshCameraFeed();
-            }
+
+        // Set color based on satellite count
+        if (satellites >= 10) {
+          $("#gps-satellites")
+            .removeClass("text-danger text-warning text-muted")
+            .addClass("text-success");
+        } else if (satellites >= 5) {
+          $("#gps-satellites")
+            .removeClass("text-danger text-success text-muted")
+            .addClass("text-warning");
+        } else {
+          $("#gps-satellites")
+            .removeClass("text-success text-warning text-muted")
+            .addClass("text-danger");
         }
-        
-        function displayTestResult(data) {
-            const resultsContainer = document.getElementById('testResults');
-            let html = '';
-            
-            if (data.test === 'all') {
-                html += '<div class="test-summary">';
-                html += `<h4>Test Summary:</h4>`;
-                html += `<div class="test-counts">`;
-                html += `<span class="test-count pass">Passed: ${data.passed}</span>`;
-                html += `<span class="test-count fail">Failed: ${data.failed}</span>`;
-                html += `<span class="test-count total">Total: ${data.total}</span>`;
-                html += `</div></div>`;
-            }
-            
-            html += `<div class="test-result ${data.success ? 'success' : 'failure'}">`;
-            html += `<div class="test-header">`;
-            html += `<span class="test-name">${data.name || data.test}</span>`;
-            html += `<span class="test-status">${data.success ? 'PASS' : 'FAIL'}</span>`;
-            html += `</div>`;
-            
-            if (data.details) {
-                html += `<div class="test-details">${data.details}</div>`;
-            }
-            
-            if (data.readings) {
-                html += `<div class="test-readings">`;
-                for (const [key, value] of Object.entries(data.readings)) {
-                    html += `<div class="reading-item">`;
-                    html += `<span class="reading-label">${key}:</span>`;
-                    html += `<span class="reading-value">${value}</span>`;
-                    html += `</div>`;
-                }
-                html += `</div>`;
-            }
-            
-            html += `<div class="test-timestamp">Test time: ${new Date().toLocaleTimeString()}</div>`;
-            html += `</div>`;
-            
-            if (data.test === 'all') {
-                resultsContainer.innerHTML = html;
-            } else {
-                resultsContainer.innerHTML = html + resultsContainer.innerHTML;
-            }
+
+        // Set color based on HDOP (lower is better)
+        if (hdop <= 1.0) {
+          $("#gps-hdop")
+            .removeClass("text-danger text-warning text-muted")
+            .addClass("text-success");
+        } else if (hdop <= 2.0) {
+          $("#gps-hdop")
+            .removeClass("text-danger text-success text-muted")
+            .addClass("text-warning");
+        } else {
+          $("#gps-hdop")
+            .removeClass("text-success text-warning text-muted")
+            .addClass("text-danger");
         }
-        
-        function updateSystemInfo(data) {
-            // Update system information
-            document.getElementById('softwareVersion').textContent = data.softwareVersion || '1.0.0';
-            document.getElementById('hardwareModel').textContent = data.hardwareModel || 'Autonomous Mower v1';
-            document.getElementById('uptime').textContent = data.uptime || '0d 0h 0m';
-            document.getElementById('cpuTemp').textContent = (data.cpuTemp !== undefined) ? `${data.cpuTemp}°C` : 'N/A';
-            document.getElementById('cpuUsage').textContent = (data.cpuUsage !== undefined) ? `${data.cpuUsage}%` : 'N/A';
-            document.getElementById('memoryUsage').textContent = (data.memoryUsage !== undefined) ? `${data.memoryUsage}%` : 'N/A';
-            document.getElementById('diskUsage').textContent = (data.diskUsage !== undefined) ? `${data.diskUsage}%` : 'N/A';
+      }
+    });
+
+    // Initial data requests
+    socket.emit("request_data", { type: "system_info" });
+    socket.emit("request_data", { type: "calibration_status" });
+    socket.emit("request_data", { type: "sensor_data" });
+    // Start polling for system information and sensor data
+    setInterval(function () {
+      socket.emit("request_data", { type: "system_info" });
+      socket.emit("request_data", { type: "sensor_data" });
+    }, 5000);
+
+    // Functions
+    function updateConnectionStatus(connected) {
+      const indicator = document.getElementById("connStatusIndicator");
+      const label = document.getElementById("connectionLabel");
+
+      if (connected) {
+        indicator.className = "status-indicator status-online";
+        label.textContent = "Connected";
+      } else {
+        indicator.className = "status-indicator status-offline";
+        label.textContent = "Disconnected";
+      }
+    }
+
+    function runDiagnosticTest(testType) {
+      const resultsContainer = document.getElementById("testResults");
+      resultsContainer.innerHTML =
+        '<div class="test-running"><i class="fas fa-spinner fa-spin"></i> Running test...</div>';
+
+      socket.emit("run_diagnostic", { test: testType });
+
+      // Show camera test modal if camera test is selected
+      if (testType === "camera") {
+        document.getElementById("cameraTestModal").style.display = "block";
+        refreshCameraFeed();
+      }
+    }
+
+    function displayTestResult(data) {
+      const resultsContainer = document.getElementById("testResults");
+      let html = "";
+
+      if (data.test === "all") {
+        html += '<div class="test-summary">';
+        html += `<h4>Test Summary:</h4>`;
+        html += `<div class="test-counts">`;
+        html += `<span class="test-count pass">Passed: ${data.passed}</span>`;
+        html += `<span class="test-count fail">Failed: ${data.failed}</span>`;
+        html += `<span class="test-count total">Total: ${data.total}</span>`;
+        html += `</div></div>`;
+      }
+
+      html += `<div class="test-result ${
+        data.success ? "success" : "failure"
+      }">`;
+      html += `<div class="test-header">`;
+      html += `<span class="test-name">${data.name || data.test}</span>`;
+      html += `<span class="test-status">${
+        data.success ? "PASS" : "FAIL"
+      }</span>`;
+      html += `</div>`;
+
+      if (data.details) {
+        html += `<div class="test-details">${data.details}</div>`;
+      }
+
+      if (data.readings) {
+        html += `<div class="test-readings">`;
+        for (const [key, value] of Object.entries(data.readings)) {
+          html += `<div class="reading-item">`;
+          html += `<span class="reading-label">${key}:</span>`;
+          html += `<span class="reading-value">${value}</span>`;
+          html += `</div>`;
         }
-        
-        function updateCalibrationStatus(data) {
-            // Update calibration status
-            if (data.imu) {
-                document.getElementById('imuCalibrationStatus').textContent = data.imu;
-                document.getElementById('imuCalibrationStatus').className = 'status-value ' + 
-                    (data.imu === 'Calibrated' ? 'status-good' : 'status-warning');
-            }
-            
-            if (data.blade) {
-                document.getElementById('bladeCalibrationStatus').textContent = data.blade;
-                document.getElementById('bladeCalibrationStatus').className = 'status-value ' + 
-                    (data.blade === 'Calibrated' ? 'status-good' : 'status-warning');
-            }
-            
-            if (data.gps) {
-                document.getElementById('gpsCalibrationStatus').textContent = data.gps;
-                document.getElementById('gpsCalibrationStatus').className = 'status-value ' + 
-                    (data.gps === 'Set' ? 'status-good' : 'status-warning');
-            }
-        }
-        
-        function showCalibrationModal(title, description) {
-            document.getElementById('calibrationModalTitle').textContent = title;
-            document.getElementById('calibrationModalBody').innerHTML = `<p>${description}</p>`;
-            document.getElementById('calibrationModal').style.display = 'block';
-            
-            // Store the calibration type in a data attribute
-            document.getElementById('startCalibrationBtn').setAttribute('data-calibration', 
-                title.toLowerCase().includes('imu') ? 'imu' : 
-                title.toLowerCase().includes('blade') ? 'blade' : 'gps');
-        }
-        
-        function closeCalibrationModal() {
-            document.getElementById('calibrationModal').style.display = 'none';
-        }
-        
-        function startCalibration() {
-            const calibrationType = document.getElementById('startCalibrationBtn').getAttribute('data-calibration');
-            
-            // Update modal content
-            document.getElementById('calibrationModalBody').innerHTML = 
-                '<div class="calibration-progress"><i class="fas fa-spinner fa-spin"></i> Starting calibration...</div>';
-            
-            // Disable buttons
-            document.getElementById('startCalibrationBtn').disabled = true;
-            document.getElementById('cancelCalibrationBtn').disabled = true;
-            
-            // Send calibration request to server
-            socket.emit('start_calibration', { type: calibrationType });
-            
-            // Listen for calibration steps
-            socket.on('calibration_step', function(data) {
-                document.getElementById('calibrationModalBody').innerHTML = 
-                    `<div class="calibration-step">
+        html += `</div>`;
+      }
+
+      html += `<div class="test-timestamp">Test time: ${new Date().toLocaleTimeString()}</div>`;
+      html += `</div>`;
+
+      if (data.test === "all") {
+        resultsContainer.innerHTML = html;
+      } else {
+        resultsContainer.innerHTML = html + resultsContainer.innerHTML;
+      }
+    }
+
+    function updateSystemInfo(data) {
+      // Update system information
+      document.getElementById("softwareVersion").textContent =
+        data.softwareVersion || "1.0.0";
+      document.getElementById("hardwareModel").textContent =
+        data.hardwareModel || "Autonomous Mower v1";
+      document.getElementById("uptime").textContent = data.uptime || "0d 0h 0m";
+      document.getElementById("cpuTemp").textContent =
+        data.cpuTemp !== undefined ? `${data.cpuTemp}°C` : "N/A";
+      document.getElementById("cpuUsage").textContent =
+        data.cpuUsage !== undefined ? `${data.cpuUsage}%` : "N/A";
+      document.getElementById("memoryUsage").textContent =
+        data.memoryUsage !== undefined ? `${data.memoryUsage}%` : "N/A";
+      document.getElementById("diskUsage").textContent =
+        data.diskUsage !== undefined ? `${data.diskUsage}%` : "N/A";
+    }
+
+    function updateCalibrationStatus(data) {
+      // Update calibration status
+      if (data.imu) {
+        document.getElementById("imuCalibrationStatus").textContent = data.imu;
+        document.getElementById("imuCalibrationStatus").className =
+          "status-value " +
+          (data.imu === "Calibrated" ? "status-good" : "status-warning");
+      }
+
+      if (data.blade) {
+        document.getElementById("bladeCalibrationStatus").textContent =
+          data.blade;
+        document.getElementById("bladeCalibrationStatus").className =
+          "status-value " +
+          (data.blade === "Calibrated" ? "status-good" : "status-warning");
+      }
+
+      if (data.gps) {
+        document.getElementById("gpsCalibrationStatus").textContent = data.gps;
+        document.getElementById("gpsCalibrationStatus").className =
+          "status-value " +
+          (data.gps === "Set" ? "status-good" : "status-warning");
+      }
+    }
+
+    function showCalibrationModal(title, description) {
+      document.getElementById("calibrationModalTitle").textContent = title;
+      document.getElementById(
+        "calibrationModalBody"
+      ).innerHTML = `<p>${description}</p>`;
+      document.getElementById("calibrationModal").style.display = "block";
+
+      // Store the calibration type in a data attribute
+      document
+        .getElementById("startCalibrationBtn")
+        .setAttribute(
+          "data-calibration",
+          title.toLowerCase().includes("imu")
+            ? "imu"
+            : title.toLowerCase().includes("blade")
+            ? "blade"
+            : "gps"
+        );
+    }
+
+    function closeCalibrationModal() {
+      document.getElementById("calibrationModal").style.display = "none";
+    }
+
+    function startCalibration() {
+      const calibrationType = document
+        .getElementById("startCalibrationBtn")
+        .getAttribute("data-calibration");
+
+      // Update modal content
+      document.getElementById("calibrationModalBody").innerHTML =
+        '<div class="calibration-progress"><i class="fas fa-spinner fa-spin"></i> Starting calibration...</div>';
+
+      // Disable buttons
+      document.getElementById("startCalibrationBtn").disabled = true;
+      document.getElementById("cancelCalibrationBtn").disabled = true;
+
+      // Send calibration request to server
+      socket.emit("start_calibration", { type: calibrationType });
+
+      // Listen for calibration steps
+      socket.on("calibration_step", function (data) {
+        document.getElementById(
+          "calibrationModalBody"
+        ).innerHTML = `<div class="calibration-step">
                         <h4>Step ${data.step}/${data.total}</h4>
                         <p>${data.instruction}</p>
-                        ${data.waiting ? '<button class="btn btn-primary" id="nextCalibrationStepBtn">Continue</button>' : ''}
-                        ${data.progress ? `<div class="progress-bar"><div style="width: ${data.progress}%"></div></div>` : ''}
+                        ${
+                          data.waiting
+                            ? '<button class="btn btn-primary" id="nextCalibrationStepBtn">Continue</button>'
+                            : ""
+                        }
+                        ${
+                          data.progress
+                            ? `<div class="progress-bar"><div style="width: ${data.progress}%"></div></div>`
+                            : ""
+                        }
                     </div>`;
-                
-                if (data.waiting) {
-                    document.getElementById('nextCalibrationStepBtn').addEventListener('click', function() {
-                        socket.emit('calibration_step_completed', { type: calibrationType, step: data.step });
-                    });
-                }
+
+        if (data.waiting) {
+          document
+            .getElementById("nextCalibrationStepBtn")
+            .addEventListener("click", function () {
+              socket.emit("calibration_step_completed", {
+                type: calibrationType,
+                step: data.step,
+              });
             });
-            
-            socket.on('calibration_complete', function(data) {
-                document.getElementById('calibrationModalBody').innerHTML = 
-                    `<div class="calibration-complete">
+        }
+      });
+
+      socket.on("calibration_complete", function (data) {
+        document.getElementById(
+          "calibrationModalBody"
+        ).innerHTML = `<div class="calibration-complete">
                         <i class="fas fa-check-circle"></i>
                         <h4>Calibration Complete</h4>
                         <p>${data.message}</p>
                     </div>`;
-                
-                // Re-enable cancel button (now acts as close)
-                document.getElementById('cancelCalibrationBtn').disabled = false;
-                document.getElementById('cancelCalibrationBtn').textContent = 'Close';
-                
-                // Update calibration status
-                socket.emit('request_data', {type: 'calibration_status'});
-            });
-            
-            socket.on('calibration_error', function(data) {
-                document.getElementById('calibrationModalBody').innerHTML = 
-                    `<div class="calibration-error">
+
+        // Re-enable cancel button (now acts as close)
+        document.getElementById("cancelCalibrationBtn").disabled = false;
+        document.getElementById("cancelCalibrationBtn").textContent = "Close";
+
+        // Update calibration status
+        socket.emit("request_data", { type: "calibration_status" });
+      });
+
+      socket.on("calibration_error", function (data) {
+        document.getElementById(
+          "calibrationModalBody"
+        ).innerHTML = `<div class="calibration-error">
                         <i class="fas fa-exclamation-circle"></i>
                         <h4>Calibration Error</h4>
                         <p>${data.message}</p>
                     </div>`;
-                
-                // Re-enable buttons
-                document.getElementById('startCalibrationBtn').disabled = false;
-                document.getElementById('cancelCalibrationBtn').disabled = false;
-            });
-        }
-        
-        function refreshCameraFeed() {
-            const img = document.getElementById('cameraTestImage');
-            img.src = `/api/camera/snapshot?t=${new Date().getTime()}`;
-        }
-        
-        function captureImage() {
-            const img = document.getElementById('cameraTestImage');
-            
-            // Send capture request
-            socket.emit('capture_image', {});
-            
-            // Refresh image after slight delay
-            setTimeout(refreshCameraFeed, 500);
-        }
-    });
+
+        // Re-enable buttons
+        document.getElementById("startCalibrationBtn").disabled = false;
+        document.getElementById("cancelCalibrationBtn").disabled = false;
+      });
+    }
+
+    function refreshCameraFeed() {
+      const img = document.getElementById("cameraTestImage");
+      img.src = `/api/camera/snapshot?t=${new Date().getTime()}`;
+    }
+
+    function captureImage() {
+      const img = document.getElementById("cameraTestImage");
+
+      // Send capture request
+      socket.emit("capture_image", {});
+
+      // Refresh image after slight delay
+      setTimeout(refreshCameraFeed, 500);
+    }
+  });
 </script>
 
 <style>
-    /* Diagnostics page specific styles */
+  /* Diagnostics page specific styles */
+  .diagnostics-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .test-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .test-btn {
+    background-color: var(--dirt-pale);
+    border: 1px solid var(--dirt-medium);
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .test-btn:hover {
+    background-color: var(--dirt-light);
+  }
+
+  .test-btn i {
+    margin-right: 8px;
+  }
+
+  .system-info {
+    display: grid;
+    gap: 10px;
+  }
+
+  .info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--dirt-pale);
+  }
+
+  .info-label {
+    font-weight: 500;
+    color: var(--dark);
+  }
+
+  .info-value {
+    font-family: monospace;
+    background-color: var(--dirt-pale);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .test-results-container {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .test-results {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .test-placeholder {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .test-running {
+    text-align: center;
+    padding: 20px;
+    color: var(--primary);
+  }
+
+  .test-result {
+    border: 1px solid var(--dirt-medium);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .test-result.success {
+    border-color: var(--grass-medium);
+  }
+
+  .test-result.failure {
+    border-color: var(--danger);
+  }
+
+  .test-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 15px;
+    background-color: var(--dirt-pale);
+    font-weight: 500;
+  }
+
+  .test-result.success .test-header {
+    background-color: var(--grass-pale);
+  }
+
+  .test-result.failure .test-header {
+    background-color: #ffeeee;
+  }
+
+  .test-status {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.9em;
+  }
+
+  .test-result.success .test-status {
+    background-color: var(--grass-medium);
+    color: white;
+  }
+
+  .test-result.failure .test-status {
+    background-color: var(--danger);
+    color: white;
+  }
+
+  .test-details,
+  .test-readings {
+    padding: 10px 15px;
+    background-color: var(--light);
+  }
+
+  .test-readings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 5px;
+    background-color: #f9f9f9;
+  }
+
+  .reading-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .reading-label {
+    font-weight: 500;
+  }
+
+  .reading-value {
+    font-family: monospace;
+  }
+
+  .test-timestamp {
+    padding: 8px 15px;
+    font-size: 0.8em;
+    text-align: right;
+    color: var(--text-muted);
+    background-color: #f9f9f9;
+  }
+
+  .test-summary {
+    background-color: var(--dirt-pale);
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: var(--border-radius);
+  }
+
+  .test-counts {
+    display: flex;
+    gap: 15px;
+    margin-top: 5px;
+  }
+
+  .test-count {
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .test-count.pass {
+    background-color: var(--grass-medium);
+    color: white;
+  }
+
+  .test-count.fail {
+    background-color: var(--danger);
+    color: white;
+  }
+
+  .test-count.total {
+    background-color: var(--primary);
+    color: white;
+  }
+
+  .card-header-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* Calibration section */
+  .calibration-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .calibration-item {
+    border: 1px solid var(--dirt-medium);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .calibration-header {
+    background-color: var(--dirt-pale);
+    padding: 10px 15px;
+  }
+
+  .calibration-header h4 {
+    margin: 0;
+  }
+
+  .calibration-content {
+    padding: 15px;
+  }
+
+  .calibration-status {
+    margin: 10px 0;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .status-value {
+    font-weight: 500;
+  }
+
+  .status-good {
+    color: var(--grass-dark);
+  }
+
+  .status-warning {
+    color: var(--warning);
+  }
+
+  /* Modal styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    position: relative;
+    background-color: var(--light);
+    margin: 10% auto;
+    padding: 0;
+    border-radius: var(--border-radius);
+    width: 500px;
+    max-width: 90%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal-lg {
+    width: 800px;
+  }
+
+  .modal-header {
+    padding: 15px;
+    background-color: var(--dirt-pale);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  .close-modal {
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-footer {
+    padding: 15px;
+    background-color: #f9f9f9;
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* Camera test modal */
+  .camera-test-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .camera-feed-container {
+    background-color: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .camera-feed-container img {
+    max-width: 100%;
+    max-height: 400px;
+  }
+
+  .camera-controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  /* Calibration progress */
+  .calibration-step {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .progress-bar {
+    height: 20px;
+    background-color: var(--dirt-pale);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .progress-bar > div {
+    height: 100%;
+    background-color: var(--grass-medium);
+    transition: width 0.3s ease;
+  }
+
+  .calibration-complete {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--grass-dark);
+  }
+
+  .calibration-complete i,
+  .calibration-error i {
+    font-size: 48px;
+    margin-bottom: 15px;
+  }
+
+  .calibration-error {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--danger);
+  }
+
+  /* Sensor readings styles */
+  .sensor-readings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+  }
+
+  .sensor-group {
+    background-color: var(--dirt-pale);
+    border-radius: var(--border-radius);
+    padding: 15px;
+  }
+
+  .sensor-group h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--dirt-medium);
+    padding-bottom: 5px;
+  }
+
+  .sensor-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+  }
+
+  .sensor-label {
+    font-weight: 500;
+  }
+
+  .sensor-value {
+    font-family: monospace;
+    background-color: var(--light);
+    padding: 2px 8px;
+    border-radius: 4px;
+    min-width: 70px;
+    text-align: right;
+  }
+
+  .refresh-btn {
+    background-color: var(--dirt-pale);
+    border: 1px solid var(--dirt-medium);
+  }
+
+  .refresh-btn:hover {
+    background-color: var(--dirt-light);
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 992px) {
     .diagnostics-layout {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
+      grid-template-columns: 1fr;
     }
-    
-    .test-buttons {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 10px;
-    }
-    
-    .test-btn {
-        background-color: var(--dirt-pale);
-        border: 1px solid var(--dirt-medium);
-        padding: 10px 15px;
-        border-radius: var(--border-radius);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .test-btn:hover {
-        background-color: var(--dirt-light);
-    }
-    
-    .test-btn i {
-        margin-right: 8px;
-    }
-    
-    .system-info {
-        display: grid;
-        gap: 10px;
-    }
-    
-    .info-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--dirt-pale);
-    }
-    
-    .info-label {
-        font-weight: 500;
-        color: var(--dark);
-    }
-    
-    .info-value {
-        font-family: monospace;
-        background-color: var(--dirt-pale);
-        padding: 2px 8px;
-        border-radius: 4px;
-    }
-    
-    .test-results-container {
-        max-height: 500px;
-        overflow-y: auto;
-    }
-    
-    .test-results {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .test-placeholder {
-        text-align: center;
-        padding: 20px;
-        color: var(--text-muted);
-        font-style: italic;
-    }
-    
-    .test-running {
-        text-align: center;
-        padding: 20px;
-        color: var(--primary);
-    }
-    
-    .test-result {
-        border: 1px solid var(--dirt-medium);
-        border-radius: var(--border-radius);
-        overflow: hidden;
-    }
-    
-    .test-result.success {
-        border-color: var(--grass-medium);
-    }
-    
-    .test-result.failure {
-        border-color: var(--danger);
-    }
-    
-    .test-header {
-        display: flex;
-        justify-content: space-between;
-        padding: 10px 15px;
-        background-color: var(--dirt-pale);
-        font-weight: 500;
-    }
-    
-    .test-result.success .test-header {
-        background-color: var(--grass-pale);
-    }
-    
-    .test-result.failure .test-header {
-        background-color: #ffeeee;
-    }
-    
-    .test-status {
-        padding: 2px 10px;
-        border-radius: 12px;
-        font-size: 0.9em;
-    }
-    
-    .test-result.success .test-status {
-        background-color: var(--grass-medium);
-        color: white;
-    }
-    
-    .test-result.failure .test-status {
-        background-color: var(--danger);
-        color: white;
-    }
-    
-    .test-details, .test-readings {
-        padding: 10px 15px;
-        background-color: var(--light);
-    }
-    
-    .test-readings {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 5px;
-        background-color: #f9f9f9;
-    }
-    
-    .reading-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 5px;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .reading-label {
-        font-weight: 500;
-    }
-    
-    .reading-value {
-        font-family: monospace;
-    }
-    
-    .test-timestamp {
-        padding: 8px 15px;
-        font-size: 0.8em;
-        text-align: right;
-        color: var(--text-muted);
-        background-color: #f9f9f9;
-    }
-    
-    .test-summary {
-        background-color: var(--dirt-pale);
-        padding: 10px 15px;
-        margin-bottom: 10px;
-        border-radius: var(--border-radius);
-    }
-    
-    .test-counts {
-        display: flex;
-        gap: 15px;
-        margin-top: 5px;
-    }
-    
-    .test-count {
-        padding: 3px 10px;
-        border-radius: 4px;
-        font-weight: 500;
-    }
-    
-    .test-count.pass {
-        background-color: var(--grass-medium);
-        color: white;
-    }
-    
-    .test-count.fail {
-        background-color: var(--danger);
-        color: white;
-    }
-    
-    .test-count.total {
-        background-color: var(--primary);
-        color: white;
-    }
-    
-    .card-header-actions {
-        display: flex;
-        gap: 10px;
-    }
-    
-    /* Calibration section */
-    .calibration-options {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .calibration-item {
-        border: 1px solid var(--dirt-medium);
-        border-radius: var(--border-radius);
-        overflow: hidden;
-    }
-    
-    .calibration-header {
-        background-color: var(--dirt-pale);
-        padding: 10px 15px;
-    }
-    
-    .calibration-header h4 {
-        margin: 0;
-    }
-    
-    .calibration-content {
-        padding: 15px;
-    }
-    
-    .calibration-status {
-        margin: 10px 0;
-        padding: 8px;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        display: flex;
-        justify-content: space-between;
-    }
-    
-    .status-value {
-        font-weight: 500;
-    }
-    
-    .status-good {
-        color: var(--grass-dark);
-    }
-    
-    .status-warning {
-        color: var(--warning);
-    }
-    
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-    }
-    
-    .modal-content {
-        position: relative;
-        background-color: var(--light);
-        margin: 10% auto;
-        padding: 0;
-        border-radius: var(--border-radius);
-        width: 500px;
-        max-width: 90%;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    
-    .modal-lg {
-        width: 800px;
-    }
-    
-    .modal-header {
-        padding: 15px;
-        background-color: var(--dirt-pale);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .modal-header h2 {
-        margin: 0;
-        font-size: 1.4rem;
-    }
-    
-    .close-modal {
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .modal-footer {
-        padding: 15px;
-        background-color: #f9f9f9;
-        text-align: right;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-    
-    /* Camera test modal */
-    .camera-test-container {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .camera-feed-container {
-        background-color: #000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 300px;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-    }
-    
-    .camera-feed-container img {
-        max-width: 100%;
-        max-height: 400px;
-    }
-    
-    .camera-controls {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-    }
-    
-    /* Calibration progress */
-    .calibration-step {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .progress-bar {
-        height: 20px;
-        background-color: var(--dirt-pale);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    
-    .progress-bar > div {
-        height: 100%;
-        background-color: var(--grass-medium);
-        transition: width 0.3s ease;
-    }
-    
-    .calibration-complete {
-        text-align: center;
-        padding: 20px 0;
-        color: var(--grass-dark);
-    }
-    
-    .calibration-complete i, .calibration-error i {
-        font-size: 48px;
-        margin-bottom: 15px;
-    }
-    
-    .calibration-error {
-        text-align: center;
-        padding: 20px 0;
-        color: var(--danger);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 992px) {
-        .diagnostics-layout {
-            grid-template-columns: 1fr;
-        }
-    }
+  }
 </style>
-{% endblock %} 
+{% endblock %}
