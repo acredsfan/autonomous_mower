@@ -13,23 +13,22 @@ Usage:
     --web-test: Opens a simple test interface to help verify web UI sensor display
 """
 
-import platform
-import time
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.tof import VL53L0XSensors
+import os
+import sys
 import json
+import time
+import platform
 import argparse
 import threading
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Add the project's src directory to the Python path
-import sys
-import os
-
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
 # Import the sensor classes
-from mower.hardware.tof import VL53L0XSensors
-from mower.hardware.imu import BNO085Sensor
 
 
 class TestHTTPHandler(BaseHTTPRequestHandler):
@@ -48,48 +47,81 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
 
     def get_test_html(self):
         """Return HTML for the test page"""
-        return (
-            """
+        css = """
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .card {
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            h1, h2 { color: #333; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            th { background-color: #f2f2f2; }
+            .instructions {
+                background-color: #f8f9fa;
+                padding: 15px;
+                border-left: 4px solid #007bff;
+            }
+            .step { margin-bottom: 10px; }
+            .highlight { background-color: yellow; font-weight: bold; }
+        """
+
+        steps = [
+            "<b>Step 1:</b> Keep this test script running in the terminal",
+            "<b>Step 2:</b> In a separate terminal, start the web UI server with:",
+            "<b>Step 3:</b> Open the web UI in a browser and navigate to the " +
+            '<span class="highlight">Diagnostics</span> tab',
+            "<b>Step 4:</b> Compare the values shown below with what appears in the " +
+            "web UI's Diagnostics tab",
+            "<b>Step 5:</b> If the values in the web UI match the ones below, " +
+            "the sensor display issue is fixed!",
+        ]
+
+        steps_html = "\n".join(
+            [f'<div class="step">{step} </div>'for step in steps])
+
+        html = f"""
         <!DOCTYPE html>
         <html>
         <head>
             <title>Sensor Test Helper</title>
             <style>
-                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                .card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 15px; }
-                h1, h2 { color: #333; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                th { background-color: #f2f2f2; }
-                .instructions { background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; }
-                .step { margin-bottom: 10px; }
-                .highlight { background-color: yellow; font-weight: bold; }
+                {css}
             </style>
         </head>
         <body>
             <h1>Autonomous Mower Sensor Test Helper</h1>
-            
+
             <div class="card instructions">
                 <h2>Test Instructions</h2>
-                <div class="step"><b>Step 1:</b> Keep this test script running in the terminal</div>
-                <div class="step"><b>Step 2:</b> In a separate terminal, start the web UI server with:
+                {steps_html}
+                <div class="step">
                     <pre>python -m mower.ui.web_ui.app</pre>
                 </div>
-                <div class="step"><b>Step 3:</b> Open the web UI in a browser and navigate to the <span class="highlight">Diagnostics</span> tab</div>
-                <div class="step"><b>Step 4:</b> Compare the values shown below with what appears in the web UI's Diagnostics tab</div>
-                <div class="step"><b>Step 5:</b> If the values in the web UI match the ones below, the sensor display issue is fixed!</div>
             </div>
-            
+
             <h2>Test Results</h2>
             <div class="card">
-                <p><b>Platform:</b> """
-            + platform.system()
-            + """</p>
-                <p>Refresh this page to see the latest sensor values being generated.</p>
-                
+                <p><b>Platform:</b> {platform.system()}</p>
+                <p>
+                    Refresh this page to see the latest sensor values being
+                    generated.
+                </p>
+
                 <h3>Sensor Values</h3>
                 <p>These are the values that should appear in the web UI:</p>
-                
+
                 <h4>ToF Distance Sensors:</h4>
                 <table id="tofTable">
                     <tr>
@@ -99,7 +131,7 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
                     </tr>
                     <!-- Values will be filled in by the test script -->
                 </table>
-                
+
                 <h4>IMU Data:</h4>
                 <table id="imuTable">
                     <tr>
@@ -113,7 +145,7 @@ class TestHTTPHandler(BaseHTTPRequestHandler):
         </body>
         </html>
         """
-        )
+        return html
 
 
 def web_test_mode():
@@ -142,7 +174,8 @@ def main():
     parser.add_argument(
         "--web-test", action="store_true", help="Run in web testing mode"
     )
-    args = parser.parse_args()
+    # Parse args but we don't use the result directly
+    parser.parse_args()
 
     print("=== Autonomous Mower Sensor Test ===")
     print(f"Platform: {platform.system()}")
@@ -160,9 +193,12 @@ def main():
 
             print("=== Autonomous Mower Sensor Test ===")
             print(f"Platform: {platform.system()}")
-            print(
-                f"Hardware detection: ToF={tof_sensor.is_hardware_available}, IMU={imu_sensor.is_hardware_available}"
-            )
+
+            # Display hardware detection status
+            hw_tof = "Available" if tof_sensor.is_hardware_available else "Simulated"
+            hw_imu = "Available" if imu_sensor.is_hardware_available else "Simulated"
+            print(f"Hardware detection: ToF={hw_tof}, IMU={hw_imu}")
+
             # Get ToF data
             tof_data = tof_sensor.get_distances()
             print("\n--- ToF Distance Sensors (Front-mounted) ---")

@@ -23,10 +23,11 @@ try:
     print("\nInitializing sensors...")
     tof_sensor = VL53L0XSensors()
     imu_sensor = BNO085Sensor()
-
-    print(
-        f"\nHardware detection: ToF={tof_sensor.is_hardware_available}, IMU={imu_sensor.is_hardware_available}"
-    )
+    print("\nHardware detection:")
+    hw_tof = "Available" if tof_sensor.is_hardware_available else "Simulated"
+    hw_imu = "Available" if imu_sensor.is_hardware_available else "Simulated"
+    print(f"ToF sensors: {hw_tof}")
+    print(f"IMU sensor:  {hw_imu}")
 
     print("\nGetting sensor data...")
     tof_data = tof_sensor.get_distances()
@@ -40,8 +41,14 @@ try:
     print(f"IMU roll: {roll:.1f}°")
     print(f"IMU pitch: {pitch:.1f}°")
 
+    print("\nGetting safety status...")
+    safety = imu_sensor.get_safety_status()
+    print(f"Safety status: {safety}")
+
+    print("\nTest completed successfully.")
 except Exception as e:
-    print(f"\nERROR: {e}")
+    print(f"\nError: {e}")
     import traceback
 
     traceback.print_exc()
+    print("\nTest failed.")
