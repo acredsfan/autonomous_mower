@@ -6,25 +6,31 @@ capabilities. These fixtures can be used in tests to simulate hardware component
 without requiring physical hardware.
 """
 
-from mower.simulation.actuators.motor_sim import SimulatedMotorController
+# Correct class, keep alias
+from mower.simulation.actuators.motor_sim import (
+    SimulatedRoboHATDriver as SimulatedMotorController
+)
 from mower.simulation.actuators.blade_sim import SimulatedBladeController
-from mower.simulation.sensors.tof_sim import SimulatedToF
-from mower.simulation.sensors.imu_sim import SimulatedImu
+# Correct class, keep alias
+from mower.simulation.sensors.tof_sim import SimulatedVL53L0XSensors as SimulatedToF
+# Correct class, keep alias
+from mower.simulation.sensors.imu_sim import SimulatedBNO085Sensor as SimulatedImu
 from mower.simulation.sensors.gps_sim import (
     SimulatedGpsPosition,
     SimulatedGpsLatestPosition,
 )
 from mower.simulation.world_model import (
     get_world_instance,
-    Vector2D,
+    # Vector2D, # Unused import
     reset_world,
 )
 from mower.simulation import enable_simulation, is_simulation_enabled
-import os
+# import os # Unused import
 import pytest
 import logging
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+# from pathlib import Path # Unused import
+# from typing import Dict, Any, Optional, List, Tuple, Union, Type #
+# Unused imports
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -116,24 +122,26 @@ def sim_gps_latest(sim_gps):
 
 
 @pytest.fixture(scope="function")
-def sim_imu(sim_world):
+def sim_imu(sim_world, request):
     """
-    Fixture for a simulated IMU sensor.
+    Fixture for a simulated IMU sensor (BNO085).
 
     This fixture provides a simulated IMU sensor that interacts with the
-    virtual world.
+    virtual world. It can accept initial_status via request.param.
 
     Args:
         sim_world: The virtual world instance
+        request: Pytest request object to access parameters.
 
     Returns:
-        SimulatedImu: The simulated IMU sensor
+        SimulatedImu: The simulated IMU sensor (alias for SimulatedBNO085Sensor)
     """
+    initial_status = getattr(request, "param", True)  # Default to working
     # Create a simulated IMU sensor
-    imu = SimulatedImu()
+    imu = SimulatedImu(initial_status=initial_status)  # Uses alias
 
     # Initialize the sensor
-    imu._initialize()
+    imu._initialize()  # This now calls _initialize_sim which uses initial_status
 
     # Return the sensor
     yield imu
@@ -143,24 +151,26 @@ def sim_imu(sim_world):
 
 
 @pytest.fixture(scope="function")
-def sim_tof(sim_world):
+def sim_tof(sim_world, request):
     """
     Fixture for a simulated ToF sensor.
 
     This fixture provides a simulated ToF sensor that interacts with the
-    virtual world.
+    virtual world. It can accept initial_statuses via request.param.
 
     Args:
         sim_world: The virtual world instance
+        request: Pytest request object to access parameters.
 
     Returns:
         SimulatedToF: The simulated ToF sensor
     """
+    initial_statuses = getattr(request, "param", None)
     # Create a simulated ToF sensor
-    tof = SimulatedToF()
+    tof = SimulatedToF(initial_statuses=initial_statuses)
 
     # Initialize the sensor
-    tof._initialize()
+    tof._initialize()  # This now calls _initialize_sim which uses initial_statuses
 
     # Return the sensor
     yield tof
@@ -199,7 +209,7 @@ def sim_blade_controller(sim_world):
 @pytest.fixture(scope="function")
 def sim_motor_controller(sim_world):
     """
-    Fixture for a simulated motor controller.
+    Fixture for a simulated motor controller (RoboHATDriver).
 
     This fixture provides a simulated motor controller that interacts with the
     virtual world.
@@ -209,8 +219,10 @@ def sim_motor_controller(sim_world):
 
     Returns:
         SimulatedMotorController: The simulated motor controller
+                                  (alias for SimulatedRoboHATDriver)
     """
     # Create a simulated motor controller
+    # Uses alias for SimulatedRoboHATDriver
     motor_controller = SimulatedMotorController()
 
     # Initialize the controller
@@ -240,15 +252,15 @@ def sim_hardware(
         sim_motor_controller: The simulated motor controller
 
     Returns:
-        Dict[str, Any]: Dictionary containing all simulated hardware components
+        dict: Dictionary containing all simulated hardware components
     """
     # Create a dictionary of all simulated hardware components
     hardware = {
         "gps": sim_gps,
-        "imu": sim_imu,
-        "tof": sim_tof,
+        "imu": sim_imu,  # Alias for SimulatedBNO085Sensor
+        "tof": sim_tof,  # Alias for SimulatedVL53L0XSensors
         "blade_controller": sim_blade_controller,
-        "motor_controller": sim_motor_controller,
+        "motor_controller": sim_motor_controller,  # Alias for SimulatedRoboHATDriver
     }
 
     # Return the dictionary

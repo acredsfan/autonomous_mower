@@ -7,15 +7,16 @@ requiring physical hardware.
 """
 
 import math
-import time
-import threading
-import random
-from enum import Enum
-from typing import Dict, Any, Optional, List, Tuple, Union, Type, Callable
+# import time # Unused
+# import threading # Unused
+# import random # Unused
+# from enum import Enum # Unused
+# Removed unused: Optional, List, Union, Type
+from typing import Dict, Any, Tuple, Callable
 
-from mower.hardware.imu import IMUStatus
+# from mower.hardware.imu import IMUStatus # Unused
 from mower.simulation.hardware_sim import SimulatedSensor
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import get_world_instance  # Removed unused: Vector2D
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Configure logging
@@ -31,20 +32,28 @@ class SimulatedBNO085Sensor(SimulatedSensor):
     requiring physical hardware.
     """
 
-    def __init__(self):
-        """Initialize the simulated IMU sensor."""
+    def __init__(self, initial_status: bool = True):
+        """
+        Initialize the simulated IMU sensor.
+
+        Args:
+            initial_status: Set the initial working status of the sensor.
+                            Defaults to True (working).
+        """
         super().__init__("BNO085 IMU")
+        self._initial_status = initial_status
 
         # Initialize sensor data
         self.state = {
-            "acceleration": (0.0, 0.0, 0.0),  # x, y, z in m/s^2
-            "gyro": (0.0, 0.0, 0.0),  # x, y, z in rad/s
-            "magnetometer": (0.0, 0.0, 0.0),  # x, y, z in uT
-            "quaternion": (1.0, 0.0, 0.0, 0.0),  # w, x, y, z
-            "euler_angles": (0.0, 0.0, 0.0),  # roll, pitch, yaw in radians
-            "heading": 0.0,  # in radians
-            "speed": 0.0,  # in m/s
-            "calibration_status": {
+            "working": True,  # Default to True, overridden by _initial_status
+            "acceleration": (float('nan'), float('nan'), float('nan')),
+            "gyro": (float('nan'), float('nan'), float('nan')),
+            "magnetometer": (float('nan'), float('nan'), float('nan')),
+            "quaternion": (float('nan'), float('nan'), float('nan'), float('nan')),
+            "euler_angles": (float('nan'), float('nan'), float('nan')),
+            "heading": float('nan'),
+            "speed": float('nan'),
+            "calibration_status": {  # Assume calibration fails if sensor not working
                 "system": 3,
                 "gyro": 3,
                 "accel": 3,
@@ -78,8 +87,19 @@ class SimulatedBNO085Sensor(SimulatedSensor):
 
     def _initialize_sim(self, *args, **kwargs) -> None:
         """Initialize the simulated IMU sensor."""
-        # Nothing special to initialize for the simulated IMU
-        pass
+        self.state["working"] = self._initial_status
+        if not self.state["working"]:
+            # Set calibration status to 0 if not working
+            self.state["calibration_status"] = {
+                "system": 0, "gyro": 0, "accel": 0, "mag": 0
+            }
+            logger.warning("Simulated BNO085 initialized in a FAILED state.")
+        else:
+            # Set calibration status to 3 (fully calibrated) if working
+            self.state["calibration_status"] = {
+                "system": 3, "gyro": 3, "accel": 3, "mag": 3
+            }
+            logger.info("Simulated BNO085 initialized successfully.")
 
     def _cleanup_sim(self) -> None:
         """Clean up the simulated IMU sensor."""
@@ -88,11 +108,16 @@ class SimulatedBNO085Sensor(SimulatedSensor):
 
     def _update_sensor_data(self) -> None:
         """Update the simulated IMU sensor data from the virtual world."""
+        if not self.state["working"]:
+            # If not working, don't update sensor readings, keep them as
+            # NaN/default error state
+            return
+
         # Get the robot state from the virtual world
         robot_state = self.world.get_robot_state()
 
         # Extract relevant data
-        position = robot_state["position"]
+        # position = robot_state["position"] # Unused variable
         heading = robot_state["heading"]
         velocity = robot_state["velocity"]
         angular_velocity = robot_state["angular_velocity"]
@@ -245,86 +270,101 @@ class SimulatedBNO085Sensor(SimulatedSensor):
 
     def _initialize(self) -> bool:
         """Initialize the simulated IMU sensor."""
-        return self._initialize()
+        # In simulation, initialization success depends on the initial_status
+        # flag
+        return self.state["working"]
 
     def read_bno085_accel(self) -> Tuple[float, float, float]:
         """Read acceleration data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["acceleration"]
+        self.get_data()
+        return self.state["acceleration"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def read_bno085_gyro(self) -> Tuple[float, float, float]:
         """Read gyroscope data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["gyro"]
+        self.get_data()
+        return self.state["gyro"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def read_bno085_magnetometer(self) -> Tuple[float, float, float]:
         """Read magnetometer data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["magnetometer"]
+        self.get_data()
+        return self.state["magnetometer"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def calculate_quaternion(self) -> Tuple[float, float, float, float]:
         """Calculate quaternion from the simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["quaternion"]
+        self.get_data()
+        return self.state["quaternion"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'), float('nan'))
 
     def calculate_heading(self) -> float:
         """Calculate heading from the simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["heading"]
+        self.get_data()
+        return self.state["heading"] if self.state["working"] else float('nan')
 
     def calculate_pitch(self) -> float:
         """Calculate pitch from the simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["euler_angles"][1]
+        self.get_data()
+        return self.state["euler_angles"][1] if self.state["working"] else float(
+            'nan')
 
     def calculate_roll(self) -> float:
         """Calculate roll from the simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["euler_angles"][0]
+        self.get_data()
+        return self.state["euler_angles"][0] if self.state["working"] else float(
+            'nan')
 
     def calculate_speed(self) -> float:
         """Calculate speed from the simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["speed"]
+        self.get_data()
+        return self.state["speed"] if self.state["working"] else float('nan')
 
     def get_orientation(self) -> Tuple[float, float, float]:
         """Get orientation data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["euler_angles"]
+        self.get_data()
+        return self.state["euler_angles"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def get_quaternion(self) -> Tuple[float, float, float, float]:
         """Get quaternion data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["quaternion"]
+        self.get_data()
+        return self.state["quaternion"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'), float('nan'))
 
     def get_acceleration(self) -> Tuple[float, float, float]:
         """Get acceleration data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["acceleration"]
+        self.get_data()
+        return self.state["acceleration"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def get_gyro(self) -> Tuple[float, float, float]:
         """Get gyroscope data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["gyro"]
+        self.get_data()
+        return self.state["gyro"] if self.state["working"] else (
+            float('nan'), float('nan'), float('nan'))
 
     def get_heading(self) -> float:
         """Get heading data from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
-        return self.state["heading"]
+        self.get_data()
+        return self.state["heading"] if self.state["working"] else float('nan')
 
     def get_calibration_status(self) -> Dict[str, int]:
         """Get calibration status from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
+        self.get_data()
+        # Calibration status is set during init based on working status
         return self.state["calibration_status"]
 
     def check_safety_conditions(self) -> Dict[str, bool]:
         """Check safety conditions based on simulated IMU sensor data."""
-        self.get_data()  # Ensure data is up to date
+        self.get_data()
+        # Safety status check depends on valid sensor data, which won't be
+        # updated if not working
         return self.state["safety_status"]
 
     def get_safety_status(self) -> Dict[str, bool]:
         """Get safety status from the simulated IMU sensor."""
-        self.get_data()  # Ensure data is up to date
+        self.get_data()
         return self.state["safety_status"]
 
     def register_safety_callback(

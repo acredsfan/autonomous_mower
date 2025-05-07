@@ -15,36 +15,40 @@ This guide provides information for developers who want to contribute to the Aut
 ### Setting Up the Development Environment
 
 1. **Clone the Repository**:
+
    ```bash
    git clone https://github.com/yourusername/autonomous_mower.git
    cd autonomous_mower
    ```
 
 2. **Create a Virtual Environment** (optional but recommended):
+
    ```bash
    python -m venv venv
-   
+
    # On Windows
    venv\Scripts\activate
-   
+
    # On Linux/macOS
    source venv/bin/activate
    ```
 
 3. **Install Dependencies**:
+
    ```bash
    # Install development dependencies
    pip install -e .[dev]
-   
+
    # Or install all dependencies
    pip install -r requirements.txt
    ```
 
 4. **Set Up Pre-commit Hooks**:
+
    ```bash
    # Install pre-commit
    pip install pre-commit
-   
+
    # Install the git hooks
    pre-commit install
    ```
@@ -106,18 +110,21 @@ The `ResourceManager` class in `main_controller.py` manages hardware and softwar
 ### Navigation
 
 The navigation module provides path planning and movement control:
+
 - `PathPlanner`: Generates mowing paths based on different patterns
 - `NavigationController`: Controls the mower's movement
 
 ### Obstacle Detection
 
 The obstacle detection module provides capabilities for detecting and avoiding obstacles:
+
 - `AvoidanceAlgorithm`: Implements obstacle avoidance strategies
 - `detect_obstacle`: Function to detect obstacles using camera
 
 ### Hardware Interfaces
 
 The hardware module provides interfaces to physical components:
+
 - `BladeController`: Controls the cutting blade
 - `RoboHATDriver`: Controls the drive motors
 - `BNO085Sensor`: Provides orientation and acceleration data
@@ -126,6 +133,7 @@ The hardware module provides interfaces to physical components:
 ### Simulation
 
 The simulation module provides capabilities for testing without physical hardware:
+
 - `VirtualWorld`: Simulates the environment
 - `SimulatedSensor`: Base class for simulated sensors
 - `SimulatedActuator`: Base class for simulated actuators
@@ -141,6 +149,7 @@ The simulation module provides capabilities for testing without physical hardwar
 ### Making Changes
 
 1. Create a new branch from `improvements`:
+
    ```bash
    git checkout improvements
    git pull
@@ -150,17 +159,20 @@ The simulation module provides capabilities for testing without physical hardwar
 2. Make your changes, following the coding standards
 
 3. Run tests to ensure your changes don't break existing functionality:
+
    ```bash
    pytest
    ```
 
 4. Commit your changes with a descriptive message:
+
    ```bash
    git add .
    git commit -m "Add feature: your feature description"
    ```
 
 5. Push your branch to the remote repository:
+
    ```bash
    git push -u origin feature/your-feature-name
    ```
@@ -175,6 +187,17 @@ The simulation module provides capabilities for testing without physical hardwar
 - Keep functions and methods small and focused
 - Write unit tests for all new functionality
 - Use meaningful variable and function names
+
+## Docstring Focus Areas
+
+Critical modules requiring comprehensive docstrings and comments:
+
+- `src/mower/main_controller.py` (flow and state transitions)
+- `src/mower/hardware/sensor_interface.py` (I²C initialization and error handling)
+- `src/mower/hardware/imu.py` (calibration and data interpretation)
+- `src/mower/hardware/tof.py` (address management and read logic)
+
+Refer to [`.roo/dev-instructions.md`](.roo/dev-instructions.md:1) for docstring standards.
 
 ## Testing
 
@@ -243,6 +266,7 @@ Troubleshooting guides are available in the `docs/troubleshooting` directory. Th
 ### Updating Documentation
 
 When making changes to the codebase, update the relevant documentation:
+
 - Update API documentation when changing interfaces
 - Update user guides when changing user-facing functionality
 - Update troubleshooting guides when fixing issues
@@ -252,6 +276,7 @@ When making changes to the codebase, update the relevant documentation:
 ### Reporting Issues
 
 If you find a bug or have a suggestion for improvement, please create an issue in the issue tracker. Include as much detail as possible:
+
 - Steps to reproduce the issue
 - Expected behavior
 - Actual behavior
@@ -261,6 +286,7 @@ If you find a bug or have a suggestion for improvement, please create an issue i
 ### Pull Requests
 
 When submitting a pull request, please:
+
 - Reference the issue that the pull request addresses
 - Provide a clear description of the changes
 - Include any necessary documentation updates
@@ -270,6 +296,7 @@ When submitting a pull request, please:
 ### Code Review
 
 All pull requests will be reviewed by at least one maintainer. The review process ensures:
+
 - Code quality and adherence to standards
 - Proper test coverage
 - Documentation updates

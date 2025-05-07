@@ -7,10 +7,11 @@ requiring physical hardware.
 """
 
 import math
-import time
-import threading
-import random
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+# import time # Not used in this module
+# import threading # Not used in this module
+# import random # Not used in this module
+# , List, Tuple, Union, Type # Unused specific types
+from typing import Dict, Any, Optional
 
 from mower.simulation.hardware_sim import SimulatedSensor
 from mower.simulation.world_model import get_world_instance, Vector2D
@@ -29,17 +30,25 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
     requiring physical hardware.
     """
 
-    def __init__(self):
-        """Initialize the simulated ToF sensors."""
+    def __init__(self, initial_statuses: Optional[Dict[str, bool]] = None):
+        """
+        Initialize the simulated ToF sensors.
+
+        Args:
+            initial_statuses: Optional dict to set initial working status
+                              of sensors (e.g., {"left": False}).
+        """
         super().__init__("VL53L0X ToF Sensors")
+        self._initial_statuses = initial_statuses if initial_statuses is not None \
+            else {}
 
         # Initialize sensor data
         self.state = {
             "left_distance": float("inf"),  # Distance in cm
             "right_distance": float("inf"),  # Distance in cm
-            "sensor_status": {
-                "left": True,  # True if sensor is working
-                "right": True,  # True if sensor is working
+            "sensor_status": {  # Default True, overridden by _initial_statuses
+                "left": True,
+                "right": True,
             },
         }
 
@@ -50,7 +59,8 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
         self.min_range = 5.0  # 5cm minimum range
 
         # Initialize sensor positions and orientations relative to robot
-        # These values should match the physical placement of sensors on the robot
+        # These values should match the physical placement of sensors on the
+        # robot
         self.sensor_positions = {
             "left": Vector2D(0.2, 0.15),  # 20cm forward, 15cm left of center
             "right": Vector2D(
@@ -68,8 +78,15 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
 
     def _initialize_sim(self, *args, **kwargs) -> None:
         """Initialize the simulated ToF sensors."""
-        # Nothing special to initialize for the simulated ToF sensors
-        pass
+        for sensor_name, is_working in self._initial_statuses.items():
+            if sensor_name in self.state["sensor_status"]:
+                self.state["sensor_status"][sensor_name] = is_working
+                if not is_working:
+                    # Set distance to NaN if sensor is not working initially
+                    self.state[f"{sensor_name}_distance"] = float('nan')
+        logger.info(
+            f"Simulated ToF initialized with statuses: {
+                self.state['sensor_status']}")
 
     def _cleanup_sim(self) -> None:
         """Clean up the simulated ToF sensors."""
@@ -87,6 +104,11 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
 
         # Update each sensor
         for sensor_name in ["left", "right"]:
+            if not self.state["sensor_status"].get(sensor_name, False):
+                self.state[f"{sensor_name}_distance"] = float(
+                    'nan')  # Ensure non-working sensor reads NaN
+                continue  # Skip update for non-working sensor
+
             # Calculate sensor position in world coordinates
             sensor_rel_pos = self.sensor_positions[sensor_name]
             sensor_rel_pos = sensor_rel_pos.rotate(robot_heading)
@@ -144,6 +166,8 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             float: Distance in cm, or inf if no obstacle detected
         """
         self.get_data()  # Ensure data is up to date
+        if not self.state["sensor_status"].get(sensor_name, False):
+            return float('nan')  # Return NaN if sensor is not working
         return self.state.get(f"{sensor_name}_distance", float("inf"))
 
     def get_left_distance(self) -> float:

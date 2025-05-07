@@ -8,6 +8,7 @@ Two service unit files are provided in the repository's root:
 
 - `autonomous-mower.service`: The main service that runs the mower.
 - `install-mower.service`: A one-shot service for initial installation.
+  **Note:** The service unit specifies `WorkingDirectory=/home/pi/autonomous_mower` (see [autonomous-mower.service:10](autonomous-mower.service:10)) to ensure correct working directory on startup.
 
 ## Installation
 

@@ -17,6 +17,34 @@ An autonomous lawn mower system built for Raspberry Pi, featuring advanced navig
 - Hardware watchdog for system reliability
 - Emergency stop button support
 
+## Environment Variables
+
+See [`.env.example`](.env.example:1) for required environment variables, including:
+
+- `USE_SIMULATION`
+- `LOG_LEVEL`
+- `CONFIG_DIR`
+- `IMU_SERIAL_PORT`
+
+## Module Overview
+
+Overview of key modules:
+
+- `MainController`: Coordinates all subsystems and state transitions
+- `NavigationController`: Handles path planning and movement control
+- `ObstacleDetector`: Processes sensor data and obstacle avoidance
+- `HardwareManager`: Provides hardware abstraction for sensors and actuators
+
+Architecture diagram placeholder: see [docs/system_architecture.md](docs/system_architecture.md)
+
+## Developer Tooling
+
+- Black (code formatting)
+- MyPy (static type checking)
+- Flake8 (linting)
+
+Refer to coverage targets in [docs/test_coverage.md](docs/test_coverage.md)
+
 ## Prerequisites
 
 - Raspberry Pi 4B (4GB RAM or better recommended)

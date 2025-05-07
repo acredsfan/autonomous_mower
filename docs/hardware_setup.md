@@ -4,6 +4,20 @@ This document provides detailed instructions for setting up the hardware compone
 
 ## Overview
 
+## Software Dependencies
+
+- Python 3.10 or newer is required (Raspberry Pi OS Bookworm).
+- Install system dependencies:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libatlas-base-dev
+```
+
+- Ensure compatible GPIO libraries:
+  - gpiozero (>=1.7)
+  - RPi.GPIO (>=0.7)
+
 The Autonomous Mower requires several hardware components to function properly. This guide will walk you through the process of assembling and connecting these components.
 
 ## Required Components

@@ -1,17 +1,18 @@
 [Unit]
 Description=Autonomous Mower Service
-After=network.target
+After=network.target local-fs.target systemd-udev-settle.service dev-i2c-1.device
+Wants=dev-i2c-1.device
 
 [Service]
 Type=simple
-#User=pi
-#Group=pi
+User=pi
+Group=pi
 WorkingDirectory=/home/pi/autonomous_mower
 Environment=PYTHONPATH=/home/pi/autonomous_mower
 ExecStartPre=/usr/bin/python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ExecStart=/usr/bin/python3 -m mower.main_controller
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=30
 
 [Install]
 WantedBy=multi-user.target

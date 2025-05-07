@@ -16,8 +16,6 @@ from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # Check if we should use simulation mode (on Windows or via env variable)
-import platform
-import os
 
 USE_SIMULATION = platform.system() == "Windows" or os.environ.get(
     "USE_SIMULATION", ""
@@ -39,7 +37,13 @@ def create_app(mower):
     """
     app = Flask(__name__)
     CORS(app)
-    socketio = SocketIO(app, cors_allowed_origins="*")
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins="*",
+        ping_timeout=20,
+        ping_interval=25,
+        logger=True,
+        engineio_logger=True)
 
     # Initialize Babel for translations using the version-agnostic approach
     # This uses the implementation from i18n.py which works with any
@@ -93,7 +97,8 @@ def create_app(mower):
         # Use a default API key or retrieve from environment/config
         # For development purposes, we'll use a placeholder API key
         google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-        return render_template("map.html", google_maps_api_key=google_maps_api_key)
+        return render_template("map.html",
+                               google_maps_api_key=google_maps_api_key)
 
     @app.route("/diagnostics")
     def diagnostics():
@@ -268,7 +273,8 @@ def create_app(mower):
         """Get the current mowing area configuration."""
         try:
             path_planner = mower.resource_manager.get_path_planner()
-            area_data = {"boundary_points": path_planner.pattern_config.boundary_points}
+            area_data = {
+                "boundary_points": path_planner.pattern_config.boundary_points}
             return jsonify({"success": True, "data": area_data})
         except Exception as e:
             logger.error(f"Failed to get mowing area: {e}")
@@ -487,7 +493,8 @@ def create_app(mower):
             path_planner = mower.resource_manager.get_path_planner()
             emit("path_update", path_planner.current_path)
         except Exception as e:
-            logger.error(f"Error in handle_connect: {e}") @ socketio.on("disconnect")
+            logger.error(
+                f"Error in handle_connect: {e}") @ socketio.on("disconnect")
 
     def handle_disconnect():
         """Handle client disconnection."""
@@ -536,10 +543,11 @@ def create_app(mower):
             elif data_type == "calibration_status":
                 # Get calibration status
                 calibration_status = {
-                    "imu": "Uncalibrated" if not USE_SIMULATION else "Simulated",
-                    "blade": "Uncalibrated" if not USE_SIMULATION else "Simulated",
-                    "gps": "Not Set" if not USE_SIMULATION else "Simulated",
-                }
+                    "imu": "Uncalibrated"
+                    if not USE_SIMULATION else "Simulated",
+                    "blade": "Uncalibrated"
+                    if not USE_SIMULATION else "Simulated", "gps": "Not Set"
+                    if not USE_SIMULATION else "Simulated", }
                 emit("calibration_update", calibration_status)
             elif data_type == "all":
                 emit("status_update", mower.get_status())
@@ -567,7 +575,8 @@ def create_app(mower):
                     },
                 )
             elif command == "save_settings":
-                # Special case for save_settings using the same logic as the REST endpoint
+                # Special case for save_settings using the same logic as the
+                # REST endpoint
                 try:
                     settings = params.get("settings", {})
                     mowing = settings.get("mowing", {})
@@ -580,11 +589,17 @@ def create_app(mower):
                             mowing["pattern"]
                         ]
                     if "spacing" in mowing:
-                        path_planner.pattern_config.spacing = float(mowing["spacing"])
+                        path_planner.pattern_config.spacing = float(
+                            mowing
+                            ["spacing"])
                     if "angle" in mowing:
-                        path_planner.pattern_config.angle = float(mowing["angle"])
+                        path_planner.pattern_config.angle = float(
+                            mowing
+                            ["angle"])
                     if "overlap" in mowing:
-                        path_planner.pattern_config.overlap = float(mowing["overlap"])
+                        path_planner.pattern_config.overlap = float(
+                            mowing
+                            ["overlap"])
 
                     emit(
                         "command_response",
@@ -597,9 +612,8 @@ def create_app(mower):
                 except Exception as e:
                     logger.error(f"Failed to save settings: {e}")
                     emit(
-                        "command_response",
-                        {"command": command, "success": False, "error": str(e)},
-                    )
+                        "command_response", {
+                            "command": command, "success": False, "error": str(e)}, )
             else:
                 # Handle other commands...
                 result = mower.execute_command(command, params)
@@ -799,6 +813,35 @@ def create_app(mower):
         except Exception as e:
             logger.error(f"Error handling command {command}: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
+
+    @app.errorhandler(KeyError)
+    def handle_key_error(e):
+        """Handle KeyError, specifically for 'Session is disconnected' from engineio."""
+        # The error is raised as `raise KeyError('Session is disconnected')`
+        # So e.args[0] will be 'Session is disconnected'
+        if e.args and e.args[0] == 'Session is disconnected':
+            sid_from_url = "N/A"
+            if request and request.args:
+                sid_from_url = request.args.get('sid', "N/A")
+
+            logger.warning(
+                f"EngineIO: Client attempted to use a disconnected session. "
+                f"SID from request: '{sid_from_url}'. URL: {request.url if request else 'N/A'}. "
+                f"Error: {e}"
+            )
+            # Engine.IO standard error for unknown session ID
+            response_data = {"code": 1, "message": "Session ID unknown"}
+            return jsonify(response_data), 400  # Bad Request
+        else:
+            # For other KeyErrors, log them and let Flask produce a 500.
+            logger.error(
+                f"Unhandled KeyError encountered: {e}. "
+                f"SID from request: {request.args.get('sid') if request and request.args else 'N/A'}. "
+                f"URL: {request.url if request else 'N/A'}",
+                exc_info=True
+            )
+            return jsonify(
+                error="An unexpected KeyError occurred.", details=str(e)), 500
 
     return app, socketio
 

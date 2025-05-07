@@ -51,6 +51,7 @@ The system follows a layered architecture with the following main layers:
 ### Main Controller
 
 The Main Controller is the central component of the system. It:
+
 - Coordinates between all other components
 - Manages the overall state of the mower
 - Handles resource initialization and cleanup
@@ -58,6 +59,7 @@ The Main Controller is the central component of the system. It:
 - Manages the event system
 
 **Key Classes**:
+
 - `MainController`: Main entry point and coordinator
 - `ResourceManager`: Manages hardware and software resources
 - `StateManager`: Manages the mower's state
@@ -65,12 +67,14 @@ The Main Controller is the central component of the system. It:
 ### Navigation
 
 The Navigation component is responsible for planning and executing the mower's movement. It:
+
 - Generates mowing paths based on boundaries and obstacles
 - Controls the mower's movement
 - Tracks the mower's position using GPS and other sensors
 - Implements different mowing patterns
 
 **Key Classes**:
+
 - `PathPlanner`: Generates mowing paths
 - `NavigationController`: Controls the mower's movement
 - `GPSManager`: Manages GPS data and position tracking
@@ -79,12 +83,14 @@ The Navigation component is responsible for planning and executing the mower's m
 ### Obstacle Detection
 
 The Obstacle Detection component is responsible for detecting and avoiding obstacles. It:
+
 - Processes camera images to detect obstacles
 - Reads distance sensors to detect nearby objects
 - Implements obstacle avoidance algorithms
 - Provides real-time obstacle information to the Navigation component
 
 **Key Classes**:
+
 - `ObstacleDetector`: Detects obstacles using camera and sensors
 - `AvoidanceAlgorithm`: Implements obstacle avoidance strategies
 - `SensorFusion`: Combines data from multiple sensors
@@ -92,12 +98,14 @@ The Obstacle Detection component is responsible for detecting and avoiding obsta
 ### Hardware Abstraction Layer
 
 The Hardware Abstraction Layer provides abstractions for hardware components. It:
+
 - Provides a consistent interface for hardware components
 - Handles hardware-specific details
 - Allows for easy switching between real hardware and simulation
 - Manages hardware resources
 
 **Key Classes**:
+
 - `HardwareManager`: Manages hardware components
 - `MotorController`: Controls motors (wheels, blades)
 - `SensorInterface`: Provides a consistent interface for sensors
@@ -106,12 +114,14 @@ The Hardware Abstraction Layer provides abstractions for hardware components. It
 ### User Interface
 
 The User Interface component provides interfaces for user interaction. It:
+
 - Provides a web interface for control and monitoring
 - Provides a mobile app for remote control
 - Displays the mower's status and position
 - Allows for configuration and scheduling
 
 **Key Classes**:
+
 - `WebServer`: Serves the web interface
 - `APIController`: Provides API endpoints for the mobile app
 - `DashboardController`: Manages the dashboard display
@@ -185,6 +195,13 @@ The system uses a unified error handling approach:
 3. The `ErrorHandler` processes errors and determines the appropriate response
 4. Errors are logged and, if appropriate, displayed to the user
 5. Critical errors trigger a safe shutdown sequence
+
+### Exception Handling Strategy
+
+- Catch specific exceptions rather than broad `Exception` types
+- Use `ErrorHandler` to centralize exception processing and logging
+- Document exception flows in module and function docstrings (see [`.roo/dev-instructions.md`](.roo/dev-instructions.md:1))
+- Raise custom exception types defined in `src/mower/error_handling/exceptions.py`
 
 ## Simulation Capabilities
 
