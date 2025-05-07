@@ -12,9 +12,9 @@ import io
 import time
 import os
 import numpy as np
-from typing import Dict, List, Any, Callable, Optional
+from typing import Dict, List, Any, Callable
 import matplotlib.pyplot as plt
-from pathlib import Path
+# from pathlib import Path
 
 from mower.utilities.logger_config import LoggerConfig
 
@@ -45,8 +45,7 @@ class PerformanceProfiler:
         os.makedirs(output_dir, exist_ok=True)
 
         logger.info(
-            f"Performance profiler initialized with output directory: {output_dir}"
-        )
+            f"Performance profiler initialized with output directory: {output_dir}")
 
     def profile_function(
         self, func: Callable, *args, **kwargs
@@ -100,8 +99,9 @@ class PerformanceProfiler:
         }
 
         logger.info(
-            f"Profiled {func.__name__}: {execution_time:.4f} seconds, {total_calls} calls"
-        )
+            f"Profiled {
+                func.__name__}: {
+                execution_time:.4f} seconds, {total_calls} calls")
 
         return metrics
 
@@ -127,7 +127,7 @@ class PerformanceProfiler:
         total_calls_list = []
 
         for i in range(iterations):
-            logger.debug(f"Iteration {i+1}/{iterations}")
+            logger.debug(f"Iteration {i + 1}/{iterations}")
             metrics = self.profile_function(func, *args, **kwargs)
             execution_times.append(metrics["execution_time"])
             total_calls_list.append(metrics["total_calls"])
@@ -192,7 +192,8 @@ class PerformanceProfiler:
                 f"Standard deviation: {results['std_time']:.4f} seconds\n"
             )
             f.write(
-                f"Min/Max time: {results['min_time']:.4f}/{results['max_time']:.4f} seconds\n"
+                f"Min/Max time: {results['min_time']:.4f}"
+                f"/{results['max_time']:.4f} seconds\n"
             )
             f.write(f"Average function calls: {results['avg_calls']:.1f}\n\n")
             f.write("Detailed statistics:\n")

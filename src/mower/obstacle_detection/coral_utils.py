@@ -25,8 +25,8 @@ logger = LoggerConfig.get_logger(__name__)
 
 # Try to import Coral libraries, with graceful fallback if not available
 try:
-    from pycoral.utils import edgetpu
-    from pycoral.adapters import common
+    from pycoral.utils import edgetpu  # type: ignore[import]
+    from pycoral.adapters import common  # type: ignore[import]
 
     coral_available = True
     logger.info("Coral libraries successfully imported")
@@ -97,7 +97,7 @@ def get_interpreter_creator(use_coral: bool = False):
         return edgetpu.make_interpreter
     else:
         # Import tflite_runtime only when needed for CPU inference
-        import tflite_runtime.interpreter as tflite
+        import tflite_runtime.interpreter as tflite  # type: ignore[import]
 
         logger.info("Using CPU for model inference")
         return tflite.Interpreter

@@ -23,7 +23,7 @@ Example usage:
 """
 
 import argparse
-import json
+# import json
 import os
 import platform
 import socket
@@ -35,9 +35,9 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 import psutil
-from flask import Flask, jsonify, request, send_file, Response
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
-from werkzeug.security import check_password_hash
+# from werkzeug.security import check_password_hash
 
 # Import hardware test suite
 from mower.diagnostics.hardware_test import (

@@ -34,9 +34,10 @@ import subprocess
 import sys
 import tarfile
 import time
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from datetime import datetime
+import tempfile
+# from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
 
 # Import logger
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
@@ -243,7 +244,10 @@ class BackupRestore:
             if component not in valid_components:
                 return (
                     False,
-                    f"Invalid component: {component}. Valid components: {valid_components}",
+                    (
+                        f"Invalid component: {component}. "
+                        f"Valid components: {valid_components}"
+                    ),
                 )
 
         # Generate backup ID and create directory
@@ -297,7 +301,10 @@ class BackupRestore:
 
         return (
             True,
-            f"Backup {backup_id} created successfully with components: {successful_components}",
+            (
+                f"Backup {backup_id} created successfully with components: "
+                f"{successful_components}"
+            ),
         )
 
     def restore_backup(
@@ -338,9 +345,8 @@ class BackupRestore:
             for component in components:
                 if component not in backup_info["components"]:
                     return (
-                        False,
-                        f"Component {component} not found in backup {backup_id}",
-                    )
+                        False, f"Component {component} not found "
+                        f"in backup {backup_id}", )
 
         # Stop services before restoring
         logger.info("Stopping autonomous-mower service")
@@ -389,7 +395,8 @@ class BackupRestore:
             logger.error(f"Error starting service: {e.stderr}")
             return (
                 False,
-                f"Restore partially successful, but failed to start service: {e.stderr}",
+                f"Restore partially successful, but failed to start service: {
+                    e.stderr}",
             )
 
         if not successful_components:
@@ -397,7 +404,10 @@ class BackupRestore:
 
         return (
             True,
-            f"Restore from backup {backup_id} completed successfully with components: {successful_components}",
+            (
+                f"Restore from backup {backup_id} completed successfully "
+                f"with components: {successful_components}"
+            ),
         )
 
     def list_backups(self) -> List[Dict[str, Any]]:
@@ -475,7 +485,8 @@ class BackupRestore:
 
         Returns:
             Tuple[bool, str]: (success, message)
-                success: True if the scheduled backup was set up successfully, False otherwise.
+                success: True if the scheduled backup was set up successfully, F
+                alse otherwise.
                 message: Information about the process or error message.
         """
         # Create a cron job to run the backup script
@@ -484,7 +495,11 @@ class BackupRestore:
         )
         description_str = f'"{description}"' if description else '""'
 
-        cron_command = f"0 2 * * * python3 -m mower.utilities.backup_restore --backup {components_str} --description {description_str} > /dev/null 2>&1"
+        cron_command = (
+            f"0 2 * * * python3 -m mower.utilities.backup_restore "
+            f"--backup {components_str} --description {description_str} "
+            f"> /dev/null 2>&1"
+        )
 
         try:
             # Get existing crontab

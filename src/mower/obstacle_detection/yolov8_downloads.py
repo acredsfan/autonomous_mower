@@ -10,11 +10,12 @@ This script:
 5. Ensures dependencies are installed.
 
 Usage:
-  python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640][--fp16 | --int8]
+  python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640]
+  [--fp16 | --int8]
   [--data path/to/coco.yaml]
 """
 
-import os
+# import os
 import sys
 import argparse
 import subprocess
@@ -204,12 +205,10 @@ def install_dependencies():
             installed_count += 1
         except subprocess.CalledProcessError:
             logging.warning(
-                f"× Failed to install {package} via pip. Please install manually."
-            )
+                f"× Failed to install {package} via pip. Please install manually.")
         except FileNotFoundError:
             logging.error(
-                f"× Failed to run pip. Is Python/pip configured correctly in your PATH?"
-            )
+                "× Failed to run pip. Is Python/pip configured correctly in your PATH?")
             return False  # Critical failure
     return installed_count > 0
 
@@ -223,7 +222,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         logging.info(f"Loading base model: {pt_model_name}...")
         model = YOLO(pt_model_name)  # Downloads.pt if needed
 
-        logging.info(f"Exporting {model_name} to TFLite with args: {export_args}...")
+        logging.info(
+            f"Exporting {model_name} to TFLite with args: {export_args}...")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # --- Perform the export ---
@@ -235,7 +235,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         # --- Determine expected filename ---
         quant_suffix = "_float16" if export_args.get("half") else "_float32"
         if export_args.get("int8"):
-            # Naming convention for INT8 TFLite might vary. Check Ultralytics docs/output.
+            # Naming convention for INT8 TFLite might vary.
+            # Check Ultralytics docs/output.
             # Common patterns: _int8.tflite, _full_integer_quant.tflite
             quant_suffix = "_int8"  # Adjust if needed based on actual output
         expected_filename = f"{model_name}{quant_suffix}.tflite"
@@ -248,7 +249,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         if (
             isinstance(export_result, (str, Path))
             and Path(export_result).is_file()
-            and Path.export_result.name.endswith(".tflite")
+            and Path(export_result).name.endswith(".tflite")
         ):
             potential_path = Path(export_result)
             if potential_path.exists():
@@ -259,14 +260,15 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         # 3. Check for common export subdirectories (Ultralytics might create these)
         # Add more patterns if needed based on observed behavior
 
-        # 4. Fallback: Glob for any matching TFLite file in CWD if specific name fails
+        # 4. Fallback: Glob for any matching TFLite file in CWD if specific
+        # name fails
         if not found_path:
             possible_files = list(Path.cwd().glob(f"{model_name}*.tflite"))
             if possible_files:
                 found_path = possible_files[0]  # Take the first match
                 logging.warning(
-                    f"Found model via glob search: {found_path.name}. Using this file."
-                )
+                    f"Found model via glob search: {
+                        found_path.name}. Using this file.")
 
         # --- Move file and return path ---
         if found_path:
@@ -275,13 +277,12 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
                 target_model_path.parent.mkdir(parents=True, exist_ok=True)
                 found_path.rename(target_model_path)
                 logging.info(
-                    f"Successfully exported and moved model to: {target_model_path}"
-                )
+                    f"Successfully exported and moved model to: {target_model_path}")
                 return target_model_path
             except OSError as e:
                 logging.error(
-                    f"Error moving exported file {found_path} to {target_model_path}: {e}"
-                )
+                    f"Error moving exported file {found_path} to "
+                    f"{target_model_path}: {e}")
                 # Attempt to copy if rename fails (e.g., different filesystems)
                 try:
                     import shutil
@@ -295,23 +296,26 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
                     # found_path.unlink()
                     return target_model_path
                 except Exception as copy_e:
-                    logging.error(f"Failed to copy file after rename failed: {copy_e}")
+                    logging.error(
+                        f"Failed to copy file after rename failed: {copy_e}")
                     return None
         else:
             logging.error(
                 f"Export process finished, but the expected TFLite file "
-                f"('{expected_filename}' or similar) was not found in standard locations."
+                f"('{expected_filename}' or similar) "
+                "was not found in standard locations."
             )
             return None
 
     except Exception as e:
-        logging.error(f"Error during model export for {model_name}: {e}", exc_info=True)
+        logging.error(
+            f"Error during model export for {model_name}: {e}",
+            exc_info=True)
         # Consider adding checks for specific common errors
         if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
             logging.error(
                 "INT8 export requires the '--data' argument specifying a calibration "
-                "dataset YAML."
-            )
+                "dataset YAML.")
         return None
 
 
@@ -367,7 +371,8 @@ def update_env_file(model_path: Path, labelmap_path: Path):
     # Add missing entries
     if not updated_model or not updated_label or not updated_flag:
         # Add header if no YOLOv8 config was found before
-        if not any(line.strip() == "# YOLOv8 configuration" for line in output_lines):
+        if not any(line.strip() == "# YOLOv8 configuration"
+                   for line in output_lines):
             output_lines.append("\n# YOLOv8 configuration\n")
         if not updated_model:
             output_lines.append(f"YOLOV8_MODEL_PATH={model_path}\n")
@@ -413,7 +418,8 @@ def main():
     elif args.int8:
         if not args.data:
             logging.error(
-                "INT8 export requires '--data' argument specifying calibration dataset YAML."
+                "INT8 export requires '--data' argument "
+                "specifying calibration dataset YAML."
             )
             sys.exit(1)
         export_args["int8"] = True
@@ -443,7 +449,8 @@ def main():
             "\nYou can now use the exported YOLOv8 TFLite model for obstacle detection."
         )
         logging.info(
-            "The obstacle detector should automatically use YOLOv8 if configured via.env."
+            "The obstacle detector should automatically use "
+            "YOLOv8 if configured via.env."
         )
         logging.info("\nTo verify application integration, run:")
         print(  # Use print for user-facing command

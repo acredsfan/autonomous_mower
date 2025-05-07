@@ -320,7 +320,7 @@ class HardwareTestSuite:
                 return False
 
             # This just checks if we can access the GPIO library without errors
-            import RPi.GPIO as GPIO
+            import RPi.GPIO as GPIO  # type: ignore
 
             # Check if GPIO is accessible
             GPIO.setmode(GPIO.BCM)

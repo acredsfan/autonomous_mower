@@ -1,10 +1,11 @@
 """
-Simulation helper for the web UI to provide simulated sensor data when running on Windows
+Simulation helper for the web UI to provide simulated
+sensor data when running on Windows
 or in simulation mode.
 """
 
 import os
-import math
+# import math
 import time
 import random
 import platform
@@ -14,7 +15,8 @@ from typing import Dict, Any
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-# Check if running on Windows - likely a development environment without real hardware
+# Check if running on Windows - likely a development environment without
+# real hardware
 IS_WINDOWS = platform.system() == "Windows"
 
 # Cache for simulated data to provide consistent but changing values over time
@@ -43,7 +45,9 @@ def should_use_simulation() -> bool:
         bool: True if simulation should be used
     """
     # Check environment variable
-    sim_env = os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")
+    sim_env = os.environ.get(
+        "USE_SIMULATION", "").lower() in (
+        "true", "1", "yes")
 
     # Check if we're running on Windows
     return IS_WINDOWS or sim_env
@@ -51,7 +55,8 @@ def should_use_simulation() -> bool:
 
 def get_simulated_sensor_data() -> Dict[str, Any]:
     """
-    Generate simulated sensor data for testing and development on systems without hardware.
+    Generate simulated sensor data for testing and development
+    on systems without hardware.
 
     Returns:
         Dict[str, Any]: Simulated sensor data
@@ -144,8 +149,9 @@ def get_simulated_sensor_data() -> Dict[str, Any]:
 
 
 def update_simulated_motor_data(
-    left_speed: float = None, right_speed: float = None, blade_speed: float = None
-) -> None:
+        left_speed: float = None,
+        right_speed: float = None,
+        blade_speed: float = None) -> None:
     """
     Update the simulated motor values to reflect commands sent by the user.
 

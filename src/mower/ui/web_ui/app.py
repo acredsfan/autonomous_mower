@@ -736,7 +736,10 @@ def create_app(mower):
                     "success": True,
                     "data": {
                         "boundary_points": (
-                            mower.resource_manager.get_path_planner().pattern_config.boundary_points
+                            mower.resource_manager
+                            .get_path_planner()
+                            .pattern_config
+                            .boundary_points
                         )
                     },
                 },
@@ -754,16 +757,29 @@ def create_app(mower):
                     "data": {
                         "mowing": {
                             "pattern": (
-                                mower.resource_manager.get_path_planner().pattern_config.pattern_type.name
+                                mower.resource_manager
+                                .get_path_planner()
+                                .pattern_config
+                                .pattern_type
+                                .name
                             ),
                             "spacing": (
-                                mower.resource_manager.get_path_planner().pattern_config.spacing
+                                mower.resource_manager
+                                .get_path_planner()
+                                .pattern_config
+                                .spacing
                             ),
                             "angle": (
-                                mower.resource_manager.get_path_planner().pattern_config.angle
+                                mower.resource_manager
+                                .get_path_planner()
+                                .pattern_config
+                                .angle
                             ),
                             "overlap": (
-                                mower.resource_manager.get_path_planner().pattern_config.overlap
+                                mower.resource_manager
+                                .get_path_planner()
+                                .pattern_config
+                                .overlap
                             ),
                         }
                     },
@@ -826,7 +842,8 @@ def create_app(mower):
 
             logger.warning(
                 f"EngineIO: Client attempted to use a disconnected session. "
-                f"SID from request: '{sid_from_url}'. URL: {request.url if request else 'N/A'}. "
+                f"SID from request: '{sid_from_url}'. "
+                f"URL: {request.url if request else 'N/A'}. "
                 f"Error: {e}"
             )
             # Engine.IO standard error for unknown session ID
@@ -836,7 +853,8 @@ def create_app(mower):
             # For other KeyErrors, log them and let Flask produce a 500.
             logger.error(
                 f"Unhandled KeyError encountered: {e}. "
-                f"SID from request: {request.args.get('sid') if request and request.args else 'N/A'}. "
+                f"SID from request: "
+                f"{request.args.get('sid') if request and request.args else 'N/A'}. "
                 f"URL: {request.url if request else 'N/A'}",
                 exc_info=True
             )

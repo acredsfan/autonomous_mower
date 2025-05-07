@@ -37,7 +37,8 @@ class SecureStorage:
 
         Args:
             storage_path: Path to the secure storage file.
-            master_key_env_var: Name of the environment variable containing the master key.
+            master_key_env_var: Name of the environment variable
+            containing the master key.
         """
         self.storage_path = Path(storage_path)
         self.master_key_env_var = master_key_env_var
@@ -144,7 +145,8 @@ class SecureStorage:
             default: The default value to return if the key doesn't exist.
 
         Returns:
-            The value associated with the key, or the default value if the key doesn't exist.
+            The value associated with the key, or the default value
+            if the key doesn't exist.
         """
         return self._data.get(key, default)
 
