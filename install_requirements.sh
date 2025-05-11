@@ -318,6 +318,19 @@ setup_yolov8() {
     print_info "Checking for ultralytics package..."
     if ! python3 -m pip show ultralytics > /dev/null 2>&1; then
         print_info "ultralytics package not found. Installing (this may take a few minutes)..."
+        
+        print_info "Attempting to remove system-installed sympy to avoid conflicts..."
+        if dpkg -s python3-sympy &> /dev/null; then
+            sudo apt-get remove -y python3-sympy
+            check_command "Removing python3-sympy" || print_warning "Failed to remove python3-sympy. Installation of ultralytics might still face issues."
+            # Clean up dependencies that are no longer needed
+            print_info "Running apt autoremove after sympy removal..."
+            sudo apt-get autoremove -y
+            check_command "Running apt autoremove"
+        else
+            print_info "python3-sympy not found via apt, proceeding with pip install."
+        fi
+        
         python3 -m pip install --break-system-packages --upgrade --upgrade-strategy eager ultralytics
         check_command "Installing ultralytics package" || return 1 # Return if install fails
         print_success "ultralytics package installed successfully."
