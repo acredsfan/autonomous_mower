@@ -317,8 +317,8 @@ setup_yolov8() {
     # Check for and install ultralytics if not present
     print_info "Checking for ultralytics package..."
     if ! python3 -m pip show ultralytics > /dev/null 2>&1; then
-        print_info "ultralytics package not found. Installing..."
-        python3 -m pip install --break-system-packages ultralytics
+        print_info "ultralytics package not found. Installing (this may take a few minutes)..."
+        python3 -m pip install --break-system-packages --upgrade --upgrade-strategy eager ultralytics
         check_command "Installing ultralytics package" || return 1 # Return if install fails
         print_success "ultralytics package installed successfully."
     else
