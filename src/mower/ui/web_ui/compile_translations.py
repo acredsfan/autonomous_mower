@@ -1,10 +1,10 @@
 """Script to compile translations for the web interface.
 
-This script compiles the .po translation files into .mo files that can be used by Flask-Babel.
+This script compiles the .po translation files into .mo
+files that can be used by Flask-Babel.
 Run this script after updating the translation files.
 """
 
-import os
 import subprocess
 from pathlib import Path
 
@@ -49,7 +49,8 @@ def compile_translations():
                         print(f"Error compiling {po_file}: {e}")
                     except FileNotFoundError:
                         print(
-                            "pybabel command not found. Make sure Flask-Babel is installed."
+                            "pybabel command not found. "
+                            "Make sure Flask-Babel is installed."
                         )
                 else:
                     print(f"No messages.po file found in {lc_messages_dir}")

@@ -10,7 +10,8 @@ This script:
 5. Ensures dependencies are installed.
 
 Usage:
-  python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640][--fp16 | --int8]
+  python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640]
+  [--fp16 | --int8]
   [--data path/to/coco.yaml]
 """
 
@@ -209,10 +210,10 @@ def install_dependencies():
             installed_count += 1
         except subprocess.CalledProcessError:
             logging.warning(
-                f"× Failed to install {package} via pip. Please install manually."
-            )
+                f"× Failed to install {package} via pip. Please install manually.")
         except FileNotFoundError:
-            logging.error("× Failed to run pip. Is Python/pip configured correctly?")
+            logging.error(
+                "× Failed to run pip. Is Python/pip configured correctly?")
             return False  # Critical failure
     return installed_count > 0
 
@@ -226,7 +227,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         logging.info(f"Loading base model: {pt_model_name}...")
         model = YOLO(pt_model_name)  # Downloads .pt if needed
 
-        logging.info(f"Exporting {model_name} to TFLite with args: {export_args}...")
+        logging.info(
+            f"Exporting {model_name} to TFLite with args: {export_args}...")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine expected filename based on export args
@@ -239,7 +241,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
 
         # Run export (it might save file relative to CWD)
         export_result_path_str = model.export(**export_args)
-        logging.info(f"Ultralytics export function returned: {export_result_path_str}")
+        logging.info(
+            f"Ultralytics export function returned: {export_result_path_str}")
 
         # --- Locate the exported file ---
         found_path = None
@@ -254,7 +257,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             logging.info(f"Located exported model at: {found_path}")
         else:
             # Fallback search if the return value wasn't helpful
-            logging.warning("Export function did not return a valid path. Searching...")
+            logging.warning(
+                "Export function did not return a valid path. Searching...")
             # Try common patterns
             possible_filenames = [
                 f"{model_name}{quant_suffix}.tflite",
@@ -286,8 +290,8 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
                 return target_model_path
             except OSError as e:
                 logging.error(
-                    f"Failed to move model from {found_path} to {target_model_path}: {e}"
-                )
+                    f"Failed to move model from {found_path} to "
+                    f"{target_model_path}: {e}")
                 return None  # Indicate failure
         else:
             logging.error(
@@ -297,7 +301,9 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             return None
 
     except Exception as e:
-        logging.error(f"Error during model export for {model_name}: {e}", exc_info=True)
+        logging.error(
+            f"Error during model export for {model_name}: {e}",
+            exc_info=True)
         if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
             logging.error(
                 "INT8 quantization requires a dataset. "
@@ -356,11 +362,13 @@ def update_env_file(model_path: Path, labelmap_path: Path):
     for line in lines:
         stripped_line = line.strip()
         # Check for YOLOv8 specific lines
-        if stripped_line.startswith("YOLO_MODEL_PATH="):  # Changed from YOLOV8_
+        if stripped_line.startswith(
+                "YOLO_MODEL_PATH="):  # Changed from YOLOV8_
             output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
             updated_model = True
             yolo_section_exists = True
-        elif stripped_line.startswith("YOLO_LABEL_PATH="):  # Changed from LABEL_MAP_
+        # Changed from LABEL_MAP_
+        elif stripped_line.startswith("YOLO_LABEL_PATH="):
             output_lines.append(f"YOLO_LABEL_PATH={label_path_str}\n")
             updated_label = True
             yolo_section_exists = True
@@ -476,7 +484,8 @@ def main():
         logging.info("Updating .env file...")
         update_env_file(model_path, labelmap_path)
     elif model_path:
-        logging.warning("Skipping .env update because label map saving failed.")
+        logging.warning(
+            "Skipping .env update because label map saving failed.")
     else:
         # This case shouldn't be reached due to sys.exit(1) earlier
         logging.warning("Skipping .env update because model export failed.")
@@ -496,7 +505,8 @@ def main():
     if model_path and labelmap_path:
         logging.info(f"  .env file updated at: {repo_root / '.env'}")
         logging.info("\n✓ YOLOv8 setup process completed successfully!")
-        logging.info("  Ensure 'tflite-runtime' is installed on the target device.")
+        logging.info(
+            "  Ensure 'tflite-runtime' is installed on the target device.")
     else:
         logging.error("\n× YOLOv8 setup process finished with errors.")
         sys.exit(1)

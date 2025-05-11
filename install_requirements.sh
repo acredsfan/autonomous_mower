@@ -126,6 +126,54 @@ validate_hardware() {
     fi
 }
 
+# Function to setup an additional UART
+setup_additional_uart() {
+    print_info "Setting up additional UART (UART2)..."
+    # Note: dtoverlay=uart2 typically uses GPIOs 0, 1 (TXD2, RXD2) and 2, 3 (CTS2, RTS2).
+    # These pins might conflict with other interfaces like I2C0 or specific camera functions
+    # depending on the Raspberry Pi model and configuration.
+    # Verify pinouts and potential conflicts for your specific setup.
+    # Other options for additional UARTs include uart3, uart4, uart5 with different GPIO assignments.
+    local DTOVERLAY_ENTRY="dtoverlay=uart2"
+    local CONFIG_TXT_NEW="/boot/firmware/config.txt"
+    local CONFIG_TXT_OLD="/boot/config.txt"
+    local CONFIG_TXT_TARGET=""
+
+    if [ -f "$CONFIG_TXT_NEW" ]; then
+        CONFIG_TXT_TARGET="$CONFIG_TXT_NEW"
+    elif [ -f "$CONFIG_TXT_OLD" ]; then
+        CONFIG_TXT_TARGET="$CONFIG_TXT_OLD"
+    else
+        print_error "Boot configuration file (config.txt) not found at $CONFIG_TXT_NEW or $CONFIG_TXT_OLD."
+        print_warning "Skipping additional UART setup."
+        return 1
+    fi
+
+    print_info "Target boot configuration file: $CONFIG_TXT_TARGET"
+
+    if sudo grep -q "^${DTOVERLAY_ENTRY}" "$CONFIG_TXT_TARGET"; then
+        print_info "UART2 overlay ('${DTOVERLAY_ENTRY}') already exists in $CONFIG_TXT_TARGET."
+    else
+        print_info "Backing up $CONFIG_TXT_TARGET to ${CONFIG_TXT_TARGET}.bak_uart_setup..."
+        sudo cp "$CONFIG_TXT_TARGET" "${CONFIG_TXT_TARGET}.bak_uart_setup_$(date +%Y%m%d_%H%M%S)"
+        if [ $? -ne 0 ]; then
+            print_error "Failed to backup $CONFIG_TXT_TARGET. Aborting UART setup."
+            return 1
+        fi
+
+        print_info "Adding '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET..."
+        echo "${DTOVERLAY_ENTRY}" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+        if [ $? -ne 0 ]; then
+            print_error "Failed to add '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET."
+            print_warning "You may need to add it manually."
+            return 1
+        else
+            print_success "Successfully added '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET."
+            print_warning "A REBOOT is required for the UART2 changes to take effect."
+        fi
+    fi
+}
+
 # Function to setup watchdog
 setup_watchdog() {
     print_info "Setting up hardware watchdog..."
@@ -215,6 +263,9 @@ print_info "Starting installation with safety checks..."
 
 # Validate hardware first
 validate_hardware
+
+# Setup additional UART
+setup_additional_uart
 
 # Check Python version
 if ! command_exists python3; then
@@ -340,4 +391,23 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
-    sudo pip3 install -e ".[coral]" --break-system_pack
+    sudo pip3 install -e ".[coral]" --break-system_packages
+    check_command "Installing Coral Python packages" || exit 1
+fi
+
+# Setup watchdog
+read -p "Do you want to setup hardware watchdog for improved reliability? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_watchdog
+fi
+
+# Setup emergency stop
+read -p "Do you want to setup emergency stop button? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_emergency_stop
+fi
+
+print_success "Installation and setup complete."
+print_info "Please reboot the system for all changes to take effect."

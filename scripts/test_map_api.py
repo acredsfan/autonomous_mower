@@ -11,10 +11,7 @@ Usage:
     python test_map_api.py
 """
 
-import json
-import requests
-import sys
-from pathlib import Path
+import requests  # type: ignore[import]
 
 # Adjust these settings for your environment
 API_BASE_URL = "http://localhost:5000/api"
@@ -106,7 +103,8 @@ def test_generate_pattern_api():
             print(f"Generated path with {len(path)} points")
             if path:
                 print(f"First few points: {path[:3]}")
-                print(f"Last few points: {path[-3:] if len(path) >= 3 else path}")
+                print(
+                    f"Last few points: {path[-3:] if len(path) >= 3 else path}")
         else:
             print(f"Error: {response.text}")
     except Exception as e:
