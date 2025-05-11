@@ -4,10 +4,10 @@
 set -e
 
 # Color codes for output
-RED='\\033[0;31m'
-GREEN='\\033[0;32m'
-YELLOW='\\033[1;33m'
-NC='\\033[0m' # No Color
+RED='\e[0;31m'
+GREEN='\e[0;32m'
+YELLOW='\e[1;33m'
+NC='\e[0m' # No Color
 
 # Global variable to collect messages for the end
 POST_INSTALL_MESSAGES=""
@@ -65,6 +65,7 @@ get_config_txt_target() {
     elif [ -f "$CONFIG_TXT_OLD" ]; then
         echo "$CONFIG_TXT_OLD"
     else
+        # Return empty string if not found, let callers handle it
         echo ""
     fi
 }
@@ -141,6 +142,8 @@ enable_required_interfaces() {
 
 # Function to validate Raspberry Pi hardware
 validate_hardware() {
+    local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target) # Get config path for messages
+
     # Check if running on Raspberry Pi
     if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
         print_error "This script must be run on a Raspberry Pi"
@@ -174,7 +177,11 @@ validate_hardware() {
     if ! ls /dev/i2c* >/dev/null 2>&1; then
         if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
             print_warning "I2C interface (/dev/i2c*) not detected. Auto-configuration was attempted. A REBOOT is likely required."
-            POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET and /etc/modules, then reboot.\\n"
+            if [ -n "$CONFIG_TXT_TARGET_FOR_MSG" ]; then
+                POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET_FOR_MSG and /etc/modules, then reboot.\\n"
+            else
+                POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt (config.txt not found by script). Ensure it is enabled manually and /etc/modules updated, then reboot.\\n"
+            fi
         else
             print_error "I2C interface not enabled. Please enable it using raspi-config and reboot."
             exit 1
@@ -186,7 +193,11 @@ validate_hardware() {
     if ! (ls /dev/ttyAMA0 >/dev/null 2>&1 || ls /dev/serial0 >/dev/null 2>&1); then
         if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
             print_warning "Primary UART (/dev/ttyAMA0 or /dev/serial0) not detected. Auto-configuration was attempted. A REBOOT is likely required."
-            POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET (and serial console disabled for GPS use), then reboot.\\n"
+            if [ -n "$CONFIG_TXT_TARGET_FOR_MSG" ]; then
+                POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET_FOR_MSG (and serial console disabled for GPS use), then reboot.\\n"
+            else
+                POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt (config.txt not found by script). Ensure it is enabled manually (and serial console disabled for GPS use), then reboot.\\n"
+            fi
         else
             print_error "Serial interface not enabled. Please enable it using raspi-config (and disable serial console if using for GPS) and reboot."
             exit 1
@@ -322,21 +333,44 @@ setup_yolov8() {
         print_info "Attempting to remove system-installed sympy to avoid conflicts..."
         if dpkg -s python3-sympy &> /dev/null; then
             sudo apt-get remove -y python3-sympy
-            check_command "Removing python3-sympy" || print_warning "Failed to remove python3-sympy. Installation of ultralytics might still face issues."
-            # Clean up dependencies that are no longer needed
-            print_info "Running apt autoremove after sympy removal..."
-            sudo apt-get autoremove -y
-            check_command "Running apt autoremove"
+            # check_command will use $? from the sudo apt-get command
+            if check_command "Removing python3-sympy"; then
+                print_info "python3-sympy removed successfully."
+                # Clean up dependencies that are no longer needed
+                print_info "Running apt autoremove after sympy removal..."
+                sudo apt-get autoremove -y
+                check_command "Running apt autoremove" || print_warning "apt autoremove encountered an issue, but proceeding."
+            else
+                print_warning "Failed to remove python3-sympy. Installation of ultralytics might still face issues."
+            fi
         else
             print_info "python3-sympy not found via apt, proceeding with pip install."
         fi
         
-        python3 -m pip install --break-system-packages --upgrade --upgrade-strategy eager ultralytics
-        check_command "Installing ultralytics package" || return 1 # Return if install fails
+        python3 -m pip install --break-system-packages --root-user-action=ignore --upgrade --upgrade-strategy eager ultralytics
+        check_command "Installing ultralytics package" || { print_error "Ultralytics installation failed."; return 1; } # Return if install fails
         print_success "ultralytics package installed successfully."
     else
         print_success "ultralytics package already installed."
     fi
+
+    # Pre-install dependencies for TFLite export to avoid issues within the ultralytics script
+    print_info "Pre-installing TFLite export dependencies for ultralytics..."
+    python3 -m pip install --break-system-packages --root-user-action=ignore \\
+        "tf_keras" \\
+        "sng4onnx>=1.0.1" \\
+        "onnx_graphsurgeon>=0.3.26" \\
+        "ai-edge-litert>=1.2.0" \\
+        "onnx>=1.12.0" \\
+        "onnx2tf>=1.26.3" \\
+        "onnxslim>=0.1.46" \\
+        "onnxruntime"
+    check_command "Installing TFLite export dependencies" || { print_warning "Failed to pre-install some TFLite export dependencies. YOLOv8 setup might encounter issues."; }
+
+    # Ensure numpy version is compatible with TensorFlow after ultralytics installation
+    print_info "Ensuring numpy version compatibility for TensorFlow..."
+    python3 -m pip install --break-system-packages --root-user-action=ignore "numpy>=1.26.0,<2.2.0"
+    check_command "Adjusting numpy version for TensorFlow compatibility" || { print_warning "Failed to adjust numpy. TensorFlow might have issues."; }
     
     # Create models directory if it doesn't exist
     mkdir -p src/mower/obstacle_detection/models
@@ -442,28 +476,28 @@ export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
 # Upgrade pip
 print_info "Upgrading pip..."
-python3 -m pip install --break-system-packages --upgrade pip
+python3 -m pip install --break-system-packages --root-user-action=ignore --upgrade pip
 check_command "Upgrading pip" || exit 1
 
 # Install main package and dependencies
 print_info "Installing Python package and dependencies..."
-python3 -m pip install --break-system-packages --no-cache-dir -e .
+python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir -e .
 check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --break-system-packages --no-cache-dir \
-    utm \
-    adafruit-circuitpython-bme280 \
-    adafruit-circuitpython-bno08x \
-    barbudor-circuitpython-ina3221 \
-    adafruit-circuitpython-vl53l0x \
-    RPi.GPIO \
-    picamera2 \
-    opencv-python \
-    pillow \
-    numpy \
-    requests \
+python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir \\
+    utm \\
+    adafruit-circuitpython-bme280 \\
+    adafruit-circuitpython-bno08x \\
+    barbudor-circuitpython-ina3221 \\
+    adafruit-circuitpython-vl53l0x \\
+    RPi.GPIO \\
+    picamera2 \\
+    opencv-python \\
+    pillow \\
+    numpy \\
+    requests \\
     tqdm
 check_command "Installing additional packages" || exit 1
 
@@ -514,12 +548,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     check_command "Reloading udev rules" || exit 1
     
     # Install GDAL Python package first
-    sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --global-option=build_ext --global-option="-I/usr/include/gdal"
+    sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --root-user-action=ignore --global-option=build_ext --global-option="-I/usr/include/gdal"
     check_command "Installing GDAL" || exit 1
     
     # Now install Coral dependencies
     print_info "Installing Coral Python packages..."
-    sudo pip3 install -e ".[coral]" --break-system_packages
+    sudo pip3 install -e ".[coral]" --break-system-packages --root-user-action=ignore
     check_command "Installing Coral Python packages" || exit 1
 fi
 
@@ -540,6 +574,11 @@ else
     POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button setup was skipped. If your software expects this hardware, ensure it's configured to run without it (e.g., by enabling a simulated e-stop or a software override in your project's .env file or configuration). Refer to your application's documentation.\\n"
 fi
 
+# Final check for pyserial to ensure it's correctly installed for the editable package
+print_info "Ensuring pyserial is correctly installed for the project..."
+python3 -m pip install --break-system-packages --root-user-action=ignore "pyserial>=3.5"
+check_command "Verifying/Installing pyserial" || print_warning "pyserial installation/verification failed. The main application might have issues."
+
 print_success "Installation and setup complete."
 
 if [ -n "$POST_INSTALL_MESSAGES" ]; then
@@ -549,3 +588,7 @@ if [ -n "$POST_INSTALL_MESSAGES" ]; then
 fi
 
 print_info "Please reboot the system for all changes to take effect."
+
+# Clear the EXIT trap on successful completion
+trap - EXIT
+exit 0
