@@ -313,6 +313,17 @@ setup_emergency_stop() {
 # Function to setup YOLOv8 models
 setup_yolov8() {
     print_info "Setting up YOLOv8 for obstacle detection..."
+
+    # Check for and install ultralytics if not present
+    print_info "Checking for ultralytics package..."
+    if ! python3 -m pip show ultralytics > /dev/null 2>&1; then
+        print_info "ultralytics package not found. Installing..."
+        python3 -m pip install --break-system-packages ultralytics
+        check_command "Installing ultralytics package" || return 1 # Return if install fails
+        print_success "ultralytics package installed successfully."
+    else
+        print_success "ultralytics package already installed."
+    fi
     
     # Create models directory if it doesn't exist
     mkdir -p src/mower/obstacle_detection/models
@@ -507,10 +518,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Setup emergency stop
-read -p "Do you want to setup emergency stop button? (y/n) " -n 1 -r
+read -p "Do you want to setup a physical emergency stop button (connected to GPIO7)? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     setup_emergency_stop
+else
+    print_info "Skipping physical emergency stop button setup."
+    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button setup was skipped. If your software expects this hardware, ensure it's configured to run without it (e.g., by enabling a simulated e-stop or a software override in your project's .env file or configuration). Refer to your application's documentation.\\n"
 fi
 
 print_success "Installation and setup complete."
