@@ -77,7 +77,7 @@ sudo apt-get install -y \
 ### 2. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/autonomous_mower.git
+git clone https://github.com/acredsfan/autonomous_mower.git
 cd autonomous_mower
 ```
 
