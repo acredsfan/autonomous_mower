@@ -4,10 +4,14 @@
 set -e
 
 # Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED=\'\\033[0;31m\'
+GREEN=\'\\033[0;32m\'
+YELLOW=\'\\033[1;33m\'
+NC=\'\\033[0m\' # No Color
+
+# Global variable to collect messages for the end
+POST_INSTALL_MESSAGES=""
+CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
 
 # Function to print error messages
 print_error() {
@@ -52,6 +56,89 @@ cleanup() {
 # Set trap for cleanup
 trap cleanup EXIT
 
+# Function to find the target config.txt file
+get_config_txt_target() {
+    local CONFIG_TXT_NEW="/boot/firmware/config.txt"
+    local CONFIG_TXT_OLD="/boot/config.txt"
+    if [ -f "$CONFIG_TXT_NEW" ]; then
+        echo "$CONFIG_TXT_NEW"
+    elif [ -f "$CONFIG_TXT_OLD" ]; then
+        echo "$CONFIG_TXT_OLD"
+    else
+        echo ""
+    fi
+}
+
+# Function to attempt to enable I2C and Serial interfaces
+enable_required_interfaces() {
+    print_info "Checking and attempting to enable required hardware interfaces (I2C, Primary UART)..."
+    local CONFIG_TXT_TARGET=$(get_config_txt_target)
+    local CHANGES_MADE_CONFIG=false
+    local CHANGES_MADE_MODULES=false
+
+    if [ -z "$CONFIG_TXT_TARGET" ]; then
+        print_error "Boot configuration file (config.txt) not found. Cannot automatically enable interfaces."
+        POST_INSTALL_MESSAGES+="[WARNING] config.txt not found. Please ensure I2C and Serial (UART) are enabled manually via raspi-config and /etc/modules.\\n"
+        CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
+        return
+    fi
+    CONFIG_TXT_FOUND_BY_ENABLE_FUNC=true
+
+    # --- Enable I2C ---
+    if ! ls /dev/i2c* >/dev/null 2>&1; then
+        print_info "I2C interface not detected (/dev/i2c*). Attempting to configure..."
+        if ! sudo grep -q -E "^\\s*dtparam=i2c_arm=on" "$CONFIG_TXT_TARGET"; then
+            print_info "Adding 'dtparam=i2c_arm=on' to $CONFIG_TXT_TARGET"
+            echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+            echo "dtparam=i2c_arm=on" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+            CHANGES_MADE_CONFIG=true
+        else
+            print_info "'dtparam=i2c_arm=on' already present in $CONFIG_TXT_TARGET."
+        fi
+        if ! grep -q -E "^\\s*i2c-dev" /etc/modules; then
+            print_info "Adding 'i2c-dev' to /etc/modules for persistent loading."
+            echo "i2c-dev" | sudo tee -a /etc/modules > /dev/null
+            CHANGES_MADE_MODULES=true
+        else
+            print_info "'i2c-dev' already present in /etc/modules."
+        fi
+        if ! lsmod | grep -q "^i2c_dev"; then
+            print_info "Attempting to load i2c-dev module now..."
+            sudo modprobe i2c-dev
+        fi
+    else
+        print_success "I2C interface (/dev/i2c*) already detected as active."
+    fi
+
+    # --- Enable Primary UART (for GPS on ttyAMA0/serial0) ---
+    if ! (ls /dev/ttyAMA0 >/dev/null 2>&1 || ls /dev/serial0 >/dev/null 2>&1); then
+        print_info "Primary UART (/dev/ttyAMA0 or /dev/serial0) not detected. Attempting to configure..."
+        if ! sudo grep -q -E "^\\s*enable_uart=1" "$CONFIG_TXT_TARGET"; then
+            print_info "Adding 'enable_uart=1' to $CONFIG_TXT_TARGET (for primary UART)."
+            echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+            echo "enable_uart=1" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+            CHANGES_MADE_CONFIG=true
+        else
+            print_info "'enable_uart=1' already present in $CONFIG_TXT_TARGET."
+        fi
+    else
+        print_success "Primary UART (/dev/ttyAMA0 or /dev/serial0) already detected as active."
+    fi
+
+    if $CHANGES_MADE_CONFIG || $CHANGES_MADE_MODULES; then
+        POST_INSTALL_MESSAGES+="[INFO] Hardware interfaces (I2C/Primary UART) have been configured in $CONFIG_TXT_TARGET and/or /etc/modules. A REBOOT is required for these changes to fully take effect.\\n"
+    fi
+    # This message is always relevant if using primary UART for GPS
+    POST_INSTALL_MESSAGES+="[IMPORTANT] If using the primary UART (/dev/ttyAMA0 or /dev/serial0, typically for GPS):\\n"
+    POST_INSTALL_MESSAGES+="  Ensure the Linux serial console is DISABLED over this port.\\n"
+    POST_INSTALL_MESSAGES+="  Use 'sudo raspi-config':\\n"
+    POST_INSTALL_MESSAGES+="    -> Interface Options\\n"
+    POST_INSTALL_MESSAGES+="    -> Serial Port\\n"
+    POST_INSTALL_MESSAGES+="      -> Would you like a login shell to be accessible over serial? Select <No>\\n"
+    POST_INSTALL_MESSAGES+="      -> Would you like the serial port hardware to be enabled? Select <Yes>\\n"
+    POST_INSTALL_MESSAGES+="  A reboot will be required after making these changes in raspi-config.\\n"
+}
+
 # Function to validate Raspberry Pi hardware
 validate_hardware() {
     # Check if running on Raspberry Pi
@@ -85,13 +172,27 @@ validate_hardware() {
 
     # Check for required interfaces
     if ! ls /dev/i2c* >/dev/null 2>&1; then
-        print_error "I2C interface not enabled. Please enable it using raspi-config"
-        exit 1
+        if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
+            print_warning "I2C interface (/dev/i2c*) not detected. Auto-configuration was attempted. A REBOOT is likely required."
+            POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET and /etc/modules, then reboot.\\n"
+        else
+            print_error "I2C interface not enabled. Please enable it using raspi-config and reboot."
+            exit 1
+        fi
+    else
+        print_success "I2C interface (/dev/i2c*) detected."
     fi
 
-    if ! ls /dev/ttyAMA* >/dev/null 2>&1; then
-        print_error "Serial interface not enabled. Please enable it using raspi-config"
-        exit 1
+    if ! (ls /dev/ttyAMA0 >/dev/null 2>&1 || ls /dev/serial0 >/dev/null 2>&1); then
+        if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
+            print_warning "Primary UART (/dev/ttyAMA0 or /dev/serial0) not detected. Auto-configuration was attempted. A REBOOT is likely required."
+            POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET (and serial console disabled for GPS use), then reboot.\\n"
+        else
+            print_error "Serial interface not enabled. Please enable it using raspi-config (and disable serial console if using for GPS) and reboot."
+            exit 1
+        fi
+    else
+        print_success "Primary UART (/dev/ttyAMA0 or /dev/serial0) detected."
     fi
 
     # Check for camera module
@@ -261,6 +362,9 @@ setup_environment() {
 # Main installation starts here
 print_info "Starting installation with safety checks..."
 
+# Attempt to enable I2C and Serial if not already enabled
+enable_required_interfaces
+
 # Validate hardware first
 validate_hardware
 
@@ -410,4 +514,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 print_success "Installation and setup complete."
+
+if [ -n "$POST_INSTALL_MESSAGES" ]; then
+    echo -e "\\n${YELLOW}--- Important Post-Installation Notes ---${NC}"
+    # Use printf for better handling of multi-line messages and escape sequences
+    printf "%b" "${YELLOW}$(echo -e "$POST_INSTALL_MESSAGES" | sed 's/^/  /')${NC}\\n"
+fi
+
 print_info "Please reboot the system for all changes to take effect."
