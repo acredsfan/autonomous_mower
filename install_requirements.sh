@@ -412,7 +412,7 @@ setup_yolov8() {
 
     # Ensure numpy version is compatible with TensorFlow after ultralytics installation
     print_info "Ensuring numpy version compatibility for TensorFlow..."
-    python3 -m pip install --break-system-packages --root-user_action=ignore "numpy>=1.26.0,<2.2.0"
+    python3 -m pip install --break-system-packages --root-user-action=ignore "numpy>=1.26.0,<2.2.0"
     check_command "Adjusting numpy version for TensorFlow compatibility" || { print_warning "Failed to adjust numpy. TensorFlow might have issues."; }
     
     # Create models directory if it doesn't exist
