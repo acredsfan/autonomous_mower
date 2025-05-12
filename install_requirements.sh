@@ -548,7 +548,28 @@ check_command "Installing additional packages" || exit 1
 read -p "Do you want to install YOLOv8 models for improved obstacle detection? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_yolov8
+    print_info "Setting up YOLOv8 for obstacle detection..."
+    
+    # Check for installation directory
+    mkdir -p src/mower/obstacle_detection/models
+    check_command "Creating models directory" || exit 1
+    
+    # Use the download script instead of the problematic setup_yolov8.py
+    print_info "Downloading YOLOv8 model (this avoids TensorFlow conversion issues)..."
+    python3 scripts/download_yolov8.py --model yolov8n
+    check_command "Downloading YOLOv8 model" || exit 1
+    
+    # Verify installation
+    if [ -f src/mower/obstacle_detection/models/yolov8n.tflite ]; then
+        print_success "YOLOv8 model successfully downloaded"
+    else
+        print_warning "YOLOv8 model not found. Setup may have failed."
+        read -p "Continue anyway? (y/n) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
 fi
 
 # Ask if user wants to install Coral TPU support
