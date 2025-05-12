@@ -4,10 +4,10 @@
 set -e
 
 # Color codes for output
-RED='\e[0;31m'
-GREEN='\e[0;32m'
-YELLOW='\e[1;33m'
-NC='\e[0m' # No Color
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
 # Global variable to collect messages for the end
 POST_INSTALL_MESSAGES=""
@@ -302,23 +302,66 @@ setup_watchdog() {
 
 # Function to setup emergency stop
 setup_emergency_stop() {
-    print_info "Setting up emergency stop button..."
-    # Add udev rule for GPIO access
-    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
-    echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
+    # Ask if the user wants to set up a physical emergency stop button
+    echo ""
+    echo "The emergency stop button is an optional hardware component."
+    echo "It provides a physical button to immediately stop all operations."
+    echo "If not installed, emergency stop functionality is still available through the web interface."
+    echo ""
+    read -p "Do you want to configure a physical emergency stop button? (y/n): " setup_estop
     
-    # Configure GPIO7 for emergency stop
-    echo "7" | sudo tee /sys/class/gpio/export
-    echo "in" | sudo tee /sys/class/gpio/gpio7/direction
-    echo "both" | sudo tee /sys/class/gpio/gpio7/edge
-    sudo chown -R root:gpio /sys/class/gpio/gpio7
-    sudo chmod -R 770 /sys/class/gpio/gpio7
-    
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-    
-    print_info "Emergency stop button configured on GPIO7"
-    print_info "Please connect emergency stop button between GPIO7 and GND"
-    print_info "Button should be normally closed (NC) for fail-safe operation"
+    if [[ $setup_estop =~ ^[Yy]$ ]]; then
+        print_info "Setting up emergency stop button..."
+        # Add udev rule for GPIO access
+        echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
+        echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
+        
+        # Configure GPIO7 for emergency stop
+        echo "7" | sudo tee /sys/class/gpio/export
+        echo "in" | sudo tee /sys/class/gpio/gpio7/direction
+        echo "both" | sudo tee /sys/class/gpio/gpio7/edge
+        sudo chown -R root:gpio /sys/class/gpio/gpio7
+        sudo chmod -R 770 /sys/class/gpio/gpio7
+        
+        sudo udevadm control --reload-rules && sudo udevadm trigger
+        
+        print_info "Emergency stop button configured on GPIO7"
+        print_info "Please connect emergency stop button between GPIO7 and GND"
+        print_info "Button should be normally closed (NC) for fail-safe operation"
+        
+        # Update config file with use_physical_emergency_stop = true
+        if [ -f "config/config.json" ]; then
+            python3 -c "
+import json
+config_file = 'config/config.json'
+with open(config_file, 'r') as f:
+    config = json.load(f)
+if 'safety' not in config:
+    config['safety'] = {}
+config['safety']['use_physical_emergency_stop'] = True
+with open(config_file, 'w') as f:
+    json.dump(config, f, indent=4)
+"
+        fi
+    else
+        print_info "Skipping physical emergency stop button configuration."
+        print_info "Emergency stop functionality will be available through the web interface only."
+        
+        # Update config file with use_physical_emergency_stop = false
+        if [ -f "config/config.json" ]; then
+            python3 -c "
+import json
+config_file = 'config/config.json'
+with open(config_file, 'r') as f:
+    config = json.load(f)
+if 'safety' not in config:
+    config['safety'] = {}
+config['safety']['use_physical_emergency_stop'] = False
+with open(config_file, 'w') as f:
+    json.dump(config, f, indent=4)
+"
+        fi
+    fi
 }
 
 # Function to setup YOLOv8 models
@@ -369,7 +412,7 @@ setup_yolov8() {
 
     # Ensure numpy version is compatible with TensorFlow after ultralytics installation
     print_info "Ensuring numpy version compatibility for TensorFlow..."
-    python3 -m pip install --break-system-packages --root-user-action=ignore "numpy>=1.26.0,<2.2.0"
+    python3 -m pip install --break-system-packages --root-user_action=ignore "numpy>=1.26.0,<2.2.0"
     check_command "Adjusting numpy version for TensorFlow compatibility" || { print_warning "Failed to adjust numpy. TensorFlow might have issues."; }
     
     # Create models directory if it doesn't exist
@@ -571,7 +614,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     setup_emergency_stop
 else
     print_info "Skipping physical emergency stop button setup."
-    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button setup was skipped. If your software expects this hardware, ensure it's configured to run without it (e.g., by enabling a simulated e-stop or a software override in your project's .env file or configuration). Refer to your application's documentation.\\n"
+    print_info "The system will be configured to run without a physical emergency stop button."
+    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button was not set up. The system has been configured to run without it.\n"
+    POST_INSTALL_MESSAGES+="[INFO] You can still trigger an emergency stop through the software interface.\n"
 fi
 
 # Final check for pyserial to ensure it's correctly installed for the editable package

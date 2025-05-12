@@ -185,14 +185,15 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ![Power System](images/power_system.jpg)
 
-### 6. Emergency Stop Button (Optional but Recommended)
+### 6. Emergency Stop Button (Optional)
 
 1. Mount the emergency stop button in an easily accessible location
 2. Connect the emergency stop button:
    - Wire the button between GPIO7 and GND
-   - Ensure the button is normally closed (NC)
+   - Ensure the button is normally closed (NC) for fail-safe operation
 3. Test the emergency stop functionality
-4. While optional, an emergency stop button is strongly recommended for safety
+4. The emergency stop button is optional - the system can operate without it by setting the `safety.use_physical_emergency_stop` option to `False` in the configuration
+5. When no physical button is present, the software will provide an emergency stop feature through the user interface
 
 ![Emergency Stop](images/emergency_stop.jpg)
 
@@ -287,13 +288,13 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 The following table lists the GPIO pin assignments for the Autonomous Mower:
 
-| Component           | GPIO Pin | Direction | Description                    |
-| ------------------- | -------- | --------- | ------------------------------ |
-| Blade Enable        | 17       | Output    | Controls the blade motor       |
-| Blade Direction     | 27       | Output    | Sets the blade motor direction |
-| Emergency Stop      | 7        | Input     | Emergency stop button (NC)     |
-| Left Motor Control  | 22       | Output    | Controls the left drive motor  |
-| Right Motor Control | 23       | Output    | Controls the right drive motor |
+| Component           | GPIO Pin | Direction | Description                          |
+| ------------------- | -------- | --------- | ------------------------------------ |
+| Blade Enable        | 17       | Output    | Controls the blade motor             |
+| Blade Direction     | 27       | Output    | Sets the blade motor direction       |
+| Emergency Stop      | 7        | Input     | Emergency stop button (NC, optional) |
+| Left Motor Control  | 22       | Output    | Controls the left drive motor        |
+| Right Motor Control | 23       | Output    | Controls the right drive motor       |
 
 Ensure these pins are connected as per the wiring diagram and configured in the software.
 
@@ -403,3 +404,44 @@ With the hardware properly assembled and tested, your Autonomous Mower is ready 
 - [LiFePO4 Battery Information](https://www.batteryspace.com/lifepo4-batteries.aspx)
 - [Renogy Solar Charge Controller Manual](https://www.renogy.com/template/files/Manuals/10A%20Charge%20Controller%20Manual.pdf)
 - [RTK GPS Guide](https://learn.sparkfun.com/tutorials/what-is-gps-rtk/all)
+
+## Emergency Stop Configuration
+
+### Physical Emergency Stop Button
+
+The physical emergency stop button is an optional safety feature that provides a hardware-based emergency shutdown capability. When installed:
+
+1. The button should be wired between GPIO7 and GND
+2. It should be a normally closed (NC) button, which opens the circuit when pressed
+3. This fail-safe design ensures that if the button is pressed or the wire is disconnected, the mower will stop
+
+### Software Configuration
+
+To configure the emergency stop button in software:
+
+1. During installation, you will be prompted whether to set up a physical emergency stop button
+2. You can modify this setting later in the configuration:
+
+```json
+{
+  "safety": {
+    "use_physical_emergency_stop": true, // Set to false if no physical button is installed
+    "emergency_stop_pin": 7
+    // Other safety settings...
+  }
+}
+```
+
+3. When `use_physical_emergency_stop` is set to `false`:
+   - The system will operate without checking for a physical button
+   - Emergency stop functionality is still available through the web interface
+   - A warning message will be displayed during startup
+
+### Testing
+
+After installation:
+
+1. Press the emergency stop button (if installed)
+2. Verify that the mower immediately stops all operations
+3. Check the web interface to confirm the EMERGENCY_STOP state is active
+4. Reset the button and verify normal operation can resume

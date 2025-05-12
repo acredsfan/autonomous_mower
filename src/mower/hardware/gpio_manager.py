@@ -53,7 +53,11 @@ class GPIOManager:
             self._simulated_values: Dict[int, int] = {}
 
     def setup_pin(
-        self, pin: int, direction: str = "out", initial: Optional[int] = None
+        self,
+        pin: int,
+        direction: str = "out",
+        initial: Optional[int] = None,
+        pull_up_down: Optional[int] = None
     ) -> bool:
         """
         Set up a GPIO pin for use.
@@ -62,6 +66,8 @@ class GPIOManager:
             pin: The GPIO pin number (BCM mode)
             direction: "in" for input, "out" for output
             initial: Initial value for output pins (GPIO.LOW or GPIO.HIGH)
+            pull_up_down: Pull up/down resistor mode for input pins
+                         (GPIO.PUD_UP, GPIO.PUD_DOWN, or None)
 
         Returns:
             bool: True if setup successful, False otherwise
@@ -79,10 +85,19 @@ class GPIOManager:
 
         try:
             dir_const = GPIO.OUT if direction == "out" else GPIO.IN
-            # Default initial for RPi.GPIO is LOW if not specified
-            initial_val = initial if initial is not None else GPIO.LOW
 
-            GPIO.setup(pin, dir_const, initial=initial_val)
+            # Handle different setup scenarios
+            if direction == "in" and pull_up_down is not None:
+                # Input pin with pull-up/down
+                GPIO.setup(pin, dir_const, pull_up_down=pull_up_down)
+            elif direction == "out":
+                # Output pin with initial value
+                initial_val = initial if initial is not None else GPIO.LOW
+                GPIO.setup(pin, dir_const, initial=initial_val)
+            else:
+                # Default input pin setup
+                GPIO.setup(pin, dir_const)
+
             self._pins_setup[pin] = direction
             return True
 
@@ -216,12 +231,40 @@ class GPIOManager:
 
     def initialize_pins(self):
         """Initialize all GPIO pins based on predefined configuration."""
+        # Import here to avoid circular import issues
+        from mower.config_management.config_manager import get_config
+
+        # Check if emergency stop button is physically installed
+        use_physical_estop = get_config(
+            "safety.use_physical_emergency_stop", True)
+
         for name, pin in self.PIN_CONFIG.items():
             try:
                 if name == "EMERGENCY_STOP":
-                    self.setup_pin(pin, direction="in")
+                    if use_physical_estop:
+                        # Use pull-up for NC button (HIGH when not pressed,
+                        # LOW when pressed or disconnected - fail-safe)
+                        if not self._simulation_mode:
+                            self.setup_pin(
+                                pin, direction="in", pull_up_down=GPIO.PUD_UP
+                            )
+                        else:
+                            self.setup_pin(pin, direction="in")
+                        logging.info(
+                            f"Initialized GPIO pin {pin} for {name} with pull-up")
+                    else:
+                        # If no physical button, simulate a non-pressed state
+                        self.setup_pin(pin, direction="in")
+                        if self._simulation_mode:
+                            # In simulation, set to HIGH (not pressed) by
+                            # default
+                            self._simulated_values[pin] = 1
+                        logging.info(
+                            f"Initialized virtual emergency stop on pin {pin}"
+                        )
                 else:
                     self.setup_pin(pin, direction="out", initial=0)
-                logging.info(f"Initialized GPIO pin {pin} for {name}")
+                    logging.info(f"Initialized GPIO pin {pin} for {name}")
             except Exception as e:
-                logging.error(f"Error initializing GPIO pin {pin} for {name}: {e}")
+                logging.error(
+                    f"Error initializing GPIO pin {pin} for {name}: {e}")

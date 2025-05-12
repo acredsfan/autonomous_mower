@@ -5,23 +5,31 @@ This document provides a chronological list of changes made to the Autonomous Mo
 ## [Unreleased]
 
 ### Added
+
 - Comprehensive API documentation for all modules
 - Usage examples for each major component
 - Troubleshooting guides for common issues
 - User guides for different operational scenarios
 - Developer onboarding guide
 - Changelog and version history documentation
+- New configuration guide for system settings
 
 ### Changed
+
 - Improved inline documentation for complex algorithms
 - Enhanced error handling and reporting
+- Made emergency stop button optional with software alternative
+- Updated GPIOManager to safely handle missing emergency stop hardware
 
 ### Fixed
+
 - Various documentation typos and inconsistencies
+- Terminal color codes in installation script
 
 ## [1.2.0] - 2025-04-15
 
 ### Added
+
 - Property-based testing for complex algorithms
 - Performance benchmarks for critical operations
 - CI/CD pipeline for automated testing
@@ -31,11 +39,13 @@ This document provides a chronological list of changes made to the Autonomous Mo
 - Test fixtures for hardware components
 
 ### Changed
+
 - Refactored path planning algorithms for better efficiency
 - Improved obstacle avoidance strategies
 - Enhanced simulation fidelity
 
 ### Fixed
+
 - Fixed GPS signal loss handling
 - Resolved intermittent sensor reading issues
 - Fixed memory leak in long-running operations
@@ -43,6 +53,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 ## [1.1.0] - 2025-03-01
 
 ### Added
+
 - Weather-aware mowing scheduling
 - Remote access options (DDNS, Cloudflare Tunnel, NGROK)
 - Mobile app interface
@@ -50,11 +61,13 @@ This document provides a chronological list of changes made to the Autonomous Mo
 - Diagnostic tools for troubleshooting
 
 ### Changed
+
 - Improved web interface with responsive design
 - Enhanced obstacle detection accuracy
 - Optimized path planning for better coverage
 
 ### Fixed
+
 - Fixed Wi-Fi connectivity issues
 - Resolved blade control timing issues
 - Fixed GPS position drift in certain conditions
@@ -62,6 +75,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 ## [1.0.0] - 2025-01-15
 
 ### Added
+
 - Initial release of the Autonomous Mower
 - Basic mowing functionality
 - Web interface for control
@@ -74,6 +88,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 ## Development History
 
 ### Architecture Improvements
+
 - Resolved resource management inconsistency between main_controller.py and mower.py
 - Implemented proper dependency injection throughout the codebase
 - Created a unified error handling and reporting system
@@ -85,6 +100,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 - Standardized configuration management across all components
 
 ### Code Quality Improvements
+
 - Added type hints to functions and methods
 - Implemented consistent error handling patterns
 - Fixed circular imports and import organization
@@ -96,6 +112,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 - Added pre-commit hooks for code formatting and linting
 
 ### Testing Improvements
+
 - Created a comprehensive test suite with unit tests for all components
 - Implemented integration tests for critical system interactions
 - Added simulation capabilities for testing without hardware
@@ -120,6 +137,7 @@ This document provides a chronological list of changes made to the Autonomous Mo
 ## Versioning
 
 We use [Semantic Versioning](https://semver.org/) for version numbers. In summary:
+
 - MAJOR version for incompatible API changes
 - MINOR version for backwards-compatible functionality additions
 - PATCH version for backwards-compatible bug fixes

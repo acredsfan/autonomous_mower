@@ -59,6 +59,7 @@ DEFAULT_CONFIG = {
     # Safety settings
     "safety": {
         "emergency_stop_pin": 7,
+        "use_physical_emergency_stop": True,
         "watchdog_timeout": 15,
         "battery_low_threshold": 20,
         "battery_critical_threshold": 10,

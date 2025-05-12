@@ -7,6 +7,7 @@ This guide provides instructions for the basic operation of the Autonomous Mower
 1. **Power On**: Press the power button on the mower. The LED indicator will light up, indicating that the mower is powered on.
 
 2. **System Initialization**: The mower will perform a system initialization, which includes:
+
    - Checking all sensors
    - Initializing the GPS
    - Connecting to the Wi-Fi network
@@ -21,6 +22,7 @@ This guide provides instructions for the basic operation of the Autonomous Mower
 1. **Start Automatic Mowing**: Press the "Start" button on the mower or use the web interface/mobile app to start automatic mowing.
 
 2. **Mowing Process**: The mower will:
+
    - Generate a mowing path based on the defined boundaries and no-go zones
    - Start the blade motor
    - Begin following the generated path
@@ -38,6 +40,7 @@ This guide provides instructions for the basic operation of the Autonomous Mower
 1. **Enter Manual Control Mode**: Use the web interface or mobile app to switch to manual control mode.
 
 2. **Control the Mower**: Use the directional controls to move the mower:
+
    - Forward: Move the mower forward
    - Backward: Move the mower backward
    - Left: Turn the mower left
@@ -45,6 +48,7 @@ This guide provides instructions for the basic operation of the Autonomous Mower
    - Stop: Stop the mower's movement
 
 3. **Blade Control**: Use the blade controls to:
+
    - Start Blade: Start the cutting blade
    - Stop Blade: Stop the cutting blade
 
@@ -62,17 +66,29 @@ This guide provides instructions for the basic operation of the Autonomous Mower
 
 ### Emergency Stop
 
+#### If Physical Button is Installed:
+
 1. **Emergency Stop Button**: Press the red emergency stop button on the mower to immediately stop all operations.
 
 2. **Reset**: After using the emergency stop, you will need to reset the mower by:
    - Releasing the emergency stop button (usually by turning it clockwise)
    - Pressing the power button to restart the mower
 
+#### Using Software Emergency Stop:
+
+1. **Software Emergency Stop**: If a physical button is not installed, you can use the emergency stop button in the web interface or mobile app.
+
+2. **Reset**: After using the software emergency stop, you can reset the mower through the web interface by:
+   - Navigating to the Control panel
+   - Clicking the "Reset" button
+   - Selecting the mode you want to resume (Idle, Mowing, etc.)
+
 ## Returning to Charging Station
 
 ### Automatic Return
 
 The mower will automatically return to the charging station when:
+
 - The battery level is low (typically below 20%)
 - The mowing operation is complete
 - A scheduled mowing session ends
@@ -80,6 +96,7 @@ The mower will automatically return to the charging station when:
 ### Manual Return
 
 To manually send the mower to the charging station:
+
 1. Press the "Home" button on the mower, or
 2. Use the "Return to Home" option in the web interface or mobile app
 

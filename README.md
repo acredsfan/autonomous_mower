@@ -190,11 +190,12 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    - Test with: `python3 -m mower.hardware.imu` (shows live IMU data if connected)
    - Ensure your `.env` or environment variables specify the correct UART port (eg., `IMU_SERIAL_PORT=/dev/ttyAMA2`)
 
-4. **Emergency Stop Button**
+4. **Emergency Stop Button** (Optional)
 
    - Connect between GPIO7 and GND
    - Button should be normally closed (NC)
    - Test with: `gpio read 7`
+   - Can be disabled in configuration if not physically installed
 
 5. **Motor Controllers**
    - Connect to appropriate GPIO pins
@@ -249,12 +250,36 @@ See `.env.example` for detailed descriptions of each setting.
 
 ## Safety Features
 
-1. **Emergency Stop Button**
+1. **Emergency Stop**
 
-   - Available in the UI
+   - Available as both:
+     - Physical button (optional hardware component)
+     - Web UI button (always available)
+   - System can operate with or without a physical button
+   - Configure in settings: `safety.use_physical_emergency_stop`
    - Sensor override controls for testing
    - Battery monitoring and low-battery alerts
    - Hardware watchdog for system reliability
+
+### Emergency Stop Configuration
+
+The autonomous mower supports two modes of emergency stop functionality:
+
+1. **With Physical Button (Default)**:
+
+   - Connect a normally closed (NC) button between GPIO7 and GND
+   - Set `safety.use_physical_emergency_stop` to `true` in config
+   - When pressed or if wire is disconnected, the mower stops immediately
+   - Provides a hardware failsafe independent of software
+
+2. **Software-Only Mode**:
+   - Set `safety.use_physical_emergency_stop` to `false` in config
+   - Emergency stop functionality available only through web interface
+   - No physical button required
+   - Suitable when hardware button is not available or desired
+
+During installation, you'll be asked whether to configure a physical emergency stop button.
+You can change this setting later by editing the configuration file.
 
 2. **Safety Guidelines**
    - Pre-Operation Checks
