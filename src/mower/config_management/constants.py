@@ -5,7 +5,6 @@ This module defines constants for the configuration management system,
 including standard configuration paths and default values.
 """
 
-import os
 from pathlib import Path
 
 # Base directory for consistent file referencing

@@ -399,14 +399,14 @@ setup_yolov8() {
 
     # Pre-install dependencies for TFLite export to avoid issues within the ultralytics script
     print_info "Pre-installing TFLite export dependencies for ultralytics..."
-    python3 -m pip install --break-system-packages --root-user-action=ignore \\
-        "tf_keras" \\
-        "sng4onnx>=1.0.1" \\
-        "onnx_graphsurgeon>=0.3.26" \\
-        "ai-edge-litert>=1.2.0" \\
-        "onnx>=1.12.0" \\
-        "onnx2tf>=1.26.3" \\
-        "onnxslim>=0.1.46" \\
+    python3 -m pip install --break-system-packages --root-user-action=ignore \
+        "tf_keras" \
+        "sng4onnx>=1.0.1" \
+        "onnx_graphsurgeon>=0.3.26" \
+        "ai-edge-litert>=1.2.0" \
+        "onnx>=1.12.0" \
+        "onnx2tf>=1.26.3" \
+        "onnxslim>=0.1.46" \
         "onnxruntime"
     check_command "Installing TFLite export dependencies" || { print_warning "Failed to pre-install some TFLite export dependencies. YOLOv8 setup might encounter issues."; }
 
@@ -529,18 +529,18 @@ check_command "Installing main package" || exit 1
 
 # Install additional packages
 print_info "Installing additional packages..."
-python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir \\
-    utm \\
-    adafruit-circuitpython-bme280 \\
-    adafruit-circuitpython-bno08x \\
-    barbudor-circuitpython-ina3221 \\
-    adafruit-circuitpython-vl53l0x \\
-    RPi.GPIO \\
-    picamera2 \\
-    opencv-python \\
-    pillow \\
-    numpy \\
-    requests \\
+python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir \
+    utm \
+    adafruit-circuitpython-bme280 \
+    adafruit-circuitpython-bno08x \
+    barbudor-circuitpython-ina3221 \
+    adafruit-circuitpython-vl53l0x \
+    RPi.GPIO \
+    picamera2 \
+    opencv-python \
+    pillow \
+    numpy \
+    requests \
     tqdm
 check_command "Installing additional packages" || exit 1
 
