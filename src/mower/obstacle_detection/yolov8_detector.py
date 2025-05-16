@@ -28,7 +28,11 @@ class YOLOv8TFLiteDetector:
     format, making them suitable for running on Raspberry Pi and edge devices.
     """
 
-    def __init__(self, model_path: str, label_path: str, conf_threshold: float = 0.5):
+    def __init__(
+            self,
+            model_path: str,
+            label_path: str,
+            conf_threshold: float = 0.5):
         """
         Initialize the YOLOv8 TFLite detector.
 
@@ -61,13 +65,20 @@ class YOLOv8TFLiteDetector:
         labels = []
         if os.path.exists(self.label_path):
             try:
-                with open(self.label_path, "r") as f:
+                with open(self.label_path, "r", encoding="utf-8") as f:
                     labels = [line.strip() for line in f.readlines()]
-                logger.info(f"Loaded {len(labels)} labels from {self.label_path}")
-            except Exception as e:
-                logger.error(f"Error loading label file {self.label_path}: {e}")
+                logger.info(
+                    "Loaded %d labels from %s",
+                    len(labels),
+                    self.label_path
+                )
+            except (IOError, ValueError, UnicodeDecodeError) as e:
+                logger.error(
+                    "Error loading label file %s: %s",
+                    self.label_path,
+                    e)
         else:
-            logger.warning(f"Label file not found at {self.label_path}")
+            logger.warning("Label file not found at %s", self.label_path)
 
         return labels
 
@@ -75,11 +86,10 @@ class YOLOv8TFLiteDetector:
         """Initialize the TensorFlow Lite interpreter."""
         try:
             # Import TFLite interpreter
-            from tflite_runtime.interpreter import Interpreter  # type: ignore
-
-            # Check if model exists
+            # type: ignore            # Check if model exists
+            from tflite_runtime.interpreter import Interpreter
             if not os.path.exists(self.model_path):
-                logger.error(f"Model file not found at {self.model_path}")
+                logger.error("Model file not found at %s", self.model_path)
                 return False
 
             # Load interpreter
@@ -117,16 +127,16 @@ class YOLOv8TFLiteDetector:
                 else:
                     logger.warning(
                         "Output tensor shape doesn't match expected YOLOv8 format. "
-                        "Falling back to classification processing."
-                    )
+                        "Falling back to classification processing.")
                     self.has_detect_output = False
-
-            logger.info(
-                f"YOLOv8 TFLite detector initialized: "
-                f"input shape={self.input_width}x{self.input_height}, "
-                f"floating_model={self.floating_model}"
-            )
-            return True
+                    logger.info(
+                        "YOLOv8 TFLite detector initialized: "
+                        "input shape=%dx%d, "
+                        "floating_model=%s",
+                        self.input_width, self.input_height,
+                        self.floating_model
+                    )
+                return True
 
         except ImportError:
             logger.error(
@@ -135,7 +145,7 @@ class YOLOv8TFLiteDetector:
             )
             return False
         except Exception as e:
-            logger.error(f"Error initializing interpreter: {e}")
+            logger.error("Error initializing interpreter: %s", e)
             return False
 
     def preprocess_image(self, image) -> np.ndarray:
@@ -202,13 +212,15 @@ class YOLOv8TFLiteDetector:
             detections = self._process_classification_output()
 
         # Apply Non-Max Suppression (NMS) to filter overlapping detections
-        detections = non_max_suppression(detections, iou_threshold=0.5)
-
-        # Log performance
+        detections = non_max_suppression(
+            detections, iou_threshold=0.5)        # Log performance
         logger.debug(
-            f"YOLOv8 inference: {inference_time:.2f}s "
-            f"({1/inference_time:.1f} FPS), "
-            f"{len(detections)} detections"
+            "YOLOv8 inference: %.2fs "
+            "(%.1f FPS), "
+            "%d detections",
+            inference_time,
+            1 / inference_time,
+            len(detections)
         )
 
         return detections
@@ -217,11 +229,13 @@ class YOLOv8TFLiteDetector:
         """Process YOLOv8 detection output format."""
         # Get output tensor - format depends on the model
         # Shape [num_boxes, num_classes+5] or [num_classes+5, num_boxes]
-        output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
+        output_data = self.interpreter.get_tensor(
+            self.output_details[0]["index"])[0]
 
         # Check if we need to transpose
         if output_data.shape[0] == len(self.labels) + 5:
-            output_data = output_data.T  # Transpose to [num_boxes, num_classes+5]
+            # Transpose to [num_boxes, num_classes+5]
+            output_data = output_data.T
 
         # Get original image dimensions (use input size as reference)
         original_height, original_width = self.input_height, self.input_width
@@ -280,15 +294,17 @@ class YOLOv8TFLiteDetector:
                 }
             )
 
-        # TODO: Add Non-Max Suppression (NMS) if the exported model doesn't include it
-        # detections = self.non_max_suppression(detections)
+        # Apply Non-Max Suppression (NMS) to filter overlapping detections.
+        detections = non_max_suppression(detections)
 
         return detections
 
     def _process_classification_output(self) -> List[Dict]:
         """Fallback for classification models."""
-        # Get output tensor - for classification output is typically [1, num_classes]
-        output = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
+        # Get output tensor - for classification output is typically [1,
+        # num_classes]
+        output = self.interpreter.get_tensor(
+            self.output_details[0]["index"])[0]
 
         # Get top predictions
         top_k = 3
@@ -309,7 +325,10 @@ class YOLOv8TFLiteDetector:
 
         return detections
 
-    def draw_detections(self, image: np.ndarray, detections: List[Dict]) -> np.ndarray:
+    def draw_detections(
+            self,
+            image: np.ndarray,
+            detections: List[Dict]) -> np.ndarray:
         """
         Draw detection boxes and labels on the image.
 
@@ -330,7 +349,10 @@ class YOLOv8TFLiteDetector:
             font = ImageFont.load_default()
 
         # Convert to PIL Image for drawing text
-        pil_image = Image.fromarray(cv2.cvtColor(image_with_boxes, cv2.COLOR_BGR2RGB))
+        pil_image = Image.fromarray(
+            cv2.cvtColor(
+                image_with_boxes,
+                cv2.COLOR_BGR2RGB))
         draw = ImageDraw.Draw(pil_image)
 
         # Draw each detection
@@ -352,19 +374,19 @@ class YOLOv8TFLiteDetector:
                 # ymax = int(ymax * height / self.input_height)
 
                 # Draw rectangle
-                draw.rectangle([(xmin, ymin), (xmax, ymax)], outline="red", width=2)
+                draw.rectangle([(xmin, ymin), (xmax, ymax)],
+                               outline="red", width=2)
 
                 # Draw label background
                 label = f"{class_name}: {confidence:.2f}"
                 text_width, text_height = font.getsize(label)
                 draw.rectangle(
-                    [(xmin, ymin - text_height - 2), (xmin + text_width + 2, ymin)],
-                    fill="red",
-                )
+                    [(xmin, ymin - text_height - 2),
+                     (xmin + text_width + 2, ymin)],
+                    fill="red",)
                 # Draw label text
-                draw.text(
-                    (xmin + 1, ymin - text_height - 1), label, fill="white", font=font
-                )
+                draw.text((xmin + 1, ymin - text_height - 1),
+                          label, fill="white", font=font)
             else:
                 # Handle classification output (draw text somewhere)
                 label = f"{class_name}: {confidence:.2f}"
@@ -418,7 +440,8 @@ def calculate_iou(box1, box2):
     inter_xmax = min(xmax1, xmax2)
     inter_ymax = min(ymax1, ymax2)
 
-    inter_area = max(0, inter_xmax - inter_xmin) * max(0, inter_ymax - inter_ymin)
+    inter_area = max(0, inter_xmax - inter_xmin) * max(0,
+                                                       inter_ymax - inter_ymin)
     area1 = (xmax1 - xmin1) * (ymax1 - ymin1)
     area2 = (xmax2 - xmin2) * (ymax2 - ymin2)
     union_area = area1 + area2 - inter_area

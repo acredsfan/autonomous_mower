@@ -1,11 +1,7 @@
 """
-Property-based tests for the PathPlanner class.
-
-This module tests the properties of the PathPlanner class in
-navigation/path_planner.py using property-based testing with Hypothesis.
-These tests verify that the algorithms maintain certain invariants
-regardless of the specific inputs.
-"""
+Test module for test_path_planner_properties.py.
+"""Test module for test_path_planner_properties.py.
+""""
 
 import pytest
 from hypothesis import given, strategies as st, settings, assume
@@ -22,6 +18,8 @@ from mower.navigation.path_planner import (
 
 # Helper strategies for generating test data
 @st.composite
+
+
 def pattern_config_strategy(draw):
     """Strategy for generating valid PatternConfig instances."""
     pattern_type = draw(st.sampled_from(list(PatternType)))
@@ -29,11 +27,11 @@ def pattern_config_strategy(draw):
     angle = draw(st.floats(min_value=0.0, max_value=359.0))
     overlap = draw(st.floats(min_value=0.0, max_value=0.5))
     start_point = (
-        draw(st.floats(min_value=-100.0, max_value=100.0)),
-        draw(st.floats(min_value=-100.0, max_value=100.0)),
+        draw(st.floats(min_value=- 100.0, max_value=100.0)),
+        draw(st.floats(min_value=- 100.0, max_value=100.0)),
     )
 
-    # Generate a valid boundary (convex polygon)
+    # Generate a valid boundary(convex polygon)
     num_points = draw(st.integers(min_value=3, max_value=8))
 
     # Generate points on a circle for a convex polygon
@@ -44,8 +42,8 @@ def pattern_config_strategy(draw):
         ]
     )
     radius = draw(st.floats(min_value=5.0, max_value=50.0))
-    center_x = draw(st.floats(min_value=-50.0, max_value=50.0))
-    center_y = draw(st.floats(min_value=-50.0, max_value=50.0))
+    center_x = draw(st.floats(min_value=- 50.0, max_value=50.0))
+    center_y = draw(st.floats(min_value=- 50.0, max_value=50.0))
 
     boundary_points = [
         (center_x + radius * np.cos(angle), center_y + radius * np.sin(angle))
@@ -63,6 +61,8 @@ def pattern_config_strategy(draw):
 
 
 @st.composite
+
+
 def learning_config_strategy(draw):
     """Strategy for generating valid LearningConfig instances."""
     learning_rate = draw(st.floats(min_value=0.01, max_value=0.5))
@@ -85,22 +85,23 @@ def learning_config_strategy(draw):
 
 
 class TestPathPlannerProperties:
-    """Property-based tests for the PathPlanner class."""
+    """Property - based tests for the PathPlanner class ."""
 
     @given(pattern_config=pattern_config_strategy())
     @settings(max_examples=10)
     def test_path_within_boundary(self, pattern_config):
-        """Test that generated paths stay within the boundary."""
+        """Test that generated paths stay with in the boundary."""
         # Create a PathPlanner instance
         path_planner = PathPlanner(pattern_config)
 
         # Generate a path
         path = path_planner.generate_path()
 
-        # Skip empty paths (which might be valid for some configurations)
+        # Skip empty paths(which might be valid for some configurations)
         assume(len(path) > 0)
 
-        # Check that all points in the path are within or very close to the boundary
+        # Check that all points in the path are with in or very close to the
+        # boundary
         for point in path:
             assert self._point_near_or_in_polygon(
                 point, pattern_config.boundary_points
@@ -108,7 +109,7 @@ class TestPathPlannerProperties:
 
     @given(
         pattern_config=pattern_config_strategy(),
-        learning_config=learning_config_strategy(),
+        learning_config = learning_config_strategy(),
     )
     @settings(max_examples=10)
     def test_learning_improves_path(self, pattern_config, learning_config):
@@ -135,12 +136,15 @@ class TestPathPlannerProperties:
         # Skip if we didn't get enough valid paths
         assume(len(rewards) > 2)
 
-        # Check that the average reward of the last 3 paths is not worse than the initial reward
-        # We use a tolerance because learning might not always improve in a small number of iterations
-        avg_recent_reward = sum(rewards[-3:]) / 3
+        #
+        Check that the average reward of the last 3 paths is not worse than the initial reward
+        # We use a tolerance because learning might not always improve in a
+        # small number of iterations
+        avg_recent_reward = sum(rewards[ - 3: ]) / 3
         assert (
             avg_recent_reward >= initial_reward * 0.9
-        ), f"Learning did not improve path quality: initial={initial_reward}, recent={avg_recent_reward}"
+        ),
+        f"Learning did not improve path quality: initial = {initial_reward}, recent = {avg_recent_reward}"
 
     @given(pattern_config=pattern_config_strategy())
     @settings(max_examples=10)
@@ -165,13 +169,13 @@ class TestPathPlannerProperties:
 
     @given(
         pattern_config=pattern_config_strategy(),
-        obstacles=st.lists(
+        obstacles = st.lists(
             st.tuples(
-                st.floats(min_value=-100.0, max_value=100.0),
-                st.floats(min_value=-100.0, max_value=100.0),
+                st.floats(min_value=- 100.0, max_value=100.0),
+                st.floats(min_value=- 100.0, max_value=100.0),
             ),
-            min_size=0,
-            max_size=5,
+            min_size = 0,
+            max_size = 5,
         ),
     )
     @settings(max_examples=10)
@@ -180,7 +184,7 @@ class TestPathPlannerProperties:
         # Create a PathPlanner instance
         path_planner = PathPlanner(pattern_config)
 
-        # Generate a path without obstacles
+        # Generate a path with out obstacles
         path_without_obstacles = path_planner.generate_path()
 
         # Skip if initial path is empty
@@ -199,18 +203,18 @@ class TestPathPlannerProperties:
         for point in path_with_obstacles:
             for obstacle in obstacles:
                 distance = np.sqrt(
-                    (point[0] - obstacle[0]) ** 2
-                    + (point[1] - obstacle[1]) ** 2
+                    (point[0] - obstacle[0]) ** 2 + (point[1] - obstacle[1]) ** 2
                 )
                 assert (
                     distance >= 0.5
-                ), f"Path point {point} is too close to obstacle {obstacle} (distance={distance})"
+                ),
+                f"Path point {point} is too close to obstacle {obstacle}(distance={distance})"
 
     @given(
         p1=st.tuples(st.floats(), st.floats()),
-        p2=st.tuples(st.floats(), st.floats()),
-        p3=st.tuples(st.floats(), st.floats()),
-        p4=st.tuples(st.floats(), st.floats()),
+        p2 = st.tuples(st.floats(), st.floats()),
+        p3 = st.tuples(st.floats(), st.floats()),
+        p4 = st.tuples(st.floats(), st.floats()),
     )
     @settings(max_examples=50)
     def test_line_intersection_properties(self, p1, p2, p3, p4):
@@ -222,7 +226,7 @@ class TestPathPlannerProperties:
             angle=0.0,
             overlap=0.0,
             start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
+            boundary_points = [(0, 0), (10, 0), (10, 10), (0, 10)],
         )
         path_planner = PathPlanner(pattern_config)
 
@@ -303,7 +307,8 @@ class TestPathPlannerProperties:
         # Calculate the squared length of the line segment
         line_length_squared = (x2 - x1) ** 2 + (y2 - y1) ** 2
 
-        # If the line segment is actually a point, return the distance to that point
+        # If the line segment is actually a point, return the distance to that
+        # point
         if line_length_squared == 0:
             return np.sqrt((x - x1) ** 2 + (y - y1) ** 2)
 
@@ -312,8 +317,7 @@ class TestPathPlannerProperties:
             0,
             min(
                 1,
-                ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1))
-                / line_length_squared,
+                ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / line_length_squared,
             ),
         )
 

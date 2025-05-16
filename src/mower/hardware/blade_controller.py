@@ -27,6 +27,7 @@ class BladeController:
         self._gpio = GPIOManager()
         self._enabled = False
         self._direction = 0
+        self._pwm = None  # Initialize _pwm attribute to None
 
         # Set up GPIO pins
         self._gpio.setup_pin(BLADE_ENABLE_PIN, "out", 0)
@@ -47,7 +48,7 @@ class BladeController:
                 self._enabled = True
                 logging.info("Blade motor enabled")
             return True
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error enabling blade motor: {e}")
             return False
 
@@ -64,7 +65,7 @@ class BladeController:
                 self._enabled = False
                 logging.info("Blade motor disabled")
             return True
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error disabling blade motor: {e}")
             return False
 
@@ -88,7 +89,7 @@ class BladeController:
                 self._direction = direction
                 logging.info(f"Blade motor direction set to {direction}")
             return True
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting blade motor direction: {e}")
             return False
 
@@ -103,14 +104,11 @@ class BladeController:
             bool: True if successful, False otherwise.
         """
         try:
-            if not (0.0 <= speed <= 1.0):
+            if not 0.0 <= speed <= 1.0:
                 logging.error(
-                    f"Invalid speed value: {speed}. Must be between 0.0 and 1.0."
-                )
-                return False
-
-            # Set up PWM on the enable pin if not already configured
-            if not hasattr(self, "_pwm"):
+                    "Invalid speed value: %s. Must be between 0.0 and 1.0.", speed)
+                return False            # Set up PWM on the enable pin if not already configured
+            if self._pwm is None:
                 self._pwm = self._gpio.setup_pwm(
                     BLADE_ENABLE_PIN, frequency=1000
                 )  # 1 kHz frequency
@@ -118,9 +116,9 @@ class BladeController:
             # Set the duty cycle based on the speed
             duty_cycle = int(speed * 100)  # Convert to percentage (0-100)
             self._pwm.ChangeDutyCycle(duty_cycle)
-            logging.info(f"Blade motor speed set to {speed * 100:.1f}%")
+            logging.info("Blade motor speed set to %.1f%%", speed * 100)
             return True
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting blade motor speed: {e}")
             return False
 
@@ -149,7 +147,7 @@ class BladeController:
             self._gpio.cleanup_pin(BLADE_ENABLE_PIN)
             self._gpio.cleanup_pin(BLADE_DIRECTION_PIN)
             logging.info("Blade controller cleaned up")
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error cleaning up blade controller: {e}")
 
     def get_state(self) -> dict:

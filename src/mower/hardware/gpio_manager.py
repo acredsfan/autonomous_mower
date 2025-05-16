@@ -8,10 +8,11 @@ It now uses RPi.GPIO for hardware access.
 
 import logging
 from typing import Optional, Dict, Any
+from mower.config_management.config_manager import get_config
 
 # Try to import RPi.GPIO, but don't fail if not available
 try:
-    import RPi.GPIO as GPIO  # type: ignore[import]
+    from RPi import GPIO  # type: ignore[import]
 
     RPI_GPIO_AVAILABLE = True
     GPIO.setmode(GPIO.BCM)  # Use Broadcom pin numbering
@@ -57,7 +58,7 @@ class GPIOManager:
         pin: int,
         direction: str = "out",
         initial: Optional[int] = None,
-        pull_up_down: Optional[int] = None
+        pull_up_down: Optional[int] = None,
     ) -> bool:
         """
         Set up a GPIO pin for use.
@@ -101,7 +102,7 @@ class GPIOManager:
             self._pins_setup[pin] = direction
             return True
 
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting up GPIO pin {pin}: {e}")
             return False
 
@@ -121,7 +122,7 @@ class GPIOManager:
             if pin in self._pins_setup:
                 GPIO.cleanup(pin)
                 self._pins_setup.pop(pin, None)
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error cleaning up GPIO pin {pin}: {e}")
 
     def cleanup_all(self) -> None:
@@ -138,7 +139,7 @@ class GPIOManager:
             if pins_to_clean:
                 GPIO.cleanup(pins_to_clean)
             self._pins_setup.clear()
-        except Exception as e:
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error cleaning up GPIO: {e}")
 
     def set_pin(self, pin: int, value: int) -> bool:
@@ -160,21 +161,22 @@ class GPIOManager:
             if pin in self._pins_setup and self._pins_setup[pin] == "out":
                 self._simulated_values[pin] = sim_value
                 return True
-            else:
-                # Use f-string correctly
-                logging.warning(
-                    f"Cannot set simulated pin {pin}, not set up as output."
-                )
-                return False
+
+            # No else after return - removed unnecessary else
+            logging.warning(
+                "Cannot set simulated pin %s, not set up as output.", pin
+            )
+            return False
 
         try:
             if pin in self._pins_setup and self._pins_setup[pin] == "out":
                 GPIO.output(pin, gpio_value)
                 return True
-            else:
-                logging.warning(f"Cannot set pin {pin}, not set up as output.")
-                return False
-        except Exception as e:
+
+            # No else after return - removed unnecessary else
+            logging.warning("Cannot set pin %s, not set up as output.", pin)
+            return False
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting GPIO pin {pin}: {e}")
             return False
 
@@ -187,23 +189,21 @@ class GPIOManager:
 
         Returns:
             Optional[int]: The pin value (0 or 1) or None on error
-        """
-        if self._simulation_mode:
+        """ if self._simulation_mode:
             if pin in self._pins_setup:
                 return self._simulated_values.get(pin, 0)
-            else:
-                # Correct indentation and formatting
-                logging.warning(f"Cannot get simulated pin {pin}, not set up.")
-                return None
 
-        try:
-            if pin in self._pins_setup:
+            # No else after return - removed unnecessary else
+            logging.warning("Cannot get simulated pin %s, not set up.", pin)
+            return None
+
+        try: if pin in self._pins_setup:
                 return GPIO.input(pin)  # Returns 0 or 1
-            else:
-                logging.warning(f"Cannot get pin {pin}, not set up.")
-                return None
-        except Exception as e:
-            logging.error(f"Error reading GPIO pin {pin}: {e}")
+
+            # No else after return - removed unnecessary else
+            logging.warning("Cannot get pin %s, not set up.", pin)
+            return None        except (IOError, ValueError, RuntimeError) as e:
+            logging.error("Error reading GPIO pin %s: %s", pin, e)
             return None
 
     def get_state(self) -> Dict[str, Any]:
@@ -213,27 +213,22 @@ class GPIOManager:
         Returns:
             Dict[str, Any]: Dictionary containing GPIO state information
         """
-        state = {"simulation_mode": self._simulation_mode, "pins": {}}
-
-        if self._simulation_mode:
+        state = {"simulation_mode": self._simulation_mode, "pins": {}}        if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
         else:
-            for pin in self._pins_setup.keys():
+            for pin in self._pins_setup:  # Iterate directly over keys
                 try:
                     state["pins"][pin] = {
                         "value": self.get_pin(pin),
                         "direction": self._pins_setup.get(pin),
                     }
-                except Exception as e:
-                    logging.error(f"Error getting state for pin {pin}: {e}")
+                except (IOError, ValueError, RuntimeError) as e:
+                    logging.error("Error getting state for pin %s: %s", pin, e)
 
         return state
 
     def initialize_pins(self):
         """Initialize all GPIO pins based on predefined configuration."""
-        # Import here to avoid circular import issues
-        from mower.config_management.config_manager import get_config
-
         # Check if emergency stop button is physically installed
         use_physical_estop = get_config(
             "safety.use_physical_emergency_stop", True)
@@ -260,11 +255,39 @@ class GPIOManager:
                             # default
                             self._simulated_values[pin] = 1
                         logging.info(
-                            f"Initialized virtual emergency stop on pin {pin}"
-                        )
+                            f"Initialized virtual emergency stop on pin {pin}")
                 else:
                     self.setup_pin(pin, direction="out", initial=0)
                     logging.info(f"Initialized GPIO pin {pin} for {name}")
-            except Exception as e:
+            except (IOError, ValueError, RuntimeError) as e:
                 logging.error(
                     f"Error initializing GPIO pin {pin} for {name}: {e}")
+
+    def setup_pwm(
+        self,
+        pin: int,
+        frequency: int = 1000,
+        duty_cycle: int = 50,
+    ) -> Optional[Any]:
+        """
+        Set up PWM on a GPIO pin.
+
+        Args:
+            pin: The GPIO pin number
+            frequency: Frequency of the PWM signal (default is 1000 Hz)
+            duty_cycle: Duty cycle percentage (0-100, default is 50%)
+
+        Returns:
+            Optional[Any]: PWM object if successful, None otherwise
+        """
+        if self._simulation_mode:
+            logging.warning("PWM setup not available in simulation mode.")
+            return None
+
+        try:
+            pwm = GPIO.PWM(pin, frequency)
+            pwm.start(duty_cycle)
+            return pwm
+        except (IOError, ValueError, RuntimeError) as e:
+            logging.error(f"Error setting up PWM on pin {pin}: {e}")
+            return None

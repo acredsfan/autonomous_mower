@@ -7,8 +7,6 @@ consistently across components.
 """
 
 import os
-import json
-from pathlib import Path
 
 # Import configuration management
 from mower.config_management import (

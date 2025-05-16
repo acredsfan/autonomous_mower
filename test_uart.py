@@ -1,11 +1,25 @@
-import serial
+"""
+UART Test Script for Autonomous Mower.
+
+This script performs UART communication tests with the mower's hardware.
+It sends commands and reads responses to verify that the UART interface
+is working correctly.
+"""
+
 import time
+import serial
 
 SERIAL_PORT = "/dev/ttyACM1"
 BAUD_RATE = 115200
 
 
 def main():
+    """
+    Main function to test UART communication with the mower hardware.
+
+    Establishes a serial connection and sends test commands to verify
+    the connection is working properly.
+    """
     try:
         with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
             print(f"Connected to {SERIAL_PORT}.")

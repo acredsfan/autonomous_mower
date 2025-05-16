@@ -1,3 +1,4 @@
+import json
 """
 Configuration manager for the autonomous mower.
 
@@ -8,7 +9,6 @@ accessing and modifying configuration values from various sources.
 
 import os
 import threading
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from mower.config_management.config_interface import ConfigurationInterface
@@ -206,7 +206,7 @@ class ConfigurationManager(ConfigurationInterface):
                 for key, value in values.items():
                     if key.startswith(f"{section}."):
                         # Remove the section prefix
-                        section_key = key[len(section) + 1 :]
+                        section_key = key[len(section) + 1:]
                         section_values[section_key] = value
                     elif isinstance(value, dict) and section in value:
                         # Handle nested dictionaries
@@ -363,7 +363,7 @@ class ConfigurationManager(ConfigurationInterface):
             value = value.lower()
             if value in ["true", "yes", "y", "1"]:
                 return True
-            elif value in ["false", "no", "n", "0"]:
+            if value in ["false", "no", "n", "0"]:
                 return False
 
         return default
@@ -415,7 +415,6 @@ class ConfigurationManager(ConfigurationInterface):
         if isinstance(value, str):
             try:
                 # Try to parse as JSON
-                import json
 
                 return json.loads(value)
             except json.JSONDecodeError:
@@ -435,7 +434,8 @@ class ConfigurationManager(ConfigurationInterface):
             default: Default value if key is not found or value is not a dictionary
 
         Returns:
-            Optional[Dict[str, Any]]: Configuration value as a dictionary, or default if not found
+            Optional[Dict[str, Any]]: Configuration value as a dictionary,
+            or default if not found
         """
         value = self.get(key, default)
 
@@ -448,7 +448,6 @@ class ConfigurationManager(ConfigurationInterface):
         if isinstance(value, str):
             try:
                 # Try to parse as JSON
-                import json
 
                 return json.loads(value)
             except json.JSONDecodeError:
@@ -469,9 +468,9 @@ def get_config_manager() -> ConfigurationManager:
     Returns:
         ConfigurationManager: The singleton instance
     """
-    global _config_manager
-
     with _config_manager_lock:
+        # Use of 'global' is required for singleton pattern in this context.
+        global _config_manager
         if _config_manager is None:
             _config_manager = ConfigurationManager()
 

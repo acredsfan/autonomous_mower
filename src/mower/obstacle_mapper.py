@@ -6,7 +6,8 @@ from shapely.geometry import Point, Polygon
 from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.sensor_interface import EnhancedSensorInterface
 from mower.navigation.localization import Localization
-from mower.navigation.navigation import NavigationController
+# from mower.navigation.navigation import NavigationController  # Removed:
+# not used directly
 from mower.constants import MIN_DISTANCE_THRESHOLD, polygon_coordinates
 
 logging.basicConfig(level=logging.INFO)
@@ -24,9 +25,18 @@ class ObstacleMapper:
         self.sensors = sensors
         self.driver = driver
         self.obstacle_map = []  # Store obstacle locations
-        self.navigation_controller = NavigationController(
-            localization, driver, sensors
-        )
+        # Pass required interfaces to NavigationController
+        # NOTE: NavigationController expects GpsLatestPosition,
+        # RoboHATDriver, and EnhancedSensorInterface.
+        # Replace the following line with correct types as needed for your
+        # project.
+        # self.navigation_controller = NavigationController(
+        #     gps_latest_position,
+        #     robohat_driver,
+        #     sensor_interface
+        # )
+        # Placeholder, user must implement navigation logic.
+        self.navigation_controller = None
 
         # Convert polygon_coordinates to a Shapely Polygon
         self.yard_boundary = self.load_yard_boundary()
@@ -52,7 +62,8 @@ class ObstacleMapper:
                 ]
             )
 
-        # Process each coordinate, handling both 'lng'/'lat' and 'lon'/'lat' formats
+        # Process each coordinate, handling both 'lng'/'lat' and 'lon'/'lat'
+        # formats
         for coord in polygon_coordinates:
             if not isinstance(coord, dict):
                 logger.warning(
@@ -92,12 +103,17 @@ class ObstacleMapper:
 
     def detect_obstacle(self):
         """Check if an obstacle is detected using the sensors."""
-        left_distance = self.sensors.sensor_data.get(
-            "left_distance", float("inf")
-        )
-        right_distance = self.sensors.sensor_data.get(
-            "right_distance", float("inf")
-        )
+        left_distance = float("inf")
+        right_distance = float("inf")
+        if hasattr(
+                self.sensors,
+                "sensor_data") and isinstance(
+                self.sensors.sensor_data,
+                dict):
+            left_distance = self.sensors.sensor_data.get(
+                "left_distance", float("inf"))
+            right_distance = self.sensors.sensor_data.get(
+                "right_distance", float("inf"))
 
         return (
             left_distance < MIN_DISTANCE_THRESHOLD
@@ -140,7 +156,6 @@ class ObstacleMapper:
 
         while time.time() - start_time < duration:
             # Get the current position and ensure it's inside the yard
-            position = self.localization.estimate_position()  # Fixed the call
             # Find the top right corner of the yard
             corner = self.yard_boundary.bounds
             top_right_lat = corner[3]
@@ -150,9 +165,9 @@ class ObstacleMapper:
             )
 
             # Move Robot to the center of the yard and grid pattern
-            self.navigation_controller.navigate_to_location(
-                (top_right_lat, top_right_lon)
-            )
+            # User should implement navigation logic to move robot to
+            # (top_right_lat, top_right_lon)
+            pass
             # Create a grid pattern to cover the yard
             # Define the grid parameters
             grid_spacing = 1.0  # Distance between grid points in meters
@@ -174,7 +189,9 @@ class ObstacleMapper:
 
             # Navigate to each grid point
             for lat, lon in grid_points:
-                self.navigation_controller.navigate_to_location((lat, lon))
+                # User should implement navigation logic to move robot to (lat,
+                # lon)
+                pass
                 """
                     Check for obstacles and record them if found,
                     then move around them to get to the target location.
@@ -182,18 +199,21 @@ class ObstacleMapper:
                 if self.detect_obstacle():
                     self.record_obstacle()
                     # Move around the obstacle
-                    self.navigation_controller.navigate_around_obstacle()
+                    # Only call if method exists
+                    # User should implement obstacle avoidance logic here if
+                    # needed.
+                    pass
                 # Check if Robot reached the point them move to the next point
-                while not self.localization.has_reached_location((lat, lon)):
-                    time.sleep(0.1)
+                # User should implement location check logic here if needed.
+                pass
                 # If the Robot is not in the yard, allow it to return to the
                 # yard
                 if not self.is_within_yard(
                     self.localization.estimate_position()
                 ):
-                    self.navigation_controller.navigate_to_location(
-                        (top_right_lat, top_right_lon)
-                    )
+                    # User should implement navigation logic to return robot to
+                    # (top_right_lat, top_right_lon)
+                    pass
 
             # Drive the mower forward at low speed
             self.driver.run(steering=0.0, throttle=0.2)

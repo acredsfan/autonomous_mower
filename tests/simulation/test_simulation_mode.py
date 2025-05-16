@@ -1,9 +1,7 @@
 """
-Test the simulation mode capabilities.
-
-This module demonstrates how to use the simulation capabilities for testing
-the autonomous mower system without requiring physical hardware.
-"""
+Test module for test_simulation_mode.py.
+"""Test module for test_simulation_mode.py.
+""""
 
 from mower.config_management import get_config, set_config
 from mower.robot_di import Robot as RobotDI
@@ -30,6 +28,8 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
+
+
 def simulation_environment():
     """Set up a simulation environment for testing."""
     # Enable simulation mode
@@ -41,19 +41,19 @@ def simulation_environment():
     world = get_world_instance()
 
     # Set up a simple virtual world with obstacles
-    # Start at (10, 10) facing east
+    # Start at(10, 10) facing east
     world.set_robot_position(Vector2D(10.0, 10.0), 0.0)
 
     # Add some obstacles
     world.add_obstacle(
-        Vector2D(15.0, 10.0), 1.0, obstacle_type="rock"
-    )  # Rock at (15, 10)
+        Vector2D(15.0, 10.0), 1.0, obstacle_type = "rock"
+    )  # Rock at(15, 10)
     world.add_obstacle(
-        Vector2D(10.0, 15.0), 0.5, obstacle_type="small_rock"
-    )  # Small rock at (10, 15)
+        Vector2D(10.0, 15.0), 0.5, obstacle_type = "small_rock"
+    )  # Small rock at(10, 15)
     world.add_obstacle(
-        Vector2D(5.0, 5.0), 2.0, obstacle_type="tree"
-    )  # Tree at (5, 5)
+        Vector2D(5.0, 5.0), 2.0, obstacle_type = "tree"
+    )  # Tree at(5, 5)
 
     # Configure the mower for simulation
     set_config("use_simulation", True)
@@ -71,7 +71,7 @@ def test_obstacle_detection(simulation_environment):
 
     # Get the robot's current position and heading
     robot_state = world.get_robot_state()
-    position = Vector2D(*robot_state["position"])
+    position = Vector2D( * robot_state["position"])
     heading = robot_state["heading"]
 
     logger.info(f"Robot starting at position {position}, heading {heading}")
@@ -82,10 +82,10 @@ def test_obstacle_detection(simulation_environment):
         position, direction, max_range=10.0
     )
 
-    # We should detect the rock at (15, 10)
+    # We should detect the rock at(15, 10)
     assert obstacle is not None, "Should detect an obstacle"
     assert (
-        obstacle.obstacle_type == "rock"
+        obstacle.obstacle_type== "rock"
     ), f"Should detect a rock, got {obstacle.obstacle_type}"
     assert (
         4.0 < distance < 6.0
@@ -100,12 +100,12 @@ def test_robot_movement(simulation_environment):
 
     # Get initial position
     initial_state = world.get_robot_state()
-    initial_position = Vector2D(*initial_state["position"])
+    initial_position = Vector2D( * initial_state["position"])
 
     logger.info(f"Robot starting at position {initial_position}")
 
-    # Set motor speeds to move forward
-    world.set_robot_motor_speeds(0.5, 0.5)  # 50% speed on both motors
+    # Set motor speeds to move for ward
+    world.set_robot_motor_speeds(0.5, 0.5)  # 50 % speed on both motors
 
     # Update the world for 2 seconds
     for _ in range(20):  # 20 updates at 0.1s each
@@ -114,16 +114,16 @@ def test_robot_movement(simulation_environment):
 
     # Get new position
     new_state = world.get_robot_state()
-    new_position = Vector2D(*new_state["position"])
+    new_position = Vector2D( * new_state["position"])
 
     # Calculate distance moved
     distance_moved = initial_position.distance_to(new_position)
 
     logger.info(
-        f"Robot moved to position {new_position}, distance moved: {distance_moved}m"
-    )
+        f"Robot moved to position {new_position}, "
+        distance moved: {distance_moved}m")"
 
-    # We should have moved forward
+    # We should have moved for ward
     assert (
         distance_moved > 0.5
     ), f"Robot should have moved, only moved {distance_moved}m"
@@ -137,17 +137,17 @@ def test_collision_handling(simulation_environment):
     world = simulation_environment
 
     # Position the robot near an obstacle
-    # Near the rock at (15, 10)
+    # Near the rock at(15, 10)
     world.set_robot_position(Vector2D(14.0, 10.0), 0.0)
 
     # Get initial position
     initial_state = world.get_robot_state()
-    initial_position = Vector2D(*initial_state["position"])
+    initial_position = Vector2D( * initial_state["position"])
 
     logger.info(f"Robot starting at position {initial_position}")
 
     # Set motor speeds to move toward the obstacle
-    world.set_robot_motor_speeds(0.5, 0.5)  # 50% speed on both motors
+    world.set_robot_motor_speeds(0.5, 0.5)  # 50 % speed on both motors
 
     # Update the world for 2 seconds
     for _ in range(20):  # 20 updates at 0.1s each
@@ -156,7 +156,7 @@ def test_collision_handling(simulation_environment):
 
     # Get new position
     new_state = world.get_robot_state()
-    new_position = Vector2D(*new_state["position"])
+    new_position = Vector2D( * new_state["position"])
 
     logger.info(f"Robot moved to position {new_position}")
 
@@ -164,10 +164,11 @@ def test_collision_handling(simulation_environment):
     obstacle_position = Vector2D(15.0, 10.0)
     distance_to_obstacle = new_position.distance_to(obstacle_position)
 
-    # We should not have penetrated the obstacle (radius 1.0)
+    # We should not have penetrated the obstacle(radius 1.0)
     assert (
         distance_to_obstacle >= 1.0
-    ), f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
+    ),
+    f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
 
     # Stop the robot
     world.set_robot_motor_speeds(0.0, 0.0)
@@ -175,7 +176,8 @@ def test_collision_handling(simulation_environment):
 
 def test_system_integration(simulation_environment):
     """Test the integration of the mower system with simulation mode."""
-    # This test would initialize the actual mower system with simulation mode enabled
+    #
+    This test would initialize the actual mower system with simulation mode enabled
     # For now, we'll just verify that simulation mode is properly enabled
     assert is_simulation_enabled(), "Simulation mode should be enabled"
 
@@ -192,7 +194,7 @@ def test_system_integration(simulation_environment):
 
 
 if __name__ == "__main__":
-    # This allows running the tests directly without pytest
+    # This allows running the tests directly with out pytest
     # Enable simulation mode
     enable_simulation()
 
@@ -207,14 +209,14 @@ if __name__ == "__main__":
     world.add_obstacle(Vector2D(5.0, 5.0), 2.0, obstacle_type="tree")
 
     # Run the tests
-    try:
+    try :
         test_obstacle_detection(world)
         test_robot_movement(world)
         test_collision_handling(world)
         test_system_integration(world)
-        logger.info("All tests passed!")
+        logger.info("All tests passed ! ")
     except AssertionError as e:
         logger.error(f"Test failed: {e}")
-    finally:
+    finally :
         # Clean up
         reset_world()

@@ -1,15 +1,11 @@
 """
-Integration tests for I2C sensor stability and error handling.
-
-This module tests the behavior of the sensor interface when encountering
-I2C bus errors and its ability to recover, including after simulated
-service restarts.
+Test module for test_i2c_sensor_stability.py.
 """
-
 import pytest
 # Placeholder for imports that will be needed
 # from unittest.mock import MagicMock, patch
-# from mower.hardware.sensor_interface import EnhancedSensorInterface, SensorStatus
+# from mower.hardware.sensor_interface import EnhancedSensorInterface
+# from mower.hardware.sensor_interface import SensorStatus
 # from mower.mower import ResourceManager
 # from tests.hardware_fixtures import (
 #     sim_world,
@@ -46,7 +42,8 @@ class TestI2CSensorStability:
         """
         # TODO: Implement test
         # 1. Setup: Mock I2C to initially raise OSError, then succeed.
-        # 2. Action: Init EnhancedSensorInterface, trigger read/check for retry.
+        # 2. Action: Init EnhancedSensorInterface,
+        # trigger read/check for retry.
         # 3. Assert: Sensor becomes operational after retry.
         pytest.skip("Test not yet implemented. Requires I2C error simulation.")
 
@@ -57,9 +54,9 @@ class TestI2CSensorStability:
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Mock I2C to raise OSError for a sensor.
-        #    - Initialize SensorInterface (sensor should fail).
-        #    - Modify mock I2C to succeed for that sensor.
+        # - Mock I2C to raise OSError for a sensor.
+        # - Initialize SensorInterface (sensor should fail).
+        # - Modify mock I2C to succeed for that sensor.
         # 2. Action: Re-initialize SensorInterface.
         # 3. Assert: Sensor is now operational.
         pytest.skip("Test not yet implemented. Requires I2C error simulation.")
@@ -70,9 +67,9 @@ class TestI2CSensorStability:
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Mock I2C to raise OSError for sensor A and sensor B.
-        #    - Initialize SensorInterface (A and B should fail).
-        #    - Modify mock I2C for sensor A to succeed, sensor B still fails.
+        # - Mock I2C to raise OSError for sensor A and sensor B.
+        # - Initialize SensorInterface (A and B should fail).
+        # - Modify mock I2C for sensor A to succeed, sensor B still fails.
         # 2. Action: Trigger sensor status check/recovery attempt.
         # 3. Assert: Sensor A is operational, Sensor B is not.
         pytest.skip("Test not yet implemented. Requires I2C error simulation.")

@@ -7,12 +7,13 @@ the environment (terrain, obstacles, etc.), and methods for updating and queryin
 the world state.
 """
 
-import time
-import math
 import logging
+import math
 import threading
+import time
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
-from typing import Dict, Any, Optional, List, Tuple, Union, Type, Set
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -102,14 +103,12 @@ class Vector2D:
 class Obstacle:
     """
     Representation of an obstacle in the virtual world.
-    """
-
-    def __init__(
+    """ def __init__(
         self,
         position: Vector2D,
         radius: float,
-        height: float = 0.0,
-        obstacle_type: str = "generic",
+        height: float=0.0,
+        obstacle_type: str="generic",
     ):
         """
         Initialize an obstacle.
@@ -127,7 +126,10 @@ class Obstacle:
 
     def __repr__(self) -> str:
         """String representation of obstacle."""
-        return f"Obstacle({self.position}, r={self.radius:.2f}, h={self.height:.2f}, type={self.obstacle_type})"
+        return (
+            f"Obstacle({self.position}, r={self.radius:.2f}, "
+            f"h={self.height:.2f}, type={self.obstacle_type})"
+        )
 
     def contains_point(self, point: Vector2D) -> bool:
         """
@@ -299,6 +301,8 @@ class Robot:
     Representation of the robot in the virtual world.
     """
 
+    # The Robot class has many attributes to accurately simulate physical state.
+    # This is intentional for simulation fidelity.
     def __init__(
         self, position: Vector2D = Vector2D(0, 0), heading: float = 0.0
     ):
@@ -330,7 +334,10 @@ class Robot:
 
     def __repr__(self) -> str:
         """String representation of robot."""
-        return f"Robot(pos={self.position}, heading={self.heading:.2f}rad, vel={self.velocity})"
+        return f"Robot(pos={
+            self.position}, heading={
+            self.heading: .2f} rad, vel={
+            self.velocity}) "
 
     def update(self, dt: float) -> None:
         """
@@ -346,17 +353,13 @@ class Robot:
         self.heading += self.angular_velocity * dt
 
         # Normalize heading to [0, 2*pi)
-        self.heading = self.heading % (2 * math.pi)
-
         # Update battery state based on motor and blade usage
-        self._update_battery(dt)
+        self.heading = self.heading % (2 * math.pi)
+        self._update_battery()
 
-    def _update_battery(self, dt: float) -> None:
+    def _update_battery(self) -> None:
         """
         Update the battery state based on motor and blade usage.
-
-        Args:
-            dt: Elapsed time in seconds
         """
         # Calculate current draw based on motor speeds and blade
         # 2A per motor at full speed
@@ -423,6 +426,8 @@ class VirtualWorld:
     Virtual world model for simulation.
     """
 
+    # The VirtualWorld class has many attributes to support simulation
+    # features.
     def __init__(self, width: float = 100.0, height: float = 100.0):
         """
         Initialize the virtual world.
@@ -547,10 +552,9 @@ class VirtualWorld:
         Args:
             position: Position to check from
             direction: Direction to check in
-            max_range: Maximum range to check
-
-        Returns:
-            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and the obstacle itself (or max_range, None if no obstacle found)
+            max_range: Maximum range to check        Returns:
+            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and the obstacle itself
+                (or max_range, None if no obstacle found)
         """
         with self._lock:
             # Normalize direction
@@ -653,7 +657,9 @@ class VirtualWorld:
 
 
 # Singleton instance of the virtual world
-_world_instance = None
+# _world_instance is intentionally not PEP8-compliant to indicate internal
+# singleton use.
+_world_instance = None  # Using underscore prefix for internal use
 
 
 def get_world_instance() -> VirtualWorld:
@@ -663,6 +669,7 @@ def get_world_instance() -> VirtualWorld:
     Returns:
         VirtualWorld: The virtual world instance
     """
+    # Use of 'global' is required for singleton pattern in this context.
     global _world_instance
     if _world_instance is None:
         _world_instance = VirtualWorld()
@@ -671,5 +678,6 @@ def get_world_instance() -> VirtualWorld:
 
 def reset_world() -> None:
     """Reset the virtual world to its initial state."""
+    # Use of 'global' is required for singleton pattern in this context.
     global _world_instance
     _world_instance = VirtualWorld()

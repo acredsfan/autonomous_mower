@@ -16,9 +16,8 @@ class ConfigurationInterface(ABC):
 
     This interface defines the contract that all configuration
     implementations must adhere to.
-    """
+    """    @ abstractmethod
 
-    @abstractmethod
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get a configuration value.
@@ -29,10 +28,8 @@ class ConfigurationInterface(ABC):
 
         Returns:
             Any: Configuration value
-        """
-        pass
+        """    @ abstractmethod
 
-    @abstractmethod
     def set(self, key: str, value: Any) -> None:
         """
         Set a configuration value.
@@ -41,7 +38,6 @@ class ConfigurationInterface(ABC):
             key: Configuration key (can be hierarchical, e.g., 'section.key')
             value: Configuration value
         """
-        pass
 
     @abstractmethod
     def has(self, key: str) -> bool:
@@ -54,7 +50,6 @@ class ConfigurationInterface(ABC):
         Returns:
             bool: True if the key exists, False otherwise
         """
-        pass
 
     @abstractmethod
     def delete(self, key: str) -> bool:
@@ -67,7 +62,6 @@ class ConfigurationInterface(ABC):
         Returns:
             bool: True if the key was deleted, False if it didn't exist
         """
-        pass
 
     @abstractmethod
     def get_section(self, section: str) -> Dict[str, Any]:
@@ -80,7 +74,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Dict[str, Any]: Configuration section
         """
-        pass
 
     @abstractmethod
     def get_all(self) -> Dict[str, Any]:
@@ -90,7 +83,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Dict[str, Any]: All configuration values
         """
-        pass
 
     @abstractmethod
     def load(self, source: Union[str, Dict[str, Any]]) -> Dict[str, Any]:
@@ -103,7 +95,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Dict[str, Any]: Loaded configuration
         """
-        pass
 
     @abstractmethod
     def save(self, destination: str) -> None:
@@ -113,12 +104,10 @@ class ConfigurationInterface(ABC):
         Args:
             destination: Destination to save to (file path)
         """
-        pass
 
     @abstractmethod
     def reset(self) -> None:
         """Reset the configuration to its default state."""
-        pass
 
     @abstractmethod
     def get_int(
@@ -134,7 +123,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Optional[int]: Configuration value as an integer, or default if not found
         """
-        pass
 
     @abstractmethod
     def get_float(
@@ -150,7 +138,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Optional[float]: Configuration value as a float, or default if not found
         """
-        pass
 
     @abstractmethod
     def get_bool(
@@ -166,7 +153,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Optional[bool]: Configuration value as a boolean, or default if not found
         """
-        pass
 
     @abstractmethod
     def get_str(
@@ -182,7 +168,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Optional[str]: Configuration value as a string, or default if not found
         """
-        pass
 
     @abstractmethod
     def get_list(
@@ -198,7 +183,6 @@ class ConfigurationInterface(ABC):
         Returns:
             Optional[List[Any]]: Configuration value as a list, or default if not found
         """
-        pass
 
     @abstractmethod
     def get_dict(
@@ -212,6 +196,6 @@ class ConfigurationInterface(ABC):
             default: Default value if key is not found or value is not a dictionary
 
         Returns:
-            Optional[Dict[str, Any]]: Configuration value as a dictionary, or default if not found
+            Optional[Dict[str, Any]]: Configuration value as a dictionary,
+            or default if not found
         """
-        pass

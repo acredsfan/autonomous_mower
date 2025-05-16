@@ -1,19 +1,14 @@
 """
-Integration tests for ML model fallbacks in the ObstacleDetector.
-
-This module tests the ObstacleDetector's behavior when ML model files
-are missing, invalid, or if the ML library (e.g., TensorFlow Lite) fails
-to initialize. It ensures that the system can gracefully degrade or use
-alternative detection methods if primary ML models are unavailable.
+Test module for test_ml_model_fallbacks.py.
 """
-
 import pytest
 # import os # Not used yet
 # from pathlib import Path # Not used yet
 # Placeholder for imports that will be needed
 # from unittest.mock import MagicMock, patch
 # from mower.obstacle_detection.obstacle_detector import ObstacleDetector
-# from mower.config_management import get_config_manager, initialize_config_manager
+# from mower.config_management import get_config_manager
+# from mower.config_management import initialize_config_manager
 # from tests.hardware_fixtures import sim_camera # Assuming a simulated
 # camera fixture
 
@@ -57,8 +52,8 @@ class TestMLModelFallbacks:
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Create dummy/valid model and label files in temp_model_dir.
-        #    - Patch 'tflite_runtime.interpreter.Interpreter' & other ML libs.
+        # - Create dummy / valid model and label files in temp_model_dir.
+        # - Patch 'tflite_runtime.interpreter.Interpreter' & other ML libs.
         # 2. Action: Initialize ObstacleDetector with obstacle_detector_config.
         # 3. Assert: Detector initializes without error, reports ML model as
         # loaded.
@@ -73,9 +68,9 @@ class TestMLModelFallbacks:
         # 1. Setup: Ensure model file specified in config does NOT exist.
         # 2. Action: Initialize ObstacleDetector.
         # 3. Assert:
-        #    - Detector initializes but reports ML model as unavailable/failed.
-        #    - Logs appropriate warning/error.
-        #    - Falls back to non-ML detection or operates in degraded mode.
+        # - Detector initializes but reports ML model as unavailable / failed.
+        # - Logs appropriate warning / error.
+        # - Falls back to non-ML detection or operates in degraded mode.
         pytest.skip("Test not yet implemented.")
 
     def test_detector_initialization_with_missing_label_file(
@@ -84,7 +79,8 @@ class TestMLModelFallbacks:
         Test ObstacleDetector behavior when the label file is missing.
         """
         # TODO: Implement test
-        # 1. Setup: Create a dummy model file, but ensure label file does NOT exist.
+        # 1. Setup: Create a dummy model file,
+        # but ensure label file does NOT exist.
         # 2. Action: Initialize ObstacleDetector.
         # 3. Assert: Similar to missing model, but specific to label file.
         pytest.skip("Test not yet implemented.")
@@ -92,7 +88,7 @@ class TestMLModelFallbacks:
     def test_detector_initialization_with_invalid_model_file(
             self, obstacle_detector_config, temp_model_dir):
         """
-        Test behavior with an invalid/corrupt .tflite model file.
+        Test behavior with an invalid / corrupt .tflite model file.
         """
         # TODO: Implement test
         # 1. Setup: Create an empty or malformed file at the model_path.
@@ -104,19 +100,27 @@ class TestMLModelFallbacks:
     def test_detector_fallback_behavior_when_model_fails_to_load(
             self, obstacle_detector_config, sim_camera):
         """
-        Test that ObstacleDetector falls back to alternative methods (e.g., basic ToF)
+        Test that ObstacleDetector falls back to alternative methods (
+            e.g.,
+            basic ToF)
         if the ML model cannot be loaded or used.
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Configure detector for ML; ensure model loading fails (e.g., file).
-        #    - Ensure ToF sensors (or fallbacks) are mocked/simulated as working.
-        # 2. Action: Call obstacle detection method (e.g., detect_obstacles(frame)).
+        # - Configure detector for ML; ensure model loading fails (
+        # e.g., missing
+        # file).
+        # - Ensure ToF sensors (or fallbacks) are mocked / simulated as working.
+        # 2. Action: Call obstacle detection method (
+        # e.g.,
+        # detect_obstacles(frame)).
         # 3. Assert:
-        #    - Detection result is based on fallback sensors, not ML.
-        #    - No exceptions due to ML failure during detection.
+        # - Detection result is based on fallback sensors, not ML.
+        # - No exceptions due to ML failure during detection.
         pytest.skip(
-            "Test not yet implemented. Requires sim_camera and fallback logic.")
+            "Test not yet implemented. Requires sim_camera and "
+            "fallback logic."
+        )
 
     def test_detector_with_coral_accelerator_unavailable(
             self, obstacle_detector_config, temp_model_dir):
@@ -126,11 +130,11 @@ class TestMLModelFallbacks:
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Config sets use_coral_accelerator = True.
-        #    - Create valid CPU model and label files.
-        #    - Patch EdgeTPU delegate loading to simulate its absence/failure.
+        # - Config sets use_coral_accelerator = True.
+        # - Create valid CPU model and label files.
+        # - Patch EdgeTPU delegate loading to simulate its absence / failure.
         # 2. Action: Initialize ObstacleDetector.
         # 3. Assert:
-        #    - Detector initializes successfully using CPU TFLite.
-        #    - Logs a warning about Coral unavailability.
+        # - Detector initializes successfully using CPU TFLite.
+        # - Logs a warning about Coral unavailability.
         pytest.skip("Test not yet implemented. Requires EdgeTPU lib mocking.")

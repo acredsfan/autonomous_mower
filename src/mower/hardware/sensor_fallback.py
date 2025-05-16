@@ -7,9 +7,8 @@ for sensor failures and improved calibration procedures for various sensors.
 
 import time
 import threading
-from typing import Dict, Any, Optional, List, Tuple, Callable
+from typing import Dict, Any, Optional, List, Callable
 from datetime import datetime
-import logging
 from enum import Enum
 
 from mower.interfaces.sensors import SensorInterface
@@ -91,7 +90,8 @@ class SensorFallbackManager:
 
             self._sensor_groups[group_id].append(sensor_id)
 
-            # Set as active if it's the first sensor in the group or has higher priority
+            # Set as active if it's the first sensor in the group or has higher
+            # priority
             with self._locks["active"]:
                 if group_id not in self._active_sensors:
                     self._active_sensors[group_id] = sensor_id
@@ -104,8 +104,8 @@ class SensorFallbackManager:
                         self._active_sensors[group_id] = sensor_id
 
         logger.info(
-            f"Registered sensor {sensor_id} in group {group_id} with priority {priority.name}"
-        )
+            f"Registered sensor {sensor_id} in group {group_id} with priority {
+                priority.name}")
 
     def set_fallback_chain(
         self, sensor_id: str, fallback_sensors: List[str]
@@ -115,20 +115,21 @@ class SensorFallbackManager:
 
         Args:
             sensor_id: ID of the primary sensor
-            fallback_sensors: List of sensor IDs to use as fallbacks, in order of preference
+            fallback_sensors: List of sensor IDs to use as fallbacks,
+                in order of preference
         """
         with self._locks["sensors"]:
             if sensor_id not in self._sensors:
                 logger.error(
-                    f"Cannot set fallback chain: Sensor {sensor_id} not registered"
-                )
+                    f"Cannot set fallback chain: Sensor {sensor_id} not registered")
                 return
 
             # Verify all fallback sensors are registered
             for fallback_id in fallback_sensors:
                 if fallback_id not in self._sensors:
                     logger.error(
-                        f"Cannot set fallback chain: Fallback sensor {fallback_id} not registered"
+                        f"Cannot set fallback chain: Fallback sensor "
+                        f"{fallback_id} not registered"
                     )
                     return
 
@@ -242,13 +243,13 @@ class SensorFallbackManager:
                 if best_sensor:
                     if best_sensor != current_active:
                         logger.info(
-                            f"Switching active sensor for group {group_id} from {current_active} to {best_sensor}"
+                            f"Switching active sensor for group {group_id} "
+                            f"from {current_active} to {best_sensor}"
                         )
                         self._active_sensors[group_id] = best_sensor
                 else:
                     logger.warning(
-                        f"No operational sensors available for group {group_id}"
-                    )
+                        f"No operational sensors available for group {group_id}")
 
     def _find_best_sensor(
         self, group_id: str, sensor_ids: List[str]
@@ -283,7 +284,8 @@ class SensorFallbackManager:
                 ):
                     return sensor_id
 
-        # If current active sensor is in calibration or initializing, keep using it
+        # If current active sensor is in calibration or initializing, keep
+        # using it
         current_active = self._active_sensors.get(group_id)
         if current_active in sensor_ids:
             status = self._sensor_status.get(current_active)
@@ -432,8 +434,7 @@ class SensorCalibrationManager:
         with self._locks["sensors"]:
             if sensor_id not in self._sensors:
                 logger.error(
-                    f"Cannot register calibration procedure: Sensor {sensor_id} not registered"
-                )
+                    f"Cannot register calibration procedure: Sensor {sensor_id} not registered")
                 return
 
             self._calibration_procedures[sensor_id] = procedure
@@ -461,8 +462,7 @@ class SensorCalibrationManager:
 
             if sensor_id not in self._calibration_procedures:
                 logger.error(
-                    f"Cannot calibrate: No calibration procedure for sensor {sensor_id}"
-                )
+                    f"Cannot calibrate: No calibration procedure for sensor {sensor_id}")
                 return False
 
             if self._calibration_status[sensor_id]["in_progress"]:
@@ -523,8 +523,7 @@ class SensorCalibrationManager:
                 self._calibration_status[sensor_id]["in_progress"] = False
 
             logger.info(
-                f"Calibration for sensor {sensor_id} completed with result: {result}"
-            )
+                f"Calibration for sensor {sensor_id} completed with result: {result}")
         except Exception as e:
             logger.error(
                 f"Error during calibration of sensor {sensor_id}: {e}"
@@ -636,7 +635,8 @@ def calibrate_imu(sensor):
 
         # Step 3: Calibrate the gyroscope
         logger.info("Calibrating gyroscope...")
-        # In a real implementation, this would call a specific gyroscope calibration method
+        # In a real implementation, this would call a specific gyroscope
+        # calibration method
         time.sleep(1)  # Simulating calibration time
 
         # Step 4: Calibrate the magnetometer

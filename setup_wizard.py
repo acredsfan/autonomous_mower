@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Autonomous Mower Setup Wizard
 
@@ -11,8 +10,11 @@ import os
 import sys
 import json
 import shutil
+import textwrap
+import getpass
+import traceback
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Callable, Union, Tuple
+from typing import Dict, List, Optional, Callable
 
 # Try to import dotenv, install if not available
 try:
@@ -89,8 +91,6 @@ def print_error(message: str) -> None:
 
 def print_help(message: str) -> None:
     """Print a help message with proper wrapping."""
-    import textwrap
-
     for line in textwrap.wrap(message, width=76):
         print(f"{color_text('?', 'MAGENTA')} {line}")
 
@@ -115,21 +115,21 @@ def ensure_env_file() -> None:
 
 def save_setup_state() -> None:
     """Save the current setup state to a file."""
-    with open(SETUP_STATE_FILE, "w") as f:
+    with open(SETUP_STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(setup_state, f, indent=2)
     print_info(f"Setup progress saved to {SETUP_STATE_FILE}")
 
 
 def load_setup_state() -> bool:
     """Load setup state from file if it exists."""
-    global setup_state
+    global setup_state  # pylint: disable=global-statement
     if SETUP_STATE_FILE.exists():
         try:
-            with open(SETUP_STATE_FILE, "r") as f:
+            with open(SETUP_STATE_FILE, "r", encoding="utf-8") as f:
                 setup_state = json.load(f)
             print_info(f"Loaded setup progress from {SETUP_STATE_FILE}")
             return True
-        except Exception as e:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             print_warning(f"Failed to load setup state: {e}")
     return False
 
@@ -205,11 +205,9 @@ def prompt_value(
     while True:
         try:
             if secret:
-                import getpass
-
                 val = getpass.getpass(
                     f"{prompt}"
-                    + (f" (default: [hidden]): " if default else ": ")
+                    + (" (default: [hidden]): " if default else ": ")
                 )
             else:
                 val = input(
@@ -317,7 +315,7 @@ def validate_lat_lng(value: str, field_name: str) -> bool:
             print_error(f"{field_name} must be valid latitude,longitude.")
             return False
         return True
-    except Exception:
+    except ValueError:
         print_error(
             f"{field_name} must be in format: lat,lng (e.g. 39.1,-84.5)"
         )
@@ -431,9 +429,14 @@ def setup_basic_configuration() -> None:
     print_subheader("Mower Identity")
     mower_name = prompt_value(
         "Mower name",
-        default=get_env_var("MOWER_NAME", "AutonoMow"),
+        default=get_env_var(
+            "MOWER_NAME",
+            "AutonoMow"),
         required=True,
-        help_text="A unique name for your mower. This will be used in logs and the web interface.",
+        help_text=(
+            "A unique name for your mower. "
+            "This will be used in logs and the web interface."
+        ),
     )
     update_env_var("MOWER_NAME", mower_name)
 
@@ -456,7 +459,10 @@ def setup_basic_configuration() -> None:
     use_simulation = prompt_bool(
         "Use simulation mode?",
         default=False,
-        help_text="Simulation mode allows testing without physical hardware. Recommended for initial setup and testing.",
+        help_text=(
+            "Simulation mode allows testing without physical hardware. "
+            "Recommended for initial setup and testing."
+        ),
     )
     update_env_var("USE_SIMULATION", str(use_simulation))
 
@@ -480,7 +486,9 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("Camera Configuration")
     use_camera = prompt_bool(
         "Use camera for obstacle detection?",
-        default=detected_hardware.get("camera", False),
+        default=detected_hardware.get(
+            "camera",
+            False),
         help_text="The camera is used for visual obstacle detection and navigation.",
     )
 
@@ -521,8 +529,12 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("GPS Configuration")
     use_gps = prompt_bool(
         "Use GPS for navigation?",
-        default=detected_hardware.get("gps", False),
-        help_text="GPS provides absolute positioning for navigation and boundary mapping.",
+        default=detected_hardware.get(
+            "gps",
+            False),
+        help_text=(
+            "GPS provides absolute positioning for navigation and boundary mapping."
+        ),
     )
 
     if use_gps:
@@ -544,7 +556,9 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
         use_rtk = prompt_bool(
             "Use RTK correction for high-precision GPS?",
             default=False,
-            help_text="RTK correction provides centimeter-level accuracy but requires an NTRIP server subscription.",
+            help_text=(
+                "RTK correction provides centimeter-level accuracy but requires "
+                "an NTRIP server subscription."),
         )
 
         if use_rtk:
@@ -592,8 +606,12 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("Motor Controller Configuration")
     use_robohat = prompt_bool(
         "Use RoboHAT MM1 motor controller?",
-        default=detected_hardware.get("robohat", False),
-        help_text="The RoboHAT MM1 is the recommended motor controller for this project.",
+        default=detected_hardware.get(
+            "robohat",
+            False),
+        help_text=(
+            "The RoboHAT MM1 is the recommended motor controller for this project."
+        ),
     )
 
     if use_robohat:
@@ -620,7 +638,9 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
         use_coral = prompt_bool(
             "Use Google Coral TPU for accelerated obstacle detection?",
             default=True,
-            help_text="The Coral TPU provides hardware acceleration for machine learning models.",
+            help_text=(
+                "The Coral TPU provides hardware acceleration for machine learning models."
+            ),
         )
 
         if use_coral:
@@ -655,7 +675,8 @@ def setup_mapping_and_navigation() -> None:
     # Home location
     print_subheader("Home Location")
     print_info(
-        "The home location is where the mower will return when it's finished or needs to charge."
+        "The home location is where the mower will return when it's finished "
+        "or needs to charge."
     )
 
     if gps_enabled:
@@ -664,7 +685,9 @@ def setup_mapping_and_navigation() -> None:
         )
         home_coords = prompt_value(
             "Home location coordinates (latitude,longitude)",
-            default=f"{get_env_var('HOME_LAT', '0.0')},{get_env_var('HOME_LON', '0.0')}",
+            default=(
+                f"{get_env_var('HOME_LAT', '0.0')},{get_env_var('HOME_LON', '0.0')}"
+            ),
             validator=validate_lat_lng,
             field_name="Home location",
         )
@@ -683,7 +706,8 @@ def setup_mapping_and_navigation() -> None:
         }
     else:
         print_info(
-            "Since GPS is disabled, the home location will be set relative to the starting position."
+            "Since GPS is disabled, the home location will be set relative to "
+            "the starting position."
         )
         setup_state["user_choices"]["home_location"] = {"relative": True}
 
@@ -692,7 +716,10 @@ def setup_mapping_and_navigation() -> None:
     use_google_maps = prompt_bool(
         "Use Google Maps in the web interface?",
         default=True,
-        help_text="Google Maps provides a visual interface for setting boundaries and monitoring the mower.",
+        help_text=(
+            "Google Maps provides a visual interface for setting boundaries "
+            "and monitoring the mower."
+        ),
     )
 
     if use_google_maps:
@@ -700,8 +727,8 @@ def setup_mapping_and_navigation() -> None:
             "To use Google Maps, you'll need an API key from the Google Cloud Console."
         )
         print_help(
-            "You can get an API key at: https://developers.google.com/maps/documentation/javascript/get-api-key"
-        )
+            "You can get an API key at: "
+            "https://developers.google.com/maps/documentation/javascript/get-api-key")
 
         gmaps_key = prompt_value(
             "Google Maps API Key",
@@ -728,7 +755,10 @@ def setup_mapping_and_navigation() -> None:
         "Path spacing (meters)",
         default=get_env_var("PATH_PLANNING_SPACING", "0.3"),
         validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
-        help_text="The distance between parallel paths. Smaller values provide more thorough coverage but take longer.",
+        help_text=(
+            "The distance between parallel paths. Smaller values provide more thorough "
+            "coverage but take longer."
+        ),
     )
 
     update_env_var("PATH_PLANNING_PATTERN_TYPE", pattern_type)
@@ -752,14 +782,17 @@ def setup_safety_features() -> None:
     # Emergency stop
     print_subheader("Emergency Stop")
     print_info(
-        "The emergency stop button is a critical safety feature that immediately stops the mower."
-    )
+        "The emergency stop button is a critical safety feature that immediately "
+        "stops the mower.")
 
     e_stop_pin = prompt_value(
         "Emergency stop GPIO pin",
         default=get_env_var("EMERGENCY_STOP_PIN", "7"),
         validator=lambda v, f: validate_int(v, f, 1, 40),
-        help_text="The GPIO pin where the emergency stop button is connected. The button should be normally closed (NC).",
+        help_text=(
+            "The GPIO pin where the emergency stop button is connected. "
+            "The button should be normally closed (NC)."
+        ),
     )
 
     update_env_var("EMERGENCY_STOP_PIN", e_stop_pin)
@@ -776,11 +809,11 @@ def setup_safety_features() -> None:
 
     if camera_enabled:
         min_conf = prompt_value(
-            "Minimum confidence threshold for obstacle detection",
-            default=get_env_var("MIN_CONF_THRESHOLD", "0.5"),
-            validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
-            help_text="Lower values detect more objects but may have false positives. Higher values are more selective.",
-        )
+            "Minimum confidence threshold for obstacle detection", default=get_env_var(
+                "MIN_CONF_THRESHOLD", "0.5"), validator=lambda v, f: validate_float(
+                v, f, 0.1, 1.0), help_text=(
+                "Lower values detect more objects but may have false positives. "
+                "Higher values are more selective."), )
 
         update_env_var("MIN_CONF_THRESHOLD", min_conf)
 
@@ -797,13 +830,16 @@ def setup_safety_features() -> None:
     # Safety zones
     print_subheader("Safety Zones")
     print_info(
-        "Safety zones define areas where the mower should not operate or should use extra caution."
+        "Safety zones define areas where the mower should not operate "
+        "or should use extra caution."
     )
 
     use_safety_zones = prompt_bool(
         "Configure safety zones?",
         default=True,
-        help_text="Safety zones include no-mow zones, children play areas, and pet zones.",
+        help_text=(
+            "Safety zones include no-mow zones, children play areas, and pet zones."
+        ),
     )
 
     if use_safety_zones:
@@ -830,14 +866,20 @@ def setup_safety_features() -> None:
         "Battery low threshold (%)",
         default=get_env_var("BATTERY_LOW_THRESHOLD", "20"),
         validator=lambda v, f: validate_int(v, f, 5, 50),
-        help_text="When battery level falls below this percentage, the mower will return to the charging station.",
+        help_text=(
+            "When battery level falls below this percentage, the mower will return "
+            "to the charging station."
+        ),
     )
 
     batt_critical = prompt_value(
         "Battery critical threshold (%)",
         default=get_env_var("BATTERY_CRITICAL_THRESHOLD", "10"),
         validator=lambda v, f: validate_int(v, f, 1, int(batt_low) - 1),
-        help_text="When battery level falls below this percentage, the mower will enter emergency shutdown.",
+        help_text=(
+            "When battery level falls below this percentage, the mower will enter "
+            "emergency shutdown."
+        ),
     )
 
     update_env_var("BATTERY_LOW_THRESHOLD", batt_low)
@@ -875,7 +917,9 @@ def setup_safety_features() -> None:
     use_rain = prompt_bool(
         "Enable rain sensor?",
         default=True,
-        help_text="The rain sensor prevents the mower from operating in wet conditions.",
+        help_text=(
+            "The rain sensor prevents the mower from operating in wet conditions."
+        ),
     )
 
     update_env_var("RAIN_SENSOR_ENABLED", str(use_rain))
@@ -896,7 +940,9 @@ def setup_web_interface() -> None:
     enable_web = prompt_bool(
         "Enable web interface?",
         default=True,
-        help_text="The web interface allows remote control and monitoring of the mower.",
+        help_text=(
+            "The web interface allows remote control and monitoring of the mower."
+        ),
     )
 
     if enable_web:
@@ -913,12 +959,15 @@ def setup_web_interface() -> None:
         enable_ssl = prompt_bool(
             "Enable SSL/HTTPS?",
             default=True,
-            help_text="SSL/HTTPS encrypts communication between your browser and the mower.",
+            help_text=(
+                "SSL/HTTPS encrypts communication between your browser and the mower."
+            ),
         )
 
         if enable_ssl:
             print_info(
-                "You'll need SSL certificates for HTTPS. You can use Let's Encrypt to get free certificates."
+                "You'll need SSL certificates for HTTPS. "
+                "You can use Let's Encrypt to get free certificates."
             )
 
             ssl_cert = prompt_value(
@@ -946,7 +995,9 @@ def setup_web_interface() -> None:
         auth_required = prompt_bool(
             "Require authentication?",
             default=True,
-            help_text="Authentication requires users to log in before accessing the web interface.",
+            help_text=(
+                "Authentication requires users to log in before accessing the web interface."
+            ),
         )
 
         if auth_required:
@@ -985,10 +1036,13 @@ def setup_web_interface() -> None:
             allowed_ips = prompt_value(
                 "Allowed IPs (comma-separated)",
                 default=get_env_var(
-                    "ALLOWED_IPS", "127.0.0.1,192.168.1.0/24"
+                    "ALLOWED_IPS",
+                    "127.0.0.1,192.168.1.0/24"
                 ),
                 required=True,
-                help_text="List of IP addresses or CIDR ranges that can access the web interface.",
+                help_text=(
+                    "List of IP addresses or CIDR ranges that can access the web interface."
+                ),
             )
 
             update_env_var("ALLOWED_IPS", allowed_ips)
@@ -1041,16 +1095,20 @@ def setup_remote_access() -> None:
 
         if remote_method == "Dynamic DNS (DDNS)":
             print_info(
-                "DDNS allows you to access your mower using a domain name even if your IP address changes."
+                "DDNS allows you to access your mower using a domain name "
+                "even if your IP address changes."
             )
             print_help(
-                "You'll need an account with a DDNS provider like Duck DNS, No-IP, or DynDNS."
+                "You'll need an account with a DDNS provider like Duck DNS, "
+                "No-IP, or DynDNS."
             )
 
             ddns_provider = prompt_value(
                 "DDNS provider",
                 default=get_env_var("DDNS_PROVIDER", "duckdns"),
-                help_text="The name of your DDNS provider (e.g., duckdns, noip, dyndns).",
+                help_text=(
+                    "The name of your DDNS provider (e.g., duckdns, noip, dyndns)."
+                ),
             )
 
             ddns_domain = prompt_value(
@@ -1062,10 +1120,14 @@ def setup_remote_access() -> None:
 
             ddns_token = prompt_value(
                 "DDNS token/key",
-                default=get_env_var("DDNS_TOKEN", ""),
+                default=get_env_var(
+                    "DDNS_TOKEN",
+                    ""),
                 required=True,
                 secret=True,
-                help_text="The token or key provided by your DDNS provider for authentication.",
+                help_text=(
+                    "The token or key provided by your DDNS provider for authentication."
+                ),
             )
 
             update_env_var("DDNS_PROVIDER", ddns_provider)
@@ -1078,8 +1140,8 @@ def setup_remote_access() -> None:
 
         elif remote_method == "Cloudflare Tunnel":
             print_info(
-                "Cloudflare Tunnel provides secure remote access without opening ports on your router."
-            )
+                "Cloudflare Tunnel provides secure remote access without opening "
+                "ports on your router.")
             print_help("You'll need a Cloudflare account and domain name.")
 
             cf_token = prompt_value(
@@ -1114,7 +1176,8 @@ def setup_remote_access() -> None:
 
         elif remote_method == "NGROK":
             print_info(
-                "NGROK provides temporary URLs for remote access without configuring your router."
+                "NGROK provides temporary URLs for remote access without "
+                "configuring your router."
             )
             print_help("You'll need an NGROK account and authtoken.")
 
@@ -1135,7 +1198,8 @@ def setup_remote_access() -> None:
                 "You've chosen to set up remote access manually or not at all."
             )
             print_info(
-                "To access your mower remotely, you'll need to configure port forwarding on your router."
+                "To access your mower remotely, you'll need to configure "
+                "port forwarding on your router."
             )
 
             setup_state["feature_flags"]["remote_access"] = "manual"
@@ -1157,7 +1221,9 @@ def setup_scheduling() -> None:
     use_schedule = prompt_bool(
         "Set up automated mowing schedule?",
         default=True,
-        help_text="Automated scheduling allows the mower to operate on a regular schedule.",
+        help_text=(
+            "Automated scheduling allows the mower to operate on a regular schedule."
+        ),
     )
 
     if use_schedule:
@@ -1208,13 +1274,11 @@ def setup_scheduling() -> None:
                     "end": end_time,
                 }
             else:
+                # Save schedule to a JSON file
                 schedule[day.lower()] = {"enabled": False}
-
-        # Save schedule to a JSON file
         schedule_path = Path(CONFIG_DIR) / "mowing_schedule.json"
         ensure_directory(CONFIG_DIR)
-
-        with open(schedule_path, "w") as f:
+        with open(schedule_path, "w", encoding="utf-8") as f:
             json.dump(schedule, f, indent=2)
 
         update_env_var("MOWING_SCHEDULE_PATH", str(schedule_path))
@@ -1232,13 +1296,16 @@ def setup_scheduling() -> None:
     use_weather = prompt_bool(
         "Enable weather-aware scheduling?",
         default=True,
-        help_text="Weather-aware scheduling prevents mowing during rain or extreme weather.",
+        help_text=(
+            "Weather-aware scheduling prevents mowing during rain or extreme weather."
+        ),
     )
 
     if use_weather:
         print_info("You'll need an OpenWeatherMap API key for weather data.")
         print_help(
-            "You can get a free API key at: https://openweathermap.org/api"
+            "You can get a free API key at: "
+            "https://openweathermap.org/api"
         )
 
         weather_api = prompt_value(
@@ -1282,39 +1349,59 @@ def setup_final_verification() -> None:
 
     # Create empty configuration files if they don't exist
     if not (CONFIG_DIR / "user_polygon.json").exists():
-        with open(CONFIG_DIR / "user_polygon.json", "w") as f:
+        with open(CONFIG_DIR / "user_polygon.json", "w", encoding="utf-8") as f:
             json.dump({"type": "Polygon", "coordinates": []}, f)
 
     if not (CONFIG_DIR / "home_location.json").exists():
-        with open(CONFIG_DIR / "home_location.json", "w") as f:
+        with open(CONFIG_DIR / "home_location.json", "w", encoding="utf-8") as f:
             json.dump({"location": [0, 0]}, f)
 
     # Summary of configuration
     print_subheader("Configuration Summary")
 
     print(
-        f"Mower Name: {setup_state['user_choices'].get('mower_name', 'AutonoMow')}"
-    )
+        f"Mower Name: {
+            setup_state['user_choices'].get(
+                'mower_name',
+                'AutonoMow')}")
     print(
-        f"Simulation Mode: {'Enabled' if setup_state['feature_flags'].get('simulation_mode', False) else 'Disabled'}"
-    )
+        f"Simulation Mode: {
+            'Enabled' if setup_state['feature_flags'].get(
+                'simulation_mode',
+                False) else 'Disabled'}")
 
     # Hardware summary
     print("\nHardware Configuration:")
     hardware_config = setup_state.get("hardware_config", {})
 
     print(
-        f"  Camera: {'Enabled' if hardware_config.get('camera', {}).get('enabled', False) else 'Disabled'}"
-    )
+        f"  Camera: {
+            'Enabled' if hardware_config.get(
+                'camera',
+                {}).get(
+                'enabled',
+                False) else 'Disabled'}")
     print(
-        f"  GPS: {'Enabled' if hardware_config.get('gps', {}).get('enabled', False) else 'Disabled'}"
-    )
+        f"  GPS: {
+            'Enabled' if hardware_config.get(
+                'gps',
+                {}).get(
+                'enabled',
+                False) else 'Disabled'}")
     print(
-        f"  Motor Controller: {hardware_config.get('motor_controller', {}).get('type', 'none')}"
-    )
+        f"  Motor Controller: {
+            hardware_config.get(
+                'motor_controller',
+                {}).get(
+                'type',
+                'none')}")
     print(
-        f"  Coral TPU: {'Enabled' if hardware_config.get('coral_tpu', {}).get('enabled', False) else 'Disabled'}"
-    )
+        f"  Coral TPU: {
+            'Enabled' if hardware_config.get(
+                'coral_tpu',
+                {}).get(
+                'enabled',
+                False) else 'Disabled'}")
 
     # Feature summary
     print("\nEnabled Features:")
@@ -1388,7 +1475,7 @@ def main() -> None:
         else:
             # Resume from saved state
             print_header("Resume Setup")
-            print_info(f"Resuming setup from saved state.")
+            print_info("Resuming setup from saved state.")
 
             completed = setup_state.get("completed_sections", [])
 
@@ -1427,18 +1514,15 @@ def main() -> None:
             print_info(f"Removed setup state file: {SETUP_STATE_FILE}")
 
         print_success("Setup wizard completed successfully!")
-
     except KeyboardInterrupt:
         print("\n\nSetup interrupted. Your progress has been saved.")
-        print(f"Run this script again to continue from where you left off.")
+        print("Run this script again to continue from where you left off.")
         sys.exit(0)
     except Exception as e:
         print_error(f"An error occurred: {e}")
         print(
             "Your progress has been saved. Run this script again to continue."
         )
-        import traceback
-
         traceback.print_exc()
         sys.exit(1)
 

@@ -64,6 +64,16 @@ tasks.md
 Thumbs.db
 ~/*
 
+# Linting and formatting temporary scripts
+fix_*.py
+*fix*.py
+*_fix_*.py
+rewrite_*.py
+*docstrings*.py
+*whitespace*.py
+*syntax*.py
+simple_fix.py
+
 # Documentation build
 docs/_build/
 docs/api/
@@ -118,3 +128,17 @@ MCP_SERVER.md
 roo_models.json
 check_conflicts.ps1
 scripts/delete_dependabot_branches.cmd
+fix_line_length.py
+fix_whitespace.py
+fix_advanced_issues.py
+fix_docstrings_simple.py
+fix_docstrings.py
+fix_problematic_docstrings.py
+fix_syntax_errors.py
+linter_fixes.md
+remove_dynamic_imports.py
+check_signature.py
+get_bool.py
+inspect_file.py
+src/mower/simulation/world_model.py.backup
+.roomodes

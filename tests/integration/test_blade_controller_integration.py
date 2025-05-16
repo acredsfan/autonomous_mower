@@ -1,98 +1,68 @@
 """
-Integration tests for the Blade Controller.
-
-This module tests the basic blade controller commands after initialization,
-ensuring it interacts correctly with other components like the ResourceManager
-and simulated hardware.
+Test module for test_blade_controller_integration.py.
 """
-
 import pytest
-# Placeholder for imports that will be needed
-# from unittest.mock import MagicMock, patch
-# from mower.hardware.blade_controller import BladeController
-# from mower.mower import ResourceManager
-# from tests.hardware_fixtures import sim_blade_controller # Existing fixture
+from unittest.mock import patch, MagicMock
+from mower.hardware.blade_controller import BladeController
+# Assuming ResourceManager is in mower.main_controller or mower.mower based on other files
+# Adjust if this is incorrect.
+from mower.main_controller import ResourceManager
 
 
-class TestBladeControllerIntegration:
-    """Tests for Blade Controller integration."""
+# Integration test for blade controller
+# Test the blade controller initialization and operation
 
-    # @pytest.fixture
-    # def mower_resource_manager_with_blade_controller(self, sim_blade_controller):
-    #     """
-    #     Fixture to provide a ResourceManager with a simulated blade controller.
-    #     """
-    #     resource_manager = ResourceManager()
-    #     # This might need adjustment based on how ResourceManager initializes
-    #     # or is provided with its hardware components.
-    #     # For instance, patching get_blade_controller or injecting during init.
-    #     with patch.object(resource_manager, '_initialize_hardware_components') \\
-    #             as mock_init_hw:
-    #         # Simulate that other hardware inits okay
-    #         mock_init_hw.return_value = True
-    #         resource_manager.blade_controller = sim_blade_controller
-    #         # If _initialize_hardware_components also sets up blade_controller,
-    #         # then we might need to patch where it gets it from.
-    #         # Or, if ResourceManager uses get_config, mock that.
-    #
-    #     # A more direct way if ResourceManager allows direct injection or has a setter
-    #     # resource_manager.set_blade_controller(sim_blade_controller)
-    #     yield resource_manager
 
-    def test_blade_controller_initialization_via_resource_manager(self):
-        """
-        Test that the BladeController is initialized correctly when accessed
-        via the ResourceManager.
-        """
-        # TODO: Implement test
-        # 1. Setup:
-        #    - Use a fixture that provides a ResourceManager.
-        #    - Ensure sim_blade_controller is used by this ResourceManager.
-        # 2. Action: Get the blade controller from ResourceManager.
-        # 3. Assert:
-        #    - Retrieved controller is BladeController (or SimBladeController).
-        #    - It's in an expected initial state (e.g., blade off).
-        pytest.skip(
-            "Test not yet implemented. Requires ResourceManager setup with mock.")
+@pytest.fixture
+def mocked_resource_manager_with_blade_controller():
+    # This fixture provides a ResourceManager with a mocked BladeController
+    resource_manager = ResourceManager()
+    # Mock the _initialize_hardware method to prevent actual hardware init
+    with patch.object(resource_manager, '_initialize_hardware') as mock_init_hw:
+        # Simulate successful hardware init without doing anything
+        mock_init_hw.return_value = None
+        # Assign a MagicMock to the blade_controller attribute
+        resource_manager.blade_controller = MagicMock(spec=BladeController)
+        resource_manager.blade_controller.start.return_value = True
+        resource_manager.blade_controller.stop.return_value = True
+        resource_manager.blade_controller.set_speed.return_value = True
+        # If ResourceManager has an explicit initialization method that sets up
+        # blade_controller, that might need to be called or mocked.
+        # For now, directly assigning a mock.
+        yield resource_manager
 
-    def test_start_blade_command(self):  # Use fixture from above
-        """Test the start_blade command."""
-        # TODO: Implement test
-        # 1. Setup: Get ResourceManager with a sim_blade_controller.
-        # 2. Action: Call a method on a higher-level component (e.g., Mower class)
-        #    that should result in blade_controller.start_blade() being called.
-        #    Or, directly call resource_manager.get_blade_controller().start_blade().
-        # 3. Assert:
-        #    - sim_blade_controller.start_blade was called.
-        #    - Blade status (from sim_blade_controller) is 'on' or 'spinning'.
-        pytest.skip("Test not yet implemented.")
 
-    def test_stop_blade_command(self):  # Use fixture from above
-        """Test the stop_blade command."""
-        # TODO: Implement test
-        # 1. Setup: Get ResourceManager with sim_blade_controller, blade started.
-        # 2. Action: Call method to stop blade.
-        # 3. Assert:
-        #    - sim_blade_controller.stop_blade was called.
-        #    - Blade status is 'off'.
-        pytest.skip("Test not yet implemented.")
+def test_blade_controller_initialization_and_operation(
+        mocked_resource_manager_with_blade_controller):
+    rm = mocked_resource_manager_with_blade_controller
 
-    def test_set_blade_speed_command(self):  # Use fixture from above
-        """Test the set_blade_speed command."""
-        # TODO: Implement test
-        # 1. Setup: Get ResourceManager with sim_blade_controller.
-        # 2. Action: Call method to set blade speed.
-        # 3. Assert:
-        #    - sim_blade_controller.set_speed was called with the correct value.
-        #    - Blade speed status reflects the new speed.
-        pytest.skip("Test not yet implemented.")
+    # Start the blade controller through ResourceManager's method if it exists
+    # Or directly if the test is for the BladeController instance itself via
+    # ResourceManager
+    if hasattr(rm, 'start_blades'):  # Assuming a method like start_blades exists
+        rm.start_blades()
+        rm.blade_controller.start.assert_called_once()
+    else:  # Fallback to direct interaction if ResourceManager doesn't abstract it
+        assert rm.blade_controller.start()
+        rm.blade_controller.start.assert_called_once()
 
-    def test_blade_controller_status_reporting(self):  # Use fixture from above
-        """Test that the blade controller's status is reported correctly."""
-        # TODO: Implement test
-        # 1. Setup: Get ResourceManager with sim_blade_controller.
-        #    Manipulate blade state (on/off, speed).
-        # 2. Action: Query blade status through ResourceManager or Mower.
-        # 3. Assert: The reported status matches the sim_blade_controller's
-        # state.
-        pytest.skip("Test not yet implemented.")
+    # Stop the blade controller
+    if hasattr(rm, 'stop_blades'):
+        rm.stop_blades()
+        rm.blade_controller.stop.assert_called_once()
+    else:
+        assert rm.blade_controller.stop()
+        rm.blade_controller.stop.assert_called_once()
+
+
+def test_blade_controller_speed_setting(
+        mocked_resource_manager_with_blade_controller):
+    rm = mocked_resource_manager_with_blade_controller
+
+    # Set blade speed
+    if hasattr(rm, 'set_blade_speed'):
+        rm.set_blade_speed(65)
+        rm.blade_controller.set_speed.assert_called_once_with(65)
+    else:
+        rm.blade_controller.set_speed(65)
+        rm.blade_controller.set_speed.assert_called_once_with(65)

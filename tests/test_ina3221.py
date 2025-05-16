@@ -1,3 +1,6 @@
+"""
+Test module for test_ina3221.py.
+"""
 import unittest
 from unittest.mock import MagicMock
 from mower.hardware.ina3221 import INA3221Sensor
@@ -9,7 +12,7 @@ class TestINA3221Sensor(unittest.TestCase):
         self.sensor = INA3221Sensor.init_ina3221(self.i2c_mock)
 
     def test_init_ina3221(self):
-        """Test INA3221 initialization."""
+        """Test initialization of INA3221 sensor."""
         self.assertIsNotNone(self.sensor)
 
     def test_read_ina3221(self):

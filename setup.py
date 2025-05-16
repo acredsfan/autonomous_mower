@@ -1,4 +1,10 @@
-# setup.py
+"""
+Setup script for the autonomous_mower package.
+
+This script defines the package metadata, dependencies, and entry points for
+command-line scripts. It uses setuptools to allow for pip installation and
+dependency management.
+"""
 from setuptools import setup, find_packages
 
 setup(
@@ -24,7 +30,8 @@ setup(
         "pyserial>=3.5",
         "rtree>=1.0.0",
         "shapely>=2.0.7",
-        "tensorflow>=2.13.0",
+        # "tensorflow>=2.13.0",  # Removed for Raspberry Pi OS Lite compatibility.
+        # Use tflite-runtime instead.
         "colorama>=0.4.4",
         "watchdog>=5.0.0",
         "psutil>=5.9.0",
@@ -110,7 +117,7 @@ setup(
     author="Your Name",
     author_email="your.email@example.com",
     description="An autonomous lawn mower control system",
-    long_description=open("README.md").read(),
+    long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/autonomous_mower",
     classifiers=[

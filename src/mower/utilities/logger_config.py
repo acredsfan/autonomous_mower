@@ -89,5 +89,20 @@ class LoggerConfigInfo:
         Args:
             days: Number of days to keep logs for
         """
-        # Implementation of log cleanup
-        pass  # TODO: Implement log cleanup
+        # Remove log files older than the specified number of days
+        import os
+        import time
+        log_dir = "logs"
+        now = time.time()
+        cutoff = now - (days * 86400)
+        if os.path.exists(log_dir):
+            for filename in os.listdir(log_dir):
+                file_path = os.path.join(log_dir, filename)
+                if os.path.isfile(file_path):
+                    file_mtime = os.path.getmtime(file_path)
+                    if file_mtime < cutoff:
+                        try:
+                            os.remove(file_path)
+                        except Exception as e:
+                            print(
+                                f"Failed to remove old log file {file_path}: {e}")

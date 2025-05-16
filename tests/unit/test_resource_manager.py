@@ -1,18 +1,9 @@
 """
-Tests for the ResourceManager class.
-
-This module tests the functionality of the ResourceManager class in both
-main_controller.py and mower.py, including:
-1. Initialization of the ResourceManager
-2. Getting resources by name
-3. Initializing hardware components
-4. Initializing software components
-5. Cleanup of resources
-6. Error handling
+Test module for test_resource_manager.py.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 from mower.main_controller import ResourceManager as MainResourceManager
 from mower.mower import ResourceManager as MowerResourceManager
@@ -275,7 +266,7 @@ class TestMowerResourceManager:
             "path_planning.learning.memory_size": 1000,
             "path_planning.learning.batch_size": 32,
             "path_planning.learning.update_frequency": 100,
-            "path_planning.learning.model_path": "path/to/model",
+            "path_planning.learning.model_path": "path / to / model",
         }.get(key, default)
 
         # Create a ResourceManager instance with mocked hardware components

@@ -1,9 +1,5 @@
 """
-Test fixtures for hardware components.
-
-This module provides pytest fixtures for hardware components using the simulation
-capabilities. These fixtures can be used in tests to simulate hardware components
-without requiring physical hardware.
+Test module for hardware_fixtures.py.
 """
 
 # Correct class, keep alias
@@ -12,33 +8,28 @@ from mower.simulation.actuators.motor_sim import (
 )
 from mower.simulation.actuators.blade_sim import SimulatedBladeController
 # Correct class, keep alias
-from mower.simulation.sensors.tof_sim import SimulatedVL53L0XSensors as SimulatedToF
+from mower.simulation.sensors.tof_sim import (
+    SimulatedVL53L0XSensors as SimulatedToF
+)
 # Correct class, keep alias
-from mower.simulation.sensors.imu_sim import SimulatedBNO085Sensor as SimulatedImu
+from mower.simulation.sensors.imu_sim import (
+    SimulatedBNO085Sensor as SimulatedImu
+)
 from mower.simulation.sensors.gps_sim import (
     SimulatedGpsPosition,
     SimulatedGpsLatestPosition,
 )
 from mower.simulation.world_model import (
     get_world_instance,
-    # Vector2D, # Unused import
     reset_world,
 )
 from mower.simulation import enable_simulation, is_simulation_enabled
-# import os # Unused import
 import pytest
 import logging
-# from pathlib import Path # Unused import
-# from typing import Dict, Any, Optional, List, Tuple, Union, Type #
-# Unused imports
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Import simulation modules
-
-# Import simulated hardware components
 
 
 @pytest.fixture(scope="function")
@@ -124,7 +115,7 @@ def sim_gps_latest(sim_gps):
 @pytest.fixture(scope="function")
 def sim_imu(sim_world, request):
     """
-    Fixture for a simulated IMU sensor (BNO085).
+    Fixture for a simulated IMU sensor(BNO085).
 
     This fixture provides a simulated IMU sensor that interacts with the
     virtual world. It can accept initial_status via request.param.
@@ -134,14 +125,15 @@ def sim_imu(sim_world, request):
         request: Pytest request object to access parameters.
 
     Returns:
-        SimulatedImu: The simulated IMU sensor (alias for SimulatedBNO085Sensor)
+        SimulatedImu: The simulated IMU sensor(alias for SimulatedBNO085Sensor)
     """
     initial_status = getattr(request, "param", True)  # Default to working
     # Create a simulated IMU sensor
     imu = SimulatedImu(initial_status=initial_status)  # Uses alias
 
     # Initialize the sensor
-    imu._initialize()  # This now calls _initialize_sim which uses initial_status
+    imu._initialize()  #
+    # This now calls _initialize_sim which uses initial_status
 
     # Return the sensor
     yield imu
@@ -170,7 +162,8 @@ def sim_tof(sim_world, request):
     tof = SimulatedToF(initial_statuses=initial_statuses)
 
     # Initialize the sensor
-    tof._initialize()  # This now calls _initialize_sim which uses initial_statuses
+    tof._initialize()  #
+    # This now calls _initialize_sim which uses initial_statuses
 
     # Return the sensor
     yield tof
@@ -209,7 +202,7 @@ def sim_blade_controller(sim_world):
 @pytest.fixture(scope="function")
 def sim_motor_controller(sim_world):
     """
-    Fixture for a simulated motor controller (RoboHATDriver).
+    Fixture for a simulated motor controller(RoboHATDriver).
 
     This fixture provides a simulated motor controller that interacts with the
     virtual world.

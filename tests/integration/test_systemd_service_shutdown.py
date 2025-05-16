@@ -1,10 +1,6 @@
 """
-Integration tests for systemd service graceful shutdown.
-
-This module tests that the main application (MainController) handles
-SIGTERM signals gracefully, ensuring proper cleanup of resources.
+Test module for test_systemd_service_shutdown.py.
 """
-
 import pytest
 # import os # Not used yet
 import signal
@@ -42,7 +38,8 @@ class TestSystemdServiceShutdown:
     def mock_main_controller_components(self):
         """Fixture to mock MainController and its ResourceManager."""
         mock_resource_manager = MagicMock(spec_set=["cleanup", "initialize"])
-        # mock_main_controller = MagicMock(spec_set=["run", "shutdown_handler"])
+        # mock_main_controller = MagicMock(
+        #     spec_set=["run", "shutdown_handler"])
         # mock_main_controller.resource_manager = mock_resource_manager
         # mock_main_controller.shutdown_event = threading.Event()
         _shutdown_event_for_test.clear()
@@ -102,18 +99,21 @@ class TestSystemdServiceShutdown:
             print("Simulating SIGTERM by setting event for test loop.")
             # This simulates the application's own SIGTERM handler being invoked
             # and calling the necessary shutdown sequence.
-            # If MainController.main has signal.signal(SIGTERM, self.shutdown_handler),
+            # If MainController.main has signal.signal(
+            #     signal.SIGTERM,
+            # self.shutdown_handler), # Assuming self.shutdown_handler exists
+
             # then os.kill(os.getpid(), signal.SIGTERM) would be more direct.
             # For now, let's assume the app's handler sets shutdown_event.
 
             # If testing actual main() from main_controller.py in a subprocess:
-            # proc = subprocess.Popen(['python', 'src/mower/main_controller.py'])
+            # proc = subprocess.Popen(
+            #     ['python', 'src/mower/main_controller.py'])
             # time.sleep(1) # Allow main_controller to start
             # proc.terminate() # Sends SIGTERM
             # proc.wait(timeout=5)
-            # assert proc.returncode == 0 # Or specific exit code for graceful shutdown
-            # resource_manager_mock.cleanup.assert_called_once() # If mock is
-            # shared/pickled
+            # assert proc.returncode == 0 # Or specific exit code
+            # resource_manager_mock.cleanup.assert_called_once()
 
             # For this threaded example:
             shutdown_event.set()  # Simulate external SIGTERM effect

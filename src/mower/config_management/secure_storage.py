@@ -85,7 +85,7 @@ class SecureStorage:
                 os.chmod(key_file, 0o600)
 
                 logger.info(
-                    f"Generated new master key and stored it in {key_file}"
+                    "Generated new master key and stored it in %s", key_file
                 )
 
             # Set the environment variable for future use
@@ -119,8 +119,8 @@ class SecureStorage:
                 self._data = json.loads(decrypted_data.decode("utf-8"))
             else:
                 self._data = {}
-        except Exception as e:
-            logger.error(f"Failed to load secure storage data: {e}")
+        except (IOError, PermissionError, ValueError, TypeError) as e:
+            logger.error("Failed to load secure storage data: %s", str(e))
             self._data = {}
 
     def _save_data(self) -> None:
@@ -134,8 +134,8 @@ class SecureStorage:
 
             # Set file permissions to be readable only by the owner
             os.chmod(self.storage_path, 0o600)
-        except Exception as e:
-            logger.error(f"Failed to save secure storage data: {e}")
+        except (IOError, PermissionError, TypeError) as e:
+            logger.error("Failed to save secure storage data: %s", str(e))
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a value from the secure storage.
@@ -185,6 +185,7 @@ class SecureStorage:
 
 
 # Singleton instance
+# pylint: disable=invalid-name
 _secure_storage_instance = None
 
 
@@ -198,8 +199,8 @@ def get_secure_storage(
             the default path is used.
 
     Returns:
-        The secure storage instance.
-    """
+        The secure storage instance.    """
+    # pylint: disable=global-statement
     global _secure_storage_instance
 
     if _secure_storage_instance is None:

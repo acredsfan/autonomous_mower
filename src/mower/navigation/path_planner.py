@@ -1,16 +1,17 @@
 """
 Path planning module for autonomous mower.
 
-This module provides advanced path planning capabilities with support for
+This
 different mowing patterns and learning-based optimization.
 """
 
 import json
-import numpy as np
-from typing import List, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
+from typing import List, Tuple, Optional
+
+import numpy as np
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -92,7 +93,9 @@ class PathPlanner:
                 self.learning_config
                 and np.random.random() < self.learning_config.exploration_rate
             ):
-                self.pattern_config.pattern_type = np.random.choice(list(PatternType))
+                self.pattern_config.pattern_type = np.random.choice(
+                    list(
+                        PatternType))
             elif self.learning_config:
                 state = self._get_current_state()
                 self.pattern_config.pattern_type = self._get_best_action(state)
@@ -101,21 +104,29 @@ class PathPlanner:
             path = self._generate_pattern_path()
 
             # If learning is enabled, update based on path quality
-            if self.learning_config and path:
-                state = self._get_current_state()
-                reward = self._calculate_reward(path)
-                self._update_q_table(state, self.pattern_config.pattern_type, reward)
-                self._store_experience(state, self.pattern_config.pattern_type, reward)
+            # if self.learning_config and path:
+            state = self._get_current_state()
+            reward = self._calculate_reward(path)
+             self._update_q_table(
+                  state, self.pattern_config.pattern_type, reward)
+              self._store_experience(
+                   state, self.pattern_config.pattern_type, reward)
 
-                if self.step_count % self.learning_config.update_frequency == 0:
+               if self.step_count % self.learning_config.update_frequency == 0:
                     self._update_model()
 
                 self.step_count += 1
 
             return path
 
-        except Exception as e:
-            logger.error(f"Error generating path: {e}")
+        except ValueError as e:
+            logger.error("Error generating path - value error: %s", e)
+            return []
+        except KeyError as e:
+            logger.error("Error generating path - missing key: %s", e)
+            return []
+        except (TypeError, AttributeError) as e:
+            logger.error("Error generating path - type error: %s", e)
             return []
 
     def _generate_pattern_path(self) -> List[Tuple[float, float]]:
@@ -129,20 +140,26 @@ class PathPlanner:
                 PatternType.DIAMOND: self._generate_diamond_path,
                 PatternType.WAVES: self._generate_waves_path,
                 PatternType.CONCENTRIC: self._generate_concentric_path,
-                PatternType.CUSTOM: self._generate_custom_path,
-            }
+                PatternType.CUSTOM: self._generate_custom_path, }
 
-            generator = pattern_generators.get(self.pattern_config.pattern_type)
+            generator = pattern_generators.get(
+                self.pattern_config.pattern_type)
             if not generator:
                 logger.error(
-                    f"Unknown pattern type: {self.pattern_config.pattern_type}"
-                )
+                    "Unknown pattern type: %s",
+                    self.pattern_config.pattern_type)
                 return []
 
             return generator()
 
-        except Exception as e:
-            logger.error(f"Error generating pattern path: {e}")
+        except ValueError as e:
+            logger.error("Error generating pattern path - value error: %s", e)
+            return []
+        except KeyError as e:
+            logger.error("Error generating pattern path - key error: %s", e)
+            return []
+        except (TypeError, AttributeError) as e:
+            logger.error("Error generating pattern path: %s", e)
             return []
 
     def _generate_parallel_path(self) -> List[Tuple[float, float]]:
@@ -160,7 +177,8 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * (1 - self.pattern_config.overlap)
+            spacing = self.pattern_config.spacing * \
+                (1 - self.pattern_config.overlap)
             num_passes = int(np.ceil(width / spacing))
 
             # Generate pass lines
@@ -173,15 +191,20 @@ class PathPlanner:
                 # Find intersection points with boundary
                 intersections = self._find_boundary_intersections(
                     line_start, line_end, boundary
-                )
-
-                if intersections:
+                ) if intersections:
                     path.extend(intersections)
 
             return path
 
+        except ValueError as e:
+            logger.error("Error generating parallel path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating parallel path - type/index error: %s", e)
+            return []
         except Exception as e:
-            logger.error(f"Error generating parallel path: {e}")
+            logger.error("Unexpected error generating parallel path: %s", e)
             return []
 
     def _generate_spiral_path(self) -> List[Tuple[float, float]]:
@@ -213,12 +236,20 @@ class PathPlanner:
                 path.extend(zip(x, y))
 
                 # Increase radius
-                r += self.pattern_config.spacing * (1 - self.pattern_config.overlap)
+                r += self.pattern_config.spacing * (
+                    1 - self.pattern_config.overlap)
 
             return path
 
-        except Exception as e:
-            logger.error(f"Error generating spiral path: {e}")
+        except ValueError as e:
+            logger.error("Error generating spiral path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating spiral path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error("Error generating spiral path - runtime error: %s", e)
             return []
 
     def _generate_zigzag_path(self) -> List[Tuple[float, float]]:
@@ -236,7 +267,8 @@ class PathPlanner:
 
             # Calculate number of passes
             width = max_proj - min_proj
-            spacing = self.pattern_config.spacing * (1 - self.pattern_config.overlap)
+            spacing = self.pattern_config.spacing * \
+                (1 - self.pattern_config.overlap)
             num_passes = int(np.ceil(width / spacing))
 
             # Generate zigzag points
@@ -262,8 +294,15 @@ class PathPlanner:
 
             return path
 
-        except Exception as e:
-            logger.error(f"Error generating zigzag path: {e}")
+        except ValueError as e:
+            logger.error("Error generating zigzag path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating zigzag path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error("Error generating zigzag path - runtime error: %s", e)
             return []
 
     def _generate_checkerboard_path(self) -> List[Tuple[float, float]]:
@@ -280,8 +319,17 @@ class PathPlanner:
             # Combine paths
             return horizontal + vertical
 
-        except Exception as e:
-            logger.error(f"Error generating checkerboard path: {e}")
+        except ValueError as e:
+            logger.error(
+                "Error generating checkerboard path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating checkerboard path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error(
+                "Error generating checkerboard path - runtime error: %s", e)
             return []
 
     def _generate_diamond_path(self) -> List[Tuple[float, float]]:
@@ -297,8 +345,16 @@ class PathPlanner:
             # Combine paths
             return diagonal1 + diagonal2
 
-        except Exception as e:
-            logger.error(f"Error generating diamond path: {e}")
+        except ValueError as e:
+            logger.error("Error generating diamond path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating diamond path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error(
+                "Error generating diamond path - runtime error: %s", e)
             return []
 
     def _generate_waves_path(self) -> List[Tuple[float, float]]:
@@ -320,7 +376,8 @@ class PathPlanner:
 
             while y <= max_y:
                 x_points = np.linspace(min_x, max_x, 100)
-                y_points = y + amplitude * np.sin(2 * np.pi * x_points / wave_length)
+                y_points = y + amplitude * np.sin(
+                    2 * np.pi * x_points / wave_length)
 
                 # Add points that fall within boundary
                 for x, wave_y in zip(x_points, y_points):
@@ -332,8 +389,15 @@ class PathPlanner:
 
             return path
 
-        except Exception as e:
-            logger.error(f"Error generating waves path: {e}")
+        except ValueError as e:
+            logger.error("Error generating waves path - value error: %s", e)
+            return []
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating waves path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error("Error generating waves path - runtime error: %s", e)
             return []
 
     def _generate_concentric_path(self) -> List[Tuple[float, float]]:
@@ -367,15 +431,23 @@ class PathPlanner:
                     if self._point_in_polygon(point, boundary):
                         path.append((px, py))
 
-                r -= self.pattern_config.spacing * (1 - self.pattern_config.overlap)
+                r -= self.pattern_config.spacing * (
+                    1 - self.pattern_config.overlap)
 
             return path
 
-        except Exception as e:
-            logger.error(f"Error generating concentric path: {e}")
+        except ValueError as e:
+            logger.error(
+                "Error generating concentric path - value error: %s", e)
             return []
-
-    def _generate_custom_path(self) -> List[Tuple[float, float]]:
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error generating concentric path - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error(
+                "Error generating concentric path - runtime error: %s", e)
+            return [] def _generate_custom_path(self) -> List[Tuple[float, float]]:
         """Generate custom mowing pattern."""
         # This can be extended for custom patterns
         # For now, default to parallel pattern
@@ -400,17 +472,26 @@ class PathPlanner:
 
             # Sort intersections by distance from start
             if intersections:
-                intersections.sort(key=lambda p: np.linalg.norm(np.array(p) - start))
+                intersections.sort(
+                    key=lambda p: np.linalg.norm(
+                        np.array(p) - start))
 
             return intersections
 
-        except Exception as e:
-            logger.error(f"Error finding boundary intersections: {e}")
+        except ValueError as e:
+            logger.error(
+                "Error finding boundary intersections - value error: %s", e)
             return []
-
-    def _line_intersection(
-        self, p1: np.ndarray, p2: np.ndarray, p3: np.ndarray, p4: np.ndarray
-    ) -> Optional[np.ndarray]:
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error finding boundary intersections - type/index error: %s", e)
+            return []
+        except (RuntimeError, AttributeError) as e:
+            logger.error(
+                "Error finding boundary intersections - runtime error: %s", e)
+            return [] def _line_intersection(
+                self, p1: np.ndarray, p2: np.ndarray, p3: np.ndarray, p4: np.ndarray
+            ) -> Optional[np.ndarray]:
         """Find intersection point of two lines."""
         try:
             # Calculate line parameters
@@ -443,11 +524,23 @@ class PathPlanner:
 
             return None
 
-        except Exception as e:
-            logger.error(f"Error calculating line intersection: {e}")
+        except ValueError as e:
+            logger.error(
+                "Error calculating line intersection - value error: %s", e)
+            return None
+        except (TypeError, IndexError) as e:
+            logger.error(
+                "Error calculating line intersection - type/index error: %s", e)
+            return None
+        except (ZeroDivisionError, RuntimeError) as e:
+            logger.error(
+                "Error calculating line intersection - runtime error: %s", e)
             return None
 
-    def _point_in_polygon(self, point: np.ndarray, polygon: np.ndarray) -> bool:
+    def _point_in_polygon(
+            self,
+            point: np.ndarray,
+            polygon: np.ndarray) -> bool:
         """Check if a point is inside a polygon."""
         x, y = point
         n = len(polygon)
@@ -467,7 +560,8 @@ class PathPlanner:
 
         return inside
 
-    def update_obstacle_map(self, obstacles: List[Tuple[float, float]]) -> None:
+    def update_obstacle_map(
+            self, obstacles: List[Tuple[float, float]]) -> None:
         """Update the obstacle map."""
         self.obstacles = obstacles
 
@@ -527,7 +621,8 @@ class PathPlanner:
             logger.error(f"Error calculating reward: {e}")
             return 0.0
 
-    def _calculate_path_distance(self, path: List[Tuple[float, float]]) -> float:
+    def _calculate_path_distance(
+            self, path: List[Tuple[float, float]]) -> float:
         """Calculate total distance of path."""
         try:
             if len(path) < 2:
@@ -588,7 +683,8 @@ class PathPlanner:
                 v2 = p3 - p2
 
                 # Calculate angle between vectors
-                cos_angle = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                cos_angle = np.dot(
+                    v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
                 angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
                 angles.append(angle)
 
@@ -601,7 +697,11 @@ class PathPlanner:
             logger.error(f"Error calculating smoothness: {e}")
             return 0.0
 
-    def _update_q_table(self, state: str, action: PatternType, reward: float) -> None:
+    def _update_q_table(
+            self,
+            state: str,
+            action: PatternType,
+            reward: float) -> None:
         """Update Q-table with new experience."""
         try:
             if state not in self.q_table:
@@ -612,17 +712,24 @@ class PathPlanner:
 
             # Calculate new Q-value
             next_state = self._get_current_state()
-            max_next_q = max(self.q_table.get(next_state, {}).values(), default=0.0)
+            max_next_q = max(
+                self.q_table.get(
+                    next_state,
+                    {}).values(),
+                default=0.0)
             new_q = current_q + self.learning_config.learning_rate * (
-                reward + self.learning_config.discount_factor * max_next_q - current_q
-            )
+                reward + self.learning_config.discount_factor * max_next_q - current_q)
 
             # Update Q-table
             self.q_table[state][action] = new_q
         except Exception as e:
             logger.error(f"Error updating Q-table: {e}")
 
-    def _store_experience(self, state: str, action: PatternType, reward: float) -> None:
+    def _store_experience(
+            self,
+            state: str,
+            action: PatternType,
+            reward: float) -> None:
         """Store experience in replay buffer."""
         try:
             experience = {
@@ -795,8 +902,8 @@ class PathPlanner:
             ]
 
             logger.info(
-                f"Boundary points updated: {self.pattern_config.boundary_points}"
-            )
+                f"Boundary points updated: {
+                    self.pattern_config.boundary_points}")
             return True
         except Exception as e:
             logger.error(f"Error setting boundary points: {e}")

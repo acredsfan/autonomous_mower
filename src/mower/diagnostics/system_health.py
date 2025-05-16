@@ -30,20 +30,16 @@ Example usage:
 import argparse
 import json
 import os
-import platform
 import psutil
-import shutil
-import socket
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Any
 
 # Import hardware test suite
 from mower.diagnostics.hardware_test import (
-    HardwareTestSuite,
     initialize_resource_manager,
 )
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
@@ -304,9 +300,7 @@ class SystemHealth:
                             hardware_health[component] = {"status": "ok"}
                         else:
                             hardware_health[component] = {
-                                "status": "error",
-                                "error": f"{component} controller not available",
-                            }
+                                "status": "error", "error": f"{component} controller not available", }
                             issues.append(
                                 f"{component} controller not available"
                             )
@@ -488,7 +482,9 @@ class SystemHealth:
             recommendations.append(
                 "Free up memory by restarting the mower service or the entire system"
             )
-        if any("Critical disk usage" in issue for issue in issues):
+        if any(
+            "Critical disk usage" in issue for issue in issues
+        ):
             recommendations.append(
                 "Free up disk space by removing old logs or unnecessary files"
             )
@@ -532,7 +528,9 @@ class SystemHealth:
             recommendations.append(
                 "Check error logs for crash details and consider updating software"
             )
-        if any("High number of errors" in issue for issue in issues):
+        if any(
+            "High number of errors" in issue for issue in issues
+        ):
             recommendations.append(
                 "Review error logs to identify and fix recurring issues"
             )
@@ -662,8 +660,8 @@ class SystemHealth:
                 # Log critical issues
                 if health_status["status"] == "critical":
                     logger.critical(
-                        f"Critical health issues detected: {health_status['issues']}"
-                    )
+                        f"Critical health issues detected: {
+                            health_status['issues']}")
                 elif health_status["status"] == "error":
                     logger.error(
                         f"Health errors detected: {health_status['issues']}"
@@ -733,7 +731,9 @@ def main():
         "--output",
         choices=["text", "json"],
         default="text",
-        help="Output format (default: text)",
+        help=(
+            "Output format (default: text)"
+        ),
     )
 
     args = parser.parse_args()
@@ -757,8 +757,11 @@ def main():
                 )
                 print("=" * 80)
                 print(
-                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
-                )
+                    f"Overall Status: {
+                        health_status.get(
+                            'status',
+                            'unknown'
+                        ).upper()}")
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")
@@ -786,10 +789,13 @@ def main():
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER {args.check.upper()} HEALTH CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                )
+                    f"AUTONOMOUS MOWER {
+                        args.check.upper()} HEALTH CHECK - {
+                        datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 print("=" * 80)
-                print(f"Status: {result.get('status', 'unknown').upper()}")
+                print(
+                    f"Status: {result.get('status', 'unknown').upper()}"
+                )
                 if "issues" in result:
                     print("\nIssues:")
                     for issue in result["issues"]:

@@ -53,15 +53,15 @@ USE_YOLOV8 = os.getenv("USE_YOLOV8", "True").lower() == "true"
 labels = []
 if LABEL_MAP_PATH and os.path.exists(LABEL_MAP_PATH):
     try:
-        with open(LABEL_MAP_PATH, "r") as f:
+        with open(LABEL_MAP_PATH, "r", encoding="utf-8") as f:
             labels = [line.strip() for line in f.readlines()]
         if labels and labels[0] == "???":
             del labels[0]
-        logger.info(f"Loaded {len(labels)} labels from {LABEL_MAP_PATH}")
-    except Exception as e:
-        logger.error(f"Error loading label map: {e}")
+        logger.info("Loaded %d labels from %s", len(labels), LABEL_MAP_PATH)
+    except (IOError, UnicodeDecodeError) as e:
+        logger.error("Error loading label map: %s", e)
 else:
-    logger.warning(f"Label map not found at {LABEL_MAP_PATH}")
+    logger.warning("Label map not found at %s", LABEL_MAP_PATH)
 
 
 class ObstacleDetector:
@@ -114,9 +114,9 @@ class ObstacleDetector:
         self._initialize_yolov8()
 
         logger.info(
-            f"ObstacleDetector initialized with {self.interpreter_type}  "
-            "interpreter" +
-            (", YOLOv8 enabled" if self.yolov8_detector else ""))
+            "ObstacleDetector initialized with %s interpreter%s",
+            self.interpreter_type,
+            ", YOLOv8 enabled" if self.yolov8_detector else "")
 
     def _initialize_interpreter(self):
         """Initialize the TensorFlow Lite interpreter."""
@@ -134,8 +134,8 @@ class ObstacleDetector:
                 magic = f.read(4)
             if magic != b"TFL3":
                 logger.error(
-                    f"Model at {model_path} is not a valid TFLite file.")
-                logger.error(f"Header: {magic}.")
+                    "Model at %s is not a valid TFLite file.", model_path)
+                logger.error("Header: %s.", magic)
                 logger.error("Standard TFLite interpreter will be disabled.")
                 self.interpreter = None
                 return
@@ -147,8 +147,12 @@ class ObstacleDetector:
             self.floating_model = self.input_details[0]["dtype"] == np.float32
             self.interpreter.allocate_tensors()
             self.interpreter_type = "tflite"
-        except Exception as e:
-            logger.error(f"Failed to initialize interpreter: {e}.")
+        except (ImportError, IOError) as e:
+            logger.error("Failed to import TFLite interpreter: %s", e)
+            logger.error("Standard TFLite interpreter will be disabled.")
+            self.interpreter = None
+        except (ValueError, RuntimeError) as e:
+            logger.error("Failed to initialize interpreter: %s", e)
             logger.error("Standard TFLite interpreter will be disabled.")
             self.interpreter = None
 
@@ -165,7 +169,7 @@ class ObstacleDetector:
             # Check if model exists
             if not os.path.exists(YOLOV8_MODEL_PATH):
                 logger.warning(
-                    f"YOLOv8 model not found at {YOLOV8_MODEL_PATH}, skipping"
+                    "YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH
                 )
                 return
 
@@ -178,8 +182,8 @@ class ObstacleDetector:
             logger.info("YOLOv8 detector initialized successfully")
         except ImportError:
             logger.error("Failed to import YOLOv8TFLiteDetector class")
-        except Exception as e:
-            logger.error(f"Failed to initialize YOLOv8 detector: {e}")
+        except (IOError, ValueError, RuntimeError) as e:
+            logger.error("Failed to initialize YOLOv8 detector: %s", e)
 
     def detect_obstacles(self, frame=None) -> List[dict]:
         """
@@ -205,9 +209,9 @@ class ObstacleDetector:
                 if remote_objects:
                     detected_objects.extend(remote_objects)
                     return detected_objects
-            except Exception as e:
+            except (ConnectionError, requests.RequestException, IOError, ValueError) as e:
                 logger.warning(
-                    f"Remote detection failed, falling back to local: {e}")
+                    "Remote detection failed, falling back to local: %s", e)
                 self.use_remote_detection = False
 
         # YOLOv8-based detection (preferred if available)
@@ -219,8 +223,8 @@ class ObstacleDetector:
                     # If YOLOv8 detection successful, return results
                     if len(detected_objects) > 0:
                         return detected_objects
-            except Exception as e:
-                logger.warning(f"YOLOv8 detection failed, falling back: {e}")
+            except (ValueError, RuntimeError, IOError) as e:
+                logger.warning("YOLOv8 detection failed, falling back: %s", e)
 
         # Local ML-based detection (fallback)
         if self.interpreter:
@@ -292,14 +296,14 @@ class ObstacleDetector:
 
             # Log performance
             logger.debug(
-                f"ML inference: {inference_time:.2f}s "
-                f"({1 / inference_time:.1f} FPS)"
+                "ML inference: %.2fs (%.1f FPS)",
+                inference_time, 1 / inference_time
             )
 
             return detected_objects
 
-        except Exception as e:
-            logger.error(f"Error in ML detection: {e}")
+        except (ValueError, RuntimeError, TypeError) as e:
+            logger.error("Error in ML detection: %s", e)
             return []
 
     def _detect_obstacles_opencv(self, frame) -> List[dict]:
@@ -346,8 +350,8 @@ class ObstacleDetector:
 
             return detected_objects
 
-        except Exception as e:
-            logger.error(f"Error in OpenCV detection: {e}")
+        except (ValueError, cv2.error, TypeError) as e:
+            logger.error("Error in OpenCV detection: %s", e)
             return []
 
     def _detect_obstacles_remote(self, frame) -> List[dict]:
@@ -386,8 +390,14 @@ class ObstacleDetector:
 
             return []
 
-        except Exception as e:
-            logger.error(f"Error in remote detection: {e}")
+        except (ConnectionError, TimeoutError) as e:
+            logger.error("Error connecting to remote detection service: %s", e)
+            raise
+        except (ValueError, TypeError) as e:
+            logger.error("Error parsing remote detection result: %s", e)
+            raise
+        except (IOError, RuntimeError) as e:
+            logger.error("Error in remote detection: %s", e)
             raise
 
     def detect_drops(self, frame=None) -> List[dict]:
@@ -445,8 +455,8 @@ class ObstacleDetector:
 
             return drops
 
-        except Exception as e:
-            logger.error(f"Error detecting drops: {e}")
+        except (ValueError, cv2.error, TypeError) as e:
+            logger.error("Error detecting drops: %s", e)
             return []
 
     def draw_detections(self, frame, detections: List[dict]) -> np.ndarray:
@@ -520,8 +530,8 @@ class ObstacleDetector:
 
             return frame_with_detections
 
-        except Exception as e:
-            logger.error(f"Error drawing detections: {e}")
+        except (ValueError, cv2.error, TypeError, IndexError) as e:
+            logger.error("Error drawing detections: %s", e)
             return frame
 
     def process_frame(self, frame=None) -> Tuple[np.ndarray, List[dict]]:
@@ -575,8 +585,8 @@ class ObstacleDetector:
                 # Small delay to prevent CPU overload
                 time.sleep(0.1)
 
-            except Exception as e:
-                logger.error(f"Error in processing loop: {e}")
+            except (ValueError, RuntimeError, cv2.error, TypeError) as e:
+                logger.error("Error in processing loop: %s", e)
                 time.sleep(1)  # Longer delay on error
 
 

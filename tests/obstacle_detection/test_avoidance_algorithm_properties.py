@@ -1,10 +1,5 @@
 """
-Property-based tests for the AvoidanceAlgorithm class.
-
-This module tests the properties of the AvoidanceAlgorithm class in
-obstacle_detection/avoidance_algorithm.py using property-based testing with Hypothesis.
-These tests verify that the algorithms maintain certain invariants
-regardless of the specific inputs.
+Test module for test_avoidance_algorithm_properties.py.
 """
 
 import pytest
@@ -26,8 +21,8 @@ from mower.obstacle_detection.avoidance_algorithm import (
 @st.composite
 def obstacle_strategy(draw):
     """Strategy for generating valid Obstacle instances."""
-    x = draw(st.floats(min_value=-100.0, max_value=100.0))
-    y = draw(st.floats(min_value=-100.0, max_value=100.0))
+    x = draw(st.floats(min_value=- 100.0, max_value=100.0))
+    y = draw(st.floats(min_value=- 100.0, max_value=100.0))
     size = draw(st.floats(min_value=0.1, max_value=5.0))
     confidence = draw(st.floats(min_value=0.1, max_value=1.0))
 
@@ -58,20 +53,20 @@ def obstacle_data_strategy(draw):
 
 @st.composite
 def path_strategy(draw):
-    """Strategy for generating valid paths (list of points)."""
+    """Strategy for generating valid paths(list of points)."""
     num_points = draw(st.integers(min_value=2, max_value=20))
 
     return [
         (
-            draw(st.floats(min_value=-100.0, max_value=100.0)),
-            draw(st.floats(min_value=-100.0, max_value=100.0)),
+            draw(st.floats(min_value=- 100.0, max_value=100.0)),
+            draw(st.floats(min_value=- 100.0, max_value=100.0)),
         )
         for _ in range(num_points)
     ]
 
 
 class TestAvoidanceAlgorithmProperties:
-    """Property-based tests for the AvoidanceAlgorithm class."""
+    """Property - based tests for the AvoidanceAlgorithm class ."""
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
@@ -123,7 +118,7 @@ class TestAvoidanceAlgorithmProperties:
         # Verify that an obstacle is detected
         assert detected, "Obstacle should be detected"
 
-        # Verify that the obstacle data is returned
+        # Verify that the obstacle data is return ed
         assert data is not None, "Obstacle data should not be None"
         assert (
             "left_sensor" in data
@@ -147,22 +142,20 @@ class TestAvoidanceAlgorithmProperties:
 
     @given(
         current_position=st.tuples(
-            st.floats(min_value=-100.0, max_value=100.0),
-            st.floats(min_value=-100.0, max_value=100.0),
+            st.floats(min_value=- 100.0, max_value=100.0),
+            st.floats(min_value=- 100.0, max_value=100.0),
         ),
         heading=st.floats(min_value=0.0, max_value=359.0),
         distance=st.floats(min_value=10.0, max_value=100.0),
-        obstacle_angle=st.floats(min_value=-90.0, max_value=90.0),
+        obstacle_angle=st.floats(min_value=- 90.0, max_value=90.0),
     )
     @settings(max_examples=20)
     def test_obstacle_position_estimation_properties(
         self, current_position, heading, distance, obstacle_angle
     ):
-        """Test properties of the obstacle position estimation algorithm."""
+                """Test properties of the obstacle position estimation algorithm."""
         # Set up the mocks
-        self.mock_motor_controller.get_current_position.return_value = (
-            current_position
-        )
+        self.mock_motor_controller.get_current_position.return_value = current_position
         self.mock_motor_controller.get_current_heading.return_value = heading
 
         # Convert angle to radians for the test
@@ -176,23 +169,25 @@ class TestAvoidanceAlgorithmProperties:
             )
         )
 
-        # Verify that the obstacle position is returned
+        # Verify that the obstacle position is return ed
         assert (
             obstacle_position is not None
         ), "Obstacle position should not be None"
         assert (
-            len(obstacle_position) == 2
-        ), "Obstacle position should be a tuple of (lat, lng)"
+            len(obstacle_position) ==  2
+        ), "Obstacle position should be a tuple of(lat, lng)"
 
-        # Calculate the expected distance between current position and obstacle position
+        # Calculate the expected distance between current position and obstacle
+        # position
         lat_diff = obstacle_position[0] - current_position[0]
         lng_diff = obstacle_position[1] - current_position[1]
         calculated_distance = (
-            math.sqrt(lat_diff**2 + lng_diff**2) * 111000
+            math.sqrt(lat_diff **2 + lng_diff **2) * 111000
         )  # Convert to meters
 
         # The calculated distance should be proportional to the input distance
-        # We use a tolerance because the conversion between lat/lng and meters is approximate
+        # We use a tolerance because the conversion between lat / lng and meters
+        # is approximate
         assert (
             calculated_distance > 0
         ), "Calculated distance should be positive"
@@ -202,10 +197,12 @@ class TestAvoidanceAlgorithmProperties:
         if bearing < 0:
             bearing += 2 * math.pi
 
-        # The bearing should be close to the expected bearing (heading + obstacle_angle)
+        # The bearing should be close to the expected bearing(heading + #
+        # obstacle_angle)
         expected_bearing = (heading_rad + obstacle_angle_rad) % (2 * math.pi)
 
-        # We use a tolerance because of floating point precision and the approximations in the algorithm
+        # We use a tolerance because of floating point precision and the
+        # approximations in the algorithm
         bearing_diff = abs(bearing - expected_bearing)
         if bearing_diff > math.pi:
             bearing_diff = 2 * math.pi - bearing_diff
@@ -216,7 +213,7 @@ class TestAvoidanceAlgorithmProperties:
 
     @given(
         path=path_strategy(),
-        obstacles=st.lists(obstacle_strategy(), min_size=1, max_size=5),
+        obstacles = st.lists(obstacle_strategy(), min_size=1, max_size=5),
     )
     @settings(max_examples=20)
     def test_path_modification_properties(self, path, obstacles):
@@ -231,10 +228,11 @@ class TestAvoidanceAlgorithmProperties:
             path, obstacle_indices
         )
 
-        # Verify that the modified path is returned
+        # Verify that the modified path is return ed
         assert modified_path is not None, "Modified path should not be None"
 
-        # If there are obstacle indices, the modified path should be different from the original
+        # If there are obstacle indices, the modified path should be different
+        # from the or iginal
         if obstacle_indices:
             assert len(modified_path) != len(
                 path
@@ -248,7 +246,9 @@ class TestAvoidanceAlgorithmProperties:
                 )
                 assert (
                     distance >= obstacle.size
-                ), f"Modified path point {point} is too close to obstacle {obstacle.position}"
+                ),
+                f"Modified path point {point}  is too close to obstacle {
+                    obstacle.position} "
 
     @given(path=path_strategy())
     @settings(max_examples=20)
@@ -260,18 +260,20 @@ class TestAvoidanceAlgorithmProperties:
         # Smooth the path
         smoothed_path = self.avoidance_algorithm._smooth_path(path)
 
-        # Verify that the smoothed path is returned
+        # Verify that the smoothed path is return ed
         assert smoothed_path is not None, "Smoothed path should not be None"
 
-        # The smoothed path should include the start and end points of the original path
+        # The smoothed path should include the start and end points of the
+        # or iginal path
         assert (
-            smoothed_path[0] == path[0]
+            smoothed_path[0] ==  path[0]
         ), "Smoothed path should start at the same point"
         assert (
-            smoothed_path[-1] == path[-1]
+            smoothed_path[ - 1] ==  path[ - 1]
         ), "Smoothed path should end at the same point"
 
-        # The smoothed path should have at least as many points as the original path
+        # The smoothed path should have at least as many points as the or iginal
+        # path
         assert len(smoothed_path) >= len(
             path
         ), "Smoothed path should have at least as many points"
@@ -289,16 +291,16 @@ class TestAvoidanceAlgorithmProperties:
             cos_angle = np.dot(v1, v2) / (
                 np.linalg.norm(v1) * np.linalg.norm(v2)
             )
-            angle = np.arccos(np.clip(cos_angle, -1.0, 1.0))
+            angle = np.arccos(np.clip(cos_angle, - 1.0, 1.0))
 
-            # Angle should not be too sharp (less than 90 degrees)
+            # Angle should not be too sharp(less than 90 degrees)
             assert (
                 angle < np.pi / 2
             ), f"Smoothed path has a sharp turn at point {i}"
 
     @given(
         sensor_data=st.lists(
-            st.floats(min_value=0.0, max_value=1.0), min_size=8, max_size=8
+            st.floats(min_value=0.0, max_value=1.0), min_size = 8, max_size = 8
         )
     )
     @settings(max_examples=20)
@@ -310,10 +312,11 @@ class TestAvoidanceAlgorithmProperties:
         # Count how many readings are above the threshold
         above_threshold = sum(1 for reading in sensor_data if reading > 0.5)
 
-        # Verify that the number of obstacles matches the number of readings above threshold
+        # Verify that the number of obstacles matches the number of readings
+        # above threshold
         assert (
-            len(obstacles) == above_threshold
-        ), f"Number of obstacles {len(obstacles)} should match readings above threshold {above_threshold}"
+            len(obstacles) ==  above_threshold), f"Number of obstacles {"
+            len(obstacles)} should match readings above threshold {above_threshold}""
 
         # Check that each obstacle has the expected properties
         for obstacle in obstacles:
@@ -326,8 +329,8 @@ class TestAvoidanceAlgorithmProperties:
             ), "Obstacle should have a confidence"
 
             assert (
-                len(obstacle.position) == 2
-            ), "Obstacle position should be a tuple of (x, y)"
+                len(obstacle.position) ==  2
+            ), "Obstacle position should be a tuple of(x, y)"
             assert obstacle.size > 0, "Obstacle size should be positive"
             assert (
                 0 < obstacle.confidence <= 1

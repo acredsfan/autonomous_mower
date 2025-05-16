@@ -13,7 +13,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv  # type:ignore
+from dotenv import load_dotenv, set_key  # type:ignore
 
 
 class ConfigurationSource(ABC):
@@ -22,9 +22,8 @@ class ConfigurationSource(ABC):
 
     This interface defines the contract that all configuration sources
     must adhere to.
-    """
+    """    @ abstractmethod
 
-    @abstractmethod
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get a configuration value.
@@ -35,10 +34,8 @@ class ConfigurationSource(ABC):
 
         Returns:
             Any: Configuration value
-        """
-        pass
+        """    @ abstractmethod
 
-    @abstractmethod
     def set(self, key: str, value: Any) -> None:
         """
         Set a configuration value.
@@ -47,7 +44,6 @@ class ConfigurationSource(ABC):
             key: Configuration key
             value: Configuration value
         """
-        pass
 
     @abstractmethod
     def has(self, key: str) -> bool:
@@ -95,10 +91,8 @@ class ConfigurationSource(ABC):
         """
         pass
 
-    @abstractmethod
     def save(self) -> None:
         """Save configuration to the source."""
-        pass
 
 
 class EnvironmentConfigurationSource(ConfigurationSource):
@@ -210,7 +204,7 @@ class EnvironmentConfigurationSource(ConfigurationSource):
                 continue
 
             # Remove prefix from key
-            config_key = key[len(self.prefix) :] if self.prefix else key
+            config_key = key[len(self.prefix):] if self.prefix else key
 
             # Convert value to appropriate type
             if value.lower() in ["true", "yes", "y", "1"]:
@@ -240,8 +234,6 @@ class EnvironmentConfigurationSource(ConfigurationSource):
 
         # Update .env file if provided
         if self.env_file:
-            from dotenv import set_key  # type:ignore
-
             for key, value in self.values.items():
                 env_key = self._get_env_key(key)
                 set_key(self.env_file, env_key, str(value))
@@ -398,9 +390,9 @@ class FileConfigurationSource(ConfigurationSource):
 
         # Load configuration from file
         try:
-            with open(file_path, "r") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 self.values = json.load(f)
-        except Exception as e:
+        except (json.JSONDecodeError, FileNotFoundError, PermissionError) as e:
             # Log error
             print(f"Error loading configuration from {self.file_path}: {e}")
 
@@ -410,13 +402,12 @@ class FileConfigurationSource(ConfigurationSource):
         """Save configuration to the file."""
         # Create directory if it doesn't exist
         file_path = Path(self.file_path)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-
         # Save configuration to file
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with open(file_path, "w") as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(self.values, f, indent=4)
-        except Exception as e:
+        except (IOError, PermissionError, TypeError) as e:
             # Log error
             print(f"Error saving configuration to {self.file_path}: {e}")
 

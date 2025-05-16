@@ -1,9 +1,5 @@
 """
-Integration tests for VL53L0X Time-of-Flight (ToF) sensor error handling.
-
-This module tests the initialization and operational behavior of the ToF sensor system,
-particularly when one or more sensors are missing or failing. It also verifies
-how downstream components handle such ToF sensor states.
+Test module for test_tof_sensor_error_handling.py.
 """
 
 import pytest
@@ -15,7 +11,7 @@ import pytest
 # # Example downstream component
 # from tests.hardware_fixtures import (
 #     sim_world,
-#     # Fixtures to simulate ToF sensor presence/absence/failure
+#     # Fixtures to simulate ToF sensor presence / absence / failure
 # )
 
 
@@ -32,7 +28,7 @@ class TestToFSensorErrorHandling:
     #     # Example:
     #     # mock_i2c = MagicMock()
     #     # with patch('busio.I2C', return_value=mock_i2c):
-    #     #     # Configure mock_i2c to simulate sensor detection/failure
+    #     #     # Configure mock_i2c to simulate sensor detection / failure
     #     #     yield mock_i2c
     #     pass
 
@@ -41,7 +37,7 @@ class TestToFSensorErrorHandling:
         Test successful initialization when all ToF sensors are present and working.
         """
         # TODO: Implement test
-        # 1. Setup: Mock I2C/VL53L0X to simulate all sensors detected and healthy.
+        # 1. Setup: Mock I2C / VL53L0X to simulate all sensors detected and healthy.
         # 2. Action: Initialize EnhancedSensorInterface (or relevant ToF handler).
         # 3. Assert: All ToF sensors reported as operational.
         pytest.skip("Test not yet implemented. Requires ToF simulation.")
@@ -51,12 +47,12 @@ class TestToFSensorErrorHandling:
         Test initialization when one ToF sensor is not detected on the I2C bus.
         """
         # TODO: Implement test
-        # 1. Setup: Mock I2C/VL53L0X to simulate one sensor not responding.
+        # 1. Setup: Mock I2C / VL53L0X to simulate one sensor not responding.
         # 2. Action: Initialize EnhancedSensorInterface.
         # 3. Assert:
-        #    - The missing sensor is reported as non-operational or absent.
-        #    - Other present sensors are operational.
-        #    - System remains stable.
+        # - The missing sensor is reported as non-operational or absent.
+        # - Other present sensors are operational.
+        # - System remains stable.
         pytest.skip("Test not yet implemented. Requires ToF simulation.")
 
     def test_initialization_with_multiple_tof_sensors_missing(self):
@@ -64,7 +60,7 @@ class TestToFSensorErrorHandling:
         Test initialization when multiple ToF sensors are not detected.
         """
         # TODO: Implement test
-        # 1. Setup: Mock I2C/VL53L0X to simulate several sensors not responding.
+        # 1. Setup: Mock I2C / VL53L0X to simulate several sensors not responding.
         # 2. Action: Initialize EnhancedSensorInterface.
         # 3. Assert: All missing sensors reported correctly, system stable.
         pytest.skip("Test not yet implemented. Requires ToF simulation.")
@@ -86,12 +82,12 @@ class TestToFSensorErrorHandling:
         """
         # TODO: Implement test
         # 1. Setup:
-        #    - Initialize system with one ToF sensor mocked as non-operational.
-        #    - Configure ObstacleDetector to use this sensor.
+        # - Initialize system with one ToF sensor mocked as non-operational.
+        # - Configure ObstacleDetector to use this sensor.
         # 2. Action: Attempt to get obstacle data.
         # 3. Assert:
-        #    - ObstacleDetector handles the missing/failing sensor gracefully.
-        #    - (e.g., reports no data for that sensor, or uses fallbacks if any).
+        # - ObstacleDetector handles the missing/failing sensor gracefully.
+        # - (e.g., reports no data for that sensor, or uses fallbacks if any).
         pytest.skip(
             "Test not yet implemented. Requires ToF and ObstacleDetector sim.")
 

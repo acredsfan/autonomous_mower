@@ -1,13 +1,5 @@
 """
-Tests for the AvoidanceAlgorithm class.
-
-This module tests the functionality of the AvoidanceAlgorithm class in
-obstacle_detection/avoidance_algorithm.py, including:
-1. Initialization of the avoidance algorithm
-2. Detecting obstacles
-3. Avoiding obstacles
-4. Recovery strategies
-5. Thread safety
+Test module for test_avoidance_algorithm.py.
 """
 
 import pytest
@@ -24,7 +16,7 @@ from mower.obstacle_detection.avoidance_algorithm import (
 
 
 class TestAvoidanceAlgorithm:
-    """Tests for the AvoidanceAlgorithm class."""
+    """Tests for the AvoidanceAlgorithm class ."""
 
     def test_initialization(self):
         """Test initialization of the avoidance algorithm."""
@@ -183,7 +175,7 @@ class TestAvoidanceAlgorithm:
         avoidance_algorithm._turn_left_strategy.assert_not_called()
         avoidance_algorithm._backup_strategy.assert_not_called()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
         # Set up different obstacle data
@@ -208,7 +200,7 @@ class TestAvoidanceAlgorithm:
         avoidance_algorithm._turn_left_strategy.assert_called_once()
         avoidance_algorithm._backup_strategy.assert_not_called()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_continue_avoidance(self):
@@ -232,7 +224,7 @@ class TestAvoidanceAlgorithm:
         # Call _continue_avoidance
         result = avoidance_algorithm._continue_avoidance()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
         # Test when avoidance is still in progress
@@ -243,7 +235,7 @@ class TestAvoidanceAlgorithm:
         # Call _continue_avoidance
         result = avoidance_algorithm._continue_avoidance()
 
-        # Verify that the function returned False
+        # Verify that the function return ed False
         assert result is False
 
         # Test when there's an error
@@ -254,7 +246,7 @@ class TestAvoidanceAlgorithm:
         # Call _continue_avoidance
         result = avoidance_algorithm._continue_avoidance()
 
-        # Verify that the function returned False
+        # Verify that the function return ed False
         assert result is False
 
     def test_execute_recovery(self):
@@ -298,7 +290,7 @@ class TestAvoidanceAlgorithm:
         avoidance_algorithm._backup_strategy.assert_not_called()
         avoidance_algorithm._alternative_route_strategy.assert_not_called()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
         # Reset the mocks
@@ -319,7 +311,7 @@ class TestAvoidanceAlgorithm:
         avoidance_algorithm._backup_strategy.assert_called_once()
         avoidance_algorithm._alternative_route_strategy.assert_not_called()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
         # Reset the mocks
@@ -340,7 +332,7 @@ class TestAvoidanceAlgorithm:
         avoidance_algorithm._backup_strategy.assert_not_called()
         avoidance_algorithm._alternative_route_strategy.assert_called_once()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_select_random_strategy(self):
@@ -370,7 +362,7 @@ class TestAvoidanceAlgorithm:
             or avoidance_algorithm._backup_strategy.called
         )
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_turn_right_strategy(self):
@@ -386,8 +378,7 @@ class TestAvoidanceAlgorithm:
         # Set up the motor controller
         avoidance_algorithm.motor_controller = MagicMock()
         avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-            0.0
-        )
+            0.0)
 
         # Call _turn_right_strategy
         result = avoidance_algorithm._turn_right_strategy(angle=45.0)
@@ -395,10 +386,9 @@ class TestAvoidanceAlgorithm:
         # Verify that the motor controller was called correctly
         avoidance_algorithm.motor_controller.get_current_heading.assert_called_once()
         avoidance_algorithm.motor_controller.rotate_to_heading.assert_called_once_with(
-            45.0
-        )
+            45.0)
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_turn_left_strategy(self):
@@ -414,8 +404,7 @@ class TestAvoidanceAlgorithm:
         # Set up the motor controller
         avoidance_algorithm.motor_controller = MagicMock()
         avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-            45.0
-        )
+            45.0)
 
         # Call _turn_left_strategy
         result = avoidance_algorithm._turn_left_strategy(angle=45.0)
@@ -423,10 +412,9 @@ class TestAvoidanceAlgorithm:
         # Verify that the motor controller was called correctly
         avoidance_algorithm.motor_controller.get_current_heading.assert_called_once()
         avoidance_algorithm.motor_controller.rotate_to_heading.assert_called_once_with(
-            0.0
-        )
+            0.0)
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_backup_strategy(self):
@@ -442,8 +430,7 @@ class TestAvoidanceAlgorithm:
         # Set up the motor controller
         avoidance_algorithm.motor_controller = MagicMock()
         avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-            0.0
-        )
+            0.0)
 
         # Mock the time.sleep function
         with patch(
@@ -455,14 +442,12 @@ class TestAvoidanceAlgorithm:
             # Verify that the motor controller was called correctly
             avoidance_algorithm.motor_controller.get_current_heading.assert_called_once()
             avoidance_algorithm.motor_controller.rotate_to_heading.assert_called_once_with(
-                180.0
-            )
+                180.0)
             mock_sleep.assert_called_once_with(2.0)
             avoidance_algorithm.motor_controller.move_distance.assert_called_once_with(
-                0.3
-            )
+                0.3)
 
-            # Verify that the function returned True
+            # Verify that the function return ed True
             assert result is True
 
     def test_alternative_route_strategy(self):
@@ -478,9 +463,7 @@ class TestAvoidanceAlgorithm:
         # Set up the motor controller
         avoidance_algorithm.motor_controller = MagicMock()
         avoidance_algorithm.motor_controller.get_current_position.return_value = (
-            0.0,
-            0.0,
-        )
+            0.0, 0.0, )
 
         # Set up the pattern planner
         avoidance_algorithm.pattern_planner.get_current_goal.return_value = (
@@ -521,10 +504,9 @@ class TestAvoidanceAlgorithm:
 
         # Verify that the motor controller was called correctly
         avoidance_algorithm.motor_controller.navigate_to_location.assert_called_once_with(
-            (1.0, 1.0)
-        )
+            (1.0, 1.0))
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
     def test_estimate_obstacle_position(self):
@@ -540,12 +522,9 @@ class TestAvoidanceAlgorithm:
         # Set up the motor controller
         avoidance_algorithm.motor_controller = MagicMock()
         avoidance_algorithm.motor_controller.get_current_position.return_value = (
-            0.0,
-            0.0,
-        )
+            0.0, 0.0, )
         avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-            0.0
-        )
+            0.0)
 
         # Set up obstacle data
         avoidance_algorithm.obstacle_data = {
@@ -601,7 +580,7 @@ class TestAvoidanceAlgorithm:
             [0.5, 0.6, 0.7]
         )
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True
 
         # Verify that the obstacles were stored
@@ -616,7 +595,7 @@ class TestAvoidanceAlgorithm:
         # Call check_obstacles
         result = avoidance_algorithm.check_obstacles()
 
-        # Verify that the function returned False
+        # Verify that the function return ed False
         assert result is False
 
     def test_avoid_obstacle(self):
@@ -684,5 +663,5 @@ class TestAvoidanceAlgorithm:
         # Call avoid_obstacle
         result = avoidance_algorithm.avoid_obstacle()
 
-        # Verify that the function returned True
+        # Verify that the function return ed True
         assert result is True

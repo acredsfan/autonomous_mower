@@ -1,13 +1,8 @@
 """
-Integration tests for navigation and obstacle avoidance.
-
-This module tests the interaction between the navigation system and the obstacle
-avoidance system, ensuring they work together correctly to navigate around obstacles.
+Test module for test_navigation_obstacle_avoidance.py.
 """
-
 import pytest
-import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock  # patch was unused
 
 from mower.navigation.path_planner import (
     PathPlanner,
@@ -17,9 +12,7 @@ from mower.navigation.path_planner import (
 )
 from mower.obstacle_detection.avoidance_algorithm import (
     AvoidanceAlgorithm,
-    AvoidanceState,
-    Obstacle,
-    NavigationStatus,
+    NavigationStatus,  # AvoidanceState and Obstacle were unused
 )
 
 
@@ -109,7 +102,8 @@ class TestNavigationObstacleAvoidance:
         # Start avoidance
         avoidance_algorithm._start_avoidance()
 
-        # Verify that the motor controller was called to execute the avoidance maneuver
+        # Verify that the motor controller was called to execute the avoidance
+        # maneuver
         assert motor_controller.get_current_heading.called
         assert (
             motor_controller.rotate_to_heading.called
@@ -126,9 +120,8 @@ class TestNavigationObstacleAvoidance:
         for point in new_path:
             # Check that the point is not too close to the obstacle
             distance = (
-                (point[0] - obstacle_position[0]) ** 2
-                + (point[1] - obstacle_position[1]) ** 2
-            ) ** 0.5
+                (point[0] - obstacle_position[0]) ** 2 +
+                (point[1] - obstacle_position[1]) ** 2) ** 0.5
             assert distance > 0.5  # Minimum distance from obstacle
 
     def test_obstacle_avoidance_during_navigation(
@@ -169,7 +162,8 @@ class TestNavigationObstacleAvoidance:
         # Start avoidance
         avoidance_algorithm._start_avoidance()
 
-        # Verify that the motor controller was called to execute the avoidance maneuver
+        # Verify that the motor controller was called to execute the avoidance
+        # maneuver
         assert motor_controller.get_current_heading.called
         assert (
             motor_controller.rotate_to_heading.called
@@ -203,9 +197,8 @@ class TestNavigationObstacleAvoidance:
             for point in new_path:
                 # Check that the point is not too close to the obstacle
                 distance = (
-                    (point[0] - obstacle_position["position"][0]) ** 2
-                    + (point[1] - obstacle_position["position"][1]) ** 2
-                ) ** 0.5
+                    (point[0] - obstacle_position["position"][0]) ** 2 +
+                    (point[1] - obstacle_position["position"][1]) ** 2) ** 0.5
                 assert distance > 0.5  # Minimum distance from obstacle
 
     def test_recovery_from_persistent_obstacle(
@@ -246,14 +239,15 @@ class TestNavigationObstacleAvoidance:
         # Start avoidance
         avoidance_algorithm._start_avoidance()
 
-        # Verify that the motor controller was called to execute the avoidance maneuver
+        # Verify that the motor controller was called to execute the avoidance
+        # maneuver
         assert motor_controller.get_current_heading.called
         assert (
             motor_controller.rotate_to_heading.called
             or motor_controller.move_distance.called
         )
 
-        # Simulate failed avoidance (obstacle still detected)
+        # Simulate failed avoidance(obstacle still detected)
         motor_controller.get_status.return_value = (
             NavigationStatus.TARGET_REACHED
         )
@@ -279,14 +273,15 @@ class TestNavigationObstacleAvoidance:
         # Verify that recovery was successful
         assert recovery_success is True
 
-        # Verify that the motor controller was called to execute the recovery maneuver
+        # Verify that the motor controller was called to execute the recovery
+        # maneuver
         assert motor_controller.get_current_heading.called
         assert (
             motor_controller.rotate_to_heading.called
             or motor_controller.move_distance.called
         )
 
-        # Simulate successful recovery (obstacle no longer detected)
+        # Simulate successful recovery(obstacle no longer detected)
         avoidance_algorithm.obstacle_left = False
         avoidance_algorithm.obstacle_right = False
         avoidance_algorithm.camera_obstacle_detected = False

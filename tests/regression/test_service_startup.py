@@ -1,9 +1,7 @@
 """
-Regression tests for service startup issues.
-
-These tests verify that common service startup issues are properly handled and don't occur.
-They are based on the troubleshooting section in the README.md file.
-"""
+Test module for test_service_startup.py.
+"""Test module for test_service_startup.py.
+""""
 
 from mower.main_controller import RobotController, ResourceManager
 import os
@@ -49,12 +47,12 @@ class TestServiceStartupIssues:
     def test_log_directory_creation(
         self, mock_chmod, mock_makedirs, mock_exists
     ):
-        """
-        Test that the log directory is created if it doesn't exist.
+                """"
+        Test that the log directory is created if it doesn't exist.'
 
         This tests the fix for the issue mentioned in the README.md troubleshooting section:
-        "Service Won't Start" - "Check log directory permissions"
-        """
+        "Service Won't Start" - "Check log directory permissions"'
+                        """"
         # Mock os.path.exists to return False for the log directory
         mock_exists.return_value = False
 
@@ -71,7 +69,7 @@ class TestServiceStartupIssues:
                     controller._initialize_logging()
 
         # Verify that os.makedirs was called to create the log directory
-        mock_makedirs.assert_called_with(self.log_dir, exist_ok=True)
+        mock_makedirs.assert _called_with(self.log_dir, exist_ok=True)
 
         # Verify that os.chmod was called to set the permissions
         mock_chmod.assert_called()
@@ -79,16 +77,17 @@ class TestServiceStartupIssues:
     @patch("os.path.exists")
     @patch("os.access")
     def test_log_directory_permissions(self, mock_access, mock_exists):
-        """
-        Test that the log directory permissions are checked and fixed if needed.
+        """"
+        Test that the log directory permissions are checked and
+        fixed if needed.
 
         This tests the fix for the issue mentioned in the README.md troubleshooting section:
-        "Service Won't Start" - "Check log directory permissions"
-        """
+        "Service Won't Start" - "Check log directory permissions"'
+                """"
         # Mock os.path.exists to return True for the log directory
         mock_exists.return_value = True
 
-        # Mock os.access to return False (no write permission)
+        # Mock os.access to return False(no write permission)
         mock_access.return_value = False
 
         # Create a RobotController instance
@@ -99,22 +98,23 @@ class TestServiceStartupIssues:
             with patch("mower.main_controller.RobotController._load_config"):
                 controller = RobotController()
 
-                # Call the method that would check and fix the log directory permissions
+                # Call the method that would check and fix the log directory
+                # permissions
                 with patch("mower.main_controller.LOG_DIR", self.log_dir):
                     with patch("os.chmod") as mock_chmod:
                         controller._initialize_logging()
 
         # Verify that os.access was called to check the permissions
-        mock_access.assert_called_with(self.log_dir, os.W_OK)
+        mock_access.assert _called_with(self.log_dir, os.W_OK)
 
     @patch("logging.FileHandler")
     def test_log_file_creation(self, mock_file_handler):
-        """
+        """"
         Test that log files are created successfully.
 
         This tests the fix for the issue mentioned in the README.md troubleshooting section:
-        "Service Won't Start" - "Check service logs"
-        """
+        "Service Won't Start" - "Check service logs"'
+                """"
         # Create a RobotController instance
         with patch(
             "mower.main_controller.ResourceManager",
@@ -132,15 +132,15 @@ class TestServiceStartupIssues:
             mock_file_handler.call_count > 0
         ), "FileHandler should be called to create log files"
 
-    @patch("importlib.import_module")
+    @patch("import lib.import _module")
     def test_python_environment(self, mock_import_module):
-        """
+        """"
         Test that the Python environment is correctly set up.
 
         This tests the fix for the issue mentioned in the README.md troubleshooting section:
-        "Service Won't Start" - "Verify Python environment"
-        """
-        # Mock importlib.import_module to return a mock module
+        "Service Won't Start" - "Verify Python environment"'
+                """"
+        # Mock import lib.import _module to return a mock module
         mock_module = MagicMock()
         mock_import_module.return_value = mock_module
 
@@ -156,9 +156,9 @@ class TestServiceStartupIssues:
                 # Call the method that would import modules
                 resource_manager.initialize()
 
-        # Verify that importlib.import_module was called
+        # Verify that import lib.import _module was called
         mock_import_module.assert_called()
 
 
 if __name__ == "__main__":
-    pytest.main(["-v", __file__])
+    pytest.main([" - v", __file__])

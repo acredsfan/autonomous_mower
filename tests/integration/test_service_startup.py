@@ -1,17 +1,18 @@
 """
-Integration test for service startup and main control loop
+Test module for test_service_startup.py.
 """
-
 import threading
-import pytest
+# import pytest # pytest is implicitly used by test functions
 from mower.main_controller import main, ResourceManager
 
 
 def test_main_controller_startup(monkeypatch):
     """
     Test that the main controller starts up and exits gracefully.
-    This patches ResourceManager.start_web_interface to avoid starting the web server,
-    and patches threading.Event.wait to raise KeyboardInterrupt after the first wait.
+
+    This patches ResourceManager.start_web_interface to avoid starting the
+    web server, and patches threading.Event.wait to raise KeyboardInterrupt
+    after the first wait.
     """
     # Avoid starting the web interface
     monkeypatch.setattr(

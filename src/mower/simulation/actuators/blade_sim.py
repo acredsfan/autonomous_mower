@@ -6,12 +6,10 @@ with the virtual world model to provide realistic blade control behavior without
 requiring physical hardware.
 """
 
-import time
-import threading
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+from typing import Dict, Any, Optional
 
 from mower.simulation.hardware_sim import SimulatedActuator
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import get_world_instance
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Configure logging
@@ -42,14 +40,12 @@ class SimulatedBladeController(SimulatedActuator):
         # Initialize actuator parameters
         # 500ms response time (blade motor is slower than drive motors)
         self.response_time = 0.5
-
         # Get the virtual world instance
         self.world = get_world_instance()
 
     def _initialize_sim(self, *args, **kwargs) -> None:
         """Initialize the simulated blade controller."""
         # Nothing special to initialize for the simulated blade controller
-        pass
 
     def _cleanup_sim(self) -> None:
         """Clean up the simulated blade controller."""
@@ -87,8 +83,11 @@ class SimulatedBladeController(SimulatedActuator):
                 self.set_value("enabled", True)
                 logger.info("Blade motor enabled")
             return True
-        except Exception as e:
-            logger.error(f"Error enabling blade motor: {e}")
+        except ValueError as e:
+            logger.error("Error enabling blade motor: %s", e)
+            return False
+        except RuntimeError as e:
+            logger.error("Runtime error enabling blade motor: %s", e)
             return False
 
     def disable(self) -> bool:
@@ -104,8 +103,11 @@ class SimulatedBladeController(SimulatedActuator):
                 self.set_value("speed", 0.0)
                 logger.info("Blade motor disabled")
             return True
-        except Exception as e:
-            logger.error(f"Error disabling blade motor: {e}")
+        except ValueError as e:
+            logger.error("Error disabling blade motor: %s", e)
+            return False
+        except RuntimeError as e:
+            logger.error("Runtime error disabling blade motor: %s", e)
             return False
 
     def set_speed(self, speed: float) -> bool:
@@ -119,15 +121,18 @@ class SimulatedBladeController(SimulatedActuator):
             bool: True if successful, False otherwise.
         """
         try:
-            if not (0.0 <= speed <= 1.0):
-                logger.error(f"Invalid speed value: {speed}")
+            if not 0.0 <= speed <= 1.0:
+                logger.error("Invalid speed value: %s", speed)
                 return False
 
             self.set_value("speed", speed)
-            logger.info(f"Blade motor speed set to {speed}")
+            logger.info("Blade motor speed set to %s", speed)
             return True
-        except Exception as e:
-            logger.error(f"Error setting blade motor speed: {e}")
+        except ValueError as e:
+            logger.error("Error setting blade motor speed: %s", e)
+            return False
+        except RuntimeError as e:
+            logger.error("Runtime error setting blade motor speed: %s", e)
             return False
 
     def is_enabled(self) -> bool:
@@ -174,8 +179,10 @@ class SimulatedBladeController(SimulatedActuator):
             self.disable()
             super().cleanup()
             logger.info("Blade controller cleaned up")
-        except Exception as e:
-            logger.error(f"Error cleaning up blade controller: {e}")
+        except ValueError as e:
+            logger.error("Error cleaning up blade controller: %s", e)
+        except RuntimeError as e:
+            logger.error("Runtime error cleaning up blade controller: %s", e)
 
     def get_state(self) -> Dict[str, Any]:
         """

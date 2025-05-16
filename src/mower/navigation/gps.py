@@ -79,12 +79,18 @@ class GpsPosition(metaclass=SingletonMeta):
                 if positions:
                     with self.lock:
                         self.position = positions
-                    # logger.debug(f"New GPS position: {positions}")
+                    # logger.debug("New GPS position: %s", positions)
                 else:
                     logger.debug("No valid GPS position received.")
                 time.sleep(1)  # Adjust as needed
-            except Exception as e:
-                logger.error(f"Error reading GPS data: {e}")
+            except IOError as e:
+                logger.error("IO error reading GPS data: %s", e)
+                time.sleep(5)  # Wait before retrying
+            except ValueError as e:
+                logger.error("Value error in GPS data processing: %s", e)
+                time.sleep(5)  # Wait before retrying
+            except RuntimeError as e:
+                logger.error("Runtime error in GPS module: %s", e)
                 time.sleep(5)  # Wait before retrying
 
     def run(self):
@@ -193,7 +199,7 @@ class GpsPlayer(metaclass=SingletonMeta):
         return nmea_sentences
 
 
-# Parsing and Utility Functions (unchanged)
+# Parsing and Utility Functions
 def parse_gps_position(line, debug=False):
     """
     Parse a GPS NMEA sentence and convert to UTM coordinates.
@@ -217,9 +223,7 @@ def parse_gps_position(line, debug=False):
 
     if "*" != line[-3]:
         logger.info("NMEA Missing checksum")
-        return None
-
-    try:
+        return None try:
         nmea_checksum = parse_nmea_checksum(line)
     except ValueError:
         logger.info("Invalid checksum format")
@@ -232,8 +236,8 @@ def parse_gps_position(line, debug=False):
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
             logger.info(
-                f"NMEA checksum does not match: {nmea_checksum} != "
-                f"{calculated_checksum}"
+                "NMEA checksum does not match: %s != %s",
+                nmea_checksum, calculated_checksum
             )
             return None
 
@@ -241,7 +245,7 @@ def parse_gps_position(line, debug=False):
             try:
                 pynmea2.parse(line)
             except pynmea2.ParseError as e:
-                logger.error(f"NMEA parse error detected: {e}")
+                logger.error("NMEA parse error detected: %s", e)
                 return None
 
         if nmea_parts[2] == "V":
@@ -256,19 +260,14 @@ def parse_gps_position(line, debug=False):
 
         # if debug:
         #     if hasattr(msg, 'longitude') and msg.longitude != longitude:
-        #         logger.info(
-        #             f"Longitude mismatch {msg.longitude} != {longitude}"
-        #         )
+        #         logger.info("Longitude mismatch %s != %s", msg.longitude, longitude)
         #     if hasattr(msg, 'latitude') and msg.latitude != latitude:
-        #         logger.info(
-        #             f"Latitude mismatch {msg.latitude} != {latitude}"
-        #         )
+        #         logger.info("Latitude mismatch %s != %s", msg.latitude, latitude)
 
-        utm_position = utm.from_latlon(latitude, longitude)
-        # if debug:
+        utm_position = utm.from_latlon(latitude, longitude)        # if debug:
         #     logger.info(
-        #         f"UTM easting = {utm_position[0]}, "
-        #         f"UTM northing = {utm_position[1]}"
+        #         "UTM easting = %s, UTM northing = %s",
+        #         utm_position[0], utm_position[1]
         #     )
 
         return (
@@ -278,8 +277,6 @@ def parse_gps_position(line, debug=False):
             utm_position[3],
         )
 
-    else:
-        pass
     return None
 
 

@@ -1,12 +1,5 @@
 """
-Tests for the PathPlanner class.
-
-This module tests the functionality of the PathPlanner class in
-navigation/path_planner.py, including:
-1. Initialization of the path planner
-2. Generating paths
-3. Handling obstacles
-4. Learning and optimization
+Test module for test_path_planner.py.
 """
 
 import pytest
@@ -22,7 +15,7 @@ from mower.navigation.path_planner import (
 
 
 class TestPathPlanner:
-    """Tests for the PathPlanner class."""
+    """Tests for the PathPlanner class ."""
 
     def test_initialization(self):
         """Test initialization of the path planner."""
@@ -102,7 +95,8 @@ class TestPathPlanner:
         assert max(y_coords) >= 10.0
 
         # Verify that the path follows a parallel pattern
-        # For a parallel pattern with angle=0.0, all points with the same y-coordinate
+        # For a parallel pattern with angle = 0.0,
+        # all points with the same y-coordinate
         # should have x-coordinates that are either increasing or decreasing
         y_values = sorted(set(y_coords))
         for y in y_values:
@@ -165,7 +159,8 @@ class TestPathPlanner:
         assert max(y_coords) >= 9.0
 
         # Verify that the path follows a spiral pattern
-        # For a spiral pattern, the distance from the center should generally increase
+        # For a spiral pattern, the distance from the center should generally
+        # increase
         center = (5.0, 5.0)
         distances = [
             ((x - center[0]) ** 2 + (y - center[1]) ** 2) ** 0.5
@@ -254,9 +249,10 @@ class TestPathPlanner:
         # Verify that a path was generated
         assert len(path) > 0
 
-        # Verify that the path starts at the start point and ends at the goal point
+        # Verify that the path starts at the start point and ends at the goal
+        # point
         assert path[0] == start
-        assert path[-1] == goal
+        assert path[- 1] == goal
 
         # Add an obstacle and get a new path
         path_planner.update_obstacle_map([(5, 5)])
@@ -265,9 +261,10 @@ class TestPathPlanner:
         # Verify that a path was generated
         assert len(path_with_obstacle) > 0
 
-        # Verify that the path starts at the start point and ends at the goal point
+        # Verify that the path starts at the start point and ends at the goal
+        # point
         assert path_with_obstacle[0] == start
-        assert path_with_obstacle[-1] == goal
+        assert path_with_obstacle[- 1] == goal
 
         # Verify that the path avoids the obstacle
         assert (5, 5) not in path_with_obstacle
@@ -315,12 +312,13 @@ class TestPathPlanner:
         # Optimize the path
         optimized_path = path_planner.optimize_path(path)
 
-        # Verify that the optimized path is shorter than the original path
+        # Verify that the optimized path is shorter than the or iginal path
         assert len(optimized_path) <= len(path)
 
-        # Verify that the optimized path still starts and ends at the same points
+        # Verify that the optimized path still starts and ends at the same
+        # points
         assert optimized_path[0] == path[0]
-        assert optimized_path[-1] == path[-1]
+        assert optimized_path[- 1] == path[- 1]
 
     def test_coord_to_grid(self):
         """Test converting coordinates to grid indices."""
@@ -427,4 +425,4 @@ class TestPathPlanner:
         goal = path_planner.get_current_goal()
 
         # Verify that the goal is the last point in the path
-        assert goal == path[-1]
+        assert goal == path[- 1]

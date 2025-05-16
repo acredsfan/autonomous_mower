@@ -19,32 +19,29 @@ Key features:
 Example usage:
     # Initialize the fleet manager
     fleet_manager = FleetManager()
-    
-    # Register mowers
-    fleet_manager.register_mower("mower1", "192.168.1.101", "Mower 1")
-    fleet_manager.register_mower("mower2", "192.168.1.102", "Mower 2")
-    
-    # Get status of all mowers
-    status = fleet_manager.get_fleet_status()
-    
-    # Assign mowing zones
-    fleet_manager.assign_zone("mower1", "front_yard")
-    fleet_manager.assign_zone("mower2", "back_yard")
-    
-    # Start mowing operation for all mowers
-    fleet_manager.start_fleet_operation()
+
+# Register mowers
+fleet_manager.register_mower("mower1", "192.168.1.101", "Mower 1")
+fleet_manager.register_mower("mower2", "192.168.1.102", "Mower 2")
+
+# Get status of all mowers
+status = fleet_manager.get_fleet_status()
+
+# Assign mowing zones
+fleet_manager.assign_zone("mower1", "front_yard")
+fleet_manager.assign_zone("mower2", "back_yard")
+
+# Start mowing operation for all mowers
+fleet_manager.start_fleet_operation()
 """
 
 import json
 import os
-import time
 import uuid
 from datetime import datetime
 from enum import Enum, auto
-from typing import Dict, List, Optional, Set, Tuple, Union, Any
-import requests
+from typing import Dict, List, Optional, Any
 import threading
-import logging
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
@@ -449,7 +446,9 @@ class FleetManager:
             Optional[Dict[str, Any]]: Status information, or None if the mower doesn't exist.
         """
         if mower_id not in self.mowers:
-            logger.warning(f"Mower '{mower_id}' not found")
+            logger.warning(
+                f"Mower '{mower_id}' not found"
+            )
             return None
 
         mower = self.mowers[mower_id]
@@ -507,7 +506,9 @@ class FleetManager:
             Optional[Dict[str, Any]]: Zone information, or None if the zone doesn't exist.
         """
         if zone_id not in self.zones:
-            logger.warning(f"Zone '{zone_id}' not found")
+            logger.warning(
+                f"Zone '{zone_id}' not found"
+            )
             return None
 
         zone = self.zones[zone_id]
@@ -548,7 +549,8 @@ class FleetManager:
             zone_id: Optional zone to mow. If None, the mower's assigned zone will be used.
 
         Returns:
-            bool: True if the mower was started, False otherwise.
+            bool: True if the mower was started,
+            False otherwise.
         """
         if mower_id not in self.mowers:
             logger.warning(f"Mower '{mower_id}' not found")
