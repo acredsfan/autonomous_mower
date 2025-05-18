@@ -1,8 +1,13 @@
-# Python
+# Autonomous Mower .gitignore
+# ======================
+
+# Python cached files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -25,37 +30,44 @@ venv/
 ENV/
 env/
 .env
+/.venv
 
-# IDE
+# IDE and editor files
 .idea/
 .vscode/
 *.swp
 *.swo
+.cursor/
 
 # Logs and databases
 *.log
 logs/
 *.db
 *.sqlite3
+
+# Cache directories
 .mypy_cache/
 .pytest_cache/
-.wheels/
+.tox/
 
 # Model files and data
 models/*.tflite
 models/*.pth
 models/*.h5
 models/*.onnx
+models/coco_labels.txt
 
-# Project specific
+# Project specific configuration
 config/user_polygon.json
 config/home_location.json
 config/mowing_schedule.json
-old_main.log
+
+# Project management files
 issues.json
 issues.md
 tasks.json
 tasks.md
+old_main.log
 .github/workflows/
 
 # Temporary files
@@ -63,6 +75,28 @@ tasks.md
 .DS_Store
 Thumbs.db
 ~/*
+
+# Documentation
+docs/_build/
+docs/api/
+original_plan.md
+jctl_output.md
+
+# Test coverage
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Utility scripts
+# --------------
+# These scripts are for maintenance and should be excluded
+check_conflicts.ps1
+check_signature.py
+get_bool.py
+inspect_file.py
+scripts/delete_dependabot_branches.cmd
 
 # Linting and formatting temporary scripts
 fix_*.py
@@ -72,73 +106,25 @@ rewrite_*.py
 *docstrings*.py
 *whitespace*.py
 *syntax*.py
-simple_fix.py
 
-# Documentation build
-docs/_build/
-docs/api/
-original_plan.md
-jctl_output.md
+# Backup files
+*.backup
+src/mower/simulation/world_model.py.backup
 
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Custom Rules
+# Custom Rules and third-party integration
+# ------------------------------------
+# These entries may not be needed but are kept in case of future integration
 *.mdc
 .junie/
-copilot-instructions.md
-.github/workflows/copilot-instructions.md
 .roo/
-
-# Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.cursor/
+.roomodes
+.blackboxrules
+.windsurfrules
+roo_models.json
+copilot-instructions.md
 mcp_server/
 mcp.json
-tools/
-rules.json
-/.windsurfrules
+MCP_SERVER.md
 server.py
 run_mcp_server.sh
-/.venv
-MCP_SERVER.md
-.blackboxrules
-roo_models.json
-check_conflicts.ps1
-scripts/delete_dependabot_branches.cmd
-fix_line_length.py
-fix_whitespace.py
-fix_advanced_issues.py
-fix_docstrings_simple.py
-fix_docstrings.py
-fix_problematic_docstrings.py
-fix_syntax_errors.py
-linter_fixes.md
-remove_dynamic_imports.py
-check_signature.py
-get_bool.py
-inspect_file.py
-src/mower/simulation/world_model.py.backup
-.roomodes
+rules.json

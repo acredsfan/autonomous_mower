@@ -56,6 +56,28 @@ def color_text(text: str, color: str) -> str:
     return f"{COLORS.get(color, '')}{text}{COLORS['RESET']}"
 
 
+# Pre-flight permission check (fail early if permissions are insufficient)
+try:
+    from src.mower.utilities.permission_check import run_permission_checks
+    if not run_permission_checks():
+        print(
+            color_text(
+                "\n[ERROR] Permission checks failed. "
+                "Please resolve the above issues before continuing setup.",
+                "RED"
+            )
+        )
+        sys.exit(1)
+except Exception as e:
+    print(
+        color_text(
+            f"\n[ERROR] Could not run pre-flight permission checks: {e}",
+            "RED"
+        )
+    )
+    sys.exit(1)
+
+
 def print_header(title: str) -> None:
     """Print a formatted section header."""
     width = 80

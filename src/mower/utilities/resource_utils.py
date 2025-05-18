@@ -6,6 +6,7 @@ and initialization/cleanup. It centralizes common functionality used across
 different components of the autonomous mower project.
 """
 
+from mower.utilities.config_schema import validate_config, ValidationError
 import threading
 import json
 import logging
@@ -22,6 +23,8 @@ from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
+
+# Import config schema validator
 
 
 def load_config(filename: str) -> Optional[Dict[str, Any]]:
@@ -52,7 +55,16 @@ def load_config(filename: str) -> Optional[Dict[str, Any]]:
         # Load the configuration file
         config = config_manager.load(str(config_path))
         logger.info(f"Loaded configuration from {filename}")
-        return config
+
+        # Validate configuration schema
+        try:
+            validated = validate_config(config)
+            return validated.model_dump()  # Return as dict for backward compatibility
+        except ValidationError as ve:
+            logger.error(
+                f"Configuration validation failed for {filename}: {ve}")
+            return None
+
     except Exception as e:
         logger.error(f"Error loading config file {filename}: {e}")
         return None

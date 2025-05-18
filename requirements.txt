@@ -5,8 +5,8 @@ pillow>=10.3.0
 pyyaml>=5.4.1
 python-dotenv>=0.19.0
 smbus2>=0.5.0
-RPi.GPIO>=0.7.0
-adafruit-circuitpython-mpu6050>=1.1.9
+RPi.GPIO>=0.7.0; sys_platform == "linux"
+adafruit-circuitpython-mpu6050>=1.1.9; sys_platform == "linux"
 flask>=3.0.0
 flask-socketio>=5.5.1
 geopy>=2.1.0
@@ -28,27 +28,27 @@ onnxruntime>=1.16.0
 # System monitoring and safety
 psutil>=5.9.0
 py3nvml>=0.2.7
-pyudev>=0.24.3
-systemd-python>=234
+pyudev>=0.24.3; sys_platform == "linux"
+systemd-python>=234; sys_platform == "linux"
 python-daemon>=3.0.1
 supervisor>=4.2.5
 prometheus_client>=0.17.0
 
 # GPS and navigation
 pynmea2>=1.18.0
-gpsd-py3>=0.3.0
+gpsd-py3>=0.3.0; sys_platform == "linux"
 utm>=0.7.0
 
 # Sensors and hardware
-adafruit-circuitpython-bme280>=3.0.0
-adafruit-circuitpython-bno08x>=1.0.0
-barbudor-circuitpython-ina3221>=2.0.0
-adafruit-circuitpython-vl53l0x>=3.0.0
-picamera2>=0.3.12
+adafruit-circuitpython-bme280>=3.0.0; sys_platform == "linux"
+adafruit-circuitpython-bno08x>=1.0.0; sys_platform == "linux"
+barbudor-circuitpython-ina3221>=2.0.0; sys_platform == "linux"
+adafruit-circuitpython-vl53l0x>=3.0.0; sys_platform == "linux"
+picamera2>=0.3.12; sys_platform == "linux"
 
 # Coral TPU dependencies
-tflite-runtime>=2.5.0
-pycoral>=2.0.0
+tflite-runtime>=2.5.0; sys_platform == "linux"
+pycoral>=2.0.0; sys_platform == "linux"
 
 # Security
 safety>=3.2.14
@@ -57,7 +57,7 @@ pyOpenSSL>=23.0.0
 certifi>=2024.7.4
 
 # Monitoring
-grafana-api-client>=2.3.0
+grafana-api-client>=2.3.0; sys_platform == "linux"
 statsd>=4.0.1
 
 # Development dependencies
@@ -78,3 +78,4 @@ pre-commit>=3.6.0
 
 flask-cors>=5.0.1
 scipy>=1.10.1
+pydantic>=2.0.0

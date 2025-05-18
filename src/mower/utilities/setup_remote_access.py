@@ -32,6 +32,20 @@ class RemoteAccessSetup:
         self.access_type = config.get("REMOTE_ACCESS_TYPE", "port_forward")
         self.web_port = config.get("WEB_UI_PORT", 8080)
 
+# Pre-flight network diagnostics
+        try:
+            from mower.utilities.network_diagnostics import run_preflight_check
+            if not run_preflight_check():
+                logger.error(
+                    "Network diagnostics failed. "
+                    "Please resolve network issues before configuring remote access.")
+                return False
+        except ImportError as e:
+            logger.warning(
+                "Could not import network diagnostics. "
+                "Skipping pre-flight network check. Error: %s", str(e)
+            )
+
     def setup(self) -> bool:
         """Configure the selected remote access method.
 
