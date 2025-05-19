@@ -405,7 +405,7 @@ setup_yolov8() {
         "onnx_graphsurgeon>=0.3.26" \
         "ai-edge-litert>=1.2.0" \
         "onnx>=1.12.0" \
-        "onnx2tf>=1.26.3" \
+        "onnx2tf==1.27.0" \
         "onnxslim>=0.1.46" \
         "onnxruntime"
     check_command "Installing TFLite export dependencies" || { print_warning "Failed to pre-install some TFLite export dependencies. YOLOv8 setup might encounter issues."; }
