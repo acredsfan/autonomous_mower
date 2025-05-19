@@ -24,8 +24,12 @@ import logging
 # --- Version Compatibility Check ---
 
 
-def check_export_dependencies():
-    """Check and log versions of tensorflow, onnx2tf, and flatbuffers."""
+# --- Hard Version Check for Export Compatibility ---
+REQUIRED_TF_VERSION = "2.14"
+REQUIRED_FLATBUFFERS_VERSION = "23."
+
+
+def enforce_export_version_requirements():
     import importlib
 
     def get_version(pkg):
@@ -34,23 +38,29 @@ def check_export_dependencies():
         except Exception:
             return None
     tf_ver = get_version("tensorflow")
-    onnx2tf_ver = get_version("onnx2tf")
     flatbuffers_ver = get_version("flatbuffers")
-    logging.info(f"tensorflow version: {tf_ver}")
-    logging.info(f"onnx2tf version: {onnx2tf_ver}")
-    logging.info(f"flatbuffers version: {flatbuffers_ver}")
-    # Known working combos (as of 2025-05):
-    # tensorflow==2.13.x or 2.14.x, flatbuffers==23.x, onnx2tf==1.26.x/1.27.x
-    # Known issues: TF 2.19+ with some flatbuffers/onnx2tf combos
-    if tf_ver and onnx2tf_ver and flatbuffers_ver:
-        if tf_ver.startswith("2.19") or tf_ver.startswith("2.20"):
-            logging.warning(
-                "TensorFlow >=2.19 detected. This may cause TFLite export errors with YOLOv8/onnx2tf. "
-                "If you see 'Builder.EndVector() missing 1 required positional argument', try downgrading "
-                "tensorflow to 2.14.x and flatbuffers to 23.x. See Ultralytics/onnx2tf GitHub for details.")
-    else:
-        logging.warning(
-            "Could not determine all dependency versions. Export may fail if versions are incompatible.")
+    if tf_ver is None or flatbuffers_ver is None:
+        logging.error(
+            "Could not determine TensorFlow or FlatBuffers version. "
+            "Please ensure both are installed."
+        )
+        sys.exit(1)
+    if not tf_ver.startswith(REQUIRED_TF_VERSION):
+        logging.error(
+            f"TensorFlow {REQUIRED_TF_VERSION}.x is required for YOLOv8 TFLite export. "
+            f"Found: {tf_ver}. Please downgrade: "
+            "pip install 'tensorflow==2.14.*'"
+        )
+        sys.exit(1)
+    if not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
+        logging.error(
+            f"FlatBuffers 23.x is required for YOLOv8 TFLite export. "
+            f"Found: {flatbuffers_ver}. Please downgrade: "
+            "pip install 'flatbuffers==23.*'"
+        )
+        sys.exit(1)
+    logging.info(
+        f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} are compatible for export.")
 
 
 # --- Add necessary imports ---
@@ -456,11 +466,12 @@ def main():
     """Main entry point."""
     args = parse_args()
 
-    # --- Check export dependencies and warn if needed ---
+    # --- Enforce export dependency versions and fail fast if incompatible ---
     try:
-        check_export_dependencies()
+        enforce_export_version_requirements()
     except Exception as e:
-        logging.warning(f"Could not check export dependencies: {e}")
+        logging.error(f"Version check failed: {e}")
+        sys.exit(1)
 
     logging.info(f"--- Starting YOLOv8 {args.model} TFLite Setup ---")
 
