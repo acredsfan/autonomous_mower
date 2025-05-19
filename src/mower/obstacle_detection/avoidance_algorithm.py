@@ -256,10 +256,11 @@ class AvoidanceAlgorithm:
                             self.logger.info(msg)
                             break
 
-            # TECHNICAL DEBT: Drop-off detection using depth analysis is not yet implemented.
-            # This should use ToF or stereo camera data to identify sudden changes in ground depth
-            # and set has_dropoff = True if a drop-off is detected in the camera's field of view.
-            # See issue tracker for design notes and requirements.
+            # TECHNICAL DEBT: Drop-off detection using depth analysis is not yet
+            # implemented. This should use ToF or stereo camera data to identify
+            # sudden changes in ground depth and set has_dropoff = True if a drop-off
+            # is detected in the camera's field of view. See issue tracker for design
+            # notes and requirements.
         except Exception as e:
             self.logger.error(f"Error during camera obstacle detection: {e}")
 

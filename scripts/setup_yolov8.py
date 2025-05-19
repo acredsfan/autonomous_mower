@@ -23,8 +23,10 @@ def ensure_required_versions():
     import importlib
     import sys
     import subprocess
+    import os
     tf_ver = None
     flatbuffers_ver = None
+    # Check current versions
     try:
         tf_mod = importlib.import_module("tensorflow")
         tf_ver = getattr(tf_mod, "__version__", None)
@@ -35,31 +37,56 @@ def ensure_required_versions():
         flatbuffers_ver = getattr(fb_mod, "__version__", None)
     except ImportError:
         pass
-    need_restart = False
+
+    # Track if any version actually changes
+    version_changed = False
+
+    # Only install if missing or wrong version
     if tf_ver is None or not tf_ver.startswith(REQUIRED_TF_VERSION):
         print(f"Auto-downgrading TensorFlow to {REQUIRED_TF_VERSION}...")
-        subprocess.check_call([
+        result = subprocess.run([
             sys.executable, "-m", "pip", "install",
             f"tensorflow=={REQUIRED_TF_VERSION}.*",
             "--break-system-packages"
-        ])
-        need_restart = True
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("Failed to install TensorFlow:", result.stderr)
+            sys.exit(1)
+        version_changed = True
+    # Re-import to check if version changed
+    try:
+        tf_mod = importlib.import_module("tensorflow")
+        tf_ver = getattr(tf_mod, "__version__", None)
+    except ImportError:
+        tf_ver = None
+
     if (
         flatbuffers_ver is None
         or not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION)
     ):
         print(
             f"Auto-downgrading FlatBuffers to {REQUIRED_FLATBUFFERS_VERSION}...")
-        subprocess.check_call([
+        result = subprocess.run([
             sys.executable, "-m", "pip", "install",
             f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*",
             "--break-system-packages"
-        ])
-        need_restart = True
-    if need_restart:
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("Failed to install FlatBuffers:", result.stderr)
+            sys.exit(1)
+        version_changed = True
+    # Re-import to check if version changed
+    try:
+        fb_mod = importlib.import_module("flatbuffers")
+        flatbuffers_ver = getattr(fb_mod, "__version__", None)
+    except ImportError:
+        flatbuffers_ver = None
+
+    # Only restart if a version was actually changed
+    if version_changed:
         print("Restarting script to use correct TensorFlow/FlatBuffers versions...")
-        import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
+    # If no version changed, continue as normal
 
 # Ensure correct versions before anything else
 

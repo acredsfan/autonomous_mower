@@ -87,7 +87,7 @@ class YOLOv8TFLiteDetector:
         try:
             # Import TFLite interpreter
             # type: ignore            # Check if model exists
-            from tflite_runtime.interpreter import Interpreter
+            from tflite_runtime.interpreter import Interpreter  # type: ignore
             if not os.path.exists(self.model_path):
                 logger.error("Model file not found at %s", self.model_path)
                 return False
@@ -197,6 +197,8 @@ class YOLOv8TFLiteDetector:
         input_data = self.preprocess_image(image)
 
         # Set input tensor
+        if self.input_details is None or self.interpreter is None:
+            return []
         self.interpreter.set_tensor(self.input_details[0]["index"], input_data)
 
         # Run inference
@@ -213,24 +215,27 @@ class YOLOv8TFLiteDetector:
 
         # Apply Non-Max Suppression (NMS) to filter overlapping detections
         detections = non_max_suppression(
-            detections, iou_threshold=0.5)        # Log performance
-        logger.debug(
-            "YOLOv8 inference: %.2fs "
-            "(%.1f FPS), "
-            "%d detections",
-            inference_time,
-            1 / inference_time,
-            len(detections)
+            detections, iou_threshold=0.5
         )
-
-        return detections
+        # Log performance
+        logger.debug(
+            "YOLOv8 inference: %.2fs (%.1f FPS), %d detections",
+            inference_time,
+            1 / inference_time if inference_time > 0 else 0.0,
+            len(detections)
+        )        return detections
 
     def _process_yolov8_output(self) -> List[Dict]:
-        """Process YOLOv8 detection output format."""
+        """
+        Process YOLOv8 detection output format.
+        """
         # Get output tensor - format depends on the model
         # Shape [num_boxes, num_classes+5] or [num_classes+5, num_boxes]
+        if self.interpreter is None or self.output_details is None:
+            return []
         output_data = self.interpreter.get_tensor(
-            self.output_details[0]["index"])[0]
+            self.output_details[0]["index"]
+        )[0]
 
         # Check if we need to transpose
         if output_data.shape[0] == len(self.labels) + 5:
@@ -243,7 +248,7 @@ class YOLOv8TFLiteDetector:
         detections = []
         num_boxes = output_data.shape[0]
 
-        for i in range(num_boxes):  # For each detection
+        for i in range(num_boxes):
             # Extract values [x, y, w, h, confidence, class_probs...]
             box_data = output_data[i]
             confidence = box_data[4]
@@ -255,7 +260,7 @@ class YOLOv8TFLiteDetector:
             # Calculate class scores
             class_scores = box_data[5:]
             class_id = np.argmax(class_scores)
-            class_score = class_scores[class_id] * confidence  # Combined score
+            class_score = class_scores[class_id] * confidence
 
             # Skip low class confidence
             if class_score < self.conf_threshold:
@@ -300,9 +305,10 @@ class YOLOv8TFLiteDetector:
         return detections
 
     def _process_classification_output(self) -> List[Dict]:
-        """Fallback for classification models."""
-        # Get output tensor - for classification output is typically [1,
+        """Fallback for classification models."""        # Get output tensor - for classification output is typically [1,
         # num_classes]
+        if self.interpreter is None or self.output_details is None:
+            return []
         output = self.interpreter.get_tensor(
             self.output_details[0]["index"])[0]
 
@@ -344,7 +350,7 @@ class YOLOv8TFLiteDetector:
         height, width, _ = image_with_boxes.shape
 
         try:
-            font = ImageFont.truetype("arial.ttf", 15)  # Or a default font
+            font = ImageFont.truetype("arial.ttf", 15)
         except IOError:
             font = ImageFont.load_default()
 
@@ -364,29 +370,31 @@ class YOLOv8TFLiteDetector:
             if box:
                 xmin, ymin, xmax, ymax = map(int, box)
 
-                # Scale box if needed (assuming box coords are relative to
-                # model input size)
-                # This might not be necessary if _process_yolov8_output already
-                # scales them
-                # xmin = int(xmin * width / self.input_width)
-                # ymin = int(ymin * height / self.input_height)
-                # xmax = int(xmax * width / self.input_width)
-                # ymax = int(ymax * height / self.input_height)
-
                 # Draw rectangle
-                draw.rectangle([(xmin, ymin), (xmax, ymax)],
-                               outline="red", width=2)
+                draw.rectangle(
+                    [(xmin, ymin), (xmax, ymax)], outline="red", width=2
+                )
 
                 # Draw label background
                 label = f"{class_name}: {confidence:.2f}"
-                text_width, text_height = font.getsize(label)
+                # Use getbbox for compatibility with PIL >= 10.0
+                bbox = font.getbbox(label)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
                 draw.rectangle(
-                    [(xmin, ymin - text_height - 2),
-                     (xmin + text_width + 2, ymin)],
-                    fill="red",)
+                    [
+                        (xmin, ymin - text_height - 2),
+                        (xmin + text_width + 2, ymin),
+                    ],
+                    fill="red",
+                )
                 # Draw label text
-                draw.text((xmin + 1, ymin - text_height - 1),
-                          label, fill="white", font=font)
+                draw.text(
+                    (xmin + 1, ymin - text_height - 1),
+                    label,
+                    fill="white",
+                    font=font,
+                )
             else:
                 # Handle classification output (draw text somewhere)
                 label = f"{class_name}: {confidence:.2f}"
@@ -440,8 +448,9 @@ def calculate_iou(box1, box2):
     inter_xmax = min(xmax1, xmax2)
     inter_ymax = min(ymax1, ymax2)
 
-    inter_area = max(0, inter_xmax - inter_xmin) * max(0,
-                                                       inter_ymax - inter_ymin)
+    inter_area = max(0, inter_xmax - inter_xmin) * max(
+        0, inter_ymax - inter_ymin
+    )
     area1 = (xmax1 - xmin1) * (ymax1 - ymin1)
     area2 = (xmax2 - xmin2) * (ymax2 - ymin2)
     union_area = area1 + area2 - inter_area

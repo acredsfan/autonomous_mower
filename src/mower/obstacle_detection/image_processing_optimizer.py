@@ -9,7 +9,7 @@ import time
 import functools
 import numpy as np
 import cv2
-from typing import List, Dict, Any, Optional, Tuple, Callable
+from typing import Dict, Any
 
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.utilities.logger_config import LoggerConfig
@@ -86,8 +86,8 @@ class ImageProcessingOptimizer:
                 self.frame_skip_count += 1
                 if self.frame_skip_count <= self.max_frame_skip:
                     logger.debug(
-                        f"Skipping frame {self.frame_skip_count} (similar to previous)"
-                    )
+                        f"Skipping frame {
+                            self.frame_skip_count} (similar to previous)")
                     return self.detection_cache.get("last_detection", [])
             else:
                 self.frame_skip_count = 0
@@ -282,10 +282,12 @@ class ImageProcessingOptimizer:
                 # Convert to grayscale
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                # Apply Gaussian blur with larger kernel for better noise reduction
+                # Apply Gaussian blur with larger kernel for better noise
+                # reduction
                 blurred = cv2.GaussianBlur(gray, (7, 7), 0)
 
-                # Use adaptive thresholding instead of Canny for better edge detection
+                # Use adaptive thresholding instead of Canny for better edge
+                # detection
                 thresh = cv2.adaptiveThreshold(
                     blurred,
                     255,
@@ -318,7 +320,8 @@ class ImageProcessingOptimizer:
                         # Calculate aspect ratio
                         aspect_ratio = float(w) / h if h > 0 else 0
 
-                        # Filter out very elongated shapes (likely not obstacles)
+                        # Filter out very elongated shapes (likely not
+                        # obstacles)
                         if 0.3 < aspect_ratio < 3.0:
                             detected_objects.append(
                                 {
@@ -353,12 +356,14 @@ class ImageProcessingOptimizer:
         def optimized_detect_ml(frame):
             try:
                 # Check if ML detection is really needed
-                # If OpenCV detection finds nothing, we can skip ML detection in some cases
+                # If OpenCV detection finds nothing, we can skip ML detection
+                # in some cases
                 opencv_detections = (
                     self.obstacle_detector._detect_obstacles_opencv(frame)
                 )
 
-                # If no objects detected by OpenCV and not every frame needs ML processing
+                # If no objects detected by OpenCV and not every frame needs ML
+                # processing
                 if not opencv_detections and self.frame_skip_count > 0:
                     logger.debug(
                         "Skipping ML detection (no OpenCV detections)"
@@ -400,7 +405,7 @@ def optimize_obstacle_detector(
     Returns:
         The optimized obstacle detector
     """
-    optimizer = ImageProcessingOptimizer(detector)
+    # optimizer = ImageProcessingOptimizer(detector)  # Unused variable removed
     return detector
 
 
@@ -432,7 +437,8 @@ def benchmark_obstacle_detector(
     detect_times = []
     for i in range(iterations):
         start_time = time.time()
-        detections = detector.detect_obstacles(frame)
+        # detections = detector.detect_obstacles(frame)  # Unused variable
+        # removed
         end_time = time.time()
         detect_times.append(end_time - start_time)
 
@@ -440,7 +446,7 @@ def benchmark_obstacle_detector(
     drop_times = []
     for i in range(iterations):
         start_time = time.time()
-        drops = detector.detect_drops(frame)
+        # drops = detector.detect_drops(frame)  # Unused variable removed
         end_time = time.time()
         drop_times.append(end_time - start_time)
 
@@ -472,12 +478,12 @@ def benchmark_obstacle_detector(
         },
     }
 
-    logger.info(f"Obstacle detection benchmark results:")
+    logger.info("Obstacle detection benchmark results:")
     logger.info(f"  Average time: {detect_avg:.4f} seconds")
     logger.info(f"  Standard deviation: {detect_std:.4f} seconds")
     logger.info(f"  Min/Max time: {detect_min:.4f}/{detect_max:.4f} seconds")
 
-    logger.info(f"Drop detection benchmark results:")
+    logger.info("Drop detection benchmark results:")
     logger.info(f"  Average time: {drop_avg:.4f} seconds")
     logger.info(f"  Standard deviation: {drop_std:.4f} seconds")
     logger.info(f"  Min/Max time: {drop_min:.4f}/{drop_max:.4f} seconds")
@@ -536,13 +542,13 @@ def compare_obstacle_detectors(
         "drop_improvement_percent": drop_improvement,
     }
 
-    logger.info(f"Performance comparison results:")
+    logger.info("Performance comparison results:")
     logger.info(
-        f"  Original obstacle detection time: {original_detect_avg:.4f} seconds"
-    )
+        f"  Original obstacle detection time: {
+            original_detect_avg:.4f} seconds")
     logger.info(
-        f"  Optimized obstacle detection time: {optimized_detect_avg:.4f} seconds"
-    )
+        f"  Optimized obstacle detection time: {
+            optimized_detect_avg:.4f} seconds")
     logger.info(
         f"  Obstacle detection improvement: {detect_improvement:.2f}%"
     )
