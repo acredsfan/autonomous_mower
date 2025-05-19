@@ -261,14 +261,12 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         # Add more patterns if needed based on observed behavior
 
         # 4. Fallback: Glob for any matching TFLite file in CWD if specific
-        # name fails
-        if not found_path:
+        # name fails        if not found_path:
             possible_files = list(Path.cwd().glob(f"{model_name}*.tflite"))
             if possible_files:
                 found_path = possible_files[0]  # Take the first match
                 logging.warning(
-                    f"Found model via glob search: {
-                        found_path.name}. Using this file.")
+                    f"Found model via glob search: {found_path.name}. Using this file.")
 
         # --- Move file and return path ---
         if found_path:
