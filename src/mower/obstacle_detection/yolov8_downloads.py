@@ -25,8 +25,21 @@ def ensure_required_versions():
     import importlib
     import sys
     import subprocess
+    import os
+    
+    # Add restart counter to prevent infinite loops
+    max_restarts = 2
+    restart_count = int(os.environ.get('YOLO_RESTART_COUNT', '0'))
+    if restart_count > max_restarts:
+        print("Error: Maximum number of restarts reached. Please check your environment setup.")
+        print(f"Current TensorFlow version: {tf_ver if 'tf_ver' in locals() else 'Not installed'}")
+        print(f"Current FlatBuffers version: {flatbuffers_ver if 'flatbuffers_ver' in locals() else 'Not installed'}")
+        sys.exit(1)
+        
     tf_ver = None
     flatbuffers_ver = None
+    
+    # Check current versions
     try:
         tf_mod = importlib.import_module("tensorflow")
         tf_ver = getattr(tf_mod, "__version__", None)
@@ -37,35 +50,85 @@ def ensure_required_versions():
         flatbuffers_ver = getattr(fb_mod, "__version__", None)
     except ImportError:
         pass
-    need_restart = False
+
+    # Track if any version actually changes
+    version_changed = False
+
+    # Only install if missing or wrong version
     if tf_ver is None or not tf_ver.startswith(REQUIRED_TF_VERSION):
         print(f"Auto-downgrading TensorFlow to {REQUIRED_TF_VERSION}...")
-        subprocess.check_call([
+        result = subprocess.run([
             sys.executable, "-m", "pip", "install",
             f"tensorflow=={REQUIRED_TF_VERSION}.*",
             "--break-system-packages"
-        ])
-        need_restart = True
-    if flatbuffers_ver is None or not flatbuffers_ver.startswith(
-            REQUIRED_FLATBUFFERS_VERSION):
-        print(
-            f"Auto-downgrading FlatBuffers to {REQUIRED_FLATBUFFERS_VERSION}...")
-        subprocess.check_call([
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("Failed to install TensorFlow:", result.stderr)
+            print("Please try installing manually: "
+                  f"pip install 'tensorflow=={REQUIRED_TF_VERSION}.*' --break-system-packages")
+            sys.exit(1)
+        version_changed = True
+        
+        # Re-import to verify installation
+        try:
+            tf_mod = importlib.import_module("tensorflow")
+            tf_ver = getattr(tf_mod, "__version__", None)
+        except ImportError:
+            tf_ver = None
+
+    if flatbuffers_ver is None or not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
+        print(f"Auto-downgrading FlatBuffers to {REQUIRED_FLATBUFFERS_VERSION}...")
+        result = subprocess.run([
             sys.executable, "-m", "pip", "install",
             f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*",
             "--break-system-packages"
-        ])
-        need_restart = True
-    if need_restart:
-        print("Restarting script to use correct TensorFlow/FlatBuffers versions...")
-        import os
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("Failed to install FlatBuffers:", result.stderr)
+            print("Please try installing manually: "
+                  f"pip install 'flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*' --break-system-packages")
+            sys.exit(1)
+        version_changed = True
+        
+        # Re-import to verify installation
+        try:
+            fb_mod = importlib.import_module("flatbuffers")
+            flatbuffers_ver = getattr(fb_mod, "__version__", None)
+        except ImportError:
+            flatbuffers_ver = None
+
+    # Only restart if a version was actually changed and not already correct
+    if version_changed and restart_count < max_restarts:
+        # Double-check that the versions are now correct before restarting
+        tf_ok = tf_ver is not None and tf_ver.startswith(REQUIRED_TF_VERSION)
+        fb_ok = flatbuffers_ver is not None and flatbuffers_ver.startswith(
+            REQUIRED_FLATBUFFERS_VERSION
+        )
+        
+        if tf_ok and fb_ok:
+            print("Versions are now correct. No restart needed.")
+        else:
+            print("Restarting script to use correct TensorFlow/FlatBuffers versions...")
+            os.environ['YOLO_RESTART_COUNT'] = str(restart_count + 1)
+            try:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+            except Exception as e:
+                print(f"Failed to restart script: {e}")
+                print("Please run the script again manually.")
+                sys.exit(1)
+    elif version_changed:
+        print("Warning: Version correction attempted but maximum restarts reached.")
+        print(f"TensorFlow version: {tf_ver}")
+        print(f"FlatBuffers version: {flatbuffers_ver}")
+        print("Continuing with current versions, but some features might not work as expected.")
+    # If no version changed, continue as normal
 
 # Ensure correct versions before anything else
 
 
 ensure_required_versions()
-# !/usr/bin/env python3
+#
+#!/usr/bin/env python3  # noqa: E265
 """
 YOLOv8 TFLite Model Setup Script for Autonomous Mower (Revised for Export)
 
@@ -76,9 +139,9 @@ This script:
 4. Updates configuration files.
 5. Ensures dependencies are installed.
 
-Usage:
-  python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640]
-  [--fp16 | --int8]
+# Usage:
+#   python3 setup_yolov8.py [--model yolov8n|yolov8s|yolov8m][--imgsz 640]
+#   [--fp16 | --int8]
   [--data path/to/coco.yaml]
 """
 
