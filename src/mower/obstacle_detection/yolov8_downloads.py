@@ -16,6 +16,10 @@ warnings.filterwarnings(
     category=UserWarning,
 )
 
+# --- Hard Version Check for Export Compatibility ---
+REQUIRED_TF_VERSION = "2.14"
+REQUIRED_FLATBUFFERS_VERSION = "23."
+
 
 def ensure_required_versions():
     import importlib
@@ -79,11 +83,6 @@ Usage:
 """
 
 # import os
-
-
-# --- Hard Version Check for Export Compatibility ---
-REQUIRED_TF_VERSION = "2.14"
-REQUIRED_FLATBUFFERS_VERSION = "23."
 
 
 def enforce_export_version_requirements():
