@@ -32,27 +32,45 @@ REQUIRED_FLATBUFFERS_VERSION = "23."
 def enforce_export_version_requirements():
     import importlib
 
-    def get_version(pkg):
-        try:
-            return importlib.import_module(pkg).__version__
-        except Exception:
-            return None
-    tf_ver = get_version("tensorflow")
-    flatbuffers_ver = get_version("flatbuffers")
-    if tf_ver is None or flatbuffers_ver is None:
+    missing = []
+    tf_ver = None
+    flatbuffers_ver = None
+
+    try:
+        tf_mod = importlib.import_module("tensorflow")
+        tf_ver = getattr(tf_mod, "__version__", None)
+    except ImportError:
+        missing.append("tensorflow")
+
+    try:
+        fb_mod = importlib.import_module("flatbuffers")
+        flatbuffers_ver = getattr(fb_mod, "__version__", None)
+    except ImportError:
+        missing.append("flatbuffers")
+
+    if missing:
+        for pkg in missing:
+            logging.error(
+                f"Required package '{pkg}' is not installed or importable."
+            )
+            logging.error(
+                f"Install it with: pip install '{pkg}'"
+            )
         logging.error(
             "Could not determine TensorFlow or FlatBuffers version. "
             "Please ensure both are installed."
         )
         sys.exit(1)
-    if not tf_ver.startswith(REQUIRED_TF_VERSION):
+
+    if not tf_ver or not tf_ver.startswith(REQUIRED_TF_VERSION):
         logging.error(
             f"TensorFlow {REQUIRED_TF_VERSION}.x is required for YOLOv8 TFLite export. "
             f"Found: {tf_ver}. Please downgrade: "
             "pip install 'tensorflow==2.14.*'"
         )
         sys.exit(1)
-    if not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
+    if not flatbuffers_ver or not flatbuffers_ver.startswith(
+            REQUIRED_FLATBUFFERS_VERSION):
         logging.error(
             f"FlatBuffers 23.x is required for YOLOv8 TFLite export. "
             f"Found: {flatbuffers_ver}. Please downgrade: "
@@ -60,7 +78,9 @@ def enforce_export_version_requirements():
         )
         sys.exit(1)
     logging.info(
-        f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} are compatible for export.")
+        f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} "
+        "are compatible for export."
+    )
 
 
 # --- Add necessary imports ---
@@ -283,7 +303,9 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         # Run export (it might save file relative to CWD)
         export_result_path_str = model.export(**export_args)
         logging.info(
-            f"Ultralytics export function returned: {export_result_path_str}")
+            f"Ultralytics export function returned: "
+            f"{export_result_path_str}"
+        )
 
         # --- Locate the exported file ---
         found_path = None
@@ -295,7 +317,9 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         ):
             found_path = Path(export_result_path_str)
             expected_filename = found_path.name  # Use the actual name
-            logging.info(f"Located exported model at: {found_path}")
+            logging.info(
+                f"Located exported model at: {found_path}"
+            )
         else:
             # Fallback search if the return value wasn't helpful
             logging.warning(
@@ -316,7 +340,9 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
                     if potential_path.is_file():
                         found_path = potential_path
                         expected_filename = fname
-                        logging.info(f"Found exported model at: {found_path}")
+                        logging.info(
+                            f"Found exported model at: {found_path}"
+                        )
                         break
                 if found_path:
                     break
@@ -327,31 +353,39 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             try:
                 output_dir.mkdir(parents=True, exist_ok=True)
                 found_path.rename(target_model_path)
-                logging.info(f"Moved exported model to: {target_model_path}")
+                logging.info(
+                    f"Moved exported model to: {target_model_path}"
+                )
                 return target_model_path
             except OSError as e:
                 logging.error(
                     f"Failed to move model from {found_path} to "
-                    f"{target_model_path}: {e}")
+                    f"{target_model_path}: {e}"
+                )
                 return None  # Indicate failure
         else:
             logging.error(
                 f"Could not locate the exported TFLite file for {model_name}. "
-                "Export might have failed or saved to an unexpected location."
+                "Export might have failed or saved to an unexpected "
+                "location."
             )
             return None
 
     except Exception as e:
         logging.error(
             f"Error during model export for {model_name}: {e}",
-            exc_info=True)
+            exc_info=True
+        )
         # FlatBuffers/TensorFlow/onnx2tf version bug detection
         if ("Builder.EndVector() missing 1 required positional argument" in str(
                 e) or "EndVector()" in str(e)):
             logging.error(
-                "\n❌ TFLite export failed due to a known incompatibility between TensorFlow, FlatBuffers, and onnx2tf.\n"
-                "Try downgrading TensorFlow to 2.14.x and FlatBuffers to 23.x, and ensure onnx2tf is >=1.26.0.\n"
-                "See: https://github.com/onnx/onnx-tensorflow/issues/1682 and Ultralytics export docs.\n")
+                "\n❌ TFLite export failed due to a known incompatibility "
+                "between TensorFlow, FlatBuffers, and onnx2tf.\n"
+                "Try downgrading TensorFlow to 2.14.x and FlatBuffers to 23.x, "
+                "and ensure onnx2tf is >=1.26.0.\n"
+                "See: https://github.com/onnx/onnx-tensorflow/issues/1682 "
+                "and Ultralytics export docs.\n")
         if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
             logging.error(
                 "INT8 quantization requires a dataset. "
@@ -367,7 +401,9 @@ def save_label_map(output_dir: Path):
         output_dir.mkdir(parents=True, exist_ok=True)
         with open(labelmap_path, "w") as f:
             f.write("\n".join(COCO_LABELS))
-        logging.info(f"COCO label map saved to {labelmap_path}")
+        logging.info(
+            f"COCO label map saved to {labelmap_path}"
+        )
         return labelmap_path
     except IOError as e:
         logging.error(f"Failed to save label map to {labelmap_path}: {e}")

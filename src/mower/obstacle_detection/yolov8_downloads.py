@@ -27,36 +27,60 @@ import logging
 REQUIRED_TF_VERSION = "2.14"
 REQUIRED_FLATBUFFERS_VERSION = "23."
 
+
 def enforce_export_version_requirements():
     import importlib
-    def get_version(pkg):
-        try:
-            return importlib.import_module(pkg).__version__
-        except Exception:
-            return None
-    tf_ver = get_version("tensorflow")
-    flatbuffers_ver = get_version("flatbuffers")
-    if tf_ver is None or flatbuffers_ver is None:
+
+    missing = []
+    tf_ver = None
+    flatbuffers_ver = None
+
+    try:
+        tf_mod = importlib.import_module("tensorflow")
+        tf_ver = getattr(tf_mod, "__version__", None)
+    except ImportError:
+        missing.append("tensorflow")
+
+    try:
+        fb_mod = importlib.import_module("flatbuffers")
+        flatbuffers_ver = getattr(fb_mod, "__version__", None)
+    except ImportError:
+        missing.append("flatbuffers")
+
+    if missing:
+        for pkg in missing:
+            logging.error(
+                f"Required package '{pkg}' is not installed or importable."
+            )
+            logging.error(
+                f"Install it with: pip install '{pkg}'"
+            )
         logging.error(
             "Could not determine TensorFlow or FlatBuffers version. "
             "Please ensure both are installed."
         )
         sys.exit(1)
-    if not tf_ver.startswith(REQUIRED_TF_VERSION):
+
+    if not tf_ver or not tf_ver.startswith(REQUIRED_TF_VERSION):
         logging.error(
             f"TensorFlow {REQUIRED_TF_VERSION}.x is required for YOLOv8 TFLite export. "
             f"Found: {tf_ver}. Please downgrade: "
             "pip install 'tensorflow==2.14.*'"
         )
         sys.exit(1)
-    if not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
+    if not flatbuffers_ver or not flatbuffers_ver.startswith(
+            REQUIRED_FLATBUFFERS_VERSION):
         logging.error(
             f"FlatBuffers 23.x is required for YOLOv8 TFLite export. "
             f"Found: {flatbuffers_ver}. Please downgrade: "
             "pip install 'flatbuffers==23.*'"
         )
         sys.exit(1)
-    logging.info(f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} are compatible for export.")
+    logging.info(
+        f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} "
+        "are compatible for export."
+    )
+
 
 # --- Add necessary imports ---
 try:
