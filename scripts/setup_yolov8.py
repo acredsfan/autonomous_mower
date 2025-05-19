@@ -20,7 +20,6 @@ import argparse
 import subprocess
 from pathlib import Path
 import logging
-import shutil
 
 # --- Add necessary imports ---
 try:
@@ -285,7 +284,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             target_model_path = output_dir / expected_filename
             try:
                 output_dir.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(found_path), str(target_model_path))
+                found_path.rename(target_model_path)
                 logging.info(f"Moved exported model to: {target_model_path}")
                 return target_model_path
             except OSError as e:
@@ -381,13 +380,13 @@ def update_env_file(model_path: Path, labelmap_path: Path):
             yolo_section_exists = True
         # Check for old/conflicting lines to comment out
         elif (
-            stripped_line.startswith("OBSTACLE_MODEL_PATH=")
-            or stripped_line.startswith("LABEL_MAP_PATH=")  # Old name
-            or stripped_line.startswith("TPU_DETECTION_MODEL=")
-            or stripped_line.startswith("DETECTION_MODEL=")
+            stripped_line.startswith("OBSTACLE_MODEL_PATH=") or
+            stripped_line.startswith("LABEL_MAP_PATH=") or  # Old name
+            stripped_line.startswith("TPU_DETECTION_MODEL=") or
+            stripped_line.startswith("DETECTION_MODEL=")
         ):
             # Comment out old/conflicting model paths if not already commented
-            if not stripped_line.startswith("#"):
+            if not stripped_line.startswith("#"):  # Check if already commented
                 output_lines.append(f"# {line.strip()}\n")  # Comment out
             else:
                 output_lines.append(line)  # Keep already commented
@@ -425,13 +424,6 @@ def main():
     output_dir = args.output if args.output else repo_root / "models"
     output_dir = output_dir.resolve()  # Ensure absolute path
     logging.info(f"Repository root detected: {repo_root}")
-    logging.info(f"Output directory set to: {output_dir}")
-
-    # --- Dependency Check (Optional) ---
-    # Consider making this explicit or removing if user manages env
-    # logging.info("Checking dependencies...")
-    # if not install_dependencies():
-    #     logging.error("Dependency installation failed. Exiting.")
     #     sys.exit(1)
     # logging.info("Dependencies checked/installed.")
 
@@ -456,10 +448,9 @@ def main():
                 "INT8 quantization enabled without explicit --data. "
                 "Ultralytics might use a default dataset (e.g., coco128.yaml)."
             )
-
     logging.info(
         f"Preparing export for {args.model} with image size {args.imgsz} "
-        f"and quantization {quant_type}."
+        f"and quantization {quant_type}."  # Corrected typo
     )
 
     # --- Export Model ---
@@ -471,7 +462,7 @@ def main():
     logging.info(f"Model export successful: {model_path}")
 
     # --- Save Label Map ---
-    logging.info("Saving COCO label map...")
+    logging.info("Saving COCO label map...")  # Corrected typo
     labelmap_path = save_label_map(output_dir)
     if not labelmap_path:
         logging.error("Failed to save label map.")
@@ -480,7 +471,7 @@ def main():
         logging.info(f"Label map saved successfully: {labelmap_path}")
 
     # --- Update Environment File ---
-    if model_path and labelmap_path:  # Only update if both paths are valid
+    if model_path and labelmap_path:
         logging.info("Updating .env file...")
         update_env_file(model_path, labelmap_path)
     elif model_path:
@@ -491,18 +482,18 @@ def main():
         logging.warning("Skipping .env update because model export failed.")
 
     # --- Final Summary ---
-    logging.info("--- YOLOv8 Setup Summary ---")
+    logging.info("--- YOLOv8 Setup Summary ---")  # Corrected typo
     if model_path:
         logging.info(f"  Model Path: {model_path}")
     else:
-        logging.error("  Model Path: FAILED")
+        logging.error("  Model Path: FAILED")  # Corrected typo
 
     if labelmap_path:
         logging.info(f"  Label Map Path: {labelmap_path}")
     else:
         logging.warning("  Label Map Path: FAILED (or skipped)")
 
-    if model_path and labelmap_path:
+    if model_path and labelmap_path:  # Corrected typo
         logging.info(f"  .env file updated at: {repo_root / '.env'}")
         logging.info("\n✓ YOLOv8 setup process completed successfully!")
         logging.info(

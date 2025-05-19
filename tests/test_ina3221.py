@@ -9,7 +9,7 @@ from mower.hardware.ina3221 import INA3221Sensor
 class TestINA3221Sensor(unittest.TestCase):
     def setUp(self):
         self.i2c_mock = MagicMock()
-        self.sensor = INA3221Sensor.init_ina3221(self.i2c_mock)
+        self.sensor = INA3221Sensor()
 
     def test_init_ina3221(self):
         """Test initialization of INA3221 sensor."""

@@ -22,6 +22,7 @@ import requests  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image
 
+from mower.obstacle_detection.sort import Sort  # Import SORT
 from mower.hardware.camera_instance import get_camera_instance
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
@@ -108,6 +109,9 @@ class ObstacleDetector:
         self.frame_condition = Condition()
         self.frame = None
         self.frame_lock = threading.Lock()
+
+        # Initialize tracker
+        self.tracker = Sort()
 
         # Initialize interpreters
         self._initialize_interpreter()
@@ -220,7 +224,22 @@ class ObstacleDetector:
                 yolo_objects = self.yolov8_detector.detect(frame)
                 if yolo_objects:
                     detected_objects.extend(yolo_objects)
-                    # If YOLOv8 detection successful, return results
+
+                    # Apply tracking
+                    if len(yolo_objects) > 0:
+                        # Extract bounding boxes and confidences for tracker
+                        detections_np = np.array(
+                            [[d["box"][0], d["box"][1], d["box"][2], d["box"][3], d["confidence"]]
+                             for d in yolo_objects]
+                        )
+
+                        # Update tracker and get tracked objects
+                        tracked_objects = self.tracker.update(detections_np)
+
+                        # Add track IDs to detections
+                        for i, obj in enumerate(yolo_objects):
+                            obj["track_id"] = int(tracked_objects[i, 4])
+
                     if len(detected_objects) > 0:
                         return detected_objects
             except (ValueError, RuntimeError, IOError) as e:
@@ -506,6 +525,8 @@ class ObstacleDetector:
                 # Draw label
                 label = f"{name}: {int(score * 100)}%"
                 if box:
+                    if "track_id" in detection:
+                        label = f"{label} (ID: {detection['track_id']})"
                     cv2.putText(
                         frame_with_detections,
                         label,
