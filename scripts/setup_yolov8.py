@@ -21,6 +21,38 @@ import subprocess
 from pathlib import Path
 import logging
 
+# --- Version Compatibility Check ---
+
+
+def check_export_dependencies():
+    """Check and log versions of tensorflow, onnx2tf, and flatbuffers."""
+    import importlib
+
+    def get_version(pkg):
+        try:
+            return importlib.import_module(pkg).__version__
+        except Exception:
+            return None
+    tf_ver = get_version("tensorflow")
+    onnx2tf_ver = get_version("onnx2tf")
+    flatbuffers_ver = get_version("flatbuffers")
+    logging.info(f"tensorflow version: {tf_ver}")
+    logging.info(f"onnx2tf version: {onnx2tf_ver}")
+    logging.info(f"flatbuffers version: {flatbuffers_ver}")
+    # Known working combos (as of 2025-05):
+    # tensorflow==2.13.x or 2.14.x, flatbuffers==23.x, onnx2tf==1.26.x/1.27.x
+    # Known issues: TF 2.19+ with some flatbuffers/onnx2tf combos
+    if tf_ver and onnx2tf_ver and flatbuffers_ver:
+        if tf_ver.startswith("2.19") or tf_ver.startswith("2.20"):
+            logging.warning(
+                "TensorFlow >=2.19 detected. This may cause TFLite export errors with YOLOv8/onnx2tf. "
+                "If you see 'Builder.EndVector() missing 1 required positional argument', try downgrading "
+                "tensorflow to 2.14.x and flatbuffers to 23.x. See Ultralytics/onnx2tf GitHub for details.")
+    else:
+        logging.warning(
+            "Could not determine all dependency versions. Export may fail if versions are incompatible.")
+
+
 # --- Add necessary imports ---
 try:
     from ultralytics import YOLO
@@ -303,6 +335,13 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         logging.error(
             f"Error during model export for {model_name}: {e}",
             exc_info=True)
+        # FlatBuffers/TensorFlow/onnx2tf version bug detection
+        if ("Builder.EndVector() missing 1 required positional argument" in str(
+                e) or "EndVector()" in str(e)):
+            logging.error(
+                "\n❌ TFLite export failed due to a known incompatibility between TensorFlow, FlatBuffers, and onnx2tf.\n"
+                "Try downgrading TensorFlow to 2.14.x and FlatBuffers to 23.x, and ensure onnx2tf is >=1.26.0.\n"
+                "See: https://github.com/onnx/onnx-tensorflow/issues/1682 and Ultralytics export docs.\n")
         if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
             logging.error(
                 "INT8 quantization requires a dataset. "
@@ -417,6 +456,12 @@ def main():
     """Main entry point."""
     args = parse_args()
 
+    # --- Check export dependencies and warn if needed ---
+    try:
+        check_export_dependencies()
+    except Exception as e:
+        logging.warning(f"Could not check export dependencies: {e}")
+
     logging.info(f"--- Starting YOLOv8 {args.model} TFLite Setup ---")
 
     # Determine output directory
@@ -496,7 +541,7 @@ def main():
     if model_path and labelmap_path:  # Corrected typo
         logging.info(f"  .env file updated at: {repo_root / '.env'}")
         logging.info("\n✓ YOLOv8 setup process completed successfully!")
-        logging.info(
+        logging.info(  # Corrected typo
             "  Ensure 'tflite-runtime' is installed on the target device.")
     else:
         logging.error("\n× YOLOv8 setup process finished with errors.")
