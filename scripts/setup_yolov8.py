@@ -1,4 +1,71 @@
-#!/usr/bin/env python3
+
+# Suppress matplotlib Axes3D warning globally
+import importlib.util
+import logging
+from pathlib import Path
+import subprocess
+import argparse
+import sys
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message=(
+        "Unable to import Axes3D. This may be due to multiple versions of "
+        "Matplotlib"
+    ),
+    category=UserWarning,
+)
+if importlib.util.find_spec("matplotlib") is None:
+    pass  # matplotlib not available; suppress Axes3D warning if needed
+
+
+def ensure_required_versions():
+    import importlib
+    import sys
+    import subprocess
+    tf_ver = None
+    flatbuffers_ver = None
+    try:
+        tf_mod = importlib.import_module("tensorflow")
+        tf_ver = getattr(tf_mod, "__version__", None)
+    except ImportError:
+        pass
+    try:
+        fb_mod = importlib.import_module("flatbuffers")
+        flatbuffers_ver = getattr(fb_mod, "__version__", None)
+    except ImportError:
+        pass
+    need_restart = False
+    if tf_ver is None or not tf_ver.startswith(REQUIRED_TF_VERSION):
+        print(f"Auto-downgrading TensorFlow to {REQUIRED_TF_VERSION}...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install",
+            f"tensorflow=={REQUIRED_TF_VERSION}.*",
+            "--break-system-packages"
+        ])
+        need_restart = True
+    if (
+        flatbuffers_ver is None
+        or not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION)
+    ):
+        print(
+            f"Auto-downgrading FlatBuffers to {REQUIRED_FLATBUFFERS_VERSION}...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install",
+            f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*",
+            "--break-system-packages"
+        ])
+        need_restart = True
+    if need_restart:
+        print("Restarting script to use correct TensorFlow/FlatBuffers versions...")
+        import os
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+# Ensure correct versions before anything else
+
+
+ensure_required_versions()
+# !/usr/bin/env python3
 """
 YOLOv8 TFLite Model Setup Script for Autonomous Mower (Revised for Export)
 
@@ -15,11 +82,6 @@ Usage:
   [--data path/to/coco.yaml]
 """
 
-import sys
-import argparse
-import subprocess
-from pathlib import Path
-import logging
 
 # --- Version Compatibility Check ---
 

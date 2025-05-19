@@ -545,7 +545,8 @@ python3 -m pip install --break-system-packages --root-user-action=ignore --no-ca
 check_command "Installing additional packages" || exit 1
 
 # Set up YOLOv8 models
-read -p "Do you want to install YOLOv8 models for improved obstacle detection? (y/n) " -n 1 -r
+echo -ne "${YELLOW}Do you want to install YOLOv8 models for improved obstacle detection? (y/n) ${NC}"
+read -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Setting up YOLOv8 for obstacle detection..."
