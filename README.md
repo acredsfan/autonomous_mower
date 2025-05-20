@@ -234,6 +234,50 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    python3 -c "import tflite_runtime.interpreter as tflite; print('Coral TPU detected')"
    ```
 
+## YOLOv8 Model Download and Conversion (Required for Obstacle Detection)
+
+**Note:** Due to TensorFlow's lack of support for export on Raspberry Pi OS Bookworm (Python 3.11+), you must export YOLOv8 models to TFLite format on a supported PC (Linux/Windows, Python 3.9 or 3.10), then copy them to your Pi.
+
+### Steps:
+
+1. **Export the YOLOv8 model to TFLite format on a supported PC:**
+
+   - Use a Linux or Windows PC (x86_64) with Python 3.9 or 3.10.
+   - Install the required packages:
+     ```sh
+     pip install ultralytics tensorflow==2.14.* flatbuffers==23.*
+     ```
+   - Download the YOLOv8 PyTorch model (e.g., yolov8n.pt) from Ultralytics.
+   - Export to TFLite:
+     ```sh
+     yolo export model=yolov8n.pt format=tflite imgsz=640 nms=False
+     ```
+   - The exported file will be named `yolov8n_float32.tflite` (or similar).
+
+2. **Copy the exported `.tflite` model and label map to your Raspberry Pi:**
+
+   - Place the `.tflite` file in the `models/` directory of your mower project.
+   - Place the label map (e.g., `imagenet_labels.txt` or `coco_labels.txt`) in the same directory.
+
+3. **Update your `.env` file:**
+
+   - Add or update these lines:
+     ```
+     # YOLOv8 configuration
+     YOLOV8_MODEL_PATH=models/yolov8n_float32.tflite
+     LABEL_MAP_PATH=models/coco_labels.txt
+     USE_YOLOV8=True
+     ```
+
+4. **Restart the mower software.**
+   - The obstacle detector will automatically use the YOLOv8 TFLite model if configured.
+
+#### Troubleshooting
+
+- If you see errors about TensorFlow or FlatBuffers versions, ensure you did the export on a supported PC, not on the Pi.
+- If the model or label map is missing, download or export them as described above.
+- For more details, see the project documentation or ask for help in the project forums.
+
 ## Configuration
 
 The `.env` file contains all configuration settings. Key sections include:
