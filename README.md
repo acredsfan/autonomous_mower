@@ -272,6 +272,34 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 4. **Restart the mower software.**
    - The obstacle detector will automatically use the YOLOv8 TFLite model if configured.
 
+### About the COCO Label Map (`coco_labels.txt`)
+
+The YOLOv8 TFLite model requires a label map file that lists the names of all object classes the model can detect. For standard COCO-trained models, this file is usually called `coco_labels.txt` or `coco_labels.txt`.
+
+- **What is it?**
+  - A plain text file, one label per line, matching the order of classes in the model.
+  - Example first lines:
+    ```
+    person
+    bicycle
+    car
+    motorcycle
+    ...
+    toothbrush
+    ```
+- **Where do I get it?**
+  - You can download it from the official Ultralytics or Google Coral repositories:
+    - [COCO labels from Google Coral](https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt)
+  - Or create it manually in a text editor using the full COCO class list (see above).
+- **How do I use it?**
+  - Place `coco_labels.txt` in your `models/` directory next to your `.tflite` model.
+  - Update your `.env` file:
+    ```
+    LABEL_MAP_PATH=models/coco_labels.txt
+    ```
+- **Why is it needed?**
+  - The label map allows the mower software to display human-readable class names for detected objects (e.g., "person", "car") instead of just class numbers.
+
 ### Exporting YOLOv8 Models Using Google Colab (Recommended for Most Users)
 
 If you do not have access to a local PC with Python 3.9/3.10, you can use Google Colab to export YOLOv8 models to TFLite format:

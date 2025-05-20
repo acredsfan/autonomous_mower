@@ -560,6 +560,17 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     python3 scripts/download_yolov8.py --model yolov8n
     check_command "Downloading YOLOv8 model" || exit 1
     
+    # Download COCO label map if not present
+    COCO_LABELS_PATH="src/mower/obstacle_detection/models/coco_labels.txt"
+    if [ ! -f "$COCO_LABELS_PATH" ]; then
+        print_info "Downloading COCO label map for YOLOv8..."
+        wget -O "$COCO_LABELS_PATH" \
+            "https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt"
+        check_command "Downloading COCO label map" || exit 1
+    else
+        print_info "COCO label map already present."
+    fi
+    
     # Verify installation
     if [ -f src/mower/obstacle_detection/models/yolov8n.tflite ]; then
         print_success "YOLOv8 model successfully downloaded"
