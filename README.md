@@ -272,6 +272,46 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 4. **Restart the mower software.**
    - The obstacle detector will automatically use the YOLOv8 TFLite model if configured.
 
+### Exporting YOLOv8 Models Using Google Colab (Recommended for Most Users)
+
+If you do not have access to a local PC with Python 3.9/3.10, you can use Google Colab to export YOLOv8 models to TFLite format:
+
+1. **Open a new notebook at [Google Colab](https://colab.research.google.com/)**
+2. **Paste and run the following code cells:**
+
+```python
+# Install dependencies
+!pip install ultralytics tensorflow==2.14.* flatbuffers==23.*
+
+# Download YOLOv8n PyTorch model
+from ultralytics import YOLO
+model = YOLO('yolov8n.pt')
+
+# Export to TFLite (FP32)
+model.export(format='tflite', imgsz=640, nms=False)
+```
+
+3. **Download the exported `.tflite` file:**
+   - After running the export, the file (e.g., `yolov8n_float32.tflite`) will appear in the Colab file browser (left sidebar).
+   - Right-click and select "Download" to save it to your computer.
+
+4. **Download the label map:**
+   - You can create a `coco_labels.txt` file in Colab with:
+     ```python
+     COCO_LABELS = """person
+bicycle
+car
+motorcycle
+... (full list as in docs) ...
+toothbrush""".splitlines()
+with open('coco_labels.txt', 'w') as f:
+    for label in COCO_LABELS:
+        f.write(label + '\n')
+     ```
+   - Download `coco_labels.txt` from the file browser.
+
+5. **Copy both files to your Raspberry Pi and follow the setup steps above.**
+
 #### Troubleshooting
 
 - If you see errors about TensorFlow or FlatBuffers versions, ensure you did the export on a supported PC, not on the Pi.
