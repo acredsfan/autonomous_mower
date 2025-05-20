@@ -292,12 +292,14 @@ model.export(format='tflite', imgsz=640, nms=False)
 ```
 
 3. **Download the exported `.tflite` file:**
+
    - After running the export, the file (e.g., `yolov8n_float32.tflite`) will appear in the Colab file browser (left sidebar).
    - Right-click and select "Download" to save it to your computer.
 
 4. **Download the label map:**
+
    - You can create a `coco_labels.txt` file in Colab with:
-     ```python
+     `python
      COCO_LABELS = """person
 bicycle
 car
@@ -307,7 +309,7 @@ toothbrush""".splitlines()
 with open('coco_labels.txt', 'w') as f:
     for label in COCO_LABELS:
         f.write(label + '\n')
-     ```
+     `
    - Download `coco_labels.txt` from the file browser.
 
 5. **Copy both files to your Raspberry Pi and follow the setup steps above.**
