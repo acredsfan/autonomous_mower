@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block title %}Data Collection{% endblock %}
+
+{% block styles %}
+<style>
+    .collection-controls {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    .status-card {
+        margin-bottom: 1rem;
+    }
+    .status-running {
+        background-color: rgba(25, 135, 84, 0.1);
+        border-left: 4px solid #198754;
+    }
+    .status-idle {
+        background-color: rgba(108, 117, 125, 0.1);
+        border-left: 4px solid #6c757d;
+    }
+    .pattern-selector {
+        max-width: 200px;
+    }
+    .interval-input {
+        max-width: 150px;
+    }
+    .collection-stats {
+        font-size: 1.2rem;
+    }
+    #progressBar {
+        height: 25px;
+    }
+    .session-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-3 mb-4">AI Training Data Collection</h1>
+    
+    <div class="row">
+        <!-- Status and Controls -->
+        <div class="col-md-8">
+            <!-- Status Card -->
+            <div class="card status-card {% if status.status == 'running' %}status-running{% else %}status-idle{% endif %} mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Collection Status</h5>
+                    <div id="statusInfo">
+                        {% if status.status == 'running' %}
+                            <div class="alert alert-success">
+                                <strong>Status:</strong> Running<br>
+                                <strong>Session:</strong> {{ status.session_id }}<br>
+                                <strong>Images:</strong> <span id="imagesCollected">{{ status.images_collected }}</span><br>
+                                <strong>Duration:</strong> <span id="collectionDuration">{{ "%0.1f"|format(status.duration_seconds|float) }}</span> seconds<br>
+                                <strong>Pattern:</strong> {{ status.pattern }}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-secondary">
+                                <strong>Status:</strong> Not collecting<br>
+                                <em>Start a collection session using the controls below.</em>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Collection Controls -->
+            <div class="card collection-controls mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Collection Controls</h5>
+                    
+                    <form id="sessionForm" class="mb-4">
+                        <div class="row align-items-end mb-3">
+                            <div class="col-md-6">
+                                <label for="sessionName" class="form-label">Session Name (optional)</label>
+                                <input type="text" class="form-control" id="sessionName" placeholder="e.g., Front Yard">
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex">
+                                    <button type="button" id="startBtn" class="btn btn-success me-2" {% if status.status == 'running' %}disabled{% endif %}>
+                                        <i class="bi bi-play-fill"></i> Start Collection
+                                    </button>
+                                    <button type="button" id="stopBtn" class="btn btn-danger" {% if status.status != 'running' %}disabled{% endif %}>
+                                        <i class="bi bi-stop-fill"></i> Stop Collection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <h6>Collection Settings</h6>
+                    <form id="settingsForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="patternSelect" class="form-label">Movement Pattern</label>
+                                <select class="form-select pattern-selector" id="patternSelect">
+                                    <option value="PARALLEL">Parallel</option>
+                                    <option value="SPIRAL">Spiral</option>
+                                    <option value="ZIGZAG">Zigzag</option>
+                                    <option value="CHECKERBOARD">Checkerboard</option>
+                                    <option value="DIAMOND">Diamond</option>
+                                    <option value="WAVES">Waves</option>
+                                    <option value="CONCENTRIC">Concentric</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="intervalInput" class="form-label">Capture Interval (seconds)</label>
+                                <div class="input-group interval-input">
+                                    <input type="number" class="form-control" id="intervalInput" value="5" min="0.1" step="0.1">
+                                    <button class="btn btn-outline-secondary" type="button" id="setIntervalBtn">Set</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Session History -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    Recent Sessions
+                </div>
+                <div class="card-body session-list">
+                    <div id="sessionsContainer">
+                        <p class="text-center text-muted">Session history will appear here</p>
+                        <!-- Sessions will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Progress section (only shown when collecting) -->
+    <div class="row mt-4" id="progressSection" {% if status.status != 'running' %}style="display:none;"{% endif %}>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Collection Progress</h5>
+                    <p class="mb-1">Images collected: <span id="progressCount">{{ status.images_collected|default(0) }}</span></p>
+                    <div class="progress mb-3" id="progressBar" role="progressbar" aria-valuenow="{{ status.images_collected|default(0) }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: {{ (status.images_collected|default(0) / 100) * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Update status periodically if collection is running
+        let statusInterval;
+        if ({% if status.status == 'running' %}true{% else %}false{% endif %}) {
+            startStatusUpdates();
+        }
+        
+        // Start collection
+        $('#startBtn').click(function() {
+            const sessionName = $('#sessionName').val();
+            
+            $.ajax({
+                url: '/datacollection/start',
+                type: 'POST',
+                data: {
+                    session_name: sessionName
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Success', response.message);
+                        updateUIForRunningState();
+                        startStatusUpdates();
+                    } else {
+                        showToast('Error', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error', 'Failed to start data collection', 'error');
+                }
+            });
+        });
+        
+        // Stop collection
+        $('#stopBtn').click(function() {
+            $.ajax({
+                url: '/datacollection/stop',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Success', response.message);
+                        updateUIForIdleState();
+                        stopStatusUpdates();
+                    } else {
+                        showToast('Error', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error', 'Failed to stop data collection', 'error');
+                }
+            });
+        });
+        
+        // Change pattern
+        $('#patternSelect').change(function() {
+            const pattern = $(this).val();
+            
+            $.ajax({
+                url: '/datacollection/pattern',
+                type: 'POST',
+                data: {
+                    pattern: pattern
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Success', response.message);
+                    } else {
+                        showToast('Error', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error', 'Failed to change pattern', 'error');
+                }
+            });
+        });
+        
+        // Set interval
+        $('#setIntervalBtn').click(function() {
+            const interval = $('#intervalInput').val();
+            
+            $.ajax({
+                url: '/datacollection/interval',
+                type: 'POST',
+                data: {
+                    interval: interval
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('Success', response.message);
+                    } else {
+                        showToast('Error', response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('Error', 'Failed to set interval', 'error');
+                }
+            });
+        });
+        
+        // Helper functions
+        function updateUIForRunningState() {
+            $('#startBtn').prop('disabled', true);
+            $('#stopBtn').prop('disabled', false);
+            $('.status-card').removeClass('status-idle').addClass('status-running');
+            $('#progressSection').show();
+        }
+        
+        function updateUIForIdleState() {
+            $('#startBtn').prop('disabled', false);
+            $('#stopBtn').prop('disabled', true);
+            $('.status-card').removeClass('status-running').addClass('status-idle');
+            $('#progressSection').hide();
+        }
+        
+        function startStatusUpdates() {
+            // Clear any existing interval
+            if (statusInterval) {
+                clearInterval(statusInterval);
+            }
+            
+            // Update every 2 seconds
+            statusInterval = setInterval(updateStatus, 2000);
+        }
+        
+        function stopStatusUpdates() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+        
+        function updateStatus() {
+            $.ajax({
+                url: '/datacollection/status',
+                type: 'GET',
+                success: function(data) {
+                    if (data.status === 'running') {
+                        // Update status display
+                        $('#statusInfo').html(`
+                            <div class="alert alert-success">
+                                <strong>Status:</strong> Running<br>
+                                <strong>Session:</strong> ${data.session_id}<br>
+                                <strong>Images:</strong> <span id="imagesCollected">${data.images_collected}</span><br>
+                                <strong>Duration:</strong> <span id="collectionDuration">${data.duration_seconds.toFixed(1)}</span> seconds<br>
+                                <strong>Pattern:</strong> ${data.pattern}
+                            </div>
+                        `);
+                        
+                        // Update progress bar
+                        $('#progressCount').text(data.images_collected);
+                        const progressPercent = (data.images_collected / 100) * 100; // Assuming target is 100
+                        $('#progressBar .progress-bar').css('width', `${progressPercent}%`);
+                        $('#progressBar').attr('aria-valuenow', data.images_collected);
+                    } else {
+                        // If collection has stopped, update UI
+                        updateUIForIdleState();
+                        stopStatusUpdates();
+                        
+                        $('#statusInfo').html(`
+                            <div class="alert alert-secondary">
+                                <strong>Status:</strong> Not collecting<br>
+                                <em>Start a collection session using the controls below.</em>
+                            </div>
+                        `);
+                    }
+                },
+                error: function() {
+                    console.error('Failed to update status');
+                }
+            });
+        }
+        
+        function showToast(title, message, type = 'success') {
+            // This assumes you have a toast display mechanism already
+            // If not, you could use Bootstrap toasts or another notification system
+            if (typeof showNotification === 'function') {
+                showNotification(title, message, type);
+            } else {
+                alert(`${title}: ${message}`);
+            }
+        }
+    });
+</script>
+{% endblock %}

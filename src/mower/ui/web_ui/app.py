@@ -11,6 +11,8 @@ from mower.navigation.path_planner import PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
 from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
+# Import data collection integration
+from mower.data_collection.integration import integrate_data_collection
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -36,14 +38,20 @@ def create_app(mower):
         The Flask application instance.
     """
     app = Flask(__name__)
-    CORS(app)
-    socketio = SocketIO(
+    CORS(app)    socketio = SocketIO(
         app,
         cors_allowed_origins="*",
         ping_timeout=20,
         ping_interval=25,
         logger=True,
         engineio_logger=True)
+
+    # Integrate data collection functionality
+    try:
+        integrate_data_collection(app, mower)
+        logger.info("Data collection module integrated successfully")
+    except Exception as e:
+        logger.error(f"Failed to integrate data collection module: {e}")
 
     # Initialize Babel for translations using the version-agnostic approach
     # This uses the implementation from i18n.py which works with any
