@@ -545,37 +545,151 @@ python3 -m pip install --break-system-packages --root-user-action=ignore --no-ca
 check_command "Installing additional packages" || exit 1
 
 # Set up YOLOv8 models
-echo -ne "${YELLOW}Do you want to install YOLOv8 models for improved obstacle detection? (y/n) ${NC}"
+echo -ne "${YELLOW}Do you want to install YOLOv8 models for improved obstacle detection? (A default model will be downloaded if you don't have your own) (y/n) ${NC}"
 read -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Setting up YOLOv8 for obstacle detection..."
     
     # Check for installation directory
-    mkdir -p src/mower/obstacle_detection/models
+    mkdir -p models
     check_command "Creating models directory" || exit 1
     
-    # Use the download script instead of the problematic setup_yolov8.py
-    print_info "Downloading YOLOv8 model (this avoids TensorFlow conversion issues)..."
-    python3 scripts/download_yolov8.py --model yolov8n
-    check_command "Downloading YOLOv8 model" || exit 1
+    # Ask if the user has their own trained model
+    echo -ne "${YELLOW}Do you have a trained YOLOv8 TFLite model for obstacle avoidance? (If not, a default model will be downloaded for you) (y/n) ${NC}"
+    read -n 1 -r
+    echo
     
-    # Download COCO label map if not present
-    COCO_LABELS_PATH="src/mower/obstacle_detection/models/coco_labels.txt"
-    if [ ! -f "$COCO_LABELS_PATH" ]; then
-        print_info "Downloading COCO label map for YOLOv8..."
-        wget -O "$COCO_LABELS_PATH" \
-            "https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt"
-        check_command "Downloading COCO label map" || exit 1
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # User has their own model
+        print_info "Please provide the path to your trained YOLOv8 TFLite model:"
+        read -r USER_MODEL_PATH
+        
+        print_info "Please provide the path to your labels text file:"
+        read -r USER_LABELS_PATH
+        
+        if [ ! -f "$USER_MODEL_PATH" ]; then
+            print_error "Model file not found at $USER_MODEL_PATH"
+            read -p "Do you want to use the default model instead? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                USE_DEFAULT_MODEL=true
+            else
+                exit 1
+            fi
+        elif [ ! -f "$USER_LABELS_PATH" ]; then
+            print_error "Labels file not found at $USER_LABELS_PATH"
+            read -p "Do you want to use the default labels instead? (y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                USE_DEFAULT_LABELS=true
+            else
+                exit 1
+            fi
+        else
+            # Copy the model and labels to the models directory
+            MODEL_FILENAME=$(basename "$USER_MODEL_PATH")
+            LABELS_FILENAME=$(basename "$USER_LABELS_PATH")
+            
+            cp "$USER_MODEL_PATH" "models/$MODEL_FILENAME"
+            check_command "Copying user model to models directory" || exit 1
+            
+            cp "$USER_LABELS_PATH" "models/$LABELS_FILENAME"
+            check_command "Copying user labels to models directory" || exit 1
+            
+            # Update .env file with the paths
+            if [ -f ".env" ]; then
+                # Remove existing YOLOv8 settings if present
+                sed -i '/YOLO_MODEL_PATH/d' .env
+                sed -i '/YOLO_LABEL_PATH/d' .env
+                sed -i '/USE_YOLOV8/d' .env
+                
+                # Add the new settings
+                echo "# YOLOv8 configuration" >> .env
+                echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
+                echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
+                echo "USE_YOLOV8=True" >> .env
+                
+                print_success "Updated .env file with custom model paths"
+            else
+                touch .env
+                echo "# YOLOv8 configuration" >> .env
+                echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
+                echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
+                echo "USE_YOLOV8=True" >> .env
+                print_success "Created .env file with custom model paths"
+            fi
+            
+            print_success "Custom YOLOv8 model and labels configured successfully"
+        fi
     else
-        print_info "COCO label map already present."
+        USE_DEFAULT_MODEL=true
+        USE_DEFAULT_LABELS=true
+    fi
+    
+    # Download default model and labels if needed
+    if [ "$USE_DEFAULT_MODEL" = true ]; then
+        print_info "Downloading default YOLOv8 TFLite model from Google Drive..."
+        # Using curl with the Google Drive direct download URL hack
+        MODEL_ID="1dGySgvgkFG52OZjSWYhoLDncbzB_a8-A"
+        MODEL_FILENAME="yolov8n.tflite"
+        
+        # Install gdown if not already available
+        pip install --break-system-packages gdown
+        gdown --id $MODEL_ID -O "models/$MODEL_FILENAME"
+        check_command "Downloading default YOLOv8 model" || exit 1
+        
+        # Update .env file with the default model path
+        if [ -f ".env" ]; then
+            sed -i '/YOLO_MODEL_PATH/d' .env
+            echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
+        else
+            touch .env
+            echo "# YOLOv8 configuration" >> .env
+            echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
+        fi
+        
+        print_success "Default YOLOv8 model downloaded and configured"
+    fi
+    
+    if [ "$USE_DEFAULT_LABELS" = true ]; then
+        print_info "Downloading default YOLOv8 labels from Google Drive..."
+        # Using curl with the Google Drive direct download URL hack
+        LABELS_ID="1TNCaki7CX8sFNm15pxNJrWgy5HAcUl3v"
+        LABELS_FILENAME="coco_labels.txt"
+        
+        # Install gdown if not already available (should have been installed above)
+        gdown --id $LABELS_ID -O "models/$LABELS_FILENAME"
+        check_command "Downloading default YOLOv8 labels" || exit 1
+        
+        # Update .env file with the default labels path
+        if [ -f ".env" ]; then
+            sed -i '/YOLO_LABEL_PATH/d' .env
+            sed -i '/USE_YOLOV8/d' .env
+            echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
+            echo "USE_YOLOV8=True" >> .env
+        else
+            touch .env
+            echo "# YOLOv8 configuration" >> .env
+            echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
+            echo "USE_YOLOV8=True" >> .env
+        fi
+        
+        print_success "Default YOLOv8 labels downloaded and configured"
     fi
     
     # Verify installation
-    if [ -f src/mower/obstacle_detection/models/yolov8n.tflite ]; then
-        print_success "YOLOv8 model successfully downloaded"
+    MODEL_PATH=""
+    if [ "$USE_DEFAULT_MODEL" = true ]; then
+        MODEL_PATH="models/$MODEL_FILENAME"
     else
-        print_warning "YOLOv8 model not found. Setup may have failed."
+        MODEL_PATH="models/$(basename "$USER_MODEL_PATH")"
+    fi
+    
+    if [ -f "$MODEL_PATH" ]; then
+        print_success "YOLOv8 model successfully set up at $MODEL_PATH"
+    else
+        print_warning "YOLOv8 model not found at $MODEL_PATH. Setup may have failed."
         read -p "Continue anyway? (y/n) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
