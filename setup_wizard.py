@@ -1351,6 +1351,193 @@ def setup_scheduling() -> None:
     print_success("Scheduling and automation configuration completed!")
 
 
+def setup_service_installation() -> None:
+    """Configure systemd service installation for automatic startup."""
+    print_header("Service Installation")
+
+    print_info(
+        "The autonomous mower can be configured to run as a system service, "
+        "automatically starting when your Raspberry Pi boots."
+    )
+
+    install_service = prompt_bool(
+        "Install mower as a system service for automatic startup?",
+        default=True,
+        help_text=(
+            "This will install the autonomous-mower.service file and enable it "
+            "to start automatically on boot. Recommended for production use."),
+    )
+
+    if install_service:
+        try:
+            import platform
+            import subprocess
+            from pathlib import Path
+
+            if platform.system() != "Linux":
+                print_warning(
+                    "Service installation is only supported on Linux systems. "
+                    "Skipping service installation."
+                )
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            print_subheader("Installing Systemd Service")
+
+            # Check if service files exist
+            service_file = Path("autonomous-mower.service")
+            if not service_file.exists():
+                print_error(
+                    "Service file 'autonomous-mower.service' not found in "
+                    "current directory. Please ensure the service file exists "
+                    "before running setup."
+                )
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            print_info("Installing service file to /etc/systemd/system/...")
+
+            # Copy service file to systemd directory
+            result = subprocess.run(
+                ["sudo", "cp", str(service_file), "/etc/systemd/system/"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                print_error(f"Failed to copy service file: {result.stderr}")
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            # Set proper permissions
+            result = subprocess.run(
+                [
+                    "sudo", "chmod", "644",
+                    "/etc/systemd/system/autonomous-mower.service"
+                ],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                print_error(
+                    f"Failed to set service file permissions: {result.stderr}"
+                )
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            # Reload systemd daemon
+            print_info("Reloading systemd daemon...")
+            result = subprocess.run(
+                ["sudo", "systemctl", "daemon-reload"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                print_error(
+                    f"Failed to reload systemd daemon: {result.stderr}"
+                )
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            # Enable service to start on boot
+            print_info("Enabling autonomous mower service to start on boot...")
+            result = subprocess.run(
+                ["sudo", "systemctl", "enable", "autonomous-mower.service"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode != 0:
+                print_error(f"Failed to enable service: {result.stderr}")
+                setup_state["feature_flags"]["service_installed"] = False
+                return
+
+            print_success(
+                "Autonomous mower service has been installed and enabled!"
+            )
+            print_info("The service will start automatically on system boot.")
+            print_info("You can manually control the service with:")
+            print_info("  sudo systemctl start autonomous-mower")
+            print_info("  sudo systemctl stop autonomous-mower")
+            print_info("  sudo systemctl status autonomous-mower")
+            print_info("  sudo journalctl -u autonomous-mower -f  # View logs")
+
+            setup_state["feature_flags"]["service_installed"] = True
+
+            # Ask if user wants to start the service now
+            start_now = prompt_bool(
+                "Start the autonomous mower service now?",
+                default=False,
+                help_text=(
+                    "This will start the mower service immediately. "
+                    "Make sure all configuration is complete before starting."
+                ),
+            )
+
+            if start_now:
+                print_info("Starting autonomous mower service...")
+                result = subprocess.run(
+                    ["sudo", "systemctl", "start", "autonomous-mower.service"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+
+                if result.returncode == 0:
+                    print_success("Service started successfully!")
+
+                    # Check service status
+                    result = subprocess.run(
+                        [
+                            "sudo", "systemctl", "is-active",
+                            "autonomous-mower.service"
+                        ],
+                        capture_output=True,
+                        text=True,
+                        check=False
+                    )
+
+                    if result.stdout.strip() == "active":
+                        print_info("Service is running and active.")
+                    else:
+                        print_warning(
+                            "Service may not be running properly. "
+                            "Check logs with:"
+                        )
+                        print_warning(
+                            "  sudo journalctl -u autonomous-mower -f")
+                else:
+                    print_error(f"Failed to start service: {result.stderr}")
+                    print_info("You can try starting it manually later with:")
+                    print_info("  sudo systemctl start autonomous-mower")
+
+        except Exception as e:
+            print_error(f"An error occurred during service installation: {e}")
+            print_warning(
+                "Service installation failed. You can install it manually later."
+            )
+            setup_state["feature_flags"]["service_installed"] = False
+
+    else:
+        print_info("Skipping service installation.")
+        print_info("You can install the service manually later with:")
+        print_info("  sudo cp autonomous-mower.service /etc/systemd/system/")
+        print_info("  sudo systemctl daemon-reload")
+        print_info("  sudo systemctl enable autonomous-mower.service")
+        setup_state["feature_flags"]["service_installed"] = False
+
+    setup_state["completed_sections"].append("service_installation")
+    save_setup_state()
+
+    print_success("Service installation configuration completed!")
+
+
 def setup_final_verification() -> None:
     """Perform final verification and setup."""
     print_header("Final Verification and Setup")
@@ -1493,6 +1680,7 @@ def main() -> None:
             setup_web_interface()
             setup_remote_access()
             setup_scheduling()
+            setup_service_installation()
             setup_final_verification()
         else:
             # Resume from saved state

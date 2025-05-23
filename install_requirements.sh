@@ -460,6 +460,50 @@ setup_environment() {
     print_success "Environment setup complete."
 }
 
+# Function to setup service installation
+setup_mower_service() {
+    print_info "Setting up autonomous mower system service..."
+    
+    # Check if service files exist
+    if [ ! -f "autonomous-mower.service" ]; then
+        print_error "Service file 'autonomous-mower.service' not found in current directory"
+        return 1
+    fi
+    
+    # Get current working directory for service file paths
+    local CURRENT_DIR=$(pwd)
+    local SERVICE_FILE="$CURRENT_DIR/autonomous-mower.service"
+    
+    # Copy service file to systemd directory
+    print_info "Installing service file to /etc/systemd/system/..."
+    sudo cp "$SERVICE_FILE" /etc/systemd/system/
+    check_command "Copying service file" || return 1
+    
+    # Set proper permissions
+    sudo chmod 644 /etc/systemd/system/autonomous-mower.service
+    check_command "Setting service file permissions" || return 1
+    
+    # Reload systemd daemon to recognize new service
+    print_info "Reloading systemd daemon..."
+    sudo systemctl daemon-reload
+    check_command "Reloading systemd daemon" || return 1
+    
+    # Enable service to start on boot
+    print_info "Enabling autonomous mower service to start on boot..."
+    sudo systemctl enable autonomous-mower.service
+    check_command "Enabling autonomous mower service" || return 1
+    
+    print_success "Autonomous mower service has been installed and enabled!"
+    print_info "The service will start automatically on system boot."
+    print_info "You can manually start/stop the service with:"
+    print_info "  sudo systemctl start autonomous-mower"
+    print_info "  sudo systemctl stop autonomous-mower"
+    print_info "  sudo systemctl status autonomous-mower"
+    
+    POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled for automatic startup on boot.\\n"
+    POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status autonomous-mower' to check service status.\\n"
+}
+
 # Main installation starts here
 print_info "Starting installation with safety checks..."
 
@@ -764,6 +808,19 @@ else
     print_info "The system will be configured to run without a physical emergency stop button."
     POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button was not set up. The system has been configured to run without it.\n"
     POST_INSTALL_MESSAGES+="[INFO] You can still trigger an emergency stop through the software interface.\n"
+fi
+
+# Setup service installation
+read -p "Do you want to install and enable the autonomous mower service for automatic startup on boot? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_mower_service
+else
+    print_info "Skipping service installation."
+    print_info "You can install the service manually later with:"
+    print_info "  sudo cp autonomous-mower.service /etc/systemd/system/"
+    print_info "  sudo systemctl daemon-reload"
+    print_info "  sudo systemctl enable autonomous-mower.service"
 fi
 
 # Final check for pyserial to ensure it's correctly installed for the editable package
