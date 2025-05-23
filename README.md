@@ -485,6 +485,111 @@ python3 scripts/setup_yolov8.py --model yolov8n
 grep YOLOV8 .env
 ```
 
+## Networking Features
+
+### Dual WiFi Configuration with Automatic Failover
+
+The autonomous mower supports a dual WiFi configuration that enables more reliable wireless connectivity by utilizing both the Raspberry Pi's onboard WiFi and an external USB WiFi adapter with an antenna. This setup provides:
+
+- **Improved Range**: External USB WiFi adapters with antennas typically offer better range
+- **Automatic Failover**: If one connection fails, the system automatically switches to the other
+- **Prioritized Connectivity**: Primary (USB WiFi) is used when available, falling back to secondary (onboard)
+- **Seamless Operation**: Switching happens automatically without interrupting mower operation
+
+#### When to Use Dual WiFi
+
+Consider using the dual WiFi setup if:
+
+- Your mowing area has poor WiFi coverage or dead zones
+- You need extended range beyond what the onboard WiFi provides
+- You want redundant connectivity for increased reliability
+- Your mower operates in areas with potential WiFi interference
+
+#### Required Hardware
+
+- Raspberry Pi with onboard WiFi (e.g., Pi 4B or Pi 5)
+- USB WiFi adapter with external antenna (recommended for best range)
+- Two available WiFi networks (can be the same network on different bands)
+
+#### Setup Instructions
+
+1. **Install the USB WiFi adapter**:
+
+   - Connect the USB WiFi adapter to an available USB port on the Raspberry Pi
+   - Ensure the antenna is properly attached and positioned for best reception
+
+2. **Run the setup script**:
+
+   ```bash
+   chmod +x setup_dual_wifi.sh
+   ./setup_dual_wifi.sh
+   ```
+
+3. **Configure your WiFi credentials**:
+
+   - Edit the script before running or follow the prompts to enter:
+     - Primary WiFi SSID and password (USB adapter - wlan1)
+     - Secondary WiFi SSID and password (onboard WiFi - wlan0)
+     - Country code for regulatory compliance
+
+4. **Verify the setup**:
+
+   ```bash
+   # Check network interfaces
+   ip addr show
+
+   # Verify the watchdog service is running
+   sudo systemctl status wifi-watchdog
+   ```
+
+#### How the Watchdog Works
+
+The WiFi watchdog service monitors connectivity using these components:
+
+1. **Python Monitoring Script**: Checks connectivity to the configured gateway
+2. **Routing Priority**: Dynamically adjusts routing metrics to prefer the working connection
+3. **Automatic Recovery**: Switches back to primary when it becomes available again
+4. **Systemd Service**: Ensures the watchdog continues running across reboots
+
+The watchdog runs these basic operations:
+
+- Pings the primary gateway every 5 seconds
+- If 3 consecutive pings fail, switches to the secondary connection
+- When primary connection is restored, automatically switches back
+
+#### Troubleshooting
+
+If you experience connectivity issues:
+
+1. **Check service status**:
+
+   ```bash
+   sudo systemctl status wifi-watchdog
+   ```
+
+2. **View watchdog logs**:
+
+   ```bash
+   sudo journalctl -u wifi-watchdog -n 50
+   ```
+
+3. **Verify both WiFi interfaces are recognized**:
+
+   ```bash
+   iwconfig
+   ```
+
+4. **Restart the service if needed**:
+
+   ```bash
+   sudo systemctl restart wifi-watchdog
+   ```
+
+5. **Check routing table**:
+   ```bash
+   ip route show
+   ```
+
 ## Contributing
 
 1. Fork the repository
