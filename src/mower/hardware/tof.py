@@ -116,10 +116,14 @@ class VL53L0XSensors:
             )
             return sensor
         except ValueError:  # Typically "No I2C device at address"
-            logging.warning(f"No I2C device for {sensor_name} VL53L0X at address {hex(address)}.")
+            logging.warning(
+                f"No I2C device for {sensor_name} VL53L0X at address {
+                    hex(address)}.")
             return None
         except Exception as e:
-            logging.error(f"Error initializing {sensor_name} VL53L0X at {hex(address)}: {e}")
+            logging.error(
+                f"Error initializing {sensor_name} VL53L0X at {
+                    hex(address)}: {e}")
             return None
 
     @staticmethod
@@ -197,18 +201,21 @@ class VL53L0XSensors:
                 try:
                     temp_sensor.set_address(right_target_addr)
                     logging.info(
-                        f"Right sensor addr changed to {hex(right_target_addr)}."
-                    )
+                        f"Right sensor addr changed to {
+                            hex(right_target_addr)}.")
                     right_sensor_obj = temp_sensor
                 except Exception as e:
                     logging.error(
-                        f"Failed to change Right sensor addr to {hex(right_target_addr)}: {e}. Sensor may remain at {hex(_DEFAULT_I2C_ADDRESS)}.")
+                        f"Failed to change Right sensor addr to {
+                            hex(right_target_addr)}: {e}. Sensor may remain at {
+                            hex(_DEFAULT_I2C_ADDRESS)}.")
                     xshut_right_pin.value = False  # Force off
                     temp_sensor = None
             else:
                 right_sensor_obj = temp_sensor
                 logging.info(
-                    f"Right sensor init at default addr {hex(_DEFAULT_I2C_ADDRESS)}.")
+                    f"Right sensor init at default addr {
+                        hex(_DEFAULT_I2C_ADDRESS)}.")
         else:
             logging.warning("Right sensor failed to init at default address.")
             xshut_right_pin.value = False
@@ -220,7 +227,8 @@ class VL53L0XSensors:
             # Or, address change failed and it's still at default.
             # We must reset the right sensor to free up the default address.
             logging.info(
-                f"Right sensor at {hex(_DEFAULT_I2C_ADDRESS)}. Resetting for Left sensor.")
+                f"Right sensor at {
+                    hex(_DEFAULT_I2C_ADDRESS)}. Resetting for Left sensor.")
             xshut_right_pin.value = False
             time.sleep(0.05)
 
@@ -235,14 +243,17 @@ class VL53L0XSensors:
             if left_target_addr == _DEFAULT_I2C_ADDRESS:
                 left_sensor_obj = temp_sensor
                 logging.info(
-                    f"Left sensor init at default addr {hex(_DEFAULT_I2C_ADDRESS)}.")
+                    f"Left sensor init at default addr {
+                        hex(_DEFAULT_I2C_ADDRESS)}.")
             else:  # Should not happen with current constants
                 logging.error(
-                    f"Left sensor target addr {hex(left_target_addr)} is not default!")
+                    f"Left sensor target addr {
+                        hex(left_target_addr)} is not default!")
                 try:
                     temp_sensor.set_address(left_target_addr)
                     logging.info(
-                        f"Left sensor addr changed to {hex(left_target_addr)}.")
+                        f"Left sensor addr changed to {
+                            hex(left_target_addr)}.")
                     left_sensor_obj = temp_sensor
                 except Exception as e:
                     logging.error(f"Failed to change Left sensor addr: {e}.")
@@ -294,9 +305,8 @@ if __name__ == "__main__":
         while True:
             distances = tof.get_distances()
             print(
-                f"Left: {
-                    distances['left']} mm, Right: {
-                    distances['right']} mm")
+                f"Left: {distances['left']} mm, "
+                f"Right: {distances['right']} mm")
             time.sleep(1)
     except KeyboardInterrupt:
         print("Stopped by user")
