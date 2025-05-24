@@ -610,12 +610,72 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     mkdir -p models
     check_command "Creating models directory" || exit 1
     
-    # Ask if the user has their own trained model
-    echo -ne "${YELLOW}Do you have a trained YOLOv8 TFLite model for obstacle avoidance? (If not, a default model will be downloaded for you) (y/n) ${NC}"
-    read -n 1 -r
-    echo
+    # Check if models already exist in the models directory
+    EXISTING_TFLITE_MODEL=""
+    EXISTING_LABELS_FILE=""
     
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # Look for common TFLite model files
+    for model_file in models/*.tflite; do
+        if [ -f "$model_file" ]; then
+            EXISTING_TFLITE_MODEL="$model_file"
+            break
+        fi
+    done
+    
+    # Look for common label files
+    for label_file in models/*.txt models/*.names; do
+        if [ -f "$label_file" ]; then
+            EXISTING_LABELS_FILE="$label_file"
+            break
+        fi
+    done
+    
+    # If both model and labels exist, ask if user wants to use them
+    if [ -n "$EXISTING_TFLITE_MODEL" ] && [ -n "$EXISTING_LABELS_FILE" ]; then
+        print_info "Found existing YOLOv8 model: $EXISTING_TFLITE_MODEL"
+        print_info "Found existing labels file: $EXISTING_LABELS_FILE"
+        echo -ne "${YELLOW}Do you want to use the existing model and labels files? (y/n) ${NC}"
+        read -n 1 -r
+        echo
+        
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Use existing files
+            MODEL_FILENAME=$(basename "$EXISTING_TFLITE_MODEL")
+            LABELS_FILENAME=$(basename "$EXISTING_LABELS_FILE")
+            
+            # Update .env file with existing model paths
+            if [ -f ".env" ]; then
+                # Remove existing YOLOv8 settings if present
+                sed -i '/YOLO_MODEL_PATH/d' .env
+                sed -i '/YOLO_LABEL_PATH/d' .env
+                sed -i '/USE_YOLOV8/d' .env
+                
+                # Add the new settings
+                echo "# YOLOv8 configuration" >> .env
+                echo "YOLO_MODEL_PATH=$EXISTING_TFLITE_MODEL" >> .env
+                echo "YOLO_LABEL_PATH=$EXISTING_LABELS_FILE" >> .env
+                echo "USE_YOLOV8=True" >> .env
+            else
+                touch .env
+                echo "# YOLOv8 configuration" >> .env
+                echo "YOLO_MODEL_PATH=$EXISTING_TFLITE_MODEL" >> .env
+                echo "YOLO_LABEL_PATH=$EXISTING_LABELS_FILE" >> .env
+                echo "USE_YOLOV8=True" >> .env
+            fi
+            
+            print_success "Configured to use existing YOLOv8 model and labels"
+            SKIP_MODEL_SETUP=true
+        fi
+    fi
+    
+    # If we're not using existing files, proceed with normal setup
+    if [ "$SKIP_MODEL_SETUP" != true ]; then
+        # Ask if the user has their own trained model
+        echo -ne "${YELLOW}Do you have a trained YOLOv8 TFLite model for obstacle avoidance? (If not, a default model will be downloaded for you) (y/n) ${NC}"
+        read -n 1 -r
+        echo
+        
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
         # User has their own model
         print_info "Please provide the path to your trained YOLOv8 TFLite model:"
         read -r USER_MODEL_PATH
@@ -645,6 +705,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             # Copy the model and labels to the models directory
             MODEL_FILENAME=$(basename "$USER_MODEL_PATH")
             LABELS_FILENAME=$(basename "$USER_LABELS_PATH")
+        
             
             cp "$USER_MODEL_PATH" "models/$MODEL_FILENAME"
             check_command "Copying user model to models directory" || exit 1
@@ -729,13 +790,17 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
             echo "USE_YOLOV8=True" >> .env
         fi
-        
-        print_success "Default YOLOv8 labels downloaded and configured"
+          print_success "Default YOLOv8 labels downloaded and configured"
+    fi
+    
+    # Close the SKIP_MODEL_SETUP condition
     fi
     
     # Verify installation
     MODEL_PATH=""
-    if [ "$USE_DEFAULT_MODEL" = true ]; then
+    if [ "$SKIP_MODEL_SETUP" = true ]; then
+        MODEL_PATH="$EXISTING_TFLITE_MODEL"
+    elif [ "$USE_DEFAULT_MODEL" = true ]; then
         MODEL_PATH="models/$MODEL_FILENAME"
     else
         MODEL_PATH="models/$(basename "$USER_MODEL_PATH")"
