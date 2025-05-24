@@ -13,16 +13,18 @@ import shutil
 import textwrap
 import getpass
 import traceback
+import re
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Callable
 
 # Try to import dotenv, install if not available
 try:
-    from dotenv import load_dotenv, set_key
+    from dotenv import set_key
 except ImportError:
     print("Installing python-dotenv...")
     os.system(f"{sys.executable} -m pip install python-dotenv")
-    from dotenv import load_dotenv, set_key
+    from dotenv import set_key
 
 # Constants
 CONFIG_DIR = Path("config")
@@ -56,26 +58,142 @@ def color_text(text: str, color: str) -> str:
     return f"{COLORS.get(color, '')}{text}{COLORS['RESET']}"
 
 
-# Pre-flight permission check (fail early if permissions are insufficient)
-try:
-    from src.mower.utilities.permission_check import run_permission_checks
-    if not run_permission_checks():
-        print(
-            color_text(
-                "\n[ERROR] Permission checks failed. "
-                "Please resolve the above issues before continuing setup.",
-                "RED"
+def install_dependencies() -> bool:
+    """Install required Python dependencies before running permission checks."""
+    print_header("Installing Dependencies")
+    print_info("Installing required Python packages...")
+
+    packages = ["pydantic>=2.0.0", "python-dotenv"]
+
+    for package in packages:
+        try:
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", package
+            ], capture_output=True, text=True)
+
+            if result.returncode == 0:
+                print_success(f"Successfully installed {package}")
+            else:
+                print_error(f"Failed to install {package}: {result.stderr}")
+                return False
+        except Exception as e:
+            print_error(f"Error installing {package}: {e}")
+            return False
+
+    return True
+
+
+def run_enhanced_permission_checks() -> bool:
+    """
+    Run permission checks with automatic fixing after dependencies are installed.
+    Returns True if all checks pass or are fixed, False otherwise.
+    """
+    print_header("Permission Checks")
+    print_info("Checking and fixing permissions...")
+
+    try:
+        # Import after dependencies are installed
+        from src.mower.utilities.permission_check import (
+            check_directory_permissions,
+            check_group_membership,
+        )
+
+        # Check directory permissions
+        dir_errors = check_directory_permissions()
+
+        # Try to fix directory permission issues
+        fixed_dirs = []
+
+        for error in dir_errors:
+            if "does not exist" in error:
+                # Extract directory path from error message
+                match = re.search(r"Directory '([^']+)' does not exist", error)
+                if match:
+                    dir_path = match.group(1)
+                    try:
+                        os.makedirs(dir_path, exist_ok=True)
+                        print_success(f"Created directory: {dir_path}")
+                        fixed_dirs.append(dir_path)
+                    except Exception as e:
+                        print_error(
+                            f"Failed to create directory {dir_path}: {e}")
+
+            elif "access denied" in error:
+                # Extract directory path and fix permissions
+                match = re.search(r"for '([^']+)'", error)
+                if match:
+                    dir_path = match.group(1)
+                    try:
+                        if "Read access denied" in error:
+                            cmd = f"sudo chmod a+r '{dir_path}'"
+                            result = os.system(cmd)
+                            if result == 0:
+                                print_success(
+                                    f"Fixed read permissions for: {dir_path}")
+                                fixed_dirs.append(dir_path)
+                            else:
+                                print_error(
+                                    f"Failed to fix read permissions for: {dir_path}")
+
+                        if "Write access denied" in error:
+                            cmd = f"sudo chmod a+rw '{dir_path}'"
+                            result = os.system(cmd)
+                            if result == 0:
+                                print_success(
+                                    f"Fixed write permissions for: {dir_path}"
+                                )
+                                fixed_dirs.append(dir_path)
+                            else:
+                                print_error(
+                                    f"Failed to fix write permissions for: {dir_path}")
+                    except Exception as e:
+                        print_error(
+                            f"Error fixing permissions for {dir_path}: {e}")
+
+        # Re-check directory permissions after fixes
+        remaining_dir_errors = check_directory_permissions()
+
+        # Check group membership
+        group_errors = check_group_membership()
+
+        # Provide guidance for group membership issues
+        if group_errors:
+            print_warning("Group membership issues found:")
+            for error in group_errors:
+                print_warning(f"  {error}")
+            print_info(
+                "Group membership changes require a logout/login to take effect."
             )
-        )
-        sys.exit(1)
-except Exception as e:
-    print(
-        color_text(
-            f"\n[ERROR] Could not run pre-flight permission checks: {e}",
-            "RED"
-        )
-    )
-    sys.exit(1)
+            print_info(
+                "You can continue setup, but hardware access may be limited.")
+
+        all_remaining_errors = remaining_dir_errors + group_errors
+
+        if all_remaining_errors:
+            print_warning("Some permission issues remain:")
+            for error in all_remaining_errors:
+                print_warning(f"  {error}")
+
+            # Ask if user wants to continue
+            continue_anyway = prompt_bool(
+                "Continue setup despite permission issues?", default=True, help_text=(
+                    "You can continue setup and fix these issues later. "
+                    "Some features may not work until permissions are resolved."), )
+            return continue_anyway
+        else:
+            print_success("All permission checks passed!")
+            return True
+
+    except ImportError as e:
+        print_error(f"Could not import permission check module: {e}")
+        print_warning("Permission checks will be skipped.")
+        return True  # Continue setup anyway
+    except Exception as e:
+        print_error(f"Error during permission checks: {e}")
+        return False
+
+
+# Pre-flight permission check will be done after dependency installation
 
 
 def print_header(title: str) -> None:
@@ -389,15 +507,14 @@ def setup_hardware_detection() -> Dict[str, bool]:
         else:
             print_warning("No camera detected")
     except Exception:
+        # Check for GPS (serial device)
         print_warning("Failed to check for camera")
-
-    # Check for GPS (serial device)
     try:
-        if os.path.exists("/dev/ttyAMA0") or os.path.exists("/dev/ttyACM0"):
+        if os.path.exists("/dev/ttyAMA0") or os.path.exists("/dev/serial0"):
             hardware["gps"] = True
-            print_success("Potential GPS device detected")
+            print_success("GPS serial port detected")
         else:
-            print_warning("No GPS device detected")
+            print_warning("No GPS serial port detected")
     except Exception:
         print_warning("Failed to check for GPS")
 
@@ -659,9 +776,9 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
         print_subheader("Google Coral TPU Configuration")
         use_coral = prompt_bool(
             "Use Google Coral TPU for accelerated obstacle detection?",
-            default=True,
-            help_text=(
-                "The Coral TPU provides hardware acceleration for machine learning models."
+            default=True, help_text=(
+                "The Coral TPU provides hardware acceleration for "
+                "machine learning models."
             ),
         )
 
@@ -1016,9 +1133,9 @@ def setup_web_interface() -> None:
         # Authentication
         auth_required = prompt_bool(
             "Require authentication?",
-            default=True,
-            help_text=(
-                "Authentication requires users to log in before accessing the web interface."
+            default=True, help_text=(
+                "Authentication requires users to log in before accessing "
+                "the web interface."
             ),
         )
 
@@ -1061,9 +1178,9 @@ def setup_web_interface() -> None:
                     "ALLOWED_IPS",
                     "127.0.0.1,192.168.1.0/24"
                 ),
-                required=True,
-                help_text=(
-                    "List of IP addresses or CIDR ranges that can access the web interface."
+                required=True, help_text=(
+                    "List of IP addresses or CIDR ranges that can access "
+                    "the web interface."
                 ),
             )
 
@@ -1146,9 +1263,9 @@ def setup_remote_access() -> None:
                     "DDNS_TOKEN",
                     ""),
                 required=True,
-                secret=True,
-                help_text=(
-                    "The token or key provided by your DDNS provider for authentication."
+                secret=True, help_text=(
+                    "The token or key provided by your DDNS provider "
+                    "for authentication."
                 ),
             )
 
@@ -1544,9 +1661,7 @@ def setup_final_verification() -> None:
 
     print_info(
         "Verifying configuration and setting up required directories..."
-    )
-
-    # Ensure all required directories exist
+    )    # Ensure all required directories exist
     directories = [
         CONFIG_DIR,
         Path("logs"),
@@ -1569,23 +1684,30 @@ def setup_final_verification() -> None:
     print_subheader("Configuration Summary")
 
     print(
-        f"Mower Name: {setup_state['user_choices'].get('mower_name', 'AutonoMow')}")
-    print(
-        f"Simulation Mode: {'Enabled' if setup_state['feature_flags'].get('simulation_mode', False) else 'Disabled'}")
+        f"Mower Name: {
+            setup_state['user_choices'].get(
+                'mower_name',
+                'AutonoMow')}")
+    sim_mode = setup_state['feature_flags'].get('simulation_mode', False)
+    print(f"Simulation Mode: {'Enabled' if sim_mode else 'Disabled'}")
 
     # Hardware summary
     print("\nHardware Configuration:")
     hardware_config = setup_state.get("hardware_config", {})
 
-    print(
-        f"  Camera: {'Enabled' if hardware_config.get('camera', {}).get('enabled', False) else 'Disabled'}"
-    )
-    print(
-        f"  GPS: {'Enabled' if hardware_config.get('gps', {}).get('enabled', False) else 'Disabled'}")
-    print(
-        f"  Motor Controller: {hardware_config.get('motor_controller', {}).get('type', 'none')}")
-    print(
-        f"  Coral TPU: {'Enabled' if hardware_config.get('coral_tpu', {}).get('enabled', False) else 'Disabled'}")
+    camera_enabled = hardware_config.get('camera', {}).get('enabled', False)
+    print(f"  Camera: {'Enabled' if camera_enabled else 'Disabled'}")
+
+    gps_enabled = hardware_config.get('gps', {}).get('enabled', False)
+    print(f"  GPS: {'Enabled' if gps_enabled else 'Disabled'}")
+
+    motor_type = hardware_config.get(
+        'motor_controller', {}).get(
+        'type', 'none')
+    print(f"  Motor Controller: {motor_type}")
+
+    coral_enabled = hardware_config.get('coral_tpu', {}).get('enabled', False)
+    print(f"  Coral TPU: {'Enabled' if coral_enabled else 'Disabled'}")
 
     # Feature summary
     print("\nEnabled Features:")
@@ -1635,11 +1757,14 @@ For more information, refer to the documentation in the docs/ directory.
 def main() -> None:
     """Main function to run the setup wizard."""
     try:
+        # First, install required dependencies before doing anything else
+        install_dependencies()
+
+        # Run enhanced permission checks after dependencies are installed
+        run_enhanced_permission_checks()
+
         # Ensure .env file exists
         ensure_env_file()
-
-        # Load environment variables
-        load_dotenv(dotenv_path=ENV_FILE, override=True)
 
         # Check if we have a saved state
         has_state = load_setup_state()

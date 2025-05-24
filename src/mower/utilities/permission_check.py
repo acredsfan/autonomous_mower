@@ -9,10 +9,20 @@ Author: Autonomous Mower Project
 """
 
 import os
-import grp
 import getpass
 from typing import List, Optional
 import sys
+
+# Try to import grp module, which is Unix-specific
+try:
+    import grp
+    import pwd
+    HAS_UNIX_GROUPS = True
+except ImportError:
+    # On Windows, grp and pwd modules are not available
+    HAS_UNIX_GROUPS = False
+    grp = None
+    pwd = None
 
 from .logger_config import LoggerConfigInfo
 
@@ -74,17 +84,25 @@ def check_group_membership(groups: Optional[List[str]] = None) -> List[str]:
 
     errors = []
     user = getpass.getuser()
-    if not sys.platform.startswith("linux"):
+    # Skip group checks if grp module is not available (Windows) or not on
+    # Linux
+    if not HAS_UNIX_GROUPS or not sys.platform.startswith("linux"):
         logger.warning(
-            "Group membership checks are only supported on Linux. "
+            "Group membership checks are only supported on Linux systems. "
             "Skipping hardware group checks."
         )
         return []
+
     try:
-        user_groups = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
-        # Also check primary group
-        user_gid = os.getgid()
-        user_groups.append(grp.getgrgid(user_gid).gr_name)
+        if HAS_UNIX_GROUPS and grp is not None:
+            user_groups = [
+                g.gr_name for g in grp.getgrall() if user in g.gr_mem]
+            # Also check primary group
+            user_gid = os.getgid()
+            user_groups.append(grp.getgrgid(user_gid).gr_name)
+        else:
+            # Fallback for systems without grp module
+            user_groups = []
     except Exception as e:
         logger.error(f"Failed to get group membership: {e}")
         return [f"Could not determine group membership for user '{user}'."]
