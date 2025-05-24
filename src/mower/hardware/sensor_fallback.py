@@ -104,7 +104,10 @@ class SensorFallbackManager:
                         self._active_sensors[group_id] = sensor_id
 
         logger.info(
-            f"Registered sensor {sensor_id} in group {group_id} with priority {priority.name}")
+            (
+                f"Registered sensor {sensor_id} in group {group_id} with"
+                f" priority {priority.name}")
+            )
 
     def set_fallback_chain(
         self, sensor_id: str, fallback_sensors: List[str]
@@ -254,14 +257,13 @@ class SensorFallbackManager:
         self, group_id: str, sensor_ids: List[str]
     ) -> Optional[str]:
         """
-        Find the best available sensor in a group.
-
-        Args:
+        Find the best available sensor in a group.        Args:
             group_id: Group ID
             sensor_ids: List of sensor IDs in the group
 
         Returns:
-            Optional[str]: ID of the best available sensor, or None if no sensors are available
+            Optional[str]: ID of the best available sensor, or None if no
+                         sensors are available
         """
         # First try to find an operational sensor by priority
         for priority in SensorPriority:
@@ -350,13 +352,12 @@ class SensorFallbackManager:
         self, group_id: str
     ) -> Optional[SensorInterface]:
         """
-        Get the instance of the currently active sensor for a group.
-
-        Args:
+        Get the instance of the currently active sensor for a group.        Args:
             group_id: Group ID
 
         Returns:
-            Optional[SensorInterface]: Active sensor instance, or None if no active sensor
+            Optional[SensorInterface]: Active sensor instance, or None if no
+                                     active sensor
         """
         active_id = self.get_active_sensor(group_id)
         if active_id:
@@ -433,7 +434,10 @@ class SensorCalibrationManager:
         with self._locks["sensors"]:
             if sensor_id not in self._sensors:
                 logger.error(
-                    f"Cannot register calibration procedure: Sensor {sensor_id} not registered")
+                    (
+                        f"Cannot register calibration procedure: Sensor "
+                        f"{sensor_id} not registered")
+                    )
                 return
 
             self._calibration_procedures[sensor_id] = procedure
@@ -461,7 +465,10 @@ class SensorCalibrationManager:
 
             if sensor_id not in self._calibration_procedures:
                 logger.error(
-                    f"Cannot calibrate: No calibration procedure for sensor {sensor_id}")
+                    (
+                        f"Cannot calibrate: No calibration procedure for"
+                        f" sensor {sensor_id}")
+                    )
                 return False
 
             if self._calibration_status[sensor_id]["in_progress"]:
@@ -653,9 +660,7 @@ def calibrate_imu(sensor):
 
 def calibrate_distance_sensor(sensor):
     """
-    Calibration procedure for distance sensors.
-
-    Args:
+    Calibration procedure for distance sensors.    Args:
         sensor: Distance sensor instance
 
     Returns:
@@ -666,21 +671,21 @@ def calibrate_distance_sensor(sensor):
 
         # Step 1: Clear the area in front of the sensor
         logger.info(
-            "Please clear the area in front of the sensor and press Enter to continue..."
-        )
-        # In a real implementation, this would wait for user input or a signal
+            "Please clear the area in front of the sensor and press Enter to "
+            "continue..."
+        )        # In a real implementation, this would wait for user input or a signal
         time.sleep(2)  # Simulating wait for user action
 
         # Step 2: Calibrate minimum distance
         logger.info("Calibrating minimum distance...")
-        # In a real implementation, this would place an object at a known minimum distance
-        # and measure the sensor reading
+        # In a real implementation, this would place an object at a known
+        # minimum distance and measure the sensor reading
         time.sleep(1)  # Simulating calibration time
 
         # Step 3: Calibrate maximum distance
         logger.info("Calibrating maximum distance...")
-        # In a real implementation, this would place an object at a known maximum distance
-        # and measure the sensor reading
+        # In a real implementation, this would place an object at a known
+        # maximum distance and measure the sensor reading
         time.sleep(1)  # Simulating calibration time
 
         # Step 4: Verify calibration

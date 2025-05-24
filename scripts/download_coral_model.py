@@ -6,16 +6,13 @@ Intended to replace fragile shell logic in setup_coral.sh.
 
 Usage:
     python3 download_coral_model.py --model detect_edgetpu.tflite \\
-        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite \\
-        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
+        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite \\ \        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
 
     python3 download_coral_model.py --model detect.tflite \\
-        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite \\
-        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
+        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite \\ \        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
 
     python3 download_coral_model.py --model labelmap.txt \\
-        --url https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt \\
-        --output_dir src/mower/obstacle_detection/models
+        --url https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt \\ \        --output_dir src/mower/obstacle_detection/models
 
 Author: Autonomous Mower Team
 """

@@ -67,9 +67,11 @@ def install_dependencies() -> bool:
 
     for package in packages:
         try:
-            result = subprocess.run([
-                sys.executable, "-m", "pip", "install", package
-            ], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", package],
+                capture_output=True,
+                text=True,
+            )
 
             if result.returncode == 0:
                 print_success(f"Successfully installed {package}")
@@ -255,15 +257,18 @@ def ensure_env_file() -> None:
         # Ensure proper permissions on Raspberry Pi
         if sys.platform.startswith("linux"):
             try:
-                result = subprocess.run([
-                    "sudo", "chmod", "664", str(ENV_FILE)
-                ], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["sudo", "chmod", "664", str(ENV_FILE)],
+                    capture_output=True,
+                    text=True,
+                )
 
                 if result.returncode == 0:
                     print_success(f"Set proper permissions for {ENV_FILE}")
                 else:
                     print_warning(
-                        f"Could not set permissions: {result.stderr}")
+                        f"Could not set permissions: {
+                            result.stderr}")
             except Exception as e:
                 print_warning(f"Permission setting failed: {e}")
     elif not os.access(ENV_FILE, os.W_OK):
@@ -271,9 +276,11 @@ def ensure_env_file() -> None:
         print_warning(f"{ENV_FILE} is not writable")
         if sys.platform.startswith("linux"):
             try:
-                result = subprocess.run([
-                    "sudo", "chmod", "664", str(ENV_FILE)
-                ], capture_output=True, text=True)
+                result = subprocess.run(
+                    ["sudo", "chmod", "664", str(ENV_FILE)],
+                    capture_output=True,
+                    text=True,
+                )
 
                 if result.returncode == 0:
                     print_success(f"Fixed permissions for {ENV_FILE}")
@@ -314,20 +321,31 @@ def update_env_var(key: str, value: str) -> None:
         try:
             if sys.platform.startswith("linux"):
                 # Use sudo to create file with proper ownership and permissions
-                subprocess.run([
-                    "sudo", "touch", str(ENV_FILE)
-                ], check=True, capture_output=True, text=True)
+                subprocess.run(
+                    ["sudo", "touch", str(ENV_FILE)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
 
                 subprocess.run(
                     ["sudo", "chmod", "664", str(ENV_FILE)],
-                    check=True, capture_output=True, text=True)  # Change ownership to current user
-                current_user = os.getenv("USER", "pi")
-                subprocess.run([
-                    "sudo", "chown", f"{current_user}:{current_user}",
-                    str(ENV_FILE)
-                ], check=True, capture_output=True, text=True)
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
 
-                print_success(f"Created {ENV_FILE} with proper permissions")
+                # Change ownership to current user
+                current_user = os.getenv("USER", "pi")
+                subprocess.run(
+                    ["sudo", "chown", f"{current_user}:{current_user}", str(ENV_FILE)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                success_msg = f"Created {ENV_FILE} with proper permissions"
+                print_success(success_msg)
             else:
                 # On Windows, just create normally
                 ENV_FILE.touch()
@@ -336,24 +354,32 @@ def update_env_var(key: str, value: str) -> None:
             print_error(f"Failed to create {ENV_FILE}: {e}")
             print_info("Please manually create the .env file:")
             print_info(
-                "sudo touch .env && sudo chmod 664 .env && sudo chown $USER:$USER .env")
-            sys.exit(1)
-
-    # Check if file is writable before attempting to write
+                "sudo touch .env && sudo chmod 664 .env && sudo chown $USER:$USER .env"
+            )
+            sys.exit(1)  # Check if file is writable before attempting to write
     elif not os.access(ENV_FILE, os.W_OK):
-        print_warning(f"{ENV_FILE} is not writable, fixing permissions...")
+        warning_msg = f"{ENV_FILE} is not writable, fixing permissions..."
+        print_warning(warning_msg)
         try:
             if sys.platform.startswith("linux"):
                 subprocess.run(
                     ["sudo", "chmod", "664", str(ENV_FILE)],
-                    check=True, capture_output=True, text=True)  # Ensure current user owns the file
-                current_user = os.getenv("USER", "pi")
-                subprocess.run([
-                    "sudo", "chown", f"{current_user}:{current_user}",
-                    str(ENV_FILE)
-                ], check=True, capture_output=True, text=True)
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
 
-                print_success(f"Fixed permissions for {ENV_FILE}")
+                # Ensure current user owns the file
+                current_user = os.getenv("USER", "pi")
+                subprocess.run(
+                    ["sudo", "chown", f"{current_user}:{current_user}", str(ENV_FILE)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                success_msg = f"Fixed permissions for {ENV_FILE}"
+                print_success(success_msg)
             else:
                 print_warning("Cannot fix permissions on Windows")
         except Exception as e:
@@ -386,9 +412,7 @@ def prompt_choice(
     """Prompt user to select from a list of choices."""
     print(f"\n{prompt}")
     for idx, choice in enumerate(choices, 1):
-        default_marker = (
-            " (default)" if default is not None and idx == default else ""
-        )
+        default_marker = " (default)" if default is not None and idx == default else ""
         print(f"  {idx}. {choice}{default_marker}")
 
     while True:
@@ -442,14 +466,12 @@ def prompt_value(
         try:
             if secret:
                 val = getpass.getpass(
-                    f"{prompt}"
-                    + (" (default: [hidden]): " if default else ": ")
-                )
+                    f"{prompt} " +
+                    (" (default: [hidden]): " if default else ": "))
             else:
                 val = input(
-                    f"{prompt}"
-                    + (f" (default: {default}): " if default else ": ")
-                )
+                    f"{prompt} " +
+                    (f" (default: {default}): "if default else ": "))
 
             if not val and default is not None:
                 val = default
@@ -553,8 +575,7 @@ def validate_lat_lng(value: str, field_name: str) -> bool:
         return True
     except ValueError:
         print_error(
-            f"{field_name} must be in format: lat,lng (e.g. 39.1,-84.5)"
-        )
+            f"{field_name} must be in format: lat,lng (e.g. 39.1,-84.5)")
         return False
 
 
@@ -664,9 +685,7 @@ def setup_basic_configuration() -> None:
     print_subheader("Mower Identity")
     mower_name = prompt_value(
         "Mower name",
-        default=get_env_var(
-            "MOWER_NAME",
-            "AutonoMow"),
+        default=get_env_var("MOWER_NAME", "AutonoMow"),
         required=True,
         help_text=(
             "A unique name for your mower. "
@@ -764,9 +783,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("GPS Configuration")
     use_gps = prompt_bool(
         "Use GPS for navigation?",
-        default=detected_hardware.get(
-            "gps",
-            False),
+        default=detected_hardware.get("gps", False),
         help_text=(
             "GPS provides absolute positioning for navigation and boundary mapping."
         ),
@@ -798,8 +815,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
 
         if use_rtk:
             print_info(
-                "To use RTK correction, you'll need NTRIP server credentials."
-            )
+                "To use RTK correction, you'll need NTRIP server credentials.")
             ntrip_user = prompt_value(
                 "NTRIP username", default=get_env_var("NTRIP_USER", "")
             )
@@ -841,9 +857,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("Motor Controller Configuration")
     use_robohat = prompt_bool(
         "Use RoboHAT MM1 motor controller?",
-        default=detected_hardware.get(
-            "robohat",
-            False),
+        default=detected_hardware.get("robohat", False),
         help_text=(
             "The RoboHAT MM1 is the recommended motor controller for this project."
         ),
@@ -872,7 +886,8 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
         print_subheader("Google Coral TPU Configuration")
         use_coral = prompt_bool(
             "Use Google Coral TPU for accelerated obstacle detection?",
-            default=True, help_text=(
+            default=True,
+            help_text=(
                 "The Coral TPU provides hardware acceleration for "
                 "machine learning models."
             ),
@@ -897,15 +912,17 @@ def setup_mapping_and_navigation() -> None:
 
     # Check if GPS is enabled in setup state
     gps_enabled = (
-        setup_state.get("hardware_config", {})
-        .get("gps", {})
-        .get("enabled", False)
-    )
+        setup_state.get(
+            "hardware_config",
+            {}).get(
+            "gps",
+            {}).get(
+                "enabled",
+            False))
 
     if not gps_enabled:
         print_warning(
-            "GPS is not enabled. Some mapping features will be limited."
-        )
+            "GPS is not enabled. Some mapping features will be limited.")
 
     # Home location
     print_subheader("Home Location")
@@ -1037,10 +1054,13 @@ def setup_safety_features() -> None:
 
     # Check if camera is enabled in setup state
     camera_enabled = (
-        setup_state.get("hardware_config", {})
-        .get("camera", {})
-        .get("enabled", False)
-    )
+        setup_state.get(
+            "hardware_config",
+            {}).get(
+            "camera",
+            {}).get(
+                "enabled",
+            False))
 
     if camera_enabled:
         min_conf = prompt_value(
@@ -1088,8 +1108,7 @@ def setup_safety_features() -> None:
         update_env_var("SAFE_ZONE_BUFFER", safe_buffer)
 
         print_info(
-            "Safety zones can be configured in the web interface after setup."
-        )
+            "Safety zones can be configured in the web interface after setup.")
         setup_state["feature_flags"]["safety_zones"] = True
     else:
         setup_state["feature_flags"]["safety_zones"] = False
@@ -1229,7 +1248,8 @@ def setup_web_interface() -> None:
         # Authentication
         auth_required = prompt_bool(
             "Require authentication?",
-            default=True, help_text=(
+            default=True,
+            help_text=(
                 "Authentication requires users to log in before accessing "
                 "the web interface."
             ),
@@ -1270,11 +1290,9 @@ def setup_web_interface() -> None:
         if use_ip_restrict:
             allowed_ips = prompt_value(
                 "Allowed IPs (comma-separated)",
-                default=get_env_var(
-                    "ALLOWED_IPS",
-                    "127.0.0.1,192.168.1.0/24"
-                ),
-                required=True, help_text=(
+                default=get_env_var("ALLOWED_IPS", "127.0.0.1,192.168.1.0/24"),
+                required=True,
+                help_text=(
                     "List of IP addresses or CIDR ranges that can access "
                     "the web interface."
                 ),
@@ -1355,11 +1373,10 @@ def setup_remote_access() -> None:
 
             ddns_token = prompt_value(
                 "DDNS token/key",
-                default=get_env_var(
-                    "DDNS_TOKEN",
-                    ""),
+                default=get_env_var("DDNS_TOKEN", ""),
                 required=True,
-                secret=True, help_text=(
+                secret=True,
+                help_text=(
                     "The token or key provided by your DDNS provider "
                     "for authentication."
                 ),
@@ -1430,8 +1447,7 @@ def setup_remote_access() -> None:
             setup_state["feature_flags"]["remote_access"] = "ngrok"
         else:
             print_info(
-                "You've chosen to set up remote access manually or not at all."
-            )
+                "You've chosen to set up remote access manually or not at all.")
             print_info(
                 "To access your mower remotely, you'll need to configure "
                 "port forwarding on your router."
@@ -1464,8 +1480,7 @@ def setup_scheduling() -> None:
     if use_schedule:
         print_info("You can set up multiple mowing sessions per week.")
         print_help(
-            "For each day, you can specify start and end times for mowing."
-        )
+            "For each day, you can specify start and end times for mowing.")
 
         # Create a basic schedule template
         schedule = {}
@@ -1540,8 +1555,7 @@ def setup_scheduling() -> None:
         print_info("You'll need an OpenWeatherMap API key for weather data.")
         print_help(
             "You can get a free API key at: "
-            "https://openweathermap.org/api"
-        )
+            "https://openweathermap.org/api")
 
         weather_api = prompt_value(
             "OpenWeatherMap API key",
@@ -1615,7 +1629,7 @@ def setup_service_installation() -> None:
                 ["sudo", "cp", str(service_file), "/etc/systemd/system/"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
 
             if result.returncode != 0:
@@ -1626,18 +1640,20 @@ def setup_service_installation() -> None:
             # Set proper permissions
             result = subprocess.run(
                 [
-                    "sudo", "chmod", "644",
-                    "/etc/systemd/system/autonomous-mower.service"
+                    "sudo",
+                    "chmod",
+                    "644",
+                    "/etc/systemd/system/autonomous-mower.service",
                 ],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
 
             if result.returncode != 0:
                 print_error(
-                    f"Failed to set service file permissions: {result.stderr}"
-                )
+                    f"Failed to set service file permissions: {
+                        result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
@@ -1647,13 +1663,13 @@ def setup_service_installation() -> None:
                 ["sudo", "systemctl", "daemon-reload"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
 
             if result.returncode != 0:
                 print_error(
-                    f"Failed to reload systemd daemon: {result.stderr}"
-                )
+                    f"Failed to reload systemd daemon: {
+                        result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
@@ -1663,7 +1679,7 @@ def setup_service_installation() -> None:
                 ["sudo", "systemctl", "enable", "autonomous-mower.service"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
             )
 
             if result.returncode != 0:
@@ -1672,8 +1688,7 @@ def setup_service_installation() -> None:
                 return
 
             print_success(
-                "Autonomous mower service has been installed and enabled!"
-            )
+                "Autonomous mower service has been installed and enabled!")
             print_info("The service will start automatically on system boot.")
             print_info("You can manually control the service with:")
             print_info("  sudo systemctl start autonomous-mower")
@@ -1699,7 +1714,7 @@ def setup_service_installation() -> None:
                     ["sudo", "systemctl", "start", "autonomous-mower.service"],
                     capture_output=True,
                     text=True,
-                    check=False
+                    check=False,
                 )
 
                 if result.returncode == 0:
@@ -1707,22 +1722,16 @@ def setup_service_installation() -> None:
 
                     # Check service status
                     result = subprocess.run(
-                        [
-                            "sudo", "systemctl", "is-active",
-                            "autonomous-mower.service"
-                        ],
-                        capture_output=True,
-                        text=True,
-                        check=False
-                    )
+                        ["sudo", "systemctl", "is-active",
+                         "autonomous-mower.service"],
+                        capture_output=True, text=True, check=False,)
 
                     if result.stdout.strip() == "active":
                         print_info("Service is running and active.")
                     else:
                         print_warning(
                             "Service may not be running properly. "
-                            "Check logs with:"
-                        )
+                            "Check logs with:")
                         print_warning(
                             "  sudo journalctl -u autonomous-mower -f")
                 else:
@@ -1757,7 +1766,7 @@ def setup_final_verification() -> None:
 
     print_info(
         "Verifying configuration and setting up required directories..."
-    )    # Ensure all required directories exist
+    )  # Ensure all required directories exist
     directories = [
         CONFIG_DIR,
         Path("logs"),
@@ -1774,30 +1783,30 @@ def setup_final_verification() -> None:
 
     if not (CONFIG_DIR / "home_location.json").exists():
         with open(CONFIG_DIR / "home_location.json", "w", encoding="utf-8") as f:
-            json.dump({"location": [0, 0]}, f)    # Summary of configuration
+            json.dump({"location": [0, 0]}, f)  # Summary of configuration
     print_subheader("Configuration Summary")
 
-    mower_name = setup_state['user_choices'].get('mower_name', 'AutonoMow')
+    mower_name = setup_state["user_choices"].get("mower_name", "AutonoMow")
     print(f"Mower Name: {mower_name}")
-    sim_mode = setup_state['feature_flags'].get('simulation_mode', False)
+    sim_mode = setup_state["feature_flags"].get("simulation_mode", False)
     print(f"Simulation Mode: {'Enabled' if sim_mode else 'Disabled'}")
 
     # Hardware summary
     print("\nHardware Configuration:")
     hardware_config = setup_state.get("hardware_config", {})
 
-    camera_enabled = hardware_config.get('camera', {}).get('enabled', False)
+    camera_enabled = hardware_config.get("camera", {}).get("enabled", False)
     print(f"  Camera: {'Enabled' if camera_enabled else 'Disabled'}")
 
-    gps_enabled = hardware_config.get('gps', {}).get('enabled', False)
+    gps_enabled = hardware_config.get("gps", {}).get("enabled", False)
     print(f"  GPS: {'Enabled' if gps_enabled else 'Disabled'}")
 
     motor_type = hardware_config.get(
-        'motor_controller', {}).get(
-        'type', 'none')
+        "motor_controller", {}).get(
+        "type", "none")
     print(f"  Motor Controller: {motor_type}")
 
-    coral_enabled = hardware_config.get('coral_tpu', {}).get('enabled', False)
+    coral_enabled = hardware_config.get("coral_tpu", {}).get("enabled", False)
     print(f"  Coral TPU: {'Enabled' if coral_enabled else 'Disabled'}")
 
     # Feature summary
@@ -1921,9 +1930,7 @@ def main() -> None:
         sys.exit(0)
     except Exception as e:
         print_error(f"An error occurred: {e}")
-        print(
-            "Your progress has been saved. Run this script again to continue."
-        )
+        print("Your progress has been saved. Run this script again to continue.")
         traceback.print_exc()
         sys.exit(1)
 

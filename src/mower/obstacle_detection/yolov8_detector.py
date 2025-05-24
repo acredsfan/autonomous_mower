@@ -306,7 +306,8 @@ class YOLOv8TFLiteDetector:
         return detections
 
     def _process_classification_output(self) -> List[Dict]:
-        """Fallback for classification models."""        # Get output tensor - for classification output is typically [1,
+        """Fallback for classification models."""
+        # Get output tensor - for classification output is typically [1,
         # num_classes]
         if self.interpreter is None or self.output_details is None:
             return []

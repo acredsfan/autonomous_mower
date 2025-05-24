@@ -99,7 +99,10 @@ class PerformanceProfiler:
         }
 
         logger.info(
-            f"Profiled {func.__name__}: {execution_time:.4f} seconds, {total_calls} calls")
+            (
+                f"Profiled {func.__name__}: {execution_time:.4f} seconds"
+                f", {total_calls} calls")
+            )
 
         return metrics
 

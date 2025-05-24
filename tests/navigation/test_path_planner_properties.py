@@ -141,7 +141,10 @@ class TestPathPlannerProperties:
         avg_recent_reward = sum(rewards[ - 3: ]) / 3
         assert (
             avg_recent_reward >= initial_reward * 0.9
-        ), f"Learning did not improve path quality: initial = {initial_reward}, recent = {avg_recent_reward}"
+ (
+     f"Learning did not improve path quality: initial = {initial_reward}"
+     f", recent = {avg_recent_reward}"
+ )
 
     @given(pattern_config=pattern_config_strategy())
     @settings(max_examples=10)
@@ -204,7 +207,10 @@ class TestPathPlannerProperties:
                 )
                 assert (
                     distance >= 0.5
-                ), f"Path point {point} is too close to obstacle {obstacle}(distance={distance})"
+ (
+     f"Path point {point} is too close to obstacle {obstacle}(distance="
+     f"{distance})"
+ )
 
     @given(
         p1=st.tuples(st.floats(), st.floats()),

@@ -230,7 +230,8 @@ class DataCollectionController:
             image_list = []
 
             for file in os.listdir(session_path):
-                if file.endswith('.jpg') or file.endswith('.jpeg'):                    image_count += 1
+                if file.endswith('.jpg') or file.endswith('.jpeg'):
+                    image_count += 1
                     # Use relative path for images to be accessible via web
                     rel_path = os.path.join(
                         'data/collected_images',

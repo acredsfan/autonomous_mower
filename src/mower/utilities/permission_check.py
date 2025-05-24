@@ -17,6 +17,7 @@ import sys
 try:
     import grp
     import pwd
+
     HAS_UNIX_GROUPS = True
 except ImportError:
     # On Windows, grp and pwd modules are not available
@@ -65,12 +66,10 @@ def check_directory_permissions(
             continue
         if not os.access(d, os.R_OK):
             errors.append(
-                f"Read access denied for '{d}'. Try: sudo chmod a+r '{d}'"
-            )
+                f"Read access denied for '{d}'. Try: sudo chmod a+r '{d}'")
         if not os.access(d, os.W_OK):
             errors.append(
-                f"Write access denied for '{d}'. Try: sudo chmod a+rw '{d}'"
-            )
+                f"Write access denied for '{d}'. Try: sudo chmod a+rw '{d}'")
     return errors
 
 
@@ -109,10 +108,12 @@ def check_group_membership(groups: Optional[List[str]] = None) -> List[str]:
 
     for group in groups:
         if group not in user_groups:
-            errors.append(
+            error_msg = (
                 f"User '{user}' is not in the '{group}' group. "
-                f"Add with: sudo usermod -aG {group} {user} (then log out and back in)"
+                f"Add with: sudo usermod -aG {group} {user} "
+                "(then log out and back in)"
             )
+            errors.append(error_msg)
     return errors
 
 
@@ -122,7 +123,8 @@ def run_permission_checks() -> bool:
     Returns True if all checks pass, False otherwise.
     """
     logger.info(
-        "Running permission checks for critical directories and hardware groups...")
+        "Running permission checks for critical directories and hardware groups..."
+    )
     dir_errors = check_directory_permissions()
     group_errors = check_group_membership()
 

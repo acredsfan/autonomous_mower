@@ -440,10 +440,9 @@ class FleetManager:
         Get the status of a mower.
 
         Args:
-            mower_id: Unique identifier for the mower.
-
-        Returns:
-            Optional[Dict[str, Any]]: Status information, or None if the mower doesn't exist.
+            mower_id: Unique identifier for the mower.        Returns:
+            Optional[Dict[str, Any]]: Status information, or None if the mower 
+                                    doesn't exist.
         """
         if mower_id not in self.mowers:
             logger.warning(
@@ -500,10 +499,9 @@ class FleetManager:
         Get information about a zone.
 
         Args:
-            zone_id: Unique identifier for the zone.
-
-        Returns:
-            Optional[Dict[str, Any]]: Zone information, or None if the zone doesn't exist.
+            zone_id: Unique identifier for the zone.        Returns:
+            Optional[Dict[str, Any]]: Zone information, or None if the zone 
+                                    doesn't exist.
         """
         if zone_id not in self.zones:
             logger.warning(
@@ -542,11 +540,10 @@ class FleetManager:
         self, mower_id: str, zone_id: Optional[str] = None
     ) -> bool:
         """
-        Start a mower.
-
-        Args:
+        Start a mower.        Args:
             mower_id: Unique identifier for the mower.
-            zone_id: Optional zone to mow. If None, the mower's assigned zone will be used.
+            zone_id: Optional zone to mow. If None, the mower's assigned zone 
+                will be used.
 
         Returns:
             bool: True if the mower was started,

@@ -283,10 +283,9 @@ class SystemHealth:
             except Exception as e:
                 hardware_health["battery"] = {
                     "status": "error",
-                    "error": str(e),
-                }
+                    "error": str(e),                }
                 issues.append(f"Battery monitor error: {str(e)}")
-
+            
             # Check motors and other components
             for component, getter in [
                 ("motors", "get_motor_controller"),
@@ -300,7 +299,9 @@ class SystemHealth:
                             hardware_health[component] = {"status": "ok"}
                         else:
                             hardware_health[component] = {
-                                "status": "error", "error": f"{component} controller not available", }
+                                "status": "error",
+                                "error": f"{component} controller not available",
+                            }
                             issues.append(
                                 f"{component} controller not available"
                             )
@@ -471,12 +472,11 @@ class SystemHealth:
             List[str]: List of recommendations.
         """
         recommendations = []
-        issues = self.health_status["issues"]
-
-        # System recommendations
+        issues = self.health_status["issues"]        # System recommendations
         if any("Critical CPU usage" in issue for issue in issues):
             recommendations.append(
-                "Reduce CPU load by disabling non-essential services or reducing sensor polling frequency"
+                "Reduce CPU load by disabling non-essential services or "
+                "reducing sensor polling frequency"
             )
         if any("Critical memory usage" in issue for issue in issues):
             recommendations.append(
@@ -517,12 +517,11 @@ class SystemHealth:
         if any("Camera" in issue for issue in issues):
             recommendations.append(
                 "Check camera connections and configuration"
-            )
-
-        # Software recommendations
+            )        # Software recommendations
         if any("Mower service not running" in issue for issue in issues):
             recommendations.append(
-                "Start the mower service with: sudo systemctl start autonomous-mower.service"
+                "Start the mower service with: "
+                "sudo systemctl start autonomous-mower.service"
             )
         if any("crashes in logs" in issue for issue in issues):
             recommendations.append(
@@ -724,7 +723,10 @@ def main():
         "--interval",
         type=int,
         default=HEALTH_CHECK_INTERVAL,
-        help=f"Time between health checks in seconds (default: {HEALTH_CHECK_INTERVAL})",
+        help=(
+            f"Time between health checks in seconds (default: "
+            f"{HEALTH_CHECK_INTERVAL})"
+        ),
     )
     parser.add_argument(
         "--output",
@@ -746,13 +748,13 @@ def main():
             # Run a full health check
             health_status = health_monitor.run_full_health_check()
 
-            # Output the results
-            if args.output == "json":
+            # Output the results            if args.output == "json":
                 print(json.dumps(health_status, indent=2))
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER HEALTH REPORT - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    f"AUTONOMOUS MOWER HEALTH REPORT - "
+                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 )
                 print("=" * 80)
                 print(
@@ -785,7 +787,10 @@ def main():
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER {args.check.upper()} HEALTH CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    (
+                        f"AUTONOMOUS MOWER {args.check.upper()} HEALTH"
+                        f" CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    )
                 print("=" * 80)
                 print(
                     f"Status: {result.get('status', 'unknown').upper()}"

@@ -75,6 +75,9 @@ old_main.log
 .DS_Store
 Thumbs.db
 ~/*
+*.bak
+fix_fstrings.py
+fix_fstrings_README.md
 
 # Documentation
 docs/_build/

@@ -244,7 +244,8 @@ class BNO085Sensor:
         logger.info("Shutting down BNO085 sensor.")
         with self.lock:  # Ensure thread safety during shutdown
             if self.serial_port_wrapper:
-                logger.debug(f"Closing serial port {self.serial_port_wrapper.port} for IMU.")
+(f"Closing serial port {self.serial_port_wrapper.port} for IMU.
+ f")
                 self.serial_port_wrapper.stop()
                 self.serial_port_wrapper = None
             self.sensor = None  # Clear the sensor instance

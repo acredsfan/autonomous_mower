@@ -101,7 +101,10 @@ class SimulatedHardwareComponent(ABC):
         with self._lock:
             if not self.initialized:
                 logger.warning(
-                    f"Simulated {self.component_name} not initialized, nothing to clean up"
+                    (
+                        f"Simulated {self.component_name} not"
+                        f" initialized, nothing to clean up"
+                    )
                 )
                 return True
 

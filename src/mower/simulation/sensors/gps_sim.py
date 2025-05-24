@@ -227,10 +227,10 @@ class SimulatedGpsPosition(SimulatedSensor):
         # Generate time string
         gps_time = time.gmtime(timestamp)
         time_str = f"{gps_time.tm_hour:02d}{gps_time.tm_min:02d}{gps_time.tm_sec:02d}"
-        date_str = f"{gps_time.tm_mday:02d}{gps_time.tm_mon:02d}{gps_time.tm_year % 100:02d}"
-
-        # Generate GPRMC sentence
-        # $GPRMC,time,status,lat,lat_dir,lng,lng_dir,speed,track,date,mag_var,mag_var_dir,mode*checksum
+ (f"{gps_time.tm_mday:02d}{gps_time.tm_mon:02d}{gps_time.tm_year % 100:02d}
+  f"        # Generate GPRMC sentence
+        # $GPRMC,time,status,lat,lat_dir,lng,lng_dir,speed,track,date,
+        # mag_var,mag_var_dir,mode*checksum
         status = "A" if self.state["fix_quality"] > 0 else "V"
         speed = 0.0  # Speed in knots
         track = 0.0  # Track angle in degrees
@@ -238,7 +238,10 @@ class SimulatedGpsPosition(SimulatedSensor):
         mag_var_dir = "E"  # Magnetic variation direction
         mode = "A"  # Autonomous mode
 
-        rmc = f"$GPRMC,{time_str},{status},{lat_nmea},{lat_dir},{lng_nmea},{lng_dir},{speed:.1f},{track:.1f},{date_str},{mag_var:.1f},{mag_var_dir},{mode}"
+ (
+     f"$GPRMC,{time_str},{status},{lat_nmea},{lat_dir},{lng_nmea},"
+     f"{lng_dir},{speed:.1f},{track:.1f},{date_str},{mag_var:.1f},{mag_var_dir},{mode}"
+ )
         rmc_checksum = self._calculate_nmea_checksum(rmc)
         rmc = f"{rmc}*{rmc_checksum:02X}"
 
@@ -254,7 +257,13 @@ class SimulatedGpsPosition(SimulatedSensor):
         age = ""  # Age of DGPS data
         ref_id = ""  # Reference station ID
 
-        gga = f"$GPGGA,{time_str},{lat_nmea},{lat_dir},{lng_nmea},{lng_dir},{quality},{satellites},{hdop:.1f},{altitude:.1f},{alt_unit},{geoid_height:.1f},{geoid_unit},{age},{ref_id}"
+ (
+     f"$GPGGA,{time_str},{lat_nmea},{lat_dir},{lng_nmea},{lng_dir},"
+     (
+         f"{quality},{satellites},{hdop:.1f},{altitude:.1f},{alt_unit},"
+         f"{geoid_height:.1f},{geoid_unit},{age},{ref_id}"
+     )
+ )
         gga_checksum = self._calculate_nmea_checksum(gga)
         gga = f"{gga}*{gga_checksum:02X}"
 

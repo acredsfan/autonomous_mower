@@ -40,7 +40,9 @@ class VL53L0XSensors:
 
                 # Check if essential libraries were imported
                 if adafruit_vl53l0x is None or digitalio is None:
-                    raise ImportError("VL53L0X or digitalio lib failed to import.")
+                    raise ImportError(
+                        "VL53L0X or digitalio lib failed to import."
+                    )
 
                 self.i2c = board.I2C()
 
@@ -58,48 +60,54 @@ class VL53L0XSensors:
                 status_messages = []
                 if self.left_sensor:
                     addr = hex(self.left_sensor.device_address)
-                    status_messages.append(f"Left ToF sensor OK (Addr: {addr})")
+                    status_messages.append(
+                        f"Left ToF sensor OK (Addr: {addr})")
                 else:
                     status_messages.append("Left ToF sensor FAILED")
 
                 if self.right_sensor:
                     addr = hex(self.right_sensor.device_address)
-                    status_messages.append(f"Right ToF sensor OK (Addr: {addr})")
+                    status_messages.append(
+                        f"Right ToF sensor OK (Addr: {addr})")
                 else:
                     status_messages.append("Right ToF sensor FAILED")
 
                 logging.info("ToF Init: " + "; ".join(status_messages))
 
                 self.is_hardware_available = (
-                    self.left_sensor is not None or self.right_sensor is not None
-                )
+                    self.left_sensor is not None or self.right_sensor is not None)
 
                 if self.is_hardware_available:
                     if self.left_sensor and self.right_sensor:
-                        logging.info("All expected ToF sensors are operational.")
+                        logging.info(
+                            "All expected ToF sensors are operational.")
                     else:
                         logging.warning(
                             "One ToF sensor not operational. Using available sensor(s)."
                         )
                 else:
-                    logging.error("No ToF sensors operational. Readings unavailable.")
+                    logging.error(
+                        "No ToF sensors operational. Readings unavailable."
+                    )
 
             except ImportError as e:
                 logging.warning(
-                    f"HW libs (board/digitalio/vl53l0x) missing: {e}. Simulating."
-                )
+                    f"HW libs (board/digitalio/vl53l0x) missing: {e}. Simulating.")
             except Exception as e:  # General exception for other init errors
-                logging.error(f"Error initializing ToF sensors: {e}. Simulating.")
+                logging.error(
+                    f"Error initializing ToF sensors: {e}. Simulating."
+                )
         else:
-            logging.info("Non-Linux platform. ToF sensors will be simulated.")
+            logging.info(
+                "Non-Linux platform. ToF sensors will be simulated."
+            )
 
     @staticmethod
     def init_vl53l0x(i2c, address, sensor_name="Sensor"):
         """Initialize a VL53L0X sensor at the specified address."""
         if adafruit_vl53l0x is None:
             logging.error(
-                f"adafruit_vl53l0x lib not available. Cannot init {sensor_name}."
-            )
+                f"adafruit_vl53l0x lib not available. Cannot init {sensor_name}.")
             return None
         try:
             sensor = adafruit_vl53l0x.VL53L0X(i2c, address=address)
@@ -109,21 +117,21 @@ class VL53L0XSensors:
             return sensor
         except ValueError:  # Typically "No I2C device at address"
             logging.warning(
-                f"No I2C device for {sensor_name} VL53L0X at address "
-                f"{hex(address)}."
-            )
+                f"No I2C device for {sensor_name} VL53L0X at address {
+                    hex(address)}.")
             return None
         except Exception as e:
             logging.error(
-                f"Error initializing {sensor_name} VL53L0X at " f"{hex(address)}: {e}"
-            )
+                f"Error initializing {sensor_name} VL53L0X at "
+                f"{hex(address)}: {e}")
             return None
 
     @staticmethod
     def reset_sensor(line):
         """Resets a VL53L0X sensor by toggling its XSHUT line."""
         if digitalio is None:
-            logging.error("digitalio library not available, cannot reset sensor.")
+            logging.error(
+                "digitalio library not available, cannot reset sensor.")
             return
 
         # Ensure direction is output
@@ -145,7 +153,9 @@ class VL53L0XSensors:
                 # VL53L0X can return 0 for valid readings very close,
                 # but often indicates an issue if consistently 0 or negative.
                 # Library might return 0 for errors. Treat > 0 as valid.
-                logging.debug(f"VL53L0X returned non-positive distance: {distance}")
+                logging.debug(
+                    f"VL53L0X returned non-positive distance: {distance}"
+                )
                 return -1  # Error value or out of range
         except Exception as e:
             logging.error(f"Error reading VL53L0X data: {e}")
@@ -191,23 +201,21 @@ class VL53L0XSensors:
                 try:
                     temp_sensor.set_address(right_target_addr)
                     logging.info(
-                        f"Right sensor addr changed to " f"{hex(right_target_addr)}."
-                    )
+                        f"Right sensor addr changed to {
+                            hex(right_target_addr)}.")
                     right_sensor_obj = temp_sensor
                 except Exception as e:
                     logging.error(
-                        f"Failed to change Right sensor addr to "
-                        f"{hex(right_target_addr)}: {e}. Sensor may remain at "
-                        f"{hex(_DEFAULT_I2C_ADDRESS)}."
-                    )
+                        f"Failed to change Right sensor addr to {
+                            hex(right_target_addr)}: {e}. Sensor may remain at {
+                            hex(_DEFAULT_I2C_ADDRESS)}.")
                     xshut_right_pin.value = False  # Force off
                     temp_sensor = None
             else:
                 right_sensor_obj = temp_sensor
                 logging.info(
-                    f"Right sensor init at default addr "
-                    f"{hex(_DEFAULT_I2C_ADDRESS)}."
-                )
+                    f"Right sensor init at default addr {
+                        hex(_DEFAULT_I2C_ADDRESS)}.")
         else:
             logging.warning("Right sensor failed to init at default address.")
             xshut_right_pin.value = False
@@ -219,9 +227,8 @@ class VL53L0XSensors:
             # Or, address change failed and it's still at default.
             # We must reset the right sensor to free up the default address.
             logging.info(
-                f"Right sensor at "
-                f"{hex(_DEFAULT_I2C_ADDRESS)}. Resetting for Left sensor."
-            )
+                f"Right sensor at {
+                    hex(_DEFAULT_I2C_ADDRESS)}. Resetting for Left sensor.")
             xshut_right_pin.value = False
             time.sleep(0.05)
 
@@ -236,18 +243,17 @@ class VL53L0XSensors:
             if left_target_addr == _DEFAULT_I2C_ADDRESS:
                 left_sensor_obj = temp_sensor
                 logging.info(
-                    f"Left sensor init at default addr " f"{hex(_DEFAULT_I2C_ADDRESS)}."
-                )
+                    f"Left sensor init at default addr {
+                        hex(_DEFAULT_I2C_ADDRESS)}.")
             else:  # Should not happen with current constants
                 logging.error(
-                    f"Left sensor target addr "
-                    f"{hex(left_target_addr)} is not default!"
-                )
+                    f"Left sensor target addr {
+                        hex(left_target_addr)} is not default!")
                 try:
                     temp_sensor.set_address(left_target_addr)
                     logging.info(
-                        f"Left sensor addr changed to " f"{hex(left_target_addr)}."
-                    )
+                        f"Left sensor addr changed to {
+                            hex(left_target_addr)}.")
                     left_sensor_obj = temp_sensor
                 except Exception as e:
                     logging.error(f"Failed to change Left sensor addr: {e}.")
@@ -298,7 +304,9 @@ if __name__ == "__main__":
     try:
         while True:
             distances = tof.get_distances()
-            print(f"Left: {distances['left']} mm, " f"Right: {distances['right']} mm")
+            print(
+                f"Left: {distances['left']} mm, "
+                f"Right: {distances['right']} mm")
             time.sleep(1)
     except KeyboardInterrupt:
         print("Stopped by user")

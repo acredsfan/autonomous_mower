@@ -1039,7 +1039,10 @@ class ResourceManager:
                 with open(self.user_polygon_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)  # Add indent for readability
                 logger.info(
-                    f"Home location saved to {self.user_polygon_path}: {normalized_location}"
+                    (
+                        f"Home location saved to {self.user_polygon_path"
+                        f"}: {normalized_location}"
+                    )
                 )
                 return True
             except Exception as e:

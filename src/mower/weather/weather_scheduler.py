@@ -458,11 +458,9 @@ class WeatherAwareScheduler:
         self,
     ) -> Dict[datetime, Tuple[MowingRecommendation, str]]:
         """
-        Get the mowing schedule for the next 7 days with weather recommendations.
-
-        Returns:
-            Dict[datetime, Tuple[MowingRecommendation, str]]: Dictionary mapping scheduled times
-                                                              to (recommendation, reason) tuples
+        Get the mowing schedule for the next 7 days with weather recommendations.        Returns:
+            Dict[datetime, Tuple[MowingRecommendation, str]]: Dictionary 
+                mapping scheduled times to (recommendation, reason) tuples
         """
         now = datetime.now()
         result = {}

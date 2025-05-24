@@ -199,7 +199,10 @@ class PowerOptimizer:
         # If mode has changed, apply new settings
         if new_mode != self.power_mode:
             logger.info(
-                f"Changing power mode from {self.power_mode.name} to {new_mode.name} (battery: {battery_level}%)"
+                (
+                    f"Changing power mode from {self.power_mode.name} to"
+                    f" {new_mode.name} (battery: {battery_level}%)"
+                )
             )
             self.power_mode = new_mode
             self._apply_power_settings()
@@ -232,7 +235,8 @@ class PowerOptimizer:
 
                 # Set governor for each CPU core
                 for i in range(cpu_count):
-                    governor_path = f"/sys/devices/system/cpu/cpu{i}/cpufreq/scaling_governor"
+ (f"/sys/devices/system/cpu/cpu{i}/cpufreq/scaling_governor
+  f"
                     if os.path.exists(governor_path):
                         with open(governor_path, "w") as f:
                             f.write(governor)
@@ -268,7 +272,10 @@ class PowerOptimizer:
             ):
                 component.set_poll_interval(settings["sensor_poll_interval"])
                 logger.debug(
-                    f"Set poll interval for {component_name} to {settings['sensor_poll_interval']}s"
+                    (
+                        f"Set poll interval for {component_name} to "
+                        f"{settings['sensor_poll_interval']}s"
+                    )
                 )
 
             if (
@@ -277,7 +284,10 @@ class PowerOptimizer:
             ):
                 component.set_resolution(settings["camera_resolution"])
                 logger.debug(
-                    f"Set resolution for {component_name} to {settings['camera_resolution']}"
+                    (
+                        f"Set resolution for {component_name} to "
+                        f"{settings['camera_resolution']}"
+                    )
                 )
 
             if (
@@ -286,7 +296,10 @@ class PowerOptimizer:
             ):
                 component.set_update_interval(settings["gps_update_interval"])
                 logger.debug(
-                    f"Set update interval for {component_name} to {settings['gps_update_interval']}s"
+                    (
+                        f"Set update interval for {component_name} to "
+                        f"{settings['gps_update_interval']}s"
+                    )
                 )
 
             if (
@@ -297,7 +310,10 @@ class PowerOptimizer:
                     settings["background_processes"]
                 )
                 logger.debug(
-                    f"Set background processes for {component_name} to {settings['background_processes']}"
+                    (
+                        f"Set background processes for {component_name}"
+                        f" to {settings['background_processes']}"
+                    )
                 )
         except Exception as e:
             logger.error(f"Error applying settings to {component_name}: {e}")
