@@ -12,6 +12,7 @@ NC='\033[0m' # No Color
 # Global variable to collect messages for the end
 POST_INSTALL_MESSAGES=""
 CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
+VENV_DIR=".venv" # Define VENV_DIR globally for use in multiple functions
 
 # Function to print error messages
 print_error() {
@@ -47,15 +48,6 @@ check_command() {
     return 0
 }
 
-# Function to cleanup on script failure
-cleanup() {
-    print_info "Cleaning up..."
-    exit 1
-}
-
-# Set trap for cleanup
-trap cleanup EXIT
-
 # Function to find the target config.txt file
 get_config_txt_target() {
     local CONFIG_TXT_NEW="/boot/firmware/config.txt"
@@ -65,7 +57,6 @@ get_config_txt_target() {
     elif [ -f "$CONFIG_TXT_OLD" ]; then
         echo "$CONFIG_TXT_OLD"
     else
-        # Return empty string if not found, let callers handle it
         echo ""
     fi
 }
@@ -129,7 +120,6 @@ enable_required_interfaces() {
     if $CHANGES_MADE_CONFIG || $CHANGES_MADE_MODULES; then
         POST_INSTALL_MESSAGES+="[INFO] Hardware interfaces (I2C/Primary UART) have been configured in $CONFIG_TXT_TARGET and/or /etc/modules. A REBOOT is required for these changes to fully take effect.\\n"
     fi
-    # This message is always relevant if using primary UART for GPS
     POST_INSTALL_MESSAGES+="[IMPORTANT] If using the primary UART (/dev/ttyAMA0 or /dev/serial0, typically for GPS):\\n"
     POST_INSTALL_MESSAGES+="  Ensure the Linux serial console is DISABLED over this port.\\n"
     POST_INSTALL_MESSAGES+="  Use 'sudo raspi-config':\\n"
@@ -142,48 +132,33 @@ enable_required_interfaces() {
 
 # Function to validate Raspberry Pi hardware
 validate_hardware() {
-    local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target) # Get config path for messages
+    local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target) 
 
-    # Check if running on Raspberry Pi
     if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
         print_error "This script must be run on a Raspberry Pi"
         exit 1
     fi
 
-    # Check Pi model and memory
     PI_MODEL=$(tr -d '\0' < /proc/device-tree/model)
-    if [[ ! "$PI_MODEL" =~ "Raspberry Pi 4" ]]; then
-        print_warning "This software is optimized for Raspberry Pi 4B 4GB or better"
-        print_warning "Current model: $PI_MODEL"
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+    if [[ ! "$PI_MODEL" =~ "Raspberry Pi 4" ]]; then # Simplified check, adjust as needed
+        print_warning "This software is optimized for Raspberry Pi 4B 4GB or better. Current model: $PI_MODEL"
+        read -p "Continue anyway? (y/n) " -n 1 -r; echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 
-    # Check available memory
     TOTAL_MEM=$(free -m | awk '/^Mem:/{print $2}')
-    if [ "$TOTAL_MEM" -lt 3500 ]; then
+    if [ "$TOTAL_MEM" -lt 3500 ]; then # Approx 3.5GB
         print_warning "Recommended minimum RAM is 4GB, current: ${TOTAL_MEM}MB"
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+        read -p "Continue anyway? (y/n) " -n 1 -r; echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 
-    # Check for required interfaces
     if ! ls /dev/i2c* >/dev/null 2>&1; then
-        if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
+        if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then # enable_required_interfaces was run
             print_warning "I2C interface (/dev/i2c*) not detected. Auto-configuration was attempted. A REBOOT is likely required."
-            if [ -n "$CONFIG_TXT_TARGET_FOR_MSG" ]; then
-                POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET_FOR_MSG and /etc/modules, then reboot.\\n"
-            else
-                POST_INSTALL_MESSAGES+="[WARNING] I2C interface was not active after configuration attempt (config.txt not found by script). Ensure it is enabled manually and /etc/modules updated, then reboot.\\n"
-            fi
-        else
-            print_error "I2C interface not enabled. Please enable it using raspi-config and reboot."
+            # Message already added by enable_required_interfaces if changes were made
+        else # enable_required_interfaces didn't run or failed to find config.txt
+            print_error "I2C interface not enabled and auto-configuration could not be performed (config.txt not found). Please enable it using raspi-config and reboot."
             exit 1
         fi
     else
@@ -191,73 +166,55 @@ validate_hardware() {
     fi
 
     if ! (ls /dev/ttyAMA0 >/dev/null 2>&1 || ls /dev/serial0 >/dev/null 2>&1); then
-        if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
+         if $CONFIG_TXT_FOUND_BY_ENABLE_FUNC; then
             print_warning "Primary UART (/dev/ttyAMA0 or /dev/serial0) not detected. Auto-configuration was attempted. A REBOOT is likely required."
-            if [ -n "$CONFIG_TXT_TARGET_FOR_MSG" ]; then
-                POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt. Ensure it is enabled in $CONFIG_TXT_TARGET_FOR_MSG (and serial console disabled for GPS use), then reboot.\\n"
-            else
-                POST_INSTALL_MESSAGES+="[WARNING] Primary UART was not active after configuration attempt (config.txt not found by script). Ensure it is enabled manually (and serial console disabled for GPS use), then reboot.\\n"
-            fi
         else
-            print_error "Serial interface not enabled. Please enable it using raspi-config (and disable serial console if using for GPS) and reboot."
+            print_error "Serial interface not enabled and auto-configuration could not be performed (config.txt not found). Please enable it using raspi-config (and disable serial console if using for GPS) and reboot."
             exit 1
         fi
     else
         print_success "Primary UART (/dev/ttyAMA0 or /dev/serial0) detected."
     fi
 
-    # Check for camera module
-    if ! ls /dev/video* >/dev/null 2>&1; then
-        print_warning "No camera devices found in /dev/video*"
-        print_warning "This could mean:"
-        print_warning "1. Camera module is not connected"
-        print_warning "2. Camera module is not enabled"
-        print_warning "3. Using a newer Pi OS where camera appears differently"
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    else
-        print_info "Camera device(s) found: $(ls /dev/video*)"
-    fi
-
-    # Additional camera check using libcamera-still
     if command_exists libcamera-still; then
-        print_info "Testing camera with libcamera-still..."
-        if ! timeout 2 libcamera-still --immediate --timeout 1 -o /dev/null 2>/dev/null; then
-            print_warning "libcamera-still test failed. Camera might not be working."
-            read -p "Continue anyway? (y/n) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                exit 1
+        print_info "Verifying camera presence with libcamera-still..."
+        if timeout 5 libcamera-still --list-cameras | grep -q "Available cameras"; then
+            print_success "Camera detected by libcamera-still."
+            print_info "Testing camera capture..."
+            if timeout 5 libcamera-still --immediate --timeout 1 -o /dev/null; then # Removed 2>/dev/null to see errors
+                print_success "Camera capture test succeeded."
+            else
+                print_warning "libcamera-still capture test failed. Camera might not be working correctly or is misconfigured."
+                POST_INSTALL_MESSAGES+="[WARNING] libcamera-still capture test failed. Check camera connection and configuration (e.g., /boot/firmware/config.txt for overlays like 'camera_auto_detect=1').\\n"
+                read -p "Continue installation despite camera test failure? (y/n) " -n 1 -r; echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
             fi
         else
-            print_success "Camera test with libcamera-still succeeded"
+            print_warning "No camera detected by libcamera-still. Ensure camera is connected and enabled (e.g., via raspi-config or in /boot/config.txt or /boot/firmware/config.txt)."
+            POST_INSTALL_MESSAGES+="[WARNING] No camera detected by libcamera-still. Ensure camera is connected and enabled. Obstacle detection with camera will not work.\\n"
+            read -p "Continue installation without a camera? (y/n) " -n 1 -r; echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
         fi
+    elif ls /dev/video* >/dev/null 2>&1; then
+        print_info "Legacy camera device(s) found: $(ls /dev/video*). Consider using libcamera stack."
+        POST_INSTALL_MESSAGES+="[INFO] Legacy camera device(s) found. For best results with Pi OS Bookworm and later, ensure you are using the libcamera stack and 'python3-picamera2'.\\n"
+    else
+        print_warning "No camera devices found (neither libcamera nor /dev/video*)."
+        POST_INSTALL_MESSAGES+="[WARNING] No camera devices found. Obstacle detection with camera will not work.\\n"
+        read -p "Continue installation without a camera? (y/n) " -n 1 -r; echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 }
 
 # Function to setup an additional UART
 setup_additional_uart() {
     print_info "Setting up additional UART (UART2)..."
-    # Note: dtoverlay=uart2 typically uses GPIOs 0, 1 (TXD2, RXD2) and 2, 3 (CTS2, RTS2).
-    # These pins might conflict with other interfaces like I2C0 or specific camera functions
-    # depending on the Raspberry Pi model and configuration.
-    # Verify pinouts and potential conflicts for your specific setup.
-    # Other options for additional UARTs include uart3, uart4, uart5 with different GPIO assignments.
     local DTOVERLAY_ENTRY="dtoverlay=uart2"
-    local CONFIG_TXT_NEW="/boot/firmware/config.txt"
-    local CONFIG_TXT_OLD="/boot/config.txt"
-    local CONFIG_TXT_TARGET=""
+    local CONFIG_TXT_TARGET=$(get_config_txt_target)
 
-    if [ -f "$CONFIG_TXT_NEW" ]; then
-        CONFIG_TXT_TARGET="$CONFIG_TXT_NEW"
-    elif [ -f "$CONFIG_TXT_OLD" ]; then
-        CONFIG_TXT_TARGET="$CONFIG_TXT_OLD"
-    else
-        print_error "Boot configuration file (config.txt) not found at $CONFIG_TXT_NEW or $CONFIG_TXT_OLD."
-        print_warning "Skipping additional UART setup."
+    if [ -z "$CONFIG_TXT_TARGET" ]; then
+        print_error "Boot configuration file (config.txt) not found. Skipping additional UART setup."
+        POST_INSTALL_MESSAGES+="[WARNING] config.txt not found. Additional UART (UART2) was not configured.\\n"
         return 1
     fi
 
@@ -266,654 +223,457 @@ setup_additional_uart() {
     if sudo grep -q "^${DTOVERLAY_ENTRY}" "$CONFIG_TXT_TARGET"; then
         print_info "UART2 overlay ('${DTOVERLAY_ENTRY}') already exists in $CONFIG_TXT_TARGET."
     else
-        print_info "Backing up $CONFIG_TXT_TARGET to ${CONFIG_TXT_TARGET}.bak_uart_setup..."
+        print_info "Backing up $CONFIG_TXT_TARGET to ${CONFIG_TXT_TARGET}.bak_uart_setup_$(date +%Y%m%d_%H%M%S)..."
         sudo cp "$CONFIG_TXT_TARGET" "${CONFIG_TXT_TARGET}.bak_uart_setup_$(date +%Y%m%d_%H%M%S)"
-        if [ $? -ne 0 ]; then
-            print_error "Failed to backup $CONFIG_TXT_TARGET. Aborting UART setup."
-            return 1
-        fi
+        check_command "Backing up $CONFIG_TXT_TARGET" || return 1
 
         print_info "Adding '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET..."
+        echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null 
         echo "${DTOVERLAY_ENTRY}" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
-        if [ $? -ne 0 ]; then
-            print_error "Failed to add '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET."
-            print_warning "You may need to add it manually."
+        check_command "Adding '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET" || {
+            print_warning "Failed to add '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET. You may need to add it manually."
             return 1
-        else
-            print_success "Successfully added '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET."
-            print_warning "A REBOOT is required for the UART2 changes to take effect."
-        fi
+        }
+        print_success "Successfully added '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET."
+        POST_INSTALL_MESSAGES+="[INFO] UART2 overlay added to $CONFIG_TXT_TARGET. A REBOOT is required for this change to take effect.\\n"
     fi
 }
 
 # Function to setup watchdog
 setup_watchdog() {
     print_info "Setting up hardware watchdog..."
+    if ! command -v watchdog >/dev/null 2>&1; then
+        sudo apt-get install -y watchdog
+        check_command "Installing watchdog package" || return 1
+    else
+        print_info "Watchdog package already installed."
+    fi
+
     sudo modprobe bcm2835_wdt
-    echo "bcm2835_wdt" | sudo tee -a /etc/modules
-    sudo apt-get install -y watchdog
-    # Configure watchdog
-    sudo sed -i 's/#max-load-1/max-load-1/' /etc/watchdog.conf
-    sudo sed -i 's/#watchdog-device/watchdog-device/' /etc/watchdog.conf
-    echo "watchdog-timeout = 15" | sudo tee -a /etc/watchdog.conf
+    check_command "Loading bcm2835_wdt module" || print_warning "Failed to load bcm2835_wdt module. Watchdog might not function."
+
+    if ! grep -q "^bcm2835_wdt" /etc/modules; then
+        echo "bcm2835_wdt" | sudo tee -a /etc/modules > /dev/null
+        print_info "Added bcm2835_wdt to /etc/modules."
+    else
+        print_info "bcm2835_wdt already in /etc/modules."
+    fi
+    
+    if sudo grep -q "^#watchdog-device" /etc/watchdog.conf; then
+        sudo sed -i 's|^#watchdog-device\s*=\s*/dev/watchdog|watchdog-device = /dev/watchdog|' /etc/watchdog.conf
+        print_info "Uncommented watchdog-device in /etc/watchdog.conf."
+    elif ! sudo grep -q "^watchdog-device" /etc/watchdog.conf; then
+        echo "watchdog-device = /dev/watchdog" | sudo tee -a /etc/watchdog.conf > /dev/null
+        print_info "Added watchdog-device to /etc/watchdog.conf."
+    fi
+    
+    if sudo grep -q "^#max-load-1" /etc/watchdog.conf; then
+        sudo sed -i 's|^#max-load-1\s*=\s*24|max-load-1 = 24|' /etc/watchdog.conf
+        print_info "Uncommented max-load-1 in /etc/watchdog.conf."
+    elif ! sudo grep -q "^max-load-1" /etc/watchdog.conf; then
+        echo "max-load-1 = 24" | sudo tee -a /etc/watchdog.conf > /dev/null
+        print_info "Added max-load-1 to /etc/watchdog.conf."
+    fi
+
+    if ! sudo grep -q "^watchdog-timeout" /etc/watchdog.conf; then
+        echo "watchdog-timeout = 15" | sudo tee -a /etc/watchdog.conf > /dev/null
+        print_info "Added watchdog-timeout = 15 to /etc/watchdog.conf."
+    else
+        sudo sed -i 's|^watchdog-timeout\s*=.*|watchdog-timeout = 15|' /etc/watchdog.conf
+        print_info "Ensured watchdog-timeout is set to 15 in /etc/watchdog.conf."
+    fi
+    
     sudo systemctl enable watchdog
-    sudo systemctl start watchdog
+    check_command "Enabling watchdog service" || return 1
+    sudo systemctl restart watchdog 
+    check_command "Starting/restarting watchdog service" || print_warning "Watchdog service failed to start/restart."
+    print_success "Hardware watchdog setup complete."
 }
 
 # Function to setup emergency stop
 setup_emergency_stop() {
-    # Ask if the user wants to set up a physical emergency stop button
-    echo ""
-    echo "The emergency stop button is an optional hardware component."
-    echo "It provides a physical button to immediately stop all operations."
-    echo "If not installed, emergency stop functionality is still available through the web interface."
-    echo ""
-    read -p "Do you want to configure a physical emergency stop button? (y/n): " setup_estop
+    print_info "Setting up physical emergency stop button (GPIO7)..."
+    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport ; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'\''"' | sudo tee /etc/udev/rules.d/99-gpio-permissions.rules > /dev/null
+    echo 'SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value ; chmod 660 /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value'\''"' | sudo tee -a /etc/udev/rules.d/99-gpio-permissions.rules > /dev/null
     
-    if [[ $setup_estop =~ ^[Yy]$ ]]; then
-        print_info "Setting up emergency stop button..."
-        # Add udev rule for GPIO access
-        echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
-        echo 'SUBSYSTEM=="input", GROUP="input", MODE="0660"' | sudo tee -a /etc/udev/rules.d/99-gpio.rules
-        
-        # Configure GPIO7 for emergency stop
-        echo "7" | sudo tee /sys/class/gpio/export
-        echo "in" | sudo tee /sys/class/gpio/gpio7/direction
-        echo "both" | sudo tee /sys/class/gpio/gpio7/edge
-        sudo chown -R root:gpio /sys/class/gpio/gpio7
-        sudo chmod -R 770 /sys/class/gpio/gpio7
-        
-        sudo udevadm control --reload-rules && sudo udevadm trigger
-        
-        print_info "Emergency stop button configured on GPIO7"
-        print_info "Please connect emergency stop button between GPIO7 and GND"
-        print_info "Button should be normally closed (NC) for fail-safe operation"
-        
-        # Update config file with use_physical_emergency_stop = true
-        if [ -f "config/config.json" ]; then
-            python3 -c "
-import json
-config_file = 'config/config.json'
-with open(config_file, 'r') as f:
-    config = json.load(f)
-if 'safety' not in config:
-    config['safety'] = {}
+    sudo udevadm control --reload-rules && sudo udevadm trigger
+    
+    print_info "Emergency stop button udev rules configured for GPIO7."
+    print_info "Please connect emergency stop button between GPIO7 and GND (NC type)."
+    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button configured for GPIO7. Ensure button is NC type connected to GPIO7 and GND.\\n"
+
+    local CONFIG_JSON_PATH="config/config.json"
+    # Ensure Python from venv is used if available and needed
+    local PYTHON_CMD="$VENV_DIR/bin/python"
+    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi # Fallback to system python3
+
+    if command_exists $PYTHON_CMD; then
+        $PYTHON_CMD -c "
+import json, os
+config_file = '$CONFIG_JSON_PATH'
+if os.path.exists(config_file):
+    try:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+    except json.JSONDecodeError:
+        config = {} 
+else:
+    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+    config = {}
+
+if 'safety' not in config: config['safety'] = {}
 config['safety']['use_physical_emergency_stop'] = True
+config['safety']['emergency_stop_gpio_pin'] = 7 
+
 with open(config_file, 'w') as f:
     json.dump(config, f, indent=4)
+print(f'Updated {config_file} for physical emergency stop.')
 "
-        fi
+        check_command "Updating $CONFIG_JSON_PATH for physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
     else
-        print_info "Skipping physical emergency stop button configuration."
-        print_info "Emergency stop functionality will be available through the web interface only."
-        
-        # Update config file with use_physical_emergency_stop = false
-        if [ -f "config/config.json" ]; then
-            python3 -c "
-import json
-config_file = 'config/config.json'
-with open(config_file, 'r') as f:
-    config = json.load(f)
-if 'safety' not in config:
-    config['safety'] = {}
+        print_warning "$PYTHON_CMD not found. Cannot automatically update $CONFIG_JSON_PATH."
+        POST_INSTALL_MESSAGES+="[WARNING] $PYTHON_CMD not found. Manually set 'use_physical_emergency_stop: true', 'emergency_stop_gpio_pin: 7' in $CONFIG_JSON_PATH.\\n"
+    fi
+}
+
+skip_physical_emergency_stop() {
+    print_info "Skipping physical emergency stop button configuration."
+    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button was not set up. Software e-stop is available.\\n"
+    
+    local CONFIG_JSON_PATH="config/config.json"
+    local PYTHON_CMD="$VENV_DIR/bin/python"
+    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi
+
+    if command_exists $PYTHON_CMD; then
+        $PYTHON_CMD -c "
+import json, os
+config_file = '$CONFIG_JSON_PATH'
+if os.path.exists(config_file):
+    try:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+    except json.JSONDecodeError:
+        config = {}
+else:
+    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+    config = {}
+
+if 'safety' not in config: config['safety'] = {}
 config['safety']['use_physical_emergency_stop'] = False
 with open(config_file, 'w') as f:
     json.dump(config, f, indent=4)
+print(f'Updated {config_file} to disable physical emergency stop.')
 "
-        fi
+        check_command "Updating $CONFIG_JSON_PATH to disable physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
+    else
+        print_warning "$PYTHON_CMD not found. Cannot automatically update $CONFIG_JSON_PATH."
+        POST_INSTALL_MESSAGES+="[WARNING] $PYTHON_CMD not found. Manually set 'use_physical_emergency_stop: false' in $CONFIG_JSON_PATH.\\n"
     fi
 }
 
 # Function to setup YOLOv8 models
 setup_yolov8() {
     print_info "Setting up YOLOv8 for obstacle detection..."
+    local PYTHON_CMD="$VENV_DIR/bin/python"
+    local PIP_CMD="$VENV_DIR/bin/pip"
+    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi
+    if [ ! -f "$PIP_CMD" ]; then PIP_CMD="pip3"; fi
 
-    # Check for and install ultralytics if not present
-    print_info "Checking for ultralytics package..."
-    if ! python3 -m pip show ultralytics > /dev/null 2>&1; then
-        print_info "ultralytics package not found. Installing (this may take a few minutes)..."
-        
-        print_info "Attempting to remove system-installed sympy to avoid conflicts..."
+    print_info "Checking for ultralytics package (using $PIP_CMD)..."
+    if ! "$PYTHON_CMD" -m pip show ultralytics > /dev/null 2>&1; then # Use python -m pip for consistency
+        print_info "ultralytics package not found. Installing..."
         if dpkg -s python3-sympy &> /dev/null; then
-            sudo apt-get remove -y python3-sympy
-            # check_command will use $? from the sudo apt-get command
-            if check_command "Removing python3-sympy"; then
-                print_info "python3-sympy removed successfully."
-                # Clean up dependencies that are no longer needed
-                print_info "Running apt autoremove after sympy removal..."
-                sudo apt-get autoremove -y
-                check_command "Running apt autoremove" || print_warning "apt autoremove encountered an issue, but proceeding."
-            else
-                print_warning "Failed to remove python3-sympy. Installation of ultralytics might still face issues."
-            fi
-        else
-            print_info "python3-sympy not found via apt, proceeding with pip install."
+            print_info "System python3-sympy detected. Consider removing it ('sudo apt-get remove python3-sympy') if ultralytics has issues."
         fi
-        
-        python3 -m pip install --break-system-packages --root-user-action=ignore --upgrade --upgrade-strategy eager ultralytics
-        check_command "Installing ultralytics package" || { print_error "Ultralytics installation failed."; return 1; } # Return if install fails
-        print_success "ultralytics package installed successfully."
+        "$PIP_CMD" install --upgrade --upgrade-strategy eager "ultralytics>=8.1.0"
+        check_command "Installing ultralytics package" || { print_error "Ultralytics installation failed."; return 1; }
     else
         print_success "ultralytics package already installed."
+        "$PIP_CMD" install --upgrade "ultralytics>=8.1.0" # Ensure version
     fi
 
-    # Pre-install dependencies for TFLite export to avoid issues within the ultralytics script
-    print_info "Pre-installing TFLite export dependencies for ultralytics..."
-    python3 -m pip install --break-system-packages --root-user-action=ignore \
-        "tf_keras" \
-        "sng4onnx>=1.0.1" \
-        "onnx_graphsurgeon>=0.3.26" \
-        "ai-edge-litert>=1.2.0" \
-        "onnx>=1.12.0" \
-        "onnx2tf==1.27.0" \
-        "onnxslim>=0.1.46" \
-        "onnxruntime"
-    check_command "Installing TFLite export dependencies" || { print_warning "Failed to pre-install some TFLite export dependencies. YOLOv8 setup might encounter issues."; }
-
-    # Ensure numpy version is compatible with TensorFlow after ultralytics installation
-    print_info "Ensuring numpy version compatibility for TensorFlow..."
-    python3 -m pip install --break-system-packages --root-user-action=ignore "numpy>=1.26.0,<2.2.0"
-    check_command "Adjusting numpy version for TensorFlow compatibility" || { print_warning "Failed to adjust numpy. TensorFlow might have issues."; }
+    print_info "Pre-installing/checking TFLite export dependencies for ultralytics (using $PIP_CMD)..."
+    "$PIP_CMD" install \
+        "tf_keras" "sng4onnx>=1.0.1" "onnx_graphsurgeon>=0.3.26" "ai-edge-litert>=1.2.0" \
+        "onnx>=1.15.0" "onnx2tf>=1.17.0" "onnxslim>=0.1.46" "onnxruntime>=1.16.0"
+    check_command "Installing/checking TFLite export dependencies" || print_warning "Failed to install/check some TFLite export dependencies."
     
-    # Create models directory if it doesn't exist
     mkdir -p src/mower/obstacle_detection/models
-    check_command "Creating models directory" || exit 1
+    check_command "Creating models directory src/mower/obstacle_detection/models" || return 1
     
-    # Run the setup script
-    print_info "Running YOLOv8 setup script..."
-    python3 scripts/setup_yolov8.py --model yolov8n
-    check_command "Setting up YOLOv8 models" || exit 1
-    
-    # Verify installation
-    if [ -f src/mower/obstacle_detection/models/yolov8n.tflite ]; then
-        print_success "YOLOv8 model successfully downloaded"
+    print_info "Running YOLOv8 setup script (scripts/setup_yolov8.py using $PYTHON_CMD)..."
+    if [ -f "scripts/setup_yolov8.py" ]; then
+        "$PYTHON_CMD" scripts/setup_yolov8.py --model yolov8n 
+        check_command "Setting up YOLOv8 models via script" || {
+            print_error "YOLOv8 model setup script failed."
+            POST_INSTALL_MESSAGES+="[ERROR] YOLOv8 model setup script failed.\\n"
+            return 1
+        }
     else
-        print_warning "YOLOv8 model not found. Setup may have failed."
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    fi
-}
-
-# Function to install all dependencies and set up the environment
-setup_environment() {
-    print_info "Installing system dependencies..."
-    sudo apt-get update && sudo apt-get install -y \
-        python3 python3-pip python3-venv \
-        libatlas-base-dev libopenjp2-7 libtiff5 \
-        i2c-tools git
-
-    print_info "Setting up Python virtual environment..."
-    python3 -m venv venv
-    source venv/bin/activate
-
-    print_info "Installing Python dependencies..."
-    pip install --upgrade pip
-    pip install -r requirements.txt
-
-    print_info "Configuring GPIO permissions..."
-    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"' | sudo tee /etc/udev/rules.d/99-gpio.rules
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-
-    print_success "Environment setup complete."
-}
-
-# Function to setup service installation
-setup_mower_service() {
-    print_info "Setting up autonomous mower system service..."
-    
-    # Check if service files exist
-    if [ ! -f "autonomous-mower.service" ]; then
-        print_error "Service file 'autonomous-mower.service' not found in current directory"
+        print_error "scripts/setup_yolov8.py not found."
+        POST_INSTALL_MESSAGES+="[ERROR] scripts/setup_yolov8.py not found. YOLOv8 models not configured.\\n"
         return 1
     fi
     
-    # Get current working directory for service file paths
-    local CURRENT_DIR=$(pwd)
-    local SERVICE_FILE="$CURRENT_DIR/autonomous-mower.service"
+    if [ -f "src/mower/obstacle_detection/models/yolov8n_float32.tflite" ] || [ -f "src/mower/obstacle_detection/models/yolov8n.tflite" ]; then
+        print_success "YOLOv8 TFLite model found."
+    else
+        print_warning "Default YOLOv8 TFLite model not found. Check script output."
+        POST_INSTALL_MESSAGES+="[WARNING] Default YOLOv8 TFLite model not found after setup.\\n"
+    fi
+    print_success "YOLOv8 setup function completed."
+}
+
+setup_virtual_environment() {
+    if [ -d "$VENV_DIR" ]; then
+        print_info "Virtual environment '$VENV_DIR' already exists."
+    else
+        print_info "Creating Python virtual environment in '$VENV_DIR'..."
+        python3 -m venv "$VENV_DIR"
+        check_command "Creating virtual environment" || { print_error "Failed to create virtual environment."; exit 1; }
+        print_success "Virtual environment created."
+    fi
+    # No activation here; use explicit paths to venv executables.
+    POST_INSTALL_MESSAGES+="[INFO] Python virtual environment is in '$VENV_DIR'. To activate manually for development, run 'source $VENV_DIR/bin/activate'.\\n"
+}
+
+install_python_dependencies() {
+    local VENV_PIP_CMD="$VENV_DIR/bin/pip"
+    if [ ! -f "$VENV_PIP_CMD" ]; then
+        print_error "Virtual environment pip not found at $VENV_PIP_CMD. Setup venv first."
+        return 1
+    fi
+
+    print_info "Upgrading pip in virtual environment ($VENV_PIP_CMD)..."
+    "$VENV_PIP_CMD" install --upgrade pip
+    check_command "Upgrading pip in venv" || return 1
+
+    print_info "Installing Python dependencies from requirements.txt into venv..."
+    if [ -f "requirements.txt" ]; then
+        "$VENV_PIP_CMD" install -r requirements.txt
+        check_command "Installing dependencies from requirements.txt" || return 1
+    else
+        print_error "requirements.txt not found."
+        return 1
+    fi
+
+    print_info "Installing project in editable mode into virtual environment..."
+    "$VENV_PIP_CMD" install -e .
+    check_command "Installing project in editable mode" || return 1
     
-    # Copy service file to systemd directory
-    print_info "Installing service file to /etc/systemd/system/..."
-    sudo cp "$SERVICE_FILE" /etc/systemd/system/
+    print_success "Python dependencies installed successfully into $VENV_DIR."
+}
+
+setup_mower_service() {
+    print_info "Setting up autonomous mower system service..."
+    
+    local PROJECT_ROOT_DIR
+    PROJECT_ROOT_DIR=$(pwd) 
+    local SERVICE_TEMPLATE_FILE="scripts/autonomous-mower.service.template"
+    local SERVICE_FILE_NAME="autonomous-mower.service" 
+    local GENERATED_SERVICE_FILE="/tmp/$SERVICE_FILE_NAME" 
+    
+    local VENV_PYTHON_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/python"
+    # Assuming main_controller.py is the entry point for the service.
+    # The project.scripts in pyproject.toml defines 'mower = "mower.main_controller:main"'
+    # So, the service should run the 'mower' script installed by 'pip install -e .'
+    # This script is typically created in $VENV_DIR/bin/
+    local MOWER_EXECUTABLE_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/mower"
+
+
+    if [ ! -f "$SERVICE_TEMPLATE_FILE" ]; then
+        print_error "Service template file '$SERVICE_TEMPLATE_FILE' not found."
+        POST_INSTALL_MESSAGES+="[ERROR] Service template '$SERVICE_TEMPLATE_FILE' not found.\\n"
+        return 1
+    fi
+    if [ ! -f "$MOWER_EXECUTABLE_PATH" ]; then # Check for the installed script
+        print_error "Mower executable script not found at '$MOWER_EXECUTABLE_PATH'. Ensure 'pip install -e .' was successful."
+        POST_INSTALL_MESSAGES+="[ERROR] Mower executable '$MOWER_EXECUTABLE_PATH' not found. Service may not work.\\n"
+        # Allow to proceed, user might fix manually or it's a path issue.
+    fi
+
+    print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
+    sed -e "s|{{PROJECT_ROOT_DIR}}|$PROJECT_ROOT_DIR|g" \
+        -e "s|{{MOWER_EXECUTABLE_PATH}}|$MOWER_EXECUTABLE_PATH|g" \
+        "$SERVICE_TEMPLATE_FILE" > "$GENERATED_SERVICE_FILE"
+    check_command "Generating service file" || return 1
+    
+    print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
+    sudo cp "$GENERATED_SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE_NAME"
     check_command "Copying service file" || return 1
     
-    # Set proper permissions
-    sudo chmod 644 /etc/systemd/system/autonomous-mower.service
+    sudo chmod 644 "/etc/systemd/system/$SERVICE_FILE_NAME"
     check_command "Setting service file permissions" || return 1
+    rm "$GENERATED_SERVICE_FILE"
     
-    # Reload systemd daemon to recognize new service
     print_info "Reloading systemd daemon..."
     sudo systemctl daemon-reload
     check_command "Reloading systemd daemon" || return 1
     
-    # Enable service to start on boot
     print_info "Enabling autonomous mower service to start on boot..."
-    sudo systemctl enable autonomous-mower.service
+    sudo systemctl enable "$SERVICE_FILE_NAME"
     check_command "Enabling autonomous mower service" || return 1
     
     print_success "Autonomous mower service has been installed and enabled!"
-    print_info "The service will start automatically on system boot."
-    print_info "You can manually start/stop the service with:"
-    print_info "  sudo systemctl start autonomous-mower"
-    print_info "  sudo systemctl stop autonomous-mower"
-    print_info "  sudo systemctl status autonomous-mower"
-    
-    POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled for automatic startup on boot.\\n"
-    POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status autonomous-mower' to check service status.\\n"
+    POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled.\\n"
+    POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status $SERVICE_FILE_NAME' to check service status.\\n"
 }
 
-# Main installation starts here
-print_info "Starting installation with safety checks..."
 
-# Attempt to enable I2C and Serial if not already enabled
+# --- Main Installation Logic ---
+print_info "Starting Autonomous Mower installation script..."
+
+if ! command_exists python3; then
+    print_error "Python 3 is not installed. Please install Python 3 (>=3.9) and try again."
+    exit 1
+fi
+if ! command_exists pip3 && ! command_exists "$VENV_DIR/bin/pip"; then 
+    print_error "pip3 is not installed system-wide, and no venv pip found yet. Please install python3-pip."
+    exit 1
+fi
+print_success "Basic system checks (python3) passed."
+
+setup_virtual_environment
+
 enable_required_interfaces
-
-# Validate hardware first
 validate_hardware
 
-# Setup additional UART
-setup_additional_uart
-
-# Check Python version
-if ! command_exists python3; then
-    print_error "Python 3 is not installed"
-    exit 1
+read -p "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)? (y/n) " -n 1 -r; echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_additional_uart
+else
+    print_info "Skipping additional UART setup."
 fi
 
-# Check pip version
-if ! command_exists pip3; then
-    print_error "pip3 is not installed"
-    exit 1
-fi
-
-# Install system dependencies
-print_info "Installing system dependencies..."
-sudo apt-get update && sudo apt-get upgrade -y && sudo apt autoremove -y
-check_command "Updating package list" || exit 1
+print_info "Updating package lists and installing essential system dependencies..."
+sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
+check_command "Updating package list and upgrading system" || exit 1
 
 sudo apt-get install -y \
-    python3-pip \
-    python3-dev \
-    python3-setuptools \
-    python3-wheel \
-    i2c-tools \
-    git \
-    libatlas-base-dev \
-    libhdf5-dev \
-    gpsd \
-    gpsd-clients \
-    python3-gps \
-    python3-libgpiod \
-    libportaudio2 \
-    libportaudiocpp0 \
-    portaudio19-dev \
+    python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
+    i2c-tools git libatlas-base-dev libhdf5-dev \
+    gpsd gpsd-clients python3-gps \
+    python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
     python3-picamera2 \
-    wget \
-    gnupg \
-    curl \
-    gdal-bin \
-    libgdal-dev \
-    python3-gdal
-check_command "Installing system packages" || exit 1
+    wget curl gnupg \
+    gdal-bin libgdal-dev python3-gdal
+check_command "Installing core system packages" || exit 1
+print_success "Essential system dependencies installed."
 
-# Set PYTHONPATH to include our src directory
-export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
-
-# Make PYTHONPATH permanent for the pi user
-print_info "Setting up permanent PYTHONPATH..."
-if ! grep -q "PYTHONPATH.*autonomous_mower/src" /home/pi/.bashrc; then
+# INFO: The following lines modify .bashrc to add the project's src directory to PYTHONPATH.
+# This is generally NOT recommended if the project is installed in editable mode (pip install -e .)
+# from within an activated virtual environment, as the 'mower' package should be discoverable
+# by Python automatically. Consider removing these lines if using a venv and editable install.
+PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
+print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
     echo "" >> /home/pi/.bashrc
     echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
-    echo "export PYTHONPATH=\"/home/pi/autonomous_mower/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
-    print_success "Added PYTHONPATH to ~/.bashrc"
+    echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
+    print_success "Added PYTHONPATH to /home/pi/.bashrc."
+    POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
 else
-    print_info "PYTHONPATH already configured in ~/.bashrc"
+    print_info "PYTHONPATH already configured in /home/pi/.bashrc."
 fi
 
-# Upgrade pip
-print_info "Upgrading pip..."
-python3 -m pip install --break-system-packages --root-user-action=ignore --upgrade pip
-check_command "Upgrading pip" || exit 1
+install_python_dependencies
 
-# Install main package and dependencies
-print_info "Installing Python package and dependencies..."
-python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir -e .
-check_command "Installing main package" || exit 1
-
-# Install additional packages
-print_info "Installing additional packages..."
-python3 -m pip install --break-system-packages --root-user-action=ignore --no-cache-dir \
-    utm \
-    adafruit-circuitpython-bme280 \
-    adafruit-circuitpython-bno08x \
-    barbudor-circuitpython-ina3221 \
-    adafruit-circuitpython-vl53l0x \
-    RPi.GPIO \
-    picamera2 \
-    opencv-python \
-    pillow \
-    numpy \
-    requests \
-    tqdm
-check_command "Installing additional packages" || exit 1
-
-# Set up YOLOv8 models
-echo -ne "${YELLOW}Do you want to install YOLOv8 models for improved obstacle detection? (A default model will be downloaded if you don't have your own) (y/n) ${NC}"
-read -n 1 -r
-echo
+read -p "Do you want to install/configure YOLOv8 models? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Setting up YOLOv8 for obstacle detection..."
-    
-    # Check for installation directory
-    mkdir -p models
-    check_command "Creating models directory" || exit 1
-    
-    # Check if models already exist in the models directory
-    EXISTING_TFLITE_MODEL=""
-    EXISTING_LABELS_FILE=""
-    
-    # Look for common TFLite model files
-    for model_file in models/*.tflite; do
-        if [ -f "$model_file" ]; then
-            EXISTING_TFLITE_MODEL="$model_file"
-            break
-        fi
-    done
-    
-    # Look for common label files
-    for label_file in models/*.txt models/*.names; do
-        if [ -f "$label_file" ]; then
-            EXISTING_LABELS_FILE="$label_file"
-            break
-        fi
-    done
-    
-    # If both model and labels exist, ask if user wants to use them
-    if [ -n "$EXISTING_TFLITE_MODEL" ] && [ -n "$EXISTING_LABELS_FILE" ]; then
-        print_info "Found existing YOLOv8 model: $EXISTING_TFLITE_MODEL"
-        print_info "Found existing labels file: $EXISTING_LABELS_FILE"
-        echo -ne "${YELLOW}Do you want to use the existing model and labels files? (y/n) ${NC}"
-        read -n 1 -r
-        echo
-        
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            # Use existing files
-            MODEL_FILENAME=$(basename "$EXISTING_TFLITE_MODEL")
-            LABELS_FILENAME=$(basename "$EXISTING_LABELS_FILE")
-            
-            # Update .env file with existing model paths
-            if [ -f ".env" ]; then
-                # Remove existing YOLOv8 settings if present
-                sed -i '/YOLO_MODEL_PATH/d' .env
-                sed -i '/YOLO_LABEL_PATH/d' .env
-                sed -i '/USE_YOLOV8/d' .env
-                
-                # Add the new settings
-                echo "# YOLOv8 configuration" >> .env
-                echo "YOLO_MODEL_PATH=$EXISTING_TFLITE_MODEL" >> .env
-                echo "YOLO_LABEL_PATH=$EXISTING_LABELS_FILE" >> .env
-                echo "USE_YOLOV8=True" >> .env
-            else
-                touch .env
-                echo "# YOLOv8 configuration" >> .env
-                echo "YOLO_MODEL_PATH=$EXISTING_TFLITE_MODEL" >> .env
-                echo "YOLO_LABEL_PATH=$EXISTING_LABELS_FILE" >> .env
-                echo "USE_YOLOV8=True" >> .env
-            fi
-            
-            print_success "Configured to use existing YOLOv8 model and labels"
-            SKIP_MODEL_SETUP=true
-        fi
-    fi
-    
-    # If we're not using existing files, proceed with normal setup
-    if [ "$SKIP_MODEL_SETUP" != true ]; then
-        # Ask if the user has their own trained model
-        echo -ne "${YELLOW}Do you have a trained YOLOv8 TFLite model for obstacle avoidance? (If not, a default model will be downloaded for you) (y/n) ${NC}"
-        read -n 1 -r
-        echo
-        
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # User has their own model
-        print_info "Please provide the path to your trained YOLOv8 TFLite model:"
-        read -r USER_MODEL_PATH
-        
-        print_info "Please provide the path to your labels text file:"
-        read -r USER_LABELS_PATH
-        
-        if [ ! -f "$USER_MODEL_PATH" ]; then
-            print_error "Model file not found at $USER_MODEL_PATH"
-            read -p "Do you want to use the default model instead? (y/n) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                USE_DEFAULT_MODEL=true
-            else
-                exit 1
-            fi
-        elif [ ! -f "$USER_LABELS_PATH" ]; then
-            print_error "Labels file not found at $USER_LABELS_PATH"
-            read -p "Do you want to use the default labels instead? (y/n) " -n 1 -r
-            echo
-            if [[ $REPLY =~ ^[Yy]$ ]]; then
-                USE_DEFAULT_LABELS=true
-            else
-                exit 1
-            fi
-        else
-            # Copy the model and labels to the models directory
-            MODEL_FILENAME=$(basename "$USER_MODEL_PATH")
-            LABELS_FILENAME=$(basename "$USER_LABELS_PATH")
-        
-            
-            cp "$USER_MODEL_PATH" "models/$MODEL_FILENAME"
-            check_command "Copying user model to models directory" || exit 1
-            
-            cp "$USER_LABELS_PATH" "models/$LABELS_FILENAME"
-            check_command "Copying user labels to models directory" || exit 1
-            
-            # Update .env file with the paths
-            if [ -f ".env" ]; then
-                # Remove existing YOLOv8 settings if present
-                sed -i '/YOLO_MODEL_PATH/d' .env
-                sed -i '/YOLO_LABEL_PATH/d' .env
-                sed -i '/USE_YOLOV8/d' .env
-                
-                # Add the new settings
-                echo "# YOLOv8 configuration" >> .env
-                echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
-                echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
-                echo "USE_YOLOV8=True" >> .env
-                
-                print_success "Updated .env file with custom model paths"
-            else
-                touch .env
-                echo "# YOLOv8 configuration" >> .env
-                echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
-                echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
-                echo "USE_YOLOV8=True" >> .env
-                print_success "Created .env file with custom model paths"
-            fi
-            
-            print_success "Custom YOLOv8 model and labels configured successfully"
-        fi
-    else
-        USE_DEFAULT_MODEL=true
-        USE_DEFAULT_LABELS=true
-    fi
-    
-    # Download default model and labels if needed
-    if [ "$USE_DEFAULT_MODEL" = true ]; then
-        print_info "Downloading default YOLOv8 TFLite model from Google Drive..."
-        # Using curl with the Google Drive direct download URL hack
-        MODEL_ID="1dGySgvgkFG52OZjSWYhoLDncbzB_a8-A"
-        MODEL_FILENAME="yolov8n.tflite"
-        
-        # Install gdown if not already available
-        pip install --break-system-packages gdown
-        gdown --id $MODEL_ID -O "models/$MODEL_FILENAME"
-        check_command "Downloading default YOLOv8 model" || exit 1
-        
-        # Update .env file with the default model path
-        if [ -f ".env" ]; then
-            sed -i '/YOLO_MODEL_PATH/d' .env
-            echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
-        else
-            touch .env
-            echo "# YOLOv8 configuration" >> .env
-            echo "YOLO_MODEL_PATH=models/$MODEL_FILENAME" >> .env
-        fi
-        
-        print_success "Default YOLOv8 model downloaded and configured"
-    fi
-    
-    if [ "$USE_DEFAULT_LABELS" = true ]; then
-        print_info "Downloading default YOLOv8 labels from Google Drive..."
-        # Using curl with the Google Drive direct download URL hack
-        LABELS_ID="1TNCaki7CX8sFNm15pxNJrWgy5HAcUl3v"
-        LABELS_FILENAME="coco_labels.txt"
-        
-        # Install gdown if not already available (should have been installed above)
-        gdown --id $LABELS_ID -O "models/$LABELS_FILENAME"
-        check_command "Downloading default YOLOv8 labels" || exit 1
-        
-        # Update .env file with the default labels path
-        if [ -f ".env" ]; then
-            sed -i '/YOLO_LABEL_PATH/d' .env
-            sed -i '/USE_YOLOV8/d' .env
-            echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
-            echo "USE_YOLOV8=True" >> .env
-        else
-            touch .env
-            echo "# YOLOv8 configuration" >> .env
-            echo "YOLO_LABEL_PATH=models/$LABELS_FILENAME" >> .env
-            echo "USE_YOLOV8=True" >> .env
-        fi
-          print_success "Default YOLOv8 labels downloaded and configured"
-    fi
-    
-    # Close the SKIP_MODEL_SETUP condition
-    fi
-    
-    # Verify installation
-    MODEL_PATH=""
-    if [ "$SKIP_MODEL_SETUP" = true ]; then
-        MODEL_PATH="$EXISTING_TFLITE_MODEL"
-    elif [ "$USE_DEFAULT_MODEL" = true ]; then
-        MODEL_PATH="models/$MODEL_FILENAME"
-    else
-        MODEL_PATH="models/$(basename "$USER_MODEL_PATH")"
-    fi
-    
-    if [ -f "$MODEL_PATH" ]; then
-        print_success "YOLOv8 model successfully set up at $MODEL_PATH"
-    else
-        print_warning "YOLOv8 model not found at $MODEL_PATH. Setup may have failed."
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
-    fi
+    setup_yolov8 
+else
+    print_info "Skipping YOLOv8 model setup."
+    POST_INSTALL_MESSAGES+="[INFO] YOLOv8 model setup was skipped.\\n"
 fi
 
-# Ask if user wants to install Coral TPU support
-read -p "Do you want to install Coral TPU support? (y/n) " -n 1 -r
-echo
+read -p "Do you want to install Coral TPU support (requires Coral USB Accelerator)? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Installing Coral TPU support..."
-    
-    # Check if Coral TPU is connected
-    if ! lsusb | grep -q "1a6e:089a"; then
-        print_warning "Coral TPU not detected. Please connect the device and try again."
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
+    CORAL_INSTALLED_OK=false
+    if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+        print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
+        POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
+        read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+            print_info "Skipping Coral TPU software installation."
+        else
+            print_info "Proceeding with Coral software installation despite no device detected."
+            CORAL_INSTALLED_OK=true # Assume user wants to proceed
         fi
+    else
+        CORAL_INSTALLED_OK=true # Device detected
     fi
-    
-    # Add Coral repository and install Edge TPU runtime
-    print_info "Installing Edge TPU runtime..."
-    echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-    check_command "Adding Coral repository" || exit 1
-    
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-    check_command "Adding Coral GPG key" || exit 1
-    
-    sudo apt-get update
-    check_command "Updating package list for Coral" || exit 1
-    
-    # Install standard version for thermal stability
-    sudo apt-get install -y libedgetpu1-std
-    check_command "Installing Edge TPU runtime" || exit 1
-    
-    # Set up udev rules for USB access
-    print_info "Setting up USB access rules..."
-    echo 'SUBSYSTEM=="usb",ATTRS{idVendor}=="1a6e",ATTRS{idProduct}=="089a",MODE="0666"' | sudo tee /etc/udev/rules.d/99-coral-tpu.rules
-    check_command "Setting up udev rules" || exit 1
-    
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-    check_command "Reloading udev rules" || exit 1
-    
-    # Install GDAL Python package first
-    sudo pip3 install GDAL==$(gdal-config --version) --break-system-packages --root-user-action=ignore --global-option=build_ext --global-option="-I/usr/include/gdal"
-    check_command "Installing GDAL" || exit 1
-    
-    # Now install Coral dependencies
-    print_info "Installing Coral Python packages..."
-    sudo pip3 install -e ".[coral]" --break-system-packages --root-user-action=ignore
-    check_command "Installing Coral Python packages" || exit 1
-fi
 
-# Setup watchdog
-read -p "Do you want to setup hardware watchdog for improved reliability? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_watchdog
-fi
-
-# Setup emergency stop
-read -p "Do you want to setup a physical emergency stop button (connected to GPIO7)? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_emergency_stop
+    if $CORAL_INSTALLED_OK; then
+        print_info "Adding Coral package repository..."
+        echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+        check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+        check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
+        sudo apt-get update
+        check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
+        print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
+        sudo apt-get install -y libedgetpu1-std
+        check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
+        
+        print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
+        VENV_PIP_CMD="$VENV_DIR/bin/pip"
+        if [ -f "$VENV_PIP_CMD" ]; then
+            if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then # Check both
+                 "$VENV_PIP_CMD" install "pycoral" 
+                 check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
+            elif "$VENV_PIP_CMD" install -e ".[coral]"; then # Try extras
+                 check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
+            else
+                print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
+                "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
+                check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
+            fi
+        else
+            print_error "Venv pip not found. Cannot install PyCoral."
+            POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
+        fi
+        print_success "Coral TPU support setup attempted."
+    fi
 else
-    print_info "Skipping physical emergency stop button setup."
-    print_info "The system will be configured to run without a physical emergency stop button."
-    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button was not set up. The system has been configured to run without it.\n"
-    POST_INSTALL_MESSAGES+="[INFO] You can still trigger an emergency stop through the software interface.\n"
+    print_info "Skipping Coral TPU support installation."
 fi
 
-# Setup service installation
-read -p "Do you want to install and enable the autonomous mower service for automatic startup on boot? (y/n) " -n 1 -r
-echo
+read -p "Do you want to setup the hardware watchdog? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_mower_service
+    setup_watchdog 
 else
-    print_info "Skipping service installation."
-    print_info "You can install the service manually later with:"
-    print_info "  sudo cp autonomous-mower.service /etc/systemd/system/"
-    print_info "  sudo systemctl daemon-reload"
-    print_info "  sudo systemctl enable autonomous-mower.service"
+    print_info "Skipping hardware watchdog setup."
 fi
 
-# Final check for pyserial to ensure it's correctly installed for the editable package
-print_info "Ensuring pyserial is correctly installed for the project..."
-python3 -m pip install --break-system-packages --root-user-action=ignore "pyserial>=3.5"
-check_command "Verifying/Installing pyserial" || print_warning "pyserial installation/verification failed. The main application might have issues."
+read -p "Do you want to setup a physical emergency stop button (GPIO7)? (y/n) " -n 1 -r; echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_emergency_stop 
+else
+    skip_physical_emergency_stop 
+fi
 
-print_success "Installation and setup complete."
+read -p "Do you want to install and enable the systemd service for automatic startup? (y/n) " -n 1 -r; echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    setup_mower_service 
+else
+    print_info "Skipping systemd service installation."
+    POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
+fi
+
+print_success "Installation and setup process complete."
 
 if [ -n "$POST_INSTALL_MESSAGES" ]; then
     echo -e "\\n${YELLOW}--- Important Post-Installation Notes ---${NC}"
-    # Use printf for better handling of multi-line messages and escape sequences
     printf "%b" "${YELLOW}$(echo -e "$POST_INSTALL_MESSAGES" | sed 's/^/  /')${NC}\\n"
 fi
 
-print_info "Please reboot the system for all changes to take effect."
-
-# Clear the EXIT trap on successful completion
-trap - EXIT
+print_info "A REBOOT is highly recommended for all changes to take full effect."
+read -p "Reboot now? (y/n) " -n 1 -r; echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Rebooting system..."
+    sudo reboot
+else
+    print_info "Please reboot manually when convenient."
+fi
 exit 0
