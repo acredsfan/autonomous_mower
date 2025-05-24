@@ -6,12 +6,9 @@ from typing import Tuple
 
 import serial
 import serial.tools.list_ports
-from dotenv import load_dotenv
+# load_dotenv is expected to be called at application entry point (e.g., main_controller.py)
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-
-dotenv_path = "/home/pi/autonomous_mower/.env"
-load_dotenv(dotenv_path)
 
 
 logger = LoggerConfig.get_logger(__name__)
