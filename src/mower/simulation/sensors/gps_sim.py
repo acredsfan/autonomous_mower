@@ -226,7 +226,10 @@ class SimulatedGpsPosition(SimulatedSensor):
 
         # Generate time string
         gps_time = time.gmtime(timestamp)
-        time_str = f"{gps_time.tm_hour:02d}{gps_time.tm_min:02d}{gps_time.tm_sec:02d}"
+        time_str = f"{
+            gps_time.tm_hour: 02d} {
+            gps_time.tm_min: 02d} {
+            gps_time.tm_sec: 02d} "
  (f"{gps_time.tm_mday:02d}{gps_time.tm_mon:02d}{gps_time.tm_year % 100:02d}
   f"        # Generate GPRMC sentence
         # $GPRMC,time,status,lat,lat_dir,lng,lng_dir,speed,track,date,

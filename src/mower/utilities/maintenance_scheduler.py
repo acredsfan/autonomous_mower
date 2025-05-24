@@ -21,7 +21,7 @@ Example usage:
     scheduler = MaintenanceScheduler()
 
     # Define maintenance tasks
-    scheduler.add_task("blade_replacement", "Replace cutting blade", 
+    scheduler.add_task("blade_replacement", "Replace cutting blade",
                       interval_hours=100, interval_distance=500)
 
     # Update usage metrics
@@ -134,7 +134,9 @@ class MaintenanceTask:
         }
         self.completion_history: List[Dict[str, Any]] = []
 
-    def is_due(self, current_metrics: Dict[str, float], current_time: datetime) -> bool:
+    def is_due(
+            self, current_metrics: Dict[str, float],
+            current_time: datetime) -> bool:
         """
         Check if the task is due for maintenance.
 

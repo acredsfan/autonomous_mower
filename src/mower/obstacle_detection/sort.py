@@ -211,7 +211,7 @@ class Sort:
 
 class KalmanBoxTracker(object):
     """
-    This class represents the internal state of individual tracked objects 
+    This class represents the internal state of individual tracked objects
     observed as bbox.
     """
 

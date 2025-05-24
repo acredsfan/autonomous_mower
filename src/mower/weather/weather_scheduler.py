@@ -150,7 +150,8 @@ class WeatherAwareScheduler:
         while not self._stop_event.is_set():
             try:
                 self._fetch_forecasts()
-                # Update every 3 hours (weather forecasts don't change that frequently)
+                # Update every 3 hours (weather forecasts don't change that
+                # frequently)
                 time.sleep(3 * 60 * 60)
             except Exception as e:
                 logger.error(f"Error updating weather forecasts: {e}")
@@ -459,7 +460,7 @@ class WeatherAwareScheduler:
     ) -> Dict[datetime, Tuple[MowingRecommendation, str]]:
         """
         Get the mowing schedule for the next 7 days with weather recommendations.        Returns:
-            Dict[datetime, Tuple[MowingRecommendation, str]]: Dictionary 
+            Dict[datetime, Tuple[MowingRecommendation, str]]: Dictionary
                 mapping scheduled times to (recommendation, reason) tuples
         """
         now = datetime.now()

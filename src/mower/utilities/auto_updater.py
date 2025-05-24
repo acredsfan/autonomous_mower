@@ -96,8 +96,9 @@ class AutoUpdater:
 
             # Fetch the latest changes
             logger.info(
-                f"Fetching latest changes from {self.repo_url}, branch {self.branch}"
-            )
+                f"Fetching latest changes from {
+                    self.repo_url}, branch {
+                    self.branch}")
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -383,7 +384,8 @@ class AutoUpdater:
                 with open(UPDATE_LOCK_FILE, "r") as f:
                     pid = int(f.read().strip())
                 try:
-                    # This will raise an exception if the process is not running
+                    # This will raise an exception if the process is not
+                    # running
                     os.kill(pid, 0)
                     return False, f"Update already in progress (PID: {pid})"
                 except OSError:
@@ -461,10 +463,8 @@ class AutoUpdater:
                     self.update_in_progress = False
                     os.remove(UPDATE_LOCK_FILE)
                     return (
-                        False,
-                        "Failed to start services after update, rolled back to "
-                        "previous version",
-                    )
+                        False, "Failed to start services after update, rolled back to "
+                        "previous version", )
 
                 # Update successful
                 logger.info("Update completed successfully")

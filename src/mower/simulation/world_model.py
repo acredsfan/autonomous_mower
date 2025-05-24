@@ -104,13 +104,13 @@ class Obstacle:
     """
     Representation of an obstacle in the virtual world.
     """
-    
+
     def __init__(
         self,
         position: Vector2D,
         radius: float,
-        height: float=0.0,
-        obstacle_type: str="generic",
+        height: float = 0.0,
+        obstacle_type: str = "generic",
     ):
         """
         Initialize an obstacle.

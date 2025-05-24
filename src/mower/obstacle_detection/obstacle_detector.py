@@ -214,9 +214,9 @@ class ObstacleDetector:
                     detected_objects.extend(remote_objects)
                     return detected_objects
             except (
-                ConnectionError, 
-                requests.RequestException, 
-                IOError, 
+                ConnectionError,
+                requests.RequestException,
+                IOError,
                 ValueError
             ) as e:
                 logger.warning(
@@ -235,7 +235,7 @@ class ObstacleDetector:
                         # Extract bounding boxes and confidences for tracker
                         detections_np = np.array([
                             [
-                                d["box"][0], d["box"][1], d["box"][2], 
+                                d["box"][0], d["box"][1], d["box"][2],
                                 d["box"][3], d["confidence"]
                             ]
                             for d in yolo_objects

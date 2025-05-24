@@ -107,7 +107,7 @@ class BladeController:
                 logging.error(
                     "Invalid speed value: %s. Must be between 0.0 and 1.0.", speed)
                 return False
-            
+
             # Set up PWM on the enable pin if not already configured
             if self._pwm is None:
                 self._pwm = self._gpio.setup_pwm(

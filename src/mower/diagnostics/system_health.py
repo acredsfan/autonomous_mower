@@ -283,9 +283,9 @@ class SystemHealth:
             except Exception as e:
                 hardware_health["battery"] = {
                     "status": "error",
-                    "error": str(e),                }
+                    "error": str(e), }
                 issues.append(f"Battery monitor error: {str(e)}")
-            
+
             # Check motors and other components
             for component, getter in [
                 ("motors", "get_motor_controller"),
@@ -299,9 +299,7 @@ class SystemHealth:
                             hardware_health[component] = {"status": "ok"}
                         else:
                             hardware_health[component] = {
-                                "status": "error",
-                                "error": f"{component} controller not available",
-                            }
+                                "status": "error", "error": f"{component} controller not available", }
                             issues.append(
                                 f"{component} controller not available"
                             )
@@ -659,7 +657,8 @@ class SystemHealth:
                 # Log critical issues
                 if health_status["status"] == "critical":
                     logger.critical(
-                        f"Critical health issues detected: {health_status['issues']}")
+                        f"Critical health issues detected: {
+                            health_status['issues']}")
                 elif health_status["status"] == "error":
                     logger.error(
                         f"Health errors detected: {health_status['issues']}"
@@ -749,7 +748,7 @@ def main():
             health_status = health_monitor.run_full_health_check()
 
             # Output the results            if args.output == "json":
-                print(json.dumps(health_status, indent=2))
+            print(json.dumps(health_status, indent=2))
             else:
                 print("\n" + "=" * 80)
                 print(
@@ -758,8 +757,10 @@ def main():
                 )
                 print("=" * 80)
                 print(
-                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
-                )
+                    f"Overall Status: {
+                        health_status.get(
+                            'status',
+                            'unknown').upper()}")
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")
@@ -790,7 +791,7 @@ def main():
                     (
                         f"AUTONOMOUS MOWER {args.check.upper()} HEALTH"
                         f" CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                    )
+                )
                 print("=" * 80)
                 print(
                     f"Status: {result.get('status', 'unknown').upper()}"

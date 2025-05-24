@@ -107,7 +107,7 @@ class SensorFallbackManager:
             (
                 f"Registered sensor {sensor_id} in group {group_id} with"
                 f" priority {priority.name}")
-            )
+        )
 
     def set_fallback_chain(
         self, sensor_id: str, fallback_sensors: List[str]
@@ -437,7 +437,7 @@ class SensorCalibrationManager:
                     (
                         f"Cannot register calibration procedure: Sensor "
                         f"{sensor_id} not registered")
-                    )
+                )
                 return
 
             self._calibration_procedures[sensor_id] = procedure
@@ -468,7 +468,7 @@ class SensorCalibrationManager:
                     (
                         f"Cannot calibrate: No calibration procedure for"
                         f" sensor {sensor_id}")
-                    )
+                )
                 return False
 
             if self._calibration_status[sensor_id]["in_progress"]:

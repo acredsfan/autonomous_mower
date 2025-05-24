@@ -441,7 +441,7 @@ class FleetManager:
 
         Args:
             mower_id: Unique identifier for the mower.        Returns:
-            Optional[Dict[str, Any]]: Status information, or None if the mower 
+            Optional[Dict[str, Any]]: Status information, or None if the mower
                                     doesn't exist.
         """
         if mower_id not in self.mowers:
@@ -500,7 +500,7 @@ class FleetManager:
 
         Args:
             zone_id: Unique identifier for the zone.        Returns:
-            Optional[Dict[str, Any]]: Zone information, or None if the zone 
+            Optional[Dict[str, Any]]: Zone information, or None if the zone
                                     doesn't exist.
         """
         if zone_id not in self.zones:
@@ -542,7 +542,7 @@ class FleetManager:
         """
         Start a mower.        Args:
             mower_id: Unique identifier for the mower.
-            zone_id: Optional zone to mow. If None, the mower's assigned zone 
+            zone_id: Optional zone to mow. If None, the mower's assigned zone
                 will be used.
 
         Returns:

@@ -33,7 +33,7 @@ def load_config(filename: str) -> Optional[Dict[str, Any]]:
 
     Args:
         filename: Name or path of the configuration file to load    Returns:
-        dict: Configuration data, or None if the file doesn't exist or there 
+        dict: Configuration data, or None if the file doesn't exist or there
             was an error
     """
     try:

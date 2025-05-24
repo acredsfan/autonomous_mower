@@ -147,7 +147,7 @@ class DataCollectionController:
         except ValueError:
             return jsonify({
                 "success": False,
-                "message": "Invalid interval value"            }), 400
+                "message": "Invalid interval value"}), 400
 
     def get_sessions(self):
         """Get list of data collection sessions."""
