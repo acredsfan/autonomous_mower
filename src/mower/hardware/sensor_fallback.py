@@ -104,8 +104,7 @@ class SensorFallbackManager:
                         self._active_sensors[group_id] = sensor_id
 
         logger.info(
-            f"Registered sensor {sensor_id} in group {group_id} with priority {
-                priority.name}")
+            f"Registered sensor {sensor_id} in group {group_id} with priority {priority.name}")
 
     def set_fallback_chain(
         self, sensor_id: str, fallback_sensors: List[str]

@@ -86,8 +86,7 @@ class ImageProcessingOptimizer:
                 self.frame_skip_count += 1
                 if self.frame_skip_count <= self.max_frame_skip:
                     logger.debug(
-                        f"Skipping frame {
-                            self.frame_skip_count} (similar to previous)")
+                        f"Skipping frame {self.frame_skip_count} (similar to previous)")
                     return self.detection_cache.get("last_detection", [])
             else:
                 self.frame_skip_count = 0
@@ -544,11 +543,10 @@ def compare_obstacle_detectors(
 
     logger.info("Performance comparison results:")
     logger.info(
-        f"  Original obstacle detection time: {
-            original_detect_avg:.4f} seconds")
+        f"  Original obstacle detection time: {original_detect_avg:.4f} seconds"
+    )
     logger.info(
-        f"  Optimized obstacle detection time: {
-            optimized_detect_avg:.4f} seconds")
+        f"  Optimized obstacle detection time: {optimized_detect_avg:.4f} seconds")
     logger.info(
         f"  Obstacle detection improvement: {detect_improvement:.2f}%"
     )

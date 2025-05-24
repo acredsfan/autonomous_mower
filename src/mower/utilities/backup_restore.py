@@ -395,8 +395,7 @@ class BackupRestore:
             logger.error(f"Error starting service: {e.stderr}")
             return (
                 False,
-                f"Restore partially successful, but failed to start service: {
-                    e.stderr}",
+                f"Restore partially successful, but failed to start service: {e.stderr}",
             )
 
         if not successful_components:

@@ -263,8 +263,7 @@ class IMUCalibration:
             if completion_callback:
                 completion_callback(
                     False,
-                    f"Error starting calibration: {
-                        str(e)}",
+                    f"Error starting calibration: {str(e)}",
                 )
             return False
 
@@ -592,10 +591,7 @@ def main():
     # Define simple terminal callback
     def status_callback(status):
         print(
-            f"\n{
-                status['current_step']}: {
-                status['status']} ({
-                status['progress']}%)"
+            f"\n{status['current_step']}: {status['status']} ({status['progress']}%)"
         )
 
     def completion_callback(success, message):

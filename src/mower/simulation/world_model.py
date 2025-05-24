@@ -103,7 +103,9 @@ class Vector2D:
 class Obstacle:
     """
     Representation of an obstacle in the virtual world.
-    """ def __init__(
+    """
+    
+    def __init__(
         self,
         position: Vector2D,
         radius: float,
@@ -334,10 +336,7 @@ class Robot:
 
     def __repr__(self) -> str:
         """String representation of robot."""
-        return f"Robot(pos={
-            self.position}, heading={
-            self.heading: .2f} rad, vel={
-            self.velocity}) "
+        return f"Robot(pos={self.position}, heading={self.heading:.2f} rad, vel={self.velocity})"
 
     def update(self, dt: float) -> None:
         """

@@ -561,6 +561,17 @@ check_command "Installing system packages" || exit 1
 # Set PYTHONPATH to include our src directory
 export PYTHONPATH=/home/pi/autonomous_mower/src:$PYTHONPATH
 
+# Make PYTHONPATH permanent for the pi user
+print_info "Setting up permanent PYTHONPATH..."
+if ! grep -q "PYTHONPATH.*autonomous_mower/src" /home/pi/.bashrc; then
+    echo "" >> /home/pi/.bashrc
+    echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
+    echo "export PYTHONPATH=\"/home/pi/autonomous_mower/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
+    print_success "Added PYTHONPATH to ~/.bashrc"
+else
+    print_info "PYTHONPATH already configured in ~/.bashrc"
+fi
+
 # Upgrade pip
 print_info "Upgrading pip..."
 python3 -m pip install --break-system-packages --root-user-action=ignore --upgrade pip

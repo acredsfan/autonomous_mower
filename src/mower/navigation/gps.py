@@ -223,7 +223,8 @@ def parse_gps_position(line, debug=False):
 
     if "*" != line[-3]:
         logger.info("NMEA Missing checksum")
-        return None try:
+        return None
+    try:
         nmea_checksum = parse_nmea_checksum(line)
     except ValueError:
         logger.info("Invalid checksum format")

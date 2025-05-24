@@ -660,8 +660,7 @@ class SystemHealth:
                 # Log critical issues
                 if health_status["status"] == "critical":
                     logger.critical(
-                        f"Critical health issues detected: {
-                            health_status['issues']}")
+                        f"Critical health issues detected: {health_status['issues']}")
                 elif health_status["status"] == "error":
                     logger.error(
                         f"Health errors detected: {health_status['issues']}"
@@ -757,11 +756,8 @@ def main():
                 )
                 print("=" * 80)
                 print(
-                    f"Overall Status: {
-                        health_status.get(
-                            'status',
-                            'unknown'
-                        ).upper()}")
+                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
+                )
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")
@@ -789,9 +785,7 @@ def main():
             else:
                 print("\n" + "=" * 80)
                 print(
-                    f"AUTONOMOUS MOWER {
-                        args.check.upper()} HEALTH CHECK - {
-                        datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                    f"AUTONOMOUS MOWER {args.check.upper()} HEALTH CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 print("=" * 80)
                 print(
                     f"Status: {result.get('status', 'unknown').upper()}"

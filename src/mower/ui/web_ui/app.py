@@ -38,7 +38,8 @@ def create_app(mower):
         The Flask application instance.
     """
     app = Flask(__name__)
-    CORS(app)    socketio = SocketIO(
+    CORS(app)
+    socketio = SocketIO(
         app,
         cors_allowed_origins="*",
         ping_timeout=20,

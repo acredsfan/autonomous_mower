@@ -10,7 +10,6 @@ Original paper: https://arxiv.org/abs/1602.00763
 """
 
 import numpy as np
-from scipy.linalg import chi2inv
 
 
 class KalmanFilter:

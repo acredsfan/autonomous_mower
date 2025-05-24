@@ -118,8 +118,7 @@ class DataCollector:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if session_name:
-            dir_name = f"{timestamp} _{session_name} _{
-                self.current_session_id[: 8]} "
+            dir_name = f"{timestamp}_{session_name}_{self.current_session_id[:8]}"
         else:
             dir_name = f"{timestamp}_{self.current_session_id[:8]}"
 
@@ -145,7 +144,8 @@ class DataCollector:
                     "angle": 0.0,
                     "overlap": 0.1
                 }
-            ) except (AttributeError, ValueError) as e:
+            )
+        except (AttributeError, ValueError) as e:
             logger.warning(
                 f"Pattern {pattern_name} not found, using PARALLEL: {e}")
 
@@ -163,9 +163,11 @@ class DataCollector:
         self._save_session_metadata()
 
         logger.info(
-            f"Started data collection session {
-                self.current_session_id}")
-        return self.current_session_id def stop_collection(self) -> Dict[str, Any]:
+            f"Started data collection session {self.current_session_id}"
+        )
+        return self.current_session_id
+    
+    def stop_collection(self) -> Dict[str, Any]:
         """
         Stop the current data collection session.
 
@@ -196,8 +198,7 @@ class DataCollector:
         self._update_session_metadata(stats)
 
         logger.info(
-            f"Stopped data collection session {
-                self.current_session_id}")
+            f"Stopped data collection session {self.current_session_id}")
         return stats
 
     def process(

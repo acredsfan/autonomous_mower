@@ -106,6 +106,14 @@ rewrite_*.py
 *docstrings*.py
 *whitespace*.py
 *syntax*.py
+test_imports.py
+setup_environment.sh
+setup_raspberry_pi.sh
+quick_fix_imports.sh
+fix_imports.py
+run_mower.sh
+activate_env.sh
+activate_mower_env.sh
 
 # Backup files
 *.backup

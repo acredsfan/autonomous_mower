@@ -85,8 +85,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
                     # Set distance to NaN if sensor is not working initially
                     self.state[f"{sensor_name}_distance"] = float('nan')
         logger.info(
-            f"Simulated ToF initialized with statuses: {
-                self.state['sensor_status']}")
+            f"Simulated ToF initialized with statuses: {self.state['sensor_status']}")
 
     def _cleanup_sim(self) -> None:
         """Clean up the simulated ToF sensors."""

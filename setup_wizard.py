@@ -1569,48 +1569,23 @@ def setup_final_verification() -> None:
     print_subheader("Configuration Summary")
 
     print(
-        f"Mower Name: {
-            setup_state['user_choices'].get(
-                'mower_name',
-                'AutonoMow')}")
+        f"Mower Name: {setup_state['user_choices'].get('mower_name', 'AutonoMow')}")
     print(
-        f"Simulation Mode: {
-            'Enabled' if setup_state['feature_flags'].get(
-                'simulation_mode',
-                False) else 'Disabled'}")
+        f"Simulation Mode: {'Enabled' if setup_state['feature_flags'].get('simulation_mode', False) else 'Disabled'}")
 
     # Hardware summary
     print("\nHardware Configuration:")
     hardware_config = setup_state.get("hardware_config", {})
 
     print(
-        f"  Camera: {
-            'Enabled' if hardware_config.get(
-                'camera',
-                {}).get(
-                'enabled',
-                False) else 'Disabled'}")
+        f"  Camera: {'Enabled' if hardware_config.get('camera', {}).get('enabled', False) else 'Disabled'}"
+    )
     print(
-        f"  GPS: {
-            'Enabled' if hardware_config.get(
-                'gps',
-                {}).get(
-                'enabled',
-                False) else 'Disabled'}")
+        f"  GPS: {'Enabled' if hardware_config.get('gps', {}).get('enabled', False) else 'Disabled'}")
     print(
-        f"  Motor Controller: {
-            hardware_config.get(
-                'motor_controller',
-                {}).get(
-                'type',
-                'none')}")
+        f"  Motor Controller: {hardware_config.get('motor_controller', {}).get('type', 'none')}")
     print(
-        f"  Coral TPU: {
-            'Enabled' if hardware_config.get(
-                'coral_tpu',
-                {}).get(
-                'enabled',
-                False) else 'Disabled'}")
+        f"  Coral TPU: {'Enabled' if hardware_config.get('coral_tpu', {}).get('enabled', False) else 'Disabled'}")
 
     # Feature summary
     print("\nEnabled Features:")

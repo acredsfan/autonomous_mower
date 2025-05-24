@@ -1029,8 +1029,7 @@ class ResourceManager:
                     )
             else:
                 logger.info(
-                    f"Config file {
-                        self.user_polygon_path} not found. Creating new.")
+                    f"Config file {self.user_polygon_path} not found. Creating new.")
 
             # Update home location
             data["home"] = normalized_location
@@ -1040,13 +1039,12 @@ class ResourceManager:
                 with open(self.user_polygon_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)  # Add indent for readability
                 logger.info(
-                    f"Home location saved to {
-                        self.user_polygon_path}: {normalized_location}")
+                    f"Home location saved to {self.user_polygon_path}: {normalized_location}"
+                )
                 return True
             except Exception as e:
                 logger.error(
-                    f"Failed to save home location to {
-                        self.user_polygon_path}: {e}")
+                    f"Failed to save home location to {self.user_polygon_path}: {e}")
                 return False
         except Exception as e:
             logger.error(f"Error setting home location: {e}", exc_info=True)

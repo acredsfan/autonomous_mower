@@ -223,7 +223,8 @@ class YOLOv8TFLiteDetector:
             inference_time,
             1 / inference_time if inference_time > 0 else 0.0,
             len(detections)
-        )        return detections
+        )
+        return detections
 
     def _process_yolov8_output(self) -> List[Dict]:
         """
