@@ -112,6 +112,7 @@ The installation script will:
 
 - Install required system packages
 - Install required Python packages system-wide
+- Set up PYTHONPATH environment variable permanently
 - Set up the systemd service
 - Configure hardware interfaces
 - Set up the watchdog timer

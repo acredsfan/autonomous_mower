@@ -189,7 +189,8 @@ class GPIOManager:
 
         Returns:
             Optional[int]: The pin value (0 or 1) or None on error
-        """ if self._simulation_mode:
+        """
+        if self._simulation_mode:
             if pin in self._pins_setup:
                 return self._simulated_values.get(pin, 0)
 
@@ -197,12 +198,14 @@ class GPIOManager:
             logging.warning("Cannot get simulated pin %s, not set up.", pin)
             return None
 
-        try: if pin in self._pins_setup:
+        try:
+            if pin in self._pins_setup:
                 return GPIO.input(pin)  # Returns 0 or 1
 
             # No else after return - removed unnecessary else
             logging.warning("Cannot get pin %s, not set up.", pin)
-            return None        except (IOError, ValueError, RuntimeError) as e:
+            return None
+        except (IOError, ValueError, RuntimeError) as e:
             logging.error("Error reading GPIO pin %s: %s", pin, e)
             return None
 
@@ -213,7 +216,8 @@ class GPIOManager:
         Returns:
             Dict[str, Any]: Dictionary containing GPIO state information
         """
-        state = {"simulation_mode": self._simulation_mode, "pins": {}}        if self._simulation_mode:
+        state = {"simulation_mode": self._simulation_mode, "pins": {}}
+        if self._simulation_mode:
             state["pins"] = self._simulated_values.copy()
         else:
             for pin in self._pins_setup:  # Iterate directly over keys

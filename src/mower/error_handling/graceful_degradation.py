@@ -142,7 +142,10 @@ class GracefulDegradationHandler:
             recovery_interval=recovery_interval,
         )
         logger.info(
-            f"Registered component '{name}' with {len(fallbacks) if fallbacks else 0} fallbacks"
+            (
+                f"Registered component '{name}' with {len(fallbacks) if"
+                f" fallbacks else 0} fallbacks"
+            )
         )
 
     def register_degradation_callback(
@@ -243,7 +246,10 @@ class GracefulDegradationHandler:
                 component.current_fallback_index = i
 
                 logger.info(
-                    f"Component '{component.name}' degraded to fallback {i+1}/{len(component.fallbacks)}"
+                    (
+                        f"Component '{component.name}' degraded to"
+                        f" fallback {i+1}/{len(component.fallbacks)}"
+                    )
                 )
 
                 # Update overall degradation level
@@ -253,7 +259,10 @@ class GracefulDegradationHandler:
 
             except Exception as e:
                 logger.warning(
-                    f"Fallback {i+1}/{len(component.fallbacks)} for component '{component.name}' failed: {e}"
+                    (
+                        f"Fallback {i+1}/{len(component.fallbacks)} for"
+                        f" component '{component.name}' failed: {e}"
+                    )
                 )
 
         # All fallbacks failed
@@ -268,7 +277,10 @@ class GracefulDegradationHandler:
         # If the component is critical, raise an exception
         if component.is_critical:
             raise RuntimeError(
-                f"Critical component '{component.name}' failed with no working fallbacks"
+                (
+                    f"Critical component '{component.name}' failed with"
+                    f" no working fallbacks"
+                )
             )
 
         return None
@@ -375,7 +387,10 @@ class GracefulDegradationHandler:
         # If the degradation level changed, log it and call callbacks
         if self.degradation_level != old_level:
             logger.info(
-                f"Degradation level changed from {old_level.name} to {self.degradation_level.name}"
+                (
+                    f"Degradation level changed from {old_level.name} to"
+                    f" {self.degradation_level.name}"
+                )
             )
 
             for callback in self.degradation_callbacks:

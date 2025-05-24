@@ -124,7 +124,10 @@ class ResourceOptimizer:
                 # Check if memory usage is above limit
                 if memory_percent > self.memory_limit_percent:
                     logger.warning(
-                        f"Memory usage ({memory_percent}%) exceeds limit ({self.memory_limit_percent}%)"
+                        (
+                            f"Memory usage ({memory_percent}%) exceeds"
+                            f" limit ({self.memory_limit_percent}%)"
+                        )
                     )
                     self._reduce_memory_usage()
 
@@ -195,7 +198,10 @@ class ResourceOptimizer:
                     memory_percent > self.memory_limit_percent * 0.9
                 ):  # 90% of limit
                     logger.info(
-                        f"Memory usage high ({memory_percent}%), clearing caches for {component_name}"
+                        (
+                            f"Memory usage high ({memory_percent}%),"
+                            f" clearing caches for {component_name}"
+                        )
                     )
                     original_clear_caches()
                 return original_clear_caches()
@@ -336,7 +342,10 @@ class ResourceOptimizer:
         gc.set_threshold(*new_thresholds)
 
         logger.info(
-            f"Optimized garbage collection thresholds: {old_thresholds} -> {new_thresholds}"
+            (
+                f"Optimized garbage collection thresholds: "
+                f"{old_thresholds} -> {new_thresholds}"
+            )
         )
 
     def get_resource_usage(self) -> Dict[str, Any]:
@@ -366,11 +375,17 @@ class ResourceOptimizer:
 
         logger.info("Resource Usage:")
         logger.info(
-            f"  Memory: {usage['memory']['percent']}% used ({usage['memory']['used'] / 1024 / 1024:.1f} MB)"
+            (
+                f"  Memory: {usage['memory']['percent']}% used ({usage"
+                f"['memory']['used'] / 1024 / 1024:.1f} MB)"
+            )
         )
         logger.info(f"  CPU: {usage['cpu']['percent']}% used")
         logger.info(
-            f"  Pool hits/misses: {usage['stats']['pool_hits']}/{usage['stats']['pool_misses']}"
+            (
+                f"  Pool hits/misses: {usage['stats']['pool_hits']}/"
+                f"{usage['stats']['pool_misses']}"
+            )
         )
         logger.info(f"  GC collections: {usage['stats']['gc_collections']}")
 

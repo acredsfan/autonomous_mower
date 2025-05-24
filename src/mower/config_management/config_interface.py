@@ -16,8 +16,9 @@ class ConfigurationInterface(ABC):
 
     This interface defines the contract that all configuration
     implementations must adhere to.
-    """    @ abstractmethod
-
+    """
+    
+    @abstractmethod
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get a configuration value.
@@ -28,8 +29,9 @@ class ConfigurationInterface(ABC):
 
         Returns:
             Any: Configuration value
-        """    @ abstractmethod
-
+        """
+    
+    @abstractmethod
     def set(self, key: str, value: Any) -> None:
         """
         Set a configuration value.

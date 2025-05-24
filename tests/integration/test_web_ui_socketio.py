@@ -1,7 +1,6 @@
 """
 Test module for test_web_ui_socketio.py.
-"""Test module for test_web_ui_socketio.py.
-""""
+"""
 
 import pytest
 # Placeholder for import s that will be needed
@@ -38,10 +37,10 @@ class TestWebUISocketIO:
             "Test not yet implemented. Requires Flask - SocketIO test client.")
 
     def test_status_update_event_emission(self):  # Use app_with_socketio
-        """"
+        """
         Test that a status update from the Mower(or relevant component)
         triggers a SocketIO event emission.
-        """"
+        """
         # TODO: Implement test
         # 1. Setup:
         # - app_with_socketio fixture.
@@ -54,10 +53,10 @@ class TestWebUISocketIO:
         pytest.skip("Test not yet implemented.")
 
     def test_command_reception_and_handling(self):  # Use app_with_socketio
-        """"
+        """
         Test that the server correctly receives and processes a command
         sent from a SocketIO client.
-        """"
+        """
         # TODO: Implement test
         # 1. Setup:
         # - app_with_socketio fixture.
@@ -72,10 +71,10 @@ class TestWebUISocketIO:
 
     # Use app_with_socketio
     def test_error_event_emission_on_mower_error(self):
-        """"
+        """
         Test that a significant error in the Mower system triggers an error
         event emission over SocketIO.
-        """"
+        """
         # TODO: Implement test
         # 1. Setup:
         # - app_with_socketio fixture.
@@ -86,10 +85,7 @@ class TestWebUISocketIO:
         # error info.
         pytest.skip("Test not yet implemented.")
 
-    # Note:
-    Testing for specific KeyError on the client side from Python integration
-    # tests is generally out of scope,
-    as it requires simulating browser JavaScript
-    # environment and
-    client - side logic. These tests focus on server - side SocketIO
+    # Note: Testing for specific KeyError on the client side from Python integration
+    # tests is generally out of scope, as it requires simulating browser JavaScript
+    # environment and client-side logic. These tests focus on server-side SocketIO
     # integration.

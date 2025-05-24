@@ -150,10 +150,9 @@ class PathPlannerInterface(ABC):
     @abstractmethod
     def get_current_goal(self) -> Optional[Tuple[float, float]]:
         """
-        Get the current goal position.
-
-        Returns:
-            Optional[Tuple[float, float]]: Current goal position or None if not available
+        Get the current goal position.        Returns:
+            Optional[Tuple[float, float]]: Current goal position or None if
+                not available
         """
         pass
 

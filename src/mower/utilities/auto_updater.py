@@ -32,11 +32,9 @@ import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Optional, Tuple
 
 # Import logger
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
@@ -98,8 +96,9 @@ class AutoUpdater:
 
             # Fetch the latest changes
             logger.info(
-                f"Fetching latest changes from {self.repo_url}, branch {self.branch}"
-            )
+                f"Fetching latest changes from {
+                    self.repo_url}, branch {
+                    self.branch}")
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -150,9 +149,9 @@ class AutoUpdater:
                     capture_output=True,
                     text=True,
                 ).stdout.strip()
-
                 message = (
-                    f"Updates available: {commits_behind} commits behind origin/{self.branch}\n"
+                    f"Updates available: {commits_behind} commits"
+                    f" behind origin/{self.branch}\n"
                     f"Commits:\n{commit_messages}"
                 )
                 return True, message
@@ -385,7 +384,8 @@ class AutoUpdater:
                 with open(UPDATE_LOCK_FILE, "r") as f:
                     pid = int(f.read().strip())
                 try:
-                    # This will raise an exception if the process is not running
+                    # This will raise an exception if the process is not
+                    # running
                     os.kill(pid, 0)
                     return False, f"Update already in progress (PID: {pid})"
                 except OSError:
@@ -453,9 +453,7 @@ class AutoUpdater:
                     check=True,
                     capture_output=True,
                     text=True,
-                )
-
-                # Start services
+                )                # Start services
                 if not self.start_services():
                     logger.error(
                         "Failed to start services after update, rolling back"
@@ -465,9 +463,8 @@ class AutoUpdater:
                     self.update_in_progress = False
                     os.remove(UPDATE_LOCK_FILE)
                     return (
-                        False,
-                        "Failed to start services after update, rolled back to previous version",
-                    )
+                        False, "Failed to start services after update, rolled back to "
+                        "previous version", )
 
                 # Update successful
                 logger.info("Update completed successfully")
@@ -484,7 +481,8 @@ class AutoUpdater:
                 os.remove(UPDATE_LOCK_FILE)
                 return (
                     False,
-                    f"Error applying updates: {e.stderr}. Rolled back to previous version.",
+                    f"Error applying updates: {e.stderr}. Rolled"
+                    f" back to previous version.",
                 )
             except Exception as e:
                 logger.error(f"Error applying updates: {str(e)}")
@@ -496,7 +494,8 @@ class AutoUpdater:
                 os.remove(UPDATE_LOCK_FILE)
                 return (
                     False,
-                    f"Error applying updates: {str(e)}. Rolled back to previous version.",
+                    f"Error applying updates: {str(e)}. Rolled back"
+                    f" to previous version.",
                 )
         except Exception as e:
             logger.error(f"Error in update process: {str(e)}")

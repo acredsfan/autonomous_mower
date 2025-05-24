@@ -103,12 +103,14 @@ class Vector2D:
 class Obstacle:
     """
     Representation of an obstacle in the virtual world.
-    """ def __init__(
+    """
+
+    def __init__(
         self,
         position: Vector2D,
         radius: float,
-        height: float=0.0,
-        obstacle_type: str="generic",
+        height: float = 0.0,
+        obstacle_type: str = "generic",
     ):
         """
         Initialize an obstacle.
@@ -334,10 +336,10 @@ class Robot:
 
     def __repr__(self) -> str:
         """String representation of robot."""
-        return f"Robot(pos={
-            self.position}, heading={
-            self.heading: .2f} rad, vel={
-            self.velocity}) "
+ (
+     f"Robot(pos={self.position}, heading={self.heading:.2f} rad, vel="
+     f"{self.velocity})"
+ )
 
     def update(self, dt: float) -> None:
         """
@@ -553,8 +555,8 @@ class VirtualWorld:
             position: Position to check from
             direction: Direction to check in
             max_range: Maximum range to check        Returns:
-            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and the obstacle itself
-                (or max_range, None if no obstacle found)
+            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and 
+                the obstacle itself (or max_range, None if no obstacle found)
         """
         with self._lock:
             # Normalize direction
@@ -620,11 +622,10 @@ class VirtualWorld:
         self, position: Vector2D, heading: float = None
     ) -> None:
         """
-        Set the robot's position and optionally heading.
-
-        Args:
+        Set the robot's position and optionally heading.        Args:
             position: New position for the robot
-            heading: New heading for the robot in radians (if None, keeps current heading)
+            heading: New heading for the robot in radians (if None, keeps 
+                current heading)
         """
         with self._lock:
             self.robot.position = position

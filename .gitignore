@@ -75,6 +75,9 @@ old_main.log
 .DS_Store
 Thumbs.db
 ~/*
+*.bak
+fix_fstrings.py
+fix_fstrings_README.md
 
 # Documentation
 docs/_build/
@@ -106,6 +109,14 @@ rewrite_*.py
 *docstrings*.py
 *whitespace*.py
 *syntax*.py
+test_imports.py
+setup_environment.sh
+setup_raspberry_pi.sh
+quick_fix_imports.sh
+fix_imports.py
+run_mower.sh
+activate_env.sh
+activate_mower_env.sh
 
 # Backup files
 *.backup
@@ -129,3 +140,16 @@ server.py
 run_mcp_server.sh
 rules.json
 linter_fixes.md
+# Data files
+*.npy
+
+# Model files
+models/claude_labels.txt
+models/claude_vision.pt
+*.onnx
+*.pt
+
+# TensorFlow/Keras saved models
+yolov8n_saved_model/
+*/*_saved_model/
+**/*_saved_model/

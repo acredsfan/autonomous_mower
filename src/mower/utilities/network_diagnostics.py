@@ -50,8 +50,7 @@ def check_internet_connectivity(timeout: int = 5) -> bool:
             return True
         else:
             logger.error(
-                f"Internet connectivity check failed (status {
-                    response.status_code})")
+                f"Internet connectivity check failed (status {response.status_code})")
             return False
     except Exception as e:
         logger.error(f"Internet connectivity check failed: {e}")
@@ -82,8 +81,8 @@ def check_required_endpoints(timeout: int = 10) -> bool:
                 logger.info(f"Endpoint reachable: {url}")
             else:
                 logger.error(
-                    f"Endpoint not reachable (status {
-                        response.status_code}): {url}")
+                    f"Endpoint not reachable (status {response.status_code}): {url}"
+                )
                 all_ok = False
         except Exception as e:
             logger.error(f"Endpoint not reachable: {url} ({e})")

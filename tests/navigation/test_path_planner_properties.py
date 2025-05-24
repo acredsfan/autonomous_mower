@@ -1,7 +1,6 @@
 """
 Test module for test_path_planner_properties.py.
-"""Test module for test_path_planner_properties.py.
-""""
+"""
 
 import pytest
 from hypothesis import given, strategies as st, settings, assume
@@ -136,15 +135,16 @@ class TestPathPlannerProperties:
         # Skip if we didn't get enough valid paths
         assume(len(rewards) > 2)
 
-        #
-        Check that the average reward of the last 3 paths is not worse than the initial reward
+        # Check that the average reward of the last 3 paths is not worse than the initial reward
         # We use a tolerance because learning might not always improve in a
         # small number of iterations
         avg_recent_reward = sum(rewards[ - 3: ]) / 3
         assert (
             avg_recent_reward >= initial_reward * 0.9
-        ),
-        f"Learning did not improve path quality: initial = {initial_reward}, recent = {avg_recent_reward}"
+ (
+     f"Learning did not improve path quality: initial = {initial_reward}"
+     f", recent = {avg_recent_reward}"
+ )
 
     @given(pattern_config=pattern_config_strategy())
     @settings(max_examples=10)
@@ -207,8 +207,10 @@ class TestPathPlannerProperties:
                 )
                 assert (
                     distance >= 0.5
-                ),
-                f"Path point {point} is too close to obstacle {obstacle}(distance={distance})"
+ (
+     f"Path point {point} is too close to obstacle {obstacle}(distance="
+     f"{distance})"
+ )
 
     @given(
         p1=st.tuples(st.floats(), st.floats()),

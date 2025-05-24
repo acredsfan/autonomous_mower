@@ -25,7 +25,10 @@ def main():
     config = load_config(config_path)
     if config is None:
         print(
-            f"Validation failed: Configuration file '{config_path}' is invalid or missing required fields.")
+            (
+                f"Validation failed: Configuration file '{config_path}'"
+                f" is invalid or missing required fields.")
+            )
         sys.exit(1)
 
     print(

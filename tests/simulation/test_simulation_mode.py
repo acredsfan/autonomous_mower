@@ -1,7 +1,6 @@
 """
 Test module for test_simulation_mode.py.
-"""Test module for test_simulation_mode.py.
-""""
+"""
 
 from mower.config_management import get_config, set_config
 from mower.robot_di import Robot as RobotDI
@@ -121,7 +120,8 @@ def test_robot_movement(simulation_environment):
 
     logger.info(
         f"Robot moved to position {new_position}, "
-        distance moved: {distance_moved}m")"
+        f"distance moved: {distance_moved}m"
+    )
 
     # We should have moved for ward
     assert (
@@ -167,8 +167,7 @@ def test_collision_handling(simulation_environment):
     # We should not have penetrated the obstacle(radius 1.0)
     assert (
         distance_to_obstacle >= 1.0
-    ),
-    f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
+    ), f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
 
     # Stop the robot
     world.set_robot_motor_speeds(0.0, 0.0)
@@ -176,8 +175,7 @@ def test_collision_handling(simulation_environment):
 
 def test_system_integration(simulation_environment):
     """Test the integration of the mower system with simulation mode."""
-    #
-    This test would initialize the actual mower system with simulation mode enabled
+    # This test would initialize the actual mower system with simulation mode enabled
     # For now, we'll just verify that simulation mode is properly enabled
     assert is_simulation_enabled(), "Simulation mode should be enabled"
 
