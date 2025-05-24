@@ -1,0 +1,20 @@
+[Unit]
+Description=Autonomous Mower Service
+After=network.target
+
+[Service]
+User=pi
+Group=pi
+WorkingDirectory={{PROJECT_ROOT_DIR}}
+ExecStart={{MOWER_EXECUTABLE_PATH}}
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autonomous-mower
+
+# Environment variables can be set here if needed
+# Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target
