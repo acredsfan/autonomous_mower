@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
-dotenv_path = "/home/pi/autonomous_mower/.env"
+# dotenv_path = "/home/pi/autonomous_mower/.env"
 load_dotenv(dotenv_path)
 
 
@@ -84,7 +84,9 @@ class SerialPort:
             # For now, let's re-raise to make startup failure explicit
             raise
         except Exception as e:
-            logger.error(f"Unexpected error opening serial port {self.port}: {e}")
+            logger.error(
+                f"Unexpected error opening serial port {
+                    self.port}: {e}")
             self.ser = None
             raise
         return self
@@ -100,11 +102,17 @@ class SerialPort:
             except serial.SerialException as e:
                 logger.error(f"SerialException closing port {self.port}: {e}")
             except Exception as e:
-                logger.error(f"Unexpected error closing serial port {self.port}: {e}")
+                logger.error(
+                    f"Unexpected error closing serial port {
+                        self.port}: {e}")
         elif self.ser is None:
-            logger.debug(f"Serial port {self.port} was already None, nothing to close.")
+            logger.debug(
+                f"Serial port {
+                    self.port} was already None, nothing to close.")
         else:  # Not None but not open
-            logger.debug(f"Serial port {self.port} was not open, nothing to close.")
+            logger.debug(
+                f"Serial port {
+                    self.port} was not open, nothing to close.")
         return self
 
     @staticmethod
@@ -226,7 +234,11 @@ class SerialLineReader:
 
     _instance = None
 
-    def __init__(self, serial: SerialPort, max_lines: int = 0, debug: bool = False):
+    def __init__(
+            self,
+            serial: SerialPort,
+            max_lines: int = 0,
+            debug: bool = False):
         self.serial = serial
         self.max_lines = max_lines
         self.debug = debug
@@ -351,7 +363,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.samples < 0:
-        print("Samples per read cycle," "greater than zero OR zero for unlimited")
+        print("Samples per read cycle,"
+              "greater than zero OR zero for unlimited")
         parser.print_help()
         sys.exit(0)
 
@@ -372,7 +385,8 @@ if __name__ == "__main__":
         )
 
         if args.threaded:
-            update_thread = threading.Thread(target=line_reader.update, args=())
+            update_thread = threading.Thread(
+                target=line_reader.update, args=())
             update_thread.start()
 
         def read_lines():
