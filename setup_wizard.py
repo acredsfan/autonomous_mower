@@ -1681,11 +1681,8 @@ def setup_final_verification() -> None:
             json.dump({"location": [0, 0]}, f)    # Summary of configuration
     print_subheader("Configuration Summary")
 
-    print(
-        f"Mower Name: {
-            setup_state['user_choices'].get(
-                'mower_name',
-                'AutonoMow')}")
+    mower_name = setup_state['user_choices'].get('mower_name', 'AutonoMow')
+    print(f"Mower Name: {mower_name}")
     sim_mode = setup_state['feature_flags'].get('simulation_mode', False)
     print(f"Simulation Mode: {'Enabled' if sim_mode else 'Disabled'}")
 
