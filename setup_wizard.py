@@ -1678,9 +1678,7 @@ def setup_final_verification() -> None:
 
     if not (CONFIG_DIR / "home_location.json").exists():
         with open(CONFIG_DIR / "home_location.json", "w", encoding="utf-8") as f:
-            json.dump({"location": [0, 0]}, f)
-
-    # Summary of configuration
+            json.dump({"location": [0, 0]}, f)    # Summary of configuration
     print_subheader("Configuration Summary")
 
     print(
