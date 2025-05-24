@@ -206,9 +206,8 @@ class VL53L0XSensors:
                     right_sensor_obj = temp_sensor
                 except Exception as e:
                     logging.error(
-                        f"Failed to change Right sensor addr to {
-                            hex(right_target_addr)}: {e}." f" Sensor may remain at {
-                            hex(_DEFAULT_I2C_ADDRESS)}.")
+                        f"Failed to change Right sensor addr to {hex(right_target_addr)}: {e}. Sensor may remain at {hex(_DEFAULT_I2C_ADDRESS)}."
+                    )
                     xshut_right_pin.value = False  # Force off
                     temp_sensor = None
             else:
