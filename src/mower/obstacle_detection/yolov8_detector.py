@@ -223,7 +223,8 @@ class YOLOv8TFLiteDetector:
             inference_time,
             1 / inference_time if inference_time > 0 else 0.0,
             len(detections)
-        )        return detections
+        )
+        return detections
 
     def _process_yolov8_output(self) -> List[Dict]:
         """
@@ -305,7 +306,8 @@ class YOLOv8TFLiteDetector:
         return detections
 
     def _process_classification_output(self) -> List[Dict]:
-        """Fallback for classification models."""        # Get output tensor - for classification output is typically [1,
+        """Fallback for classification models."""
+        # Get output tensor - for classification output is typically [1,
         # num_classes]
         if self.interpreter is None or self.output_details is None:
             return []

@@ -24,9 +24,9 @@ Test module for test_resource_manager.py.
 
         status = self.resource_manager.get_status()
 
-        self.assert Equal(status["state"], "IDLE")
-        self.assert Equal(status["battery"], "75 % ")
-        self.assert Equal(status["location"], (37.7749, - 122.4194))
+        self.assertEqual(status["state"], "IDLE")
+        self.assertEqual(status["battery"], "75 % ")
+        self.assertEqual(status["location"], (37.7749, - 122.4194))
 
 
 if __name__ == "__main__":

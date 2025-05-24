@@ -10,7 +10,6 @@ Original paper: https://arxiv.org/abs/1602.00763
 """
 
 import numpy as np
-from scipy.linalg import chi2inv
 
 
 class KalmanFilter:
@@ -212,7 +211,8 @@ class Sort:
 
 class KalmanBoxTracker(object):
     """
-    This class represents the internal state of individual tracked objects observed as bbox.
+    This class represents the internal state of individual tracked objects
+    observed as bbox.
     """
 
     count = 0

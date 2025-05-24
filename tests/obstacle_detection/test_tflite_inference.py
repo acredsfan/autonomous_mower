@@ -50,7 +50,8 @@ Test module for test_tflite_inference.py.
         print(f"Error parsing input details: {e}")
         return
 
-    # - - - Prepare Input Image - - - print(f"Loading and preparing image: {image_path}")
+(f"Loading and preparing image: {image_path}
+ f")
     try :
         img = Image.open(image_path).resize(input_size_wh)  # Resize to W, H
         img_rgb = img.convert("RGB")

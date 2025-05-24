@@ -101,13 +101,14 @@ class BladeController:
             speed (float): Speed value between 0.0 (stopped) and 1.0 (full speed).
 
         Returns:
-            bool: True if successful, False otherwise.
-        """
+            bool: True if successful, False otherwise.        """
         try:
             if not 0.0 <= speed <= 1.0:
                 logging.error(
                     "Invalid speed value: %s. Must be between 0.0 and 1.0.", speed)
-                return False            # Set up PWM on the enable pin if not already configured
+                return False
+
+            # Set up PWM on the enable pin if not already configured
             if self._pwm is None:
                 self._pwm = self._gpio.setup_pwm(
                     BLADE_ENABLE_PIN, frequency=1000

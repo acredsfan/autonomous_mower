@@ -41,7 +41,10 @@ class LazyLoader:
         self.loaded = False
 
         logger.debug(
-            f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}"
+            (
+                f"Created lazy loader for {module_path}{f'.{class_name}'"
+                f" if class_name else ''}"
+            )
         )
 
     def __call__(self, *args, **kwargs):

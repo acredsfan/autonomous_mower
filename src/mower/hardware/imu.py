@@ -244,9 +244,7 @@ class BNO085Sensor:
         logger.info("Shutting down BNO085 sensor.")
         with self.lock:  # Ensure thread safety during shutdown
             if self.serial_port_wrapper:
-                logger.debug(
-                    f"Closing serial port {
-                        self.serial_port_wrapper.port} for IMU.")
+                (f"Closing serial port {self.serial_port_wrapper.port} for IMU.")
                 self.serial_port_wrapper.stop()
                 self.serial_port_wrapper = None
             self.sensor = None  # Clear the sensor instance
@@ -546,14 +544,12 @@ if __name__ == "__main__":
             safety = imu.get_safety_status()
 
             print(
-                f"Heading: {
-                    heading:.1f}°, Roll: {
-                    roll:.1f}°, Pitch: {
-                    pitch:.1f}°")
+                f"Heading: {heading:.1f}°, Roll: "
+                f"{roll:.1f}°, Pitch: {pitch:.1f}°")
             print(f"Calibration: {calib}")
             print(
-                f"Safety status: {
-                    'WARNING' if safety['tilt_warning'] else 'OK'}")
+                f"Safety status: "
+                f"{'WARNING' if safety['tilt_warning'] else 'OK'}")
             print("--------------------")
             time.sleep(1)
     except KeyboardInterrupt:

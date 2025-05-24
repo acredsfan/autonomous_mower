@@ -663,8 +663,7 @@ class AvoidanceAlgorithm:
             bool: True if recovery initiated successfully, False otherwise
         """
         logger.info(
-            f"Executing recovery (attempt {
-                self.recovery_attempts + 1})")
+            f"Executing recovery (attempt {self.recovery_attempts + 1})")
 
         try:
             attempt = 0
@@ -680,15 +679,13 @@ class AvoidanceAlgorithm:
 
                 if obstacle_data and obstacle_data.get("left_sensor", False):
                     logger.info(
-                        f"Recovery attempt {
-                            attempt +
-                            1}: " "aggressive right turn")
+                        f"Recovery attempt {attempt + 1}: aggressive right turn"
+                    )
                     return self._turn_right_strategy(angle=turn_angle)
                 else:
                     logger.info(
-                        f"Recovery attempt {
-                            attempt +
-                            1}: aggressive left turn")
+                        f"Recovery attempt {attempt + 1}: aggressive left turn"
+                    )
                     return self._turn_left_strategy(angle=turn_angle)
 
             elif attempt == 1:
@@ -697,9 +694,7 @@ class AvoidanceAlgorithm:
 
             else:
                 logger.info(
-                    f"Recovery attempt {
-                        attempt +
-                        1}: alternative route")
+                    f"Recovery attempt {attempt + 1}: alternative route")
                 return self._alternative_route_strategy()
 
         except Exception as e:
@@ -873,8 +868,7 @@ class AvoidanceAlgorithm:
                 return False
 
             logger.info(
-                f"Found alternative route with {
-                    len(new_path)} waypoints")
+                f"Found alternative route with {len(new_path)} waypoints")
 
             first_waypoint = new_path[0]
             self.motor_controller.navigate_to_location(

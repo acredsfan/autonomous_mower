@@ -12,11 +12,14 @@ src/mower/obstacle_detection/yolov8_downloads.py, which:
   4. Updates the .env file.
 
 Usage:
-  python3 download_yolov8.py [--model yolov8n|yolov8s|yolov8m] [--output <output_dir>] [--imgsz 640] [--fp16|--int8] [--data <calibration_yaml>]
+  python3 download_yolov8.py [--model yolov8n|yolov8s|yolov8m]
+                              [--output <output_dir>] [--imgsz 640]
+                              [--fp16|--int8] [--data <calibration_yaml>]
 
 All arguments are passed through to the export script.
 
-This change fixes the 404 error and ensures the model is always available in the correct format.
+This change fixes the 404 error and ensures the model is always available in the
+correct format.
 """
 
 import sys
