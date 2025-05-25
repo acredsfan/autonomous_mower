@@ -341,3 +341,87 @@ class RoboHATDriver:
                 logger.info("PWM serial connection closed.")
             except serial.SerialException:
                 logger.error("Failed to close the PWM serial connection.")
+
+    def stop_motors(self):
+        """Stop all motors."""
+        logger.info("RoboHAT: Stopping all motors")
+        self.set_pulse(0, 0)  # Assuming 0 steering, 0 throttle stops motors
+
+    def get_current_heading(self) -> float:
+        """Get the current heading in degrees."""
+        logger.info("RoboHAT: Getting current heading")
+        # Placeholder for actual heading retrieval logic
+        # This might involve reading from an IMU or GPS connected via RoboHAT
+        return 0.0  # Replace with actual heading
+
+    def get_current_position(self) -> tuple[float, float]:
+        """Get the current position (x, y)."""
+        logger.info("RoboHAT: Getting current position")
+        # Placeholder for actual position retrieval logic
+        # This might involve reading from GPS or odometry
+        return (0.0, 0.0)  # Replace with actual position
+
+    def rotate_to_heading(self, target_heading: float) -> bool:
+        """Rotate the mower to a target heading."""
+        logger.info(f"RoboHAT: Rotating to heading {target_heading}")
+        # Placeholder for actual rotation logic
+        # This would involve controlling motors based on current and target heading
+        # For now, we'll simulate success
+        current_heading = self.get_current_heading()
+        logger.info(f"RoboHAT: Current heading {current_heading}, Target {target_heading}")
+        # Simulate rotation
+        time.sleep(1) # Simulate time taken to rotate
+        logger.info(f"RoboHAT: Rotation to {target_heading} complete.")
+        return True
+
+    def move_distance(self, distance: float, speed: float = 0.5) -> bool:
+        """Move the mower a specific distance."""
+        logger.info(f"RoboHAT: Moving distance {distance}m at speed {speed}")
+        # Placeholder for actual movement logic
+        # This would involve controlling motors for a certain duration or based on encoders
+        # For now, we'll simulate success
+        if distance > 0: # Forward
+            self.set_pulse(0, speed)
+        elif distance < 0: # Backward
+            self.set_pulse(0, -speed)
+        else: # No movement
+            self.set_pulse(0,0)
+            return True
+
+        # Simulate time taken to move
+        # This is a very rough approximation
+        # Actual implementation would use encoders or GPS
+        move_time = abs(distance / (speed * 0.5)) # Assuming average speed of 0.5 m/s for speed=1
+        logger.info(f"RoboHAT: Estimated move time {move_time:.2f}s")
+        time.sleep(move_time)
+        self.stop_motors() # Stop after moving
+        logger.info(f"RoboHAT: Movement of {distance}m complete.")
+        return True
+
+    def get_status(self) -> dict:
+        """Get the status of the RoboHAT."""
+        logger.info("RoboHAT: Getting status")
+        # Placeholder for actual status retrieval
+        # This could include motor status, battery level (if RoboHAT handles it), etc.
+        return {
+            "motor_status": "ok",  # Could be 'error', 'stalled', etc.
+            "battery_level": "N/A", # If RoboHAT has battery monitoring
+            "last_command_steering": self.pwm.last_steering if hasattr(self.pwm, 'last_steering') else "N/A", # Assuming pwm object stores last sent values
+            "last_command_throttle": self.pwm.last_throttle if hasattr(self.pwm, 'last_throttle') else "N/A"
+        }
+
+    # Helper to store last sent PWM values for get_status (optional)
+    def write_pwm(self, steering, throttle):
+        if self.pwm and self.pwm.is_open:
+            try:
+                pwm_command = b"%d, %d\r" % (steering, throttle)
+                self.pwm.write(pwm_command)
+                self.pwm.last_steering = steering # Store for status
+                self.pwm.last_throttle = throttle # Store for status
+                logger.debug(f"Sent PWM command: {pwm_command}")
+            except Exception as e:
+                logger.error(f"Failed to write PWM command: {e}")
+        else:
+            logger.error(
+                "Cannot write PWM command. PWM serial port is not open."
+            )

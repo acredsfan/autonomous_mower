@@ -13,7 +13,7 @@ from typing import Dict, Optional, Any
 
 import cv2
 
-from mower.config.config_manager import ConfigManager
+from mower.config_management.config_manager import ConfigManager
 from mower.hardware.camera_instance import CameraInstance
 from mower.navigation.path_planner import PathPlanner, PatternType
 from mower.hardware.sensor_types import SensorReading

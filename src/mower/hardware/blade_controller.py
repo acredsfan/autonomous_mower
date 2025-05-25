@@ -164,3 +164,13 @@ class BladeController:
             "enable_pin": BLADE_ENABLE_PIN,
             "direction_pin": BLADE_DIRECTION_PIN,
         }
+
+    def stop_blade(self) -> None:
+        """Stop the blade motor."""
+        if self._enabled:
+            logging.info("Stopping blade motor")
+            self.set_speed(0)  # Set speed to 0 to stop the motor
+            self.disable()  # Disable the motor enable pin
+            logging.info("Blade motor stopped")
+        else:
+            logging.info("Blade motor is already stopped")

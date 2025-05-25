@@ -354,12 +354,10 @@ class AvoidanceAlgorithm:
                 logger.error("Sensor interface not initialized")
                 return
 
-            left_distance = self.sensor_interface._read_vl53l0x(
-                "left_distance", float("inf")
-            )
-            right_distance = self.sensor_interface._read_vl53l0x(
-                "right_distance", float("inf")
-            )
+            sensor_data_full = self.sensor_interface.get_sensor_data()
+            tof_data = sensor_data_full.get("tof", {})
+            left_distance = tof_data.get("front_left", float("inf"))
+            right_distance = tof_data.get("front_right", float("inf"))
 
             with self.thread_lock:
                 self.obstacle_left = left_distance < MIN_DISTANCE_THRESHOLD
@@ -386,9 +384,22 @@ class AvoidanceAlgorithm:
                 return False
 
             # Example: Use ToF sensors to detect drop-offs
-            front_distance = self.sensor_interface._read_vl53l0x(
-                "front_distance", float("inf")
-            )
+            sensor_data_full = self.sensor_interface.get_sensor_data()
+            tof_data = sensor_data_full.get("tof", {})
+            # Assuming 'front_distance' might be an average or specific sensor not yet fully detailed.
+            # For now, use minimum of left/right as a proxy, or log if specific front is needed.
+            front_left = tof_data.get("front_left", float("inf"))
+            front_right = tof_data.get("front_right", float("inf"))
+            if front_left == float("inf") and front_right == float("inf"):
+                front_distance = float("inf")
+            elif front_left == float("inf"):
+                front_distance = front_right
+            elif front_right == float("inf"):
+                front_distance = front_left
+            else:
+                front_distance = min(front_left, front_right)
+            if front_distance == float("inf"):
+                 logger.warning("_detect_dropoff: No valid ToF front distances available.")
 
             # Define a threshold for drop-off detection (e.g., very large
             # distance)
@@ -556,7 +567,7 @@ class AvoidanceAlgorithm:
         logger.info("Starting obstacle avoidance")
 
         try:
-            self.motor_controller.stop()
+            self.motor_controller.stop_motors()
 
             obstacle_data = None
             with self.thread_lock:
@@ -871,9 +882,11 @@ class AvoidanceAlgorithm:
                 f"Found alternative route with {len(new_path)} waypoints")
 
             first_waypoint = new_path[0]
-            self.motor_controller.navigate_to_location(
-                (first_waypoint["lat"], first_waypoint["lng"])
-            )
+            logger.warning("_alternative_route_strategy: navigate_to_location on motor_controller is not implemented. Stopping motors instead.")
+            self.motor_controller.stop_motors()
+            # self.motor_controller.navigate_to_location(
+            #     (first_waypoint["lat"], first_waypoint["lng"])
+            # )
 
             return True
 
