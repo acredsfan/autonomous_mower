@@ -32,6 +32,7 @@ import threading
 from pathlib import Path
 from typing import Dict, Optional, Any
 
+from mower.config_management.constants import CONFIG_DIR
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 from mower.main_controller import ResourceManager
 
@@ -75,14 +76,10 @@ class IMUCalibration:
         self.calibration_data = {}
 
         # Set up calibration file path
-        config_dir = Path(
-            os.path.join(
-                os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                "config",
-            )
-        )
-        config_dir.mkdir(exist_ok=True)
-        self.calibration_file = config_dir / "imu_calibration.json"
+        # CONFIG_DIR is imported from mower.config_management.constants
+        # and should already point to project_root/config
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        self.calibration_file = CONFIG_DIR / "imu_calibration.json"
 
         # Initialize tracking variables
         self.calibration_in_progress = False
