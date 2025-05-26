@@ -9,7 +9,7 @@ import os
 import time
 import requests
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any, List # Added Any, List
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
@@ -149,6 +149,12 @@ class WeatherService:
 
     def _update_forecast(self) -> None:
         """Update forecast data from OpenWeatherMap API."""
+        if not self.api_key:
+            logger.error("OpenWeatherMap API key is missing. Cannot update forecast.")
+            self.cached_forecast = None 
+            self.last_api_update = time.time() # Treat as an update attempt to prevent rapid retries
+            return
+
         try:
             url = (
                 f"https://api.openweathermap.org/data/2.5/forecast?"
@@ -257,3 +263,99 @@ class WeatherService:
             timestamp=datetime.now(),
             source="fallback",
         )
+
+    def get_detailed_weather_for_scheduler(self) -> Optional[Dict[str, Any]]:
+        """
+        Provides current weather and short-term precipitation forecast,
+        tailored for the WeatherScheduler's decision-making.
+
+        Returns:
+            A dictionary containing:
+            - 'current_temperature': float
+            - 'current_wind_speed': float
+            - 'current_rain_volume_3h': float (rain volume in last 3h, can indicate current rain)
+            - 'is_currently_raining': bool (derived from current_rain_volume_3h or specific weather codes)
+            - 'hourly_precipitation_probability': List[float] (e.g., for next 3, 6 hours)
+            - 'error': Optional[str] if data fetching failed.
+        Or None if a significant error occurred.
+        """
+        try:
+            if time.time() - self.last_api_update > self.cache_duration:
+                self._update_forecast()
+
+            if not self.cached_forecast or "list" not in self.cached_forecast or not self.cached_forecast["list"]:
+                logger.warning("No forecast data available to provide details for scheduler.")
+                return {"error": "No forecast data available."}
+
+            # Current conditions from the first forecast item (closest to now)
+            # OpenWeatherMap's /forecast endpoint gives data in 3-hour intervals.
+            # The first item is the "most current" 3-hour block.
+            now_dt = datetime.now()
+            current_forecast_data = None
+            min_diff = float('inf')
+
+            for forecast_item in self.cached_forecast["list"]:
+                item_dt = datetime.fromtimestamp(forecast_item["dt"])
+                diff = abs((item_dt - now_dt).total_seconds())
+                if diff < min_diff:
+                    min_diff = diff
+                    current_forecast_data = forecast_item
+            
+            if not current_forecast_data: # Should not happen if list is not empty
+                 logger.warning("Could not determine current forecast data point.")
+                 return {"error": "Could not determine current forecast data point."}
+
+
+            current_temp = current_forecast_data["main"]["temp"]
+            current_wind = current_forecast_data["wind"]["speed"]
+            
+            # Rain volume in the last 3 hours. If present and > 0, it's likely raining or has just rained.
+            current_rain_3h = current_forecast_data.get("rain", {}).get("3h", 0.0) 
+            
+            # Determine if it's "currently raining"
+            # This can be based on rain volume or specific weather conditions if available
+            # OpenWeatherMap weather condition codes: 5xx for Rain.
+            is_raining = False
+            if current_rain_3h > 0.0: # If there's measurable rain in the period
+                is_raining = True
+            else: # Check weather codes if rain volume is zero (e.g. very light rain not measured)
+                weather_conditions = current_forecast_data.get("weather", [])
+                if weather_conditions:
+                    main_condition_code = weather_conditions[0].get("id", 0)
+                    if 500 <= main_condition_code < 600: # Codes for rain
+                        is_raining = True
+            
+            # Hourly precipitation probability for the next ~6 hours (two 3-hour blocks)
+            # The list starts with the current 3-hour block. We need the next ones.
+            hourly_precip_prob = []
+            # Forecast list is sorted by time.
+            # Find the index of the current_forecast_data or the first one after now.
+            start_index = 0
+            for i, item in enumerate(self.cached_forecast["list"]):
+                if item["dt"] >= current_forecast_data["dt"]:
+                    start_index = i
+                    break
+            
+            # Get up to 2 subsequent forecast periods (next 6 hours approximately)
+            # The 'pop' field is Probability of Precipitation.
+            for i in range(start_index, min(start_index + 2, len(self.cached_forecast["list"]))):
+                hourly_precip_prob.append(self.cached_forecast["list"][i].get("pop", 0.0) * 100) # Convert to percentage
+
+            return {
+                "current_temperature": current_temp,
+                "current_wind_speed": current_wind, # m/s by default from OpenWeatherMap
+                "current_rain_volume_3h": current_rain_3h, # mm
+                "is_currently_raining": is_raining,
+                "hourly_precipitation_probability": hourly_precip_prob, # List of %
+                "error": None
+            }
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request error in get_detailed_weather_for_scheduler: {e}")
+            return {"error": f"API request error: {e}"}
+        except (KeyError, IndexError, TypeError) as e:
+            logger.error(f"Error parsing weather data in get_detailed_weather_for_scheduler: {e}")
+            return {"error": f"Error parsing weather data: {e}"}
+        except Exception as e:
+            logger.error(f"Unexpected error in get_detailed_weather_for_scheduler: {e}")
+            return {"error": f"Unexpected error: {e}"}

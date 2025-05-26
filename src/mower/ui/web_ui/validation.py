@@ -2,10 +2,14 @@
 
 This module provides functions for validating and sanitizing user inputs
 to protect against injection attacks and other security vulnerabilities.
+It also includes address validation using Google's Address Validation API.
 """
 
 import re
 import json
+import os
+import urllib.request
+import urllib.parse
 from typing import Any, Dict, List, Optional, Union, Tuple
 
 from flask import Request
@@ -15,6 +19,18 @@ from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
+
+
+# --- Google Address Validation API Configuration ---
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY")
+ADDRESS_VALIDATION_API_URL_BASE = "https://addressvalidation.googleapis.com/v1:validateAddress"
+
+if not GOOGLE_MAPS_API_KEY:
+    logger.warning(
+        "GOOGLE_MAPS_API_KEY environment variable not found. "
+        "Address validation functionality will be severely limited or unavailable."
+    )
+# --- End Google Address Validation API Configuration ---
 
 
 def sanitize_string(value: str) -> str:
@@ -279,3 +295,105 @@ def validate_allowed_ips(ip_list: str) -> Tuple[bool, str]:
                 return False, f"Invalid IP address: {entry}"
 
     return True, ""
+
+
+# --- Google Address Validation API Function ---
+def validate_address(address_input: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validates a given address using the Google Address Validation API.
+
+    Args:
+        address_input: A dictionary representing the address to validate.
+                       Expected format: {"address": {"regionCode": "US", ...}}
+
+    Returns:
+        A dictionary containing:
+        - isValid: bool (True if validationGranularity is PREMISE/SUB_PREMISE and no major issues)
+        - validationResult: dict (the 'result' object from the API response)
+        - error: Optional[str] (error message if API call failed or key was missing)
+    """
+    default_error_response = {
+        "isValid": False,
+        "validationResult": {},
+        "error": "An unexpected error occurred.",
+    }
+
+    if not GOOGLE_MAPS_API_KEY:
+        logger.error("Address Validation API key is missing.")
+        return {
+            "isValid": False,
+            "validationResult": {},
+            "error": "API key for address validation is not configured.",
+        }
+
+    if not isinstance(address_input, dict) or "address" not in address_input:
+        logger.warning("Invalid address_input format for validation.")
+        return {
+            "isValid": False,
+            "validationResult": {},
+            "error": "Invalid input format for address validation.",
+        }
+
+    api_url = f"{ADDRESS_VALIDATION_API_URL_BASE}?key={GOOGLE_MAPS_API_KEY}"
+    request_body = json.dumps(address_input).encode("utf-8")
+
+    try:
+        req = urllib.request.Request(
+            api_url, data=request_body, headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            response_body = response.read().decode("utf-8")
+            data = json.loads(response_body)
+    except urllib.error.HTTPError as e:
+        error_content = e.read().decode("utf-8") if e.fp else "No additional error content"
+        logger.error(f"HTTP error from Address Validation API: {e.code} {e.reason} - {error_content}")
+        return {
+            "isValid": False,
+            "validationResult": {},
+            "error": f"Address Validation API request failed with HTTP {e.code}.",
+        }
+    except urllib.error.URLError as e:
+        logger.error(f"Network error during Address Validation API call: {e.reason}")
+        return {
+            "isValid": False,
+            "validationResult": {},
+            "error": "Network error connecting to Address Validation API.",
+        }
+    except json.JSONDecodeError:
+        logger.error("Failed to decode JSON response from Address Validation API.")
+        return {
+            "isValid": False,
+            "validationResult": {},
+            "error": "Invalid JSON response from Address Validation API.",
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error during Address Validation API call: {e}")
+        return default_error_response # Use a generic error for truly unexpected issues
+
+    # Process the API response
+    validation_result = data.get("result", {})
+    verdict = validation_result.get("verdict", {})
+
+    # Determine 'isValid' based on verdict
+    # High precision is desired: PREMISE or SUB_PREMISE granularity.
+    # No critical issues like missing required fields.
+    is_valid = False
+    validation_granularity = verdict.get("validationGranularity")
+    
+    if validation_granularity in ["PREMISE", "SUB_PREMISE"]:
+        # Check for problematic flags.
+        # Depending on strictness, hasUnconfirmedComponents or hasInferredComponents might be acceptable.
+        # For this implementation, we'll be relatively strict.
+        if not verdict.get("hasMissingComponents", False):
+            is_valid = True
+            # Optionally, be stricter:
+            # if not verdict.get("hasUnconfirmedComponents", False) and \
+            #    not verdict.get("hasInferredComponents", False):
+            #     is_valid = True
+
+    return {
+        "isValid": is_valid,
+        "validationResult": validation_result,
+        "error": None, # No error if API call was successful
+    }
+# --- End Google Address Validation API Function ---

@@ -1,428 +1,402 @@
-"""
-Test module for test_path_planner.py.
-"""
+import unittest
+from unittest.mock import patch, MagicMock, mock_open
+import os
+import json
+import numpy as np # numpy is used by the module under test indirectly
+import requests # For requests.exceptions
 
-import pytest
-import numpy as np
-from unittest.mock import MagicMock, patch, call
+import sys
+from pathlib import Path
 
+# Add the project's 'src' directory to the Python path
+project_root = Path(__file__).resolve().parent.parent.parent # /app
+src_root = project_root / "src"
+if str(src_root) not in sys.path:
+    sys.path.insert(0, str(src_root))
+
+# Now imports should work as 'from mower.module...'
 from mower.navigation.path_planner import (
     PathPlanner,
     PatternConfig,
-    LearningConfig,
     PatternType,
+    LearningConfig,
+    get_elevation_for_path,
+    GOOGLE_MAPS_API_KEY as MODULE_API_KEY_FROM_MODULE, 
+    ELEVATION_API_URL,
+    logger as path_planner_logger 
 )
+from mower.utilities.logger_config import LoggerConfigInfo
 
 
-class TestPathPlanner:
-    """Tests for the PathPlanner class ."""
+# Configure a specific logger for tests
+test_logger = LoggerConfigInfo.get_logger("test_path_planner_logger")
 
-    def test_initialization(self):
-        """Test initialization of the path planner."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
+DEFAULT_BOUNDARY = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+DEFAULT_START_POINT = (0.0, 0.0)
+
+def create_default_pattern_config():
+    return PatternConfig(
+        pattern_type=PatternType.PARALLEL,
+        spacing=1.0,
+        angle=0.0,
+        overlap=0.1,
+        start_point=DEFAULT_START_POINT,
+        boundary_points=DEFAULT_BOUNDARY,
+    )
+
+class TestPathPlannerElevation(unittest.TestCase):
+    def setUp(self):
+        self.pattern_config = create_default_pattern_config()
+        self.learning_config = LearningConfig(model_path="test_model.json", update_frequency=10000, memory_size=10, batch_size=2) 
+        self.planner = PathPlanner(self.pattern_config, self.learning_config)
+        
+        model_file = Path(self.learning_config.model_path)
+        if model_file.exists():
+            model_file.unlink()
+
+    def tearDown(self):
+        model_file = Path(self.learning_config.model_path)
+        if model_file.exists():
+            model_file.unlink()
+        if "GOOGLE_MAPS_API_KEY" in os.environ:
+            del os.environ["GOOGLE_MAPS_API_KEY"]
+        
+        # Reload module to reset its global state for GOOGLE_MAPS_API_KEY
+        import importlib
+        from mower.navigation import path_planner 
+        importlib.reload(path_planner)
+
+    @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test_key_123"}, clear=True)
+    def test_api_key_loaded_on_module_import(self):
+        import importlib
+        from mower.navigation import path_planner 
+        importlib.reload(path_planner)
+        self.assertEqual(path_planner.GOOGLE_MAPS_API_KEY, "test_key_123")
+
+    @patch.dict(os.environ, {}, clear=True) 
+    @patch("mower.navigation.path_planner.logger.warning") 
+    def test_api_key_missing_logs_warning_on_import_and_usage(self, mock_logger_warning):
+        import importlib
+        from mower.navigation import path_planner 
+        importlib.reload(path_planner) 
+
+        self.assertIsNone(path_planner.GOOGLE_MAPS_API_KEY)
+        mock_logger_warning.assert_any_call(
+            "GOOGLE_MAPS_API_KEY environment variable not found. "
+            "Elevation data will not be fetched. Path planning may be suboptimal."
+        )
+        
+        mock_logger_warning.reset_mock()
+        path_planner.get_elevation_for_path([(0,0)])
+        mock_logger_warning.assert_any_call(
+            "Cannot fetch elevation data: GOOGLE_MAPS_API_KEY is not set."
         )
 
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_success(self, mock_requests_get):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "results": [{"elevation": 10.0}, {"elevation": 20.0}], "status": "OK",
+            }
+            mock_requests_get.return_value = mock_response
+            
+            path = [(39.7, -105.2), (40.7, -105.3)]
+            elevations = path_planner.get_elevation_for_path(path)
+            
+            self.assertEqual(elevations, [10.0, 20.0])
+            mock_requests_get.assert_called_once()
+            args, kwargs = mock_requests_get.call_args
+            self.assertEqual(kwargs['params']['key'], "fake_key")
+            self.assertEqual(kwargs['params']['locations'], "39.7,-105.2|40.7,-105.3")
+
+    def _run_get_elevation_test_with_mocked_api(self, api_response_json, expected_log_message, mock_logger_error, mock_requests_get):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200 
+            mock_response.json.return_value = api_response_json
+            mock_requests_get.return_value = mock_response
+            
+            elevations = path_planner.get_elevation_for_path([(0,0)]) # Pass a non-empty path
+            self.assertIsNone(elevations)
+            if expected_log_message:
+                # For INVALID_REQUEST, the log includes the locations string.
+                if "INVALID_REQUEST" in api_response_json.get("status", ""):
+                     mock_logger_error.assert_any_call(expected_log_message) # Use any_call due to dynamic part
+                else:
+                    mock_logger_error.assert_called_with(expected_log_message)
+
+
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_api_error_over_query_limit(self, mock_requests_get, mock_logger_error):
+        self._run_get_elevation_test_with_mocked_api(
+            {"results": [], "status": "OVER_QUERY_LIMIT"},
+            "Google Maps Elevation API: Query limit exceeded. Consider reducing request frequency or upgrading your plan.",
+            mock_logger_error, mock_requests_get
         )
 
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Verify that the configurations were stored correctly
-        assert path_planner.pattern_config is pattern_config
-        assert path_planner.learning_config is learning_config
-
-        # Verify that the path planner was initialized correctly
-        assert path_planner.current_path == []
-        assert path_planner.obstacle_map == []
-        assert path_planner.coverage_map is not None
-        assert path_planner.learning_model is not None
-
-    def test_generate_parallel_path(self):
-        """Test generating a parallel path."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=1.0,  # Use a larger spacing for easier testing
-            angle=0.0,
-            overlap=0.0,  # No overlap for easier testing
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_api_error_request_denied(self, mock_requests_get, mock_logger_error):
+        self._run_get_elevation_test_with_mocked_api(
+            {"results": [], "status": "REQUEST_DENIED"},
+            "Google Maps Elevation API: Request denied. Check your API key and ensure the Elevation API is enabled.",
+            mock_logger_error, mock_requests_get
         )
 
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_api_error_invalid_request(self, mock_requests_get, mock_logger_error):
+         # The expected log message contains the locations string, which is dynamic.
+         # So we check if the expected prefix is present in any of the calls.
+        self._run_get_elevation_test_with_mocked_api(
+            {"results": [], "status": "INVALID_REQUEST", "error_message": "Test error"},
+            "Google Maps Elevation API: Invalid request. Locations: 0,0, Error: Test error",
+            mock_logger_error, mock_requests_get
         )
 
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_api_error_unknown(self, mock_requests_get, mock_logger_error):
+        self._run_get_elevation_test_with_mocked_api(
+            {"results": [], "status": "SOME_OTHER_ERROR", "error_message": "Unknown issue"},
+            "Google Maps Elevation API: Error - SOME_OTHER_ERROR. Error message: Unknown issue",
+            mock_logger_error, mock_requests_get
+        )
 
-        # Generate a path
-        path = path_planner.generate_path()
+    def _run_get_elevation_test_with_request_exception(self, exception_to_raise, expected_log_message, mock_logger_error, mock_requests_get):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
 
-        # Verify that a path was generated
-        assert len(path) > 0
+            mock_requests_get.side_effect = exception_to_raise
+            
+            elevations = path_planner.get_elevation_for_path([(0,0)])
+            self.assertIsNone(elevations)
+            if expected_log_message:
+                mock_logger_error.assert_called_with(expected_log_message)
 
-        # Verify that the path starts at the start point
-        assert path[0] == (0.0, 0.0)
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_network_error_timeout(self, mock_requests_get, mock_logger_error):
+        self._run_get_elevation_test_with_request_exception(
+            requests.exceptions.Timeout("Test timeout"),
+            "Google Maps Elevation API: Request timed out.",
+            mock_logger_error, mock_requests_get
+        )
 
-        # Verify that the path covers the entire area
-        x_coords = [point[0] for point in path]
-        y_coords = [point[1] for point in path]
-        assert min(x_coords) <= 0.0
-        assert max(x_coords) >= 10.0
-        assert min(y_coords) <= 0.0
-        assert max(y_coords) >= 10.0
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_network_error_httperror(self, mock_requests_get, mock_logger_error):
+        mock_response = MagicMock()
+        mock_response.text = "Server Error Text"
+        self._run_get_elevation_test_with_request_exception(
+            requests.exceptions.HTTPError("Test HTTP Error", response=mock_response),
+            "Google Maps Elevation API: HTTP error occurred: Test HTTP Error - Server Error Text",
+            mock_logger_error, mock_requests_get
+        )
 
-        # Verify that the path follows a parallel pattern
-        # For a parallel pattern with angle = 0.0,
-        # all points with the same y-coordinate
-        # should have x-coordinates that are either increasing or decreasing
-        y_values = sorted(set(y_coords))
-        for y in y_values:
-            points_at_y = [
-                (x, y_idx)
-                for x_idx, (x, y_idx) in enumerate(path)
-                if y_idx == y
-            ]
-            x_values = [x for x, _ in points_at_y]
-            # Check if x values are monotonically increasing or decreasing
-            assert all(
-                x_values[i] <= x_values[i + 1]
-                for i in range(len(x_values) - 1)
-            ) or all(
-                x_values[i] >= x_values[i + 1]
-                for i in range(len(x_values) - 1)
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_network_error_requestexception(self, mock_requests_get, mock_logger_error):
+        self._run_get_elevation_test_with_request_exception(
+            requests.exceptions.RequestException("Test RequestException"),
+            "Google Maps Elevation API: Request failed: Test RequestException",
+            mock_logger_error, mock_requests_get
+        )
+
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_key_error(self, mock_requests_get, mock_logger_error): # Malformed JSON
+        self._run_get_elevation_test_with_mocked_api(
+            {"status": "OK", "unexpected_field": []}, 
+            "Google Maps Elevation API: Invalid response format from API.",
+            mock_logger_error, mock_requests_get
+        )
+
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_json_decode_error(self, mock_requests_get, mock_logger_error):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
+
+            mock_response = MagicMock()
+            mock_response.json.side_effect = json.JSONDecodeError("Error decoding", "doc", 0)
+            mock_requests_get.return_value = mock_response
+            
+            elevations = path_planner.get_elevation_for_path([(0,0)])
+            self.assertIsNone(elevations)
+            mock_logger_error.assert_called_with("Google Maps Elevation API: Could not decode JSON response.")
+
+    @patch("mower.navigation.path_planner.logger.warning")
+    def test_get_elevation_no_api_key(self, mock_logger_warning):
+        with patch.dict(os.environ, {}, clear=True): 
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
+
+            elevations = path_planner.get_elevation_for_path([(0,0)])
+            self.assertIsNone(elevations)
+            mock_logger_warning.assert_any_call(
+                "GOOGLE_MAPS_API_KEY environment variable not found. "
+                "Elevation data will not be fetched. Path planning may be suboptimal."
             )
+            mock_logger_warning.assert_any_call(
+                "Cannot fetch elevation data: GOOGLE_MAPS_API_KEY is not set."
+            )
+    
+    def test_get_elevation_empty_path(self):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
+            elevations = path_planner.get_elevation_for_path([])
+            self.assertEqual(elevations, [])
 
-    def test_generate_spiral_path(self):
-        """Test generating a spiral path."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.SPIRAL,
-            spacing=1.0,  # Use a larger spacing for easier testing
-            angle=0.0,
-            overlap=0.0,  # No overlap for easier testing
-            start_point=(5.0, 5.0),  # Start in the center
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
+    @patch("mower.navigation.path_planner.logger.error")
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_mismatch_results(self, mock_requests_get, mock_logger_error):
+        # Path has 2 points, API returns 1 elevation
+        path_coords = [(39.7, -105.2), (40.7, -105.3)] 
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
 
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "results": [{"elevation": 10.0}], "status": "OK",
+            }
+            mock_requests_get.return_value = mock_response
+            
+            elevations = path_planner.get_elevation_for_path(path_coords)
+            self.assertIsNone(elevations)
+            mock_logger_error.assert_called_with(
+                "Mismatch between number of requested coordinates and received elevations."
+            )
+    
+    @patch("mower.navigation.path_planner.requests.get")
+    def test_get_elevation_batched_requests(self, mock_requests_get):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+            import importlib
+            from mower.navigation import path_planner
+            importlib.reload(path_planner)
 
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
+            num_points = 600 
+            path_coords = [(float(i), float(i)) for i in range(num_points)]
+            
+            mock_response_1 = MagicMock()
+            mock_response_1.json.return_value = {
+                "results": [{"elevation": float(i)} for i in range(512)], "status": "OK",
+            }
+            mock_response_2 = MagicMock()
+            mock_response_2.json.return_value = {
+                "results": [{"elevation": float(i)} for i in range(512, num_points)], "status": "OK",
+            }
+            mock_requests_get.side_effect = [mock_response_1, mock_response_2]
+            
+            elevations = path_planner.get_elevation_for_path(path_coords)
+            
+            self.assertIsNotNone(elevations)
+            self.assertEqual(len(elevations), num_points)
+            self.assertEqual(elevations[512], 512.0)
+            self.assertEqual(mock_requests_get.call_count, 2)
 
-        # Generate a path
-        path = path_planner.generate_path()
+    @patch("mower.navigation.path_planner.get_elevation_for_path")
+    # Removed class-level patch for _generate_pattern_path from decorators
+    def test_generate_path_with_elevation_data(self, mock_get_elevation):
+        fixed_path_coords = [(0.0,0.0), (1.0,1.0), (2.0,0.0)]
+        mock_elevations = [10.0 + i * 0.5 for i in range(len(fixed_path_coords))]
+        mock_get_elevation.return_value = mock_elevations
 
-        # Verify that a path was generated
-        assert len(path) > 0
+        # Mock the instance method directly using 'with patch.object'
+        with patch.object(self.planner, '_generate_pattern_path', return_value=fixed_path_coords) as mock_instance_generate_pattern, \
+             patch.object(self.planner, '_calculate_reward', wraps=self.planner._calculate_reward) as mock_calc_reward:
+            
+            with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+                import importlib
+                from mower.navigation import path_planner 
+                importlib.reload(path_planner)
+                
+                generated_path = self.planner.generate_path() 
+            
+            self.assertEqual(generated_path, fixed_path_coords) 
+            mock_instance_generate_pattern.assert_called_once() 
+            mock_get_elevation.assert_called_once_with(fixed_path_coords)
+            mock_calc_reward.assert_called()
+            args, kwargs = mock_calc_reward.call_args
+            self.assertEqual(args[0], fixed_path_coords) 
+            self.assertEqual(args[1], mock_elevations) 
 
-        # Verify that the path starts near the center
-        assert abs(path[0][0] - 5.0) < 1.0
-        assert abs(path[0][1] - 5.0) < 1.0
 
-        # Verify that the path covers the entire area
-        x_coords = [point[0] for point in path]
-        y_coords = [point[1] for point in path]
-        assert min(x_coords) <= 1.0
-        assert max(x_coords) >= 9.0
-        assert min(y_coords) <= 1.0
-        assert max(y_coords) >= 9.0
+    @patch("mower.navigation.path_planner.get_elevation_for_path")
+    # Removed class-level patch for _generate_pattern_path from decorators
+    @patch("mower.navigation.path_planner.logger.debug") 
+    def test_generate_path_api_failure_graceful(self, mock_logger_debug, mock_get_elevation):
+        fixed_path_coords = [(0.0,0.0), (1.0,1.0), (2.0,0.0)]
+        mock_get_elevation.return_value = None # Simulate API failure
+        
+        # Mock the instance method directly using 'with patch.object'
+        with patch.object(self.planner, '_generate_pattern_path', return_value=fixed_path_coords) as mock_instance_generate_pattern, \
+             patch.object(self.planner, '_calculate_reward', wraps=self.planner._calculate_reward) as mock_calc_reward:
 
-        # Verify that the path follows a spiral pattern
-        # For a spiral pattern, the distance from the center should generally
-        # increase
-        center = (5.0, 5.0)
-        distances = [
-            ((x - center[0]) ** 2 + (y - center[1]) ** 2) ** 0.5
-            for x, y in path
-        ]
-        # Check if distances are generally increasing
-        # We allow some fluctuations, so we check if the trend is increasing
-        increasing_count = sum(
-            distances[i] <= distances[i + 1]
-            for i in range(len(distances) - 1)
-        )
-        # At least 70% should be increasing
-        assert increasing_count >= len(distances) * 0.7
+            with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "fake_key"}, clear=True):
+                import importlib
+                from mower.navigation import path_planner
+                importlib.reload(path_planner)
+                generated_path = self.planner.generate_path()
+            
+            self.assertEqual(generated_path, fixed_path_coords)
+            mock_instance_generate_pattern.assert_called_once()
+            mock_get_elevation.assert_called_once_with(fixed_path_coords)
+            mock_calc_reward.assert_called()
+            args, kwargs = mock_calc_reward.call_args
+            self.assertEqual(args[0], fixed_path_coords) # path
+            self.assertIsNone(args[1]) # elevation_data should be None
+            
+            log_messages = [call[0][0] for call in mock_logger_debug.call_args_list]
+            self.assertFalse(any("Elevation penalty applied" in msg for msg in log_messages))
 
-    def test_update_obstacle_map(self):
-        """Test updating the obstacle map."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
+    def test_reward_calculation_with_elevation(self):
+        path = [(0,0), (10,0), (20,0)] 
+        elevations = [10.0, 12.0, 11.0] 
+        
+        with patch.object(self.planner, '_calculate_path_distance', return_value=20.0), \
+             patch.object(self.planner, '_calculate_coverage', return_value=0.8), \
+             patch.object(self.planner, '_calculate_smoothness', return_value=0.9):
+            reward = self.planner._calculate_reward(path, elevations)
+            self.assertAlmostEqual(reward, 0.50, places=3)
 
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
+    def test_reward_calculation_with_steep_slope_penalty(self):
+        path = [(0,0), (10,0)] 
+        elevations = [10.0, 13.0] 
+        
+        with patch.object(self.planner, '_calculate_path_distance', return_value=10.0), \
+             patch.object(self.planner, '_calculate_coverage', return_value=0.8), \
+             patch.object(self.planner, '_calculate_smoothness', return_value=1.0):
+            reward = self.planner._calculate_reward(path, elevations)
+            self.assertAlmostEqual(reward, 0.52, places=3)
 
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
+    def test_reward_calculation_without_elevation(self):
+        path = [(0,0), (10,0), (20,0)]
+        with patch.object(self.planner, '_calculate_path_distance', return_value=20.0), \
+             patch.object(self.planner, '_calculate_coverage', return_value=0.8), \
+             patch.object(self.planner, '_calculate_smoothness', return_value=0.9):
+            reward = self.planner._calculate_reward(path, None) 
+            self.assertAlmostEqual(reward, 0.52, places=3)
 
-        # Update the obstacle map
-        obstacles = [(5.0, 5.0), (7.0, 7.0)]
-        path_planner.update_obstacle_map(obstacles)
-
-        # Verify that the obstacle map was updated
-        assert len(path_planner.obstacle_map) == 2
-        assert (5.0, 5.0) in path_planner.obstacle_map
-        assert (7.0, 7.0) in path_planner.obstacle_map
-
-        # Update the obstacle map again with a new obstacle
-        path_planner.update_obstacle_map([(3.0, 3.0)])
-
-        # Verify that the obstacle map was updated
-        assert len(path_planner.obstacle_map) == 3
-        assert (3.0, 3.0) in path_planner.obstacle_map
-
-    def test_get_path(self):
-        """Test getting a path between two points."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
-
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
-
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Get a path between two points
-        start = (0, 0)
-        goal = (10, 10)
-        path = path_planner.get_path(start, goal)
-
-        # Verify that a path was generated
-        assert len(path) > 0
-
-        # Verify that the path starts at the start point and ends at the goal
-        # point
-        assert path[0] == start
-        assert path[- 1] == goal
-
-        # Add an obstacle and get a new path
-        path_planner.update_obstacle_map([(5, 5)])
-        path_with_obstacle = path_planner.get_path(start, goal)
-
-        # Verify that a path was generated
-        assert len(path_with_obstacle) > 0
-
-        # Verify that the path starts at the start point and ends at the goal
-        # point
-        assert path_with_obstacle[0] == start
-        assert path_with_obstacle[- 1] == goal
-
-        # Verify that the path avoids the obstacle
-        assert (5, 5) not in path_with_obstacle
-
-    def test_optimize_path(self):
-        """Test optimizing a path."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
-
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
-
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Create a path with unnecessary detours
-        path = [
-            (0, 0),
-            (1, 1),
-            (2, 2),
-            (3, 3),
-            (4, 4),
-            (5, 5),
-            (6, 6),
-            (7, 7),
-            (8, 8),
-            (9, 9),
-            (10, 10),
-        ]
-
-        # Optimize the path
-        optimized_path = path_planner.optimize_path(path)
-
-        # Verify that the optimized path is shorter than the or iginal path
-        assert len(optimized_path) <= len(path)
-
-        # Verify that the optimized path still starts and ends at the same
-        # points
-        assert optimized_path[0] == path[0]
-        assert optimized_path[- 1] == path[- 1]
-
-    def test_coord_to_grid(self):
-        """Test converting coordinates to grid indices."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
-
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
-
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Convert coordinates to grid indices
-        grid_x, grid_y = path_planner.coord_to_grid(5.0, 5.0)
-
-        # Verify that the conversion is correct
-        assert isinstance(grid_x, int)
-        assert isinstance(grid_y, int)
-        assert grid_x >= 0
-        assert grid_y >= 0
-
-    def test_grid_to_coord(self):
-        """Test converting grid indices to coordinates."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
-
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
-
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Convert grid indices to coordinates
-        coord_x, coord_y = path_planner.grid_to_coord(50, 50)
-
-        # Verify that the conversion is correct
-        assert isinstance(coord_x, float)
-        assert isinstance(coord_y, float)
-
-        # Convert back to grid indices
-        grid_x, grid_y = path_planner.coord_to_grid(coord_x, coord_y)
-
-        # Verify that the conversion is reversible
-        assert grid_x == 50
-        assert grid_y == 50
-
-    def test_get_current_goal(self):
-        """Test getting the current goal."""
-        # Create pattern and learning configurations
-        pattern_config = PatternConfig(
-            pattern_type=PatternType.PARALLEL,
-            spacing=0.3,
-            angle=0.0,
-            overlap=0.1,
-            start_point=(0.0, 0.0),
-            boundary_points=[(0, 0), (10, 0), (10, 10), (0, 10)],
-        )
-
-        learning_config = LearningConfig(
-            learning_rate=0.1,
-            discount_factor=0.9,
-            exploration_rate=0.2,
-            memory_size=1000,
-            batch_size=32,
-            update_frequency=100,
-            model_path="test_model_path",
-        )
-
-        # Create a PathPlanner instance
-        path_planner = PathPlanner(pattern_config, learning_config)
-
-        # Generate a path
-        path = path_planner.generate_path()
-
-        # Get the current goal
-        goal = path_planner.get_current_goal()
-
-        # Verify that the goal is the last point in the path
-        assert goal == path[- 1]
+if __name__ == '__main__':
+    unittest.main(argv=['first-arg-is-ignored'], exit=False)

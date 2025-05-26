@@ -252,168 +252,68 @@ class WeatherAwareScheduler:
                     "Not scheduled for mowing at this time",
                 )
 
-        # Check current weather conditions
+        # Check current weather conditions using the new detailed method
         try:
-            current_conditions = (
-                self._weather_service.get_current_conditions()
-            )
-            is_suitable, reason = self._weather_service.is_mowing_weather()
+            with self._lock: # Access thresholds within lock
+                thresholds = self._weather_thresholds.copy()
 
-            if not is_suitable:
-                return MowingRecommendation.UNSAFE, reason
+            weather_data = self._weather_service.get_detailed_weather_for_scheduler()
 
-            # Check forecast for the target time
-            forecast = self._get_forecast_for_time(time)
-            if forecast:
-                return self._evaluate_forecast(forecast)
+            if not weather_data or weather_data.get("error"):
+                logger.warning(f"Could not retrieve valid weather data for recommendation: {weather_data.get('error', 'Unknown error') if weather_data else 'No data'}")
+                return MowingRecommendation.POOR, "Weather data unavailable"
 
-            # If no forecast available, use current conditions
-            return self._evaluate_current_conditions(current_conditions)
+            current_temp_celsius = weather_data.get("current_temperature")
+            is_currently_raining = weather_data.get("is_currently_raining")
+            precipitation_probability_next_hours = weather_data.get("hourly_precipitation_probability", [])
+            
+            # Rule 1: Currently raining
+            if is_currently_raining:
+                logger.info(f"Mowing decision for {time}: Postponed - Currently raining. Details: {weather_data}")
+                return MowingRecommendation.UNSAFE, "Currently raining"
+
+            # Rule 2: High chance of rain soon (checking first forecast interval, e.g., next 1-3 hours)
+            # The threshold for "max_rain_probability" is expected to be in percentage (e.g., 50.0 for 50%)
+            # The precipitation_probability_next_hours from service is already in percentage.
+            if precipitation_probability_next_hours and \
+               precipitation_probability_next_hours[0] > thresholds.get("max_rain_probability", 50.0):
+                reason_msg = f"High chance of rain soon ({precipitation_probability_next_hours[0]}%)"
+                logger.info(f"Mowing decision for {time}: Postponed - {reason_msg}. Details: {weather_data}")
+                return MowingRecommendation.POOR, reason_msg
+            
+            # Rule 3: Temperature too low (using Celsius)
+            min_temp_celsius_threshold = 5.0 # Define this threshold directly or get from a new Celsius config
+            # The existing self._weather_thresholds["min_temperature"] is in Fahrenheit.
+            # For simplicity in this fix, using a hardcoded Celsius threshold.
+            # TODO: Consider making thresholds unit-aware or consistently Celsius.
+            if current_temp_celsius is not None and current_temp_celsius < min_temp_celsius_threshold:
+                reason_msg = f"Temperature too low ({current_temp_celsius}°C)"
+                logger.info(f"Mowing decision for {time}: Postponed - {reason_msg}. Details: {weather_data}")
+                return MowingRecommendation.POOR, reason_msg
+            
+            # Add other checks if necessary (e.g., max temperature, wind speed)
+            # Example: Wind speed check (assuming m/s from service, threshold in mph needs conversion or new m/s threshold)
+            # current_wind_speed_ms = weather_data.get("current_wind_speed") # m/s
+            # max_wind_speed_mph = thresholds.get("max_wind_speed", 20.0) # mph
+            # max_wind_speed_ms = max_wind_speed_mph * 0.44704 # Convert mph to m/s
+            # if current_wind_speed_ms is not None and current_wind_speed_ms > max_wind_speed_ms:
+            #     logger.info(f"Mowing postponed: Too windy ({current_wind_speed_ms} m/s).")
+            #     return MowingRecommendation.POOR, f"Too windy ({current_wind_speed_ms} m/s)"
+
+            logger.info(f"Mowing decision for {time}: Weather conditions suitable. Details: {weather_data}")
+            return MowingRecommendation.GOOD, "Weather conditions suitable"
+
         except Exception as e:
-            logger.error(f"Error getting mowing recommendation: {e}")
+            logger.error(f"Error getting mowing recommendation for {time}: {e}")
             return (
                 MowingRecommendation.POOR,
                 f"Error evaluating weather: {str(e)}",
             )
 
-    def _evaluate_forecast(
-        self, forecast: Dict[str, Any]
-    ) -> Tuple[MowingRecommendation, str]:
-        """
-        Evaluate a weather forecast for mowing suitability.
-
-        Args:
-            forecast: Weather forecast data
-
-        Returns:
-            Tuple[MowingRecommendation, str]: Recommendation and reason
-        """
-        with self._lock:
-            thresholds = self._weather_thresholds.copy()
-
-        # Extract relevant data from forecast
-        condition = forecast.get("condition", "unknown")
-        rain_prob = forecast.get("precipitation_probability", 0)
-        wind_speed = forecast.get("wind_speed", 0)
-        temperature = forecast.get("temperature", 70)
-
-        # Check for unsafe conditions
-        if condition.lower() in [
-            c.lower() for c in thresholds["unsafe_conditions"]
-        ]:
-            return (
-                MowingRecommendation.UNSAFE,
-                f"Unsafe weather condition: {condition}",
-            )
-
-        if rain_prob > thresholds["max_rain_probability"]:
-            return (
-                MowingRecommendation.POOR,
-                f"High chance of rain: {rain_prob}%",
-            )
-
-        if wind_speed > thresholds["max_wind_speed"]:
-            return (
-                MowingRecommendation.POOR,
-                f"High wind speed: {wind_speed} mph",
-            )
-
-        if temperature < thresholds["min_temperature"]:
-            return (
-                MowingRecommendation.POOR,
-                f"Temperature too low: {temperature}°F",
-            )
-
-        if temperature > thresholds["max_temperature"]:
-            return (
-                MowingRecommendation.POOR,
-                f"Temperature too high: {temperature}°F",
-            )
-
-        # Determine recommendation based on conditions
-        if condition.lower() in ["sunny", "partly_cloudy"] and rain_prob < 20:
-            return (
-                MowingRecommendation.OPTIMAL,
-                "Optimal weather conditions for mowing",
-            )
-        elif rain_prob < 30 and wind_speed < 15:
-            return (
-                MowingRecommendation.GOOD,
-                "Good weather conditions for mowing",
-            )
-        else:
-            return (
-                MowingRecommendation.FAIR,
-                "Fair weather conditions for mowing",
-            )
-
-    def _evaluate_current_conditions(
-        self, conditions: Dict[str, Any]
-    ) -> Tuple[MowingRecommendation, str]:
-        """
-        Evaluate current weather conditions for mowing suitability.
-
-        Args:
-            conditions: Current weather conditions data
-
-        Returns:
-            Tuple[MowingRecommendation, str]: Recommendation and reason
-        """
-        with self._lock:
-            thresholds = self._weather_thresholds.copy()
-
-        # Extract relevant data from conditions
-        condition = conditions.get("condition", "unknown")
-        is_raining = conditions.get("is_raining", False)
-        wind_speed = conditions.get("wind_speed", 0)
-        temperature = conditions.get("temperature", 70)
-
-        # Check for unsafe conditions
-        if condition.lower() in [
-            c.lower() for c in thresholds["unsafe_conditions"]
-        ]:
-            return (
-                MowingRecommendation.UNSAFE,
-                f"Unsafe weather condition: {condition}",
-            )
-
-        if is_raining:
-            return MowingRecommendation.POOR, "Currently raining"
-
-        if wind_speed > thresholds["max_wind_speed"]:
-            return (
-                MowingRecommendation.POOR,
-                f"High wind speed: {wind_speed} mph",
-            )
-
-        if temperature < thresholds["min_temperature"]:
-            return (
-                MowingRecommendation.POOR,
-                f"Temperature too low: {temperature}°F",
-            )
-
-        if temperature > thresholds["max_temperature"]:
-            return (
-                MowingRecommendation.POOR,
-                f"Temperature too high: {temperature}°F",
-            )
-
-        # Determine recommendation based on conditions
-        if condition.lower() in ["sunny", "partly_cloudy"] and not is_raining:
-            return (
-                MowingRecommendation.OPTIMAL,
-                "Optimal weather conditions for mowing",
-            )
-        elif not is_raining and wind_speed < 15:
-            return (
-                MowingRecommendation.GOOD,
-                "Good weather conditions for mowing",
-            )
-        else:
-            return (
-                MowingRecommendation.FAIR,
-                "Fair weather conditions for mowing",
-            )
+    # _evaluate_forecast, _evaluate_current_conditions, _get_forecast_for_time, _fetch_forecasts, _update_forecasts
+    # are now effectively bypassed by the new logic in get_mowing_recommendation using get_detailed_weather_for_scheduler.
+    # They can be marked as deprecated or removed if no other part of the system uses them.
+    # The WeatherService's own caching (_update_forecast) is still used by get_detailed_weather_for_scheduler.
 
     def get_next_mowing_time(self) -> Optional[datetime]:
         """
@@ -433,25 +333,26 @@ class WeatherAwareScheduler:
                 scheduled_times = self._schedule.get(day_of_week, [])
 
             for hour, minute in scheduled_times:
-                target_time = datetime.combine(
+                target_time_dt = datetime.combine( # Renamed to avoid conflict
                     target_date,
                     datetime.min.time().replace(hour=hour, minute=minute),
                 )
 
                 # Skip times in the past
-                if target_time <= now:
+                if target_time_dt <= now:
                     continue
 
                 # Check if weather is suitable
-                recommendation, _ = self.get_mowing_recommendation(
-                    target_time
+                # Pass target_time_dt to get_mowing_recommendation
+                recommendation, _ = self.get_mowing_recommendation( 
+                    target_time_dt 
                 )
                 if recommendation in [
                     MowingRecommendation.OPTIMAL,
                     MowingRecommendation.GOOD,
-                    MowingRecommendation.FAIR,
+                    # MowingRecommendation.FAIR, # FAIR might be too risky if we are proactive
                 ]:
-                    return target_time
+                    return target_time_dt
 
         return None
 
@@ -464,7 +365,7 @@ class WeatherAwareScheduler:
                 mapping scheduled times to (recommendation, reason) tuples
         """
         now = datetime.now()
-        result = {}
+        result_schedule = {} # Renamed to avoid conflict
 
         # Look ahead 7 days
         for days_ahead in range(7):
@@ -475,22 +376,22 @@ class WeatherAwareScheduler:
                 scheduled_times = self._schedule.get(day_of_week, [])
 
             for hour, minute in scheduled_times:
-                target_time = datetime.combine(
+                target_time_dt = datetime.combine( # Renamed
                     target_date,
                     datetime.min.time().replace(hour=hour, minute=minute),
                 )
 
                 # Skip times in the past
-                if target_time <= now:
+                if target_time_dt <= now:
                     continue
 
                 # Get weather recommendation
                 recommendation, reason = self.get_mowing_recommendation(
-                    target_time
+                    target_time_dt
                 )
-                result[target_time] = (recommendation, reason)
+                result_schedule[target_time_dt] = (recommendation, reason)
 
-        return result
+        return result_schedule
 
     def cleanup(self) -> None:
         """Clean up resources used by the WeatherAwareScheduler."""

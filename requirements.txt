@@ -80,3 +80,4 @@ pre-commit>=3.6.0
 flask-cors>=5.0.1
 scipy>=1.10.1
 pydantic>=2.0.0
+Flask-Babel==4.0.0
