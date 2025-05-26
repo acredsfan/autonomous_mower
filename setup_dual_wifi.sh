@@ -6,29 +6,14 @@ PASS_FAST="Your_primary_wifi_password"
 SSID_SLOW="Your_Secondary_WiFi_SSID"
 PASS_SLOW="your_secondary_wifi_password"
 COUNTRY="US"
-GATEWAY_FAST="192.168.50.1" # Replace with your primary Wi-Fi gateway
-GATEWAY_SLOW="192.168.60.1" # Replace with your secondary Wi-Fi gateway
+GATEWAY_FAST="192.168.50.1" # Primary Wi-Fi gateway (for wlan1)
+GATEWAY_SLOW="192.168.50.1" # Secondary Wi-Fi gateway (for wlan0)
 
-echo "Setting up dual Wi-Fi configuration..."
+echo "Starting Dual Wi-Fi Setup..."
 
-# 1. Set country code
-echo "Setting regulatory domain..."
-echo "country=$COUNTRY" | sudo tee /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null
-
-# 2. Write WPA configs
-echo "Creating wpa_supplicant configs..."
-sudo tee /etc/wpa_supplicant/wpa_supplicant-wlan0.conf > /dev/null <<EOF
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=$COUNTRY
-
-network={
-    ssid="$SSID_SLOW"
-    psk="$PASS_SLOW"
-}
-EOF
-
-sudo tee /etc/wpa_supplicant/wpa_supplicant-wlan1.conf > /dev/null <<EOF
+# 1. Set global wpa_supplicant config with multiple networks
+echo "Creating global wpa_supplicant.conf..."
+sudo tee /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null <<EOF
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 country=$COUNTRY
@@ -36,43 +21,39 @@ country=$COUNTRY
 network={
     ssid="$SSID_FAST"
     psk="$PASS_FAST"
+    priority=2
+}
+
+network={
+    ssid="$SSID_SLOW"
+    psk="$PASS_SLOW"
+    priority=1
 }
 EOF
 
-# 3. Configure interfaces
-echo "Configuring interfaces..."
-sudo mkdir -p /etc/network/interfaces.d
+# 2. Cleanup dhcpcd.conf to avoid conflicts
+echo "Cleaning up dhcpcd.conf..."
+sudo sed -i '/denyinterfaces wlan0/d' /etc/dhcpcd.conf
+sudo sed -i '/denyinterfaces wlan1/d' /etc/dhcpcd.conf
 
-sudo tee /etc/network/interfaces.d/wlan0 > /dev/null <<EOF
-auto wlan0
-iface wlan0 inet dhcp
-    wpa-conf /etc/wpa_supplicant/wpa_supplicant-wlan0.conf
-EOF
+# 3. Restart networking to apply changes
+echo "Restarting networking services..."
+sudo systemctl restart dhcpcd
+sudo wpa_cli -i wlan0 reconfigure || true
+sudo wpa_cli -i wlan1 reconfigure || true
 
-sudo tee /etc/network/interfaces.d/wlan1 > /dev/null <<EOF
-auto wlan1
-iface wlan1 inet dhcp
-    wpa-conf /etc/wpa_supplicant/wpa_supplicant-wlan1.conf
-EOF
-
-# 4. Update dhcpcd.conf to stop interference
-echo "Updating dhcpcd config..."
-sudo sed -i '/denyinterfaces wlan/d' /etc/dhcpcd.conf
-echo "denyinterfaces wlan0" | sudo tee -a /etc/dhcpcd.conf > /dev/null
-echo "denyinterfaces wlan1" | sudo tee -a /etc/dhcpcd.conf > /dev/null
-
-# 5. Install watchdog script
+# 4. Create the Wi-Fi watchdog script for failover
 echo "Creating watchdog script..."
 sudo tee /usr/local/bin/wifi_watchdog.py > /dev/null <<EOF
 #!/usr/bin/env python3
 import subprocess
 import time
 
-WLAN1_GATEWAY = "$GATEWAY_FAST"
-WLAN0_GATEWAY = "$GATEWAY_SLOW"
-PING_INTERFACE = "wlan1"
-FALLBACK_INTERFACE = "wlan0"
-PING_HOST = WLAN1_GATEWAY
+PRIMARY_IFACE = "wlan1"
+SECONDARY_IFACE = "wlan0"
+PRIMARY_GATEWAY = "$GATEWAY_FAST"
+SECONDARY_GATEWAY = "$GATEWAY_SLOW"
+PING_HOST = PRIMARY_GATEWAY
 FAIL_THRESHOLD = 3
 PING_INTERVAL = 5
 
@@ -86,36 +67,36 @@ def ping(host, iface):
     except subprocess.CalledProcessError:
         return False
 
-def set_route(primary=True):
+def set_default_route(primary=True):
     subprocess.call(["ip", "route", "del", "default"])
     if primary:
-        subprocess.call(["ip", "route", "add", "default", "via", WLAN1_GATEWAY, "dev", PING_INTERFACE, "metric", "100"])
-        subprocess.call(["ip", "route", "add", "default", "via", WLAN0_GATEWAY, "dev", FALLBACK_INTERFACE, "metric", "200"])
+        subprocess.call(["ip", "route", "add", "default", "via", PRIMARY_GATEWAY, "dev", PRIMARY_IFACE, "metric", "100"])
+        subprocess.call(["ip", "route", "add", "default", "via", SECONDARY_GATEWAY, "dev", SECONDARY_IFACE, "metric", "200"])
     else:
-        subprocess.call(["ip", "route", "add", "default", "via", WLAN0_GATEWAY, "dev", FALLBACK_INTERFACE, "metric", "100"])
-        subprocess.call(["ip", "route", "add", "default", "via", WLAN1_GATEWAY, "dev", PING_INTERFACE, "metric", "200"])
+        subprocess.call(["ip", "route", "add", "default", "via", SECONDARY_GATEWAY, "dev", SECONDARY_IFACE, "metric", "100"])
+        subprocess.call(["ip", "route", "add", "default", "via", PRIMARY_GATEWAY, "dev", PRIMARY_IFACE, "metric", "200"])
 
 fail_count = 0
 primary_active = True
 
 while True:
-    if ping(PING_HOST, PING_INTERFACE):
+    if ping(PING_HOST, PRIMARY_IFACE):
         if not primary_active:
-            set_route(primary=True)
+            set_default_route(primary=True)
             primary_active = True
         fail_count = 0
     else:
         fail_count += 1
         if fail_count >= FAIL_THRESHOLD and primary_active:
-            set_route(primary=False)
+            set_default_route(primary=False)
             primary_active = False
     time.sleep(PING_INTERVAL)
 EOF
 
 sudo chmod +x /usr/local/bin/wifi_watchdog.py
 
-# 6. Create systemd service
-echo "Setting up systemd service..."
+# 5. Set up systemd service for the watchdog
+echo "Setting up watchdog service..."
 sudo tee /etc/systemd/system/wifi-watchdog.service > /dev/null <<EOF
 [Unit]
 Description=Wi-Fi Failover Watchdog
@@ -131,18 +112,17 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-# 7. Enable service
-echo "Enabling watchdog..."
-sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
 sudo systemctl enable wifi-watchdog.service
 
-# 8. Done!
-echo "Setup complete. Reboot Now? (y/n)"
+# 6. Done
+echo "Setup complete! Reboot to apply changes. Reboot now? (y/n)"
 read REBOOT_NOW
-if [[ "$REBOOT_NOW" == "y" || "$REBOOT_NOW" == "Y" ]]; then
+if [[ "\$REBOOT_NOW" == "y" || "\$REBOOT_NOW" == "Y" ]]; then
     echo "Rebooting..."
     sudo reboot
 else
-    echo "Please reboot your system to apply changes."
+    echo "Please reboot manually when ready."
 fi
+
 echo "Dual Wi-Fi setup script completed."
