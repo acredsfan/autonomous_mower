@@ -30,10 +30,10 @@ echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sud
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 sudo apt-get update
 sudo apt-get install -y libedgetpu1-std
+sudo apt-get install -y python3-pycoral
 
 # 2. Install Python packages
 print_status "Installing Python packages..."
-pip install --no-cache-dir -e ".[coral]"
 
 # 3. Set up udev rules for USB access
 print_status "Setting up udev rules..."

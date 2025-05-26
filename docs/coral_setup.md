@@ -34,12 +34,6 @@ sudo apt-get update
 
 # Install the Edge TPU runtime and Python libraries
 sudo apt-get install libedgetpu1-std python3-pycoral
-
-# Install the TensorFlow Lite Runtime
-pip3 install tflite-runtime
-
-# Install the PyCoral library
-pip3 install pycoral
 ```
 
 For other systems, please refer to the [official Coral documentation](https://coral.ai/docs/accelerator/get-started/).

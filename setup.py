@@ -54,7 +54,6 @@ setup(
     extras_require={
         "coral": [
             "tflite-runtime>=2.5.0",
-            "pycoral>=2.0.0",
         ],
         "yolo": [
             "ultralytics>=8.1.0",
