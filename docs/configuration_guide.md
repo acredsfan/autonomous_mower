@@ -59,6 +59,53 @@ To modify this setting during installation, answer "n" when prompted to set up t
 }
 ```
 
+### Weather API Configuration
+
+The Autonomous Mower utilizes the Google Maps Platform Weather API to fetch weather forecasts. This information is crucial for weather-dependent scheduling features, allowing the mower to adjust its operations based on current and predicted weather conditions (e.g., avoiding mowing during rain).
+
+**Obtaining a Google Weather API Key:**
+
+To use the weather features, you need to obtain an API key from the Google Cloud Console and enable the Weather API.
+
+1.  **Navigate to Google Cloud Console:** Go to [console.cloud.google.com](https://console.cloud.google.com).
+2.  **Project Selection:**
+    *   Create a new project if you don't have one already.
+    *   Or, select an existing project.
+3.  **Enable the Weather API:**
+    *   In the navigation menu, go to "APIs & Services" > "Library".
+    *   Search for "Weather API" (it's part of the Google Maps Platform).
+    *   Select the "Weather API" from the search results and click "Enable".
+    *   You may also need to ensure a billing account is associated with your project, as Google Cloud services, including the Weather API, require it.
+4.  **Create API Credentials:**
+    *   Go to "APIs & Services" > "Credentials".
+    *   Click "+ CREATE CREDENTIALS" and select "API key".
+    *   Your new API key will be displayed. Copy it securely.
+5.  **Restrict Your API Key (Highly Recommended for Security):**
+    *   In the API key list, click on the name of your newly created key (or the pencil icon to edit it).
+    *   Under "API restrictions":
+        *   Select "Restrict key".
+        *   From the dropdown, select "Weather API". If you use this key for other Google services, ensure they are also selected.
+    *   Under "Application restrictions" (optional but recommended):
+        *   Consider restricting by IP addresses if your mower has a static public IP or if you access it through a known static IP.
+        *   Other restriction types might be less applicable for a mower application but review them based on your setup.
+    *   Click "Save".
+
+**Setting the Environment Variable:**
+
+Once you have your API key, you need to set it in the mower's environment.
+
+*   Open or create a `.env` file in the root directory of the project.
+*   Add the following line, replacing `YOUR_GOOGLE_WEATHER_API_KEY_HERE` with the actual key you obtained:
+    ```
+    GOOGLE_WEATHER_API_KEY=YOUR_GOOGLE_WEATHER_API_KEY_HERE
+    ```
+*   Refer to the `.env.example` file for the exact variable name and format.
+
+**Important Considerations:**
+
+*   **Google Cloud Pricing:** The Weather API is a service provided by Google Cloud. While it may have a free tier, usage beyond that is subject to Google's pricing model. Be sure to review the pricing details for the Weather API on the Google Cloud Platform website. The API might also be in a "Preview" stage, which can have specific terms and conditions.
+*   **API Key Security:** Protect your API key. Do not commit it directly into your version control system (e.g., Git). The `.env` file is typically included in `.gitignore` to prevent accidental exposure.
+
 ### Sensor Settings
 
 ```json
