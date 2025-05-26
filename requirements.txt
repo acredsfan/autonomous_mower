@@ -50,7 +50,6 @@ adafruit-circuitpython-vl53l0x>=3.0.0; sys_platform == "linux"
 # Ensure tflite-runtime is present for Raspberry Pi (Linux)
 tflite-runtime>=2.5.0; sys_platform == "linux"
 # Ensure pycoral is present for Coral support on Raspberry Pi (Linux)
-pycoral>=2.0.0; sys_platform == "linux"
 
 # Security
 safety>=3.2.14
