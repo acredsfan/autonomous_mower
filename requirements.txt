@@ -40,7 +40,7 @@ gpsd-py3>=0.3.0; sys_platform == "linux"
 utm>=0.7.0
 
 # Sensors and hardware
-adafruit-circuitpython-bme280>=3.0.0; sys_platform == "linux"
+adafruit-circuitpython-bme280>=2.6.0; sys_platform == "linux"
 adafruit-circuitpython-bno08x>=1.0.0; sys_platform == "linux"
 barbudor-circuitpython-ina3221>=2.0.0; sys_platform == "linux"
 adafruit-circuitpython-vl53l0x>=3.0.0; sys_platform == "linux"
