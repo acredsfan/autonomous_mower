@@ -71,7 +71,8 @@ sudo apt-get install -y \
     python3-setuptools \
     python3-wheel \
     i2c-tools \
-    git
+    git \
+    libsystemd-dev
 ```
 
 ### 2. Clone Repository
