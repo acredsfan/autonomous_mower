@@ -1552,19 +1552,20 @@ def setup_scheduling() -> None:
     )
 
     if use_weather:
-        print_info("You'll need an OpenWeatherMap API key for weather data.")
+        print_info("You'll need a Google Weather API key for weather data.")
         print_help(
-            "You can get a free API key at: "
-            "https://openweathermap.org/api")
-
-        weather_api = prompt_value(
-            "OpenWeatherMap API key",
-            default=get_env_var("OPEN_WEATHER_MAP_API", ""),
-            required=True,
-            help_text="Your OpenWeatherMap API key.",
+            "You can get an API key from the Google Cloud Console. "
+            "Enable the 'Weather API' (under Google Maps Platform) for your project."
         )
 
-        update_env_var("OPEN_WEATHER_MAP_API", weather_api)
+        weather_api_key = prompt_value(
+            "Google Weather API Key",
+            default=get_env_var("GOOGLE_WEATHER_API_KEY", ""),
+            required=True,
+            help_text="Your Google Weather API key.",
+        )
+
+        update_env_var("GOOGLE_WEATHER_API_KEY", weather_api_key)
         update_env_var("WEATHER_AWARE_SCHEDULING", "True")
 
         setup_state["feature_flags"]["weather_integration"] = True

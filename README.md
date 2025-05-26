@@ -364,6 +364,8 @@ The `.env` file contains all configuration settings. Key sections include:
 
 See `.env.example` for detailed descriptions of each setting.
 
+Note: For weather-dependent scheduling, you will also need to configure a `GOOGLE_WEATHER_API_KEY`. Instructions for obtaining this key are in the `docs/configuration_guide.md` and prompted during the `setup_wizard.py`.
+
 ## Safety Features
 
 1. **Emergency Stop**
