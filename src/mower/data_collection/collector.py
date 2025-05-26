@@ -13,7 +13,7 @@ from typing import Dict, Optional, Any
 
 import cv2
 
-from mower.config_management.config_manager import ConfigManager
+from mower.config_management import ConfigurationManager # Changed import
 from mower.hardware.camera_instance import CameraInstance
 from mower.navigation.path_planner import PathPlanner, PatternType
 from mower.hardware.sensor_types import SensorReading
@@ -32,7 +32,7 @@ class DataCollector:
         self,
         camera: CameraInstance,
         path_planner: PathPlanner,
-        config_manager: ConfigManager,
+        config_manager: ConfigurationManager, # Changed type hint
     ):
         """Initialize the DataCollector.
 
@@ -66,10 +66,11 @@ class DataCollector:
 
         logger.info("DataCollector initialized")
 
-    def _load_config(self) -> Dict:
+    def _load_config(self) -> Dict[str, Any]: # Changed return type hint
         """Load data collection configuration"""
         try:
-            dc_config = self.config_manager.get_config("data_collection", {})
+            # Changed to use .get() from ConfigurationManager instance
+            dc_config = self.config_manager.get("data_collection", {})
             return {
                 "storage_path": dc_config.get(
                     "storage_path", "data/collected_images"),
