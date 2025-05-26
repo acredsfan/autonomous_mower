@@ -59,7 +59,7 @@ pyOpenSSL>=23.0.0
 certifi>=2024.7.4
 
 # Monitoring
-grafana-api-client>=2.3.0; sys_platform == "linux"
+grafana-client>=2.3.0; sys_platform == "linux"
 statsd>=4.0.1
 
 # Development dependencies
