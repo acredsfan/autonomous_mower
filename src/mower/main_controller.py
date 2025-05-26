@@ -753,17 +753,15 @@ class ResourceManager:
 
             # Time-of-Flight (ToF) Data
             tof_sensors = self.get_resource("tof")
-            if tof_sensors:
+            if tof_sensors and hasattr(tof_sensors, 'get_distances'):
                 try:
-                    sensor_data["tof"] = {
-                        "front_left": tof_sensors.get_distance_front_left(),
-                        "front_right": tof_sensors.get_distance_front_right(),
-                        "rear_left": tof_sensors.get_distance_rear_left(),
-                        "rear_right": tof_sensors.get_distance_rear_right(),
-                    }
+                    sensor_data["tof"] = tof_sensors.get_distances() # Use get_distances()
                 except Exception as e:
                     logger.warning(f"Failed to get ToF data: {e}")
                     sensor_data["tof"] = {"error": str(e)}
+            elif tof_sensors:
+                logger.warning("ToF sensors object present but 'get_distances' method missing.")
+                sensor_data["tof"] = {"error": "get_distances method missing"}
 
             # Power Monitor (INA3221) Data
             power_monitor = self.get_resource("ina3221")
@@ -792,15 +790,16 @@ class ResourceManager:
 
             # Blade Controller Status
             blade_controller = self.get_resource("blade")
-            if blade_controller and hasattr(blade_controller, "get_status"):
+            if blade_controller and hasattr(blade_controller, "get_state"): # Use get_state()
                 try:
-                    sensor_data["blade_status"] = blade_controller.get_status()
+                    sensor_data["blade_status"] = blade_controller.get_state()
                 except Exception as e:
                     logger.warning(f"Failed to get blade status: {e}")
                     sensor_data["blade_status"] = {"error": str(e)}
             elif blade_controller:
+                logger.warning("Blade controller object present but 'get_state' method missing.")
                 sensor_data["blade_status"] = {
-                    "status": "get_status method missing"}
+                    "status": "get_state method missing"}
 
             # Motor Driver Status (Example)
             motor_driver = self.get_resource("motor_driver")
@@ -814,10 +813,9 @@ class ResourceManager:
                 sensor_data["motor_driver_status"] = {
                     "status": "get_status method missing"}
 
-            # Camera Status (Example - if it has a simple status method)
+            # Camera Status
             camera = self.get_resource("camera")
-            if camera and hasattr(
-                    camera, "is_operational"):  # Example status check
+            if camera and hasattr(camera, "is_operational"): # Use is_operational()
                 try:
                     sensor_data["camera_status"] = {
                         "operational": camera.is_operational()
@@ -826,6 +824,7 @@ class ResourceManager:
                     logger.warning(f"Failed to get camera status: {e}")
                     sensor_data["camera_status"] = {"error": str(e)}
             elif camera:
+                logger.warning("Camera object present but 'is_operational' method missing.")
                 sensor_data["camera_status"] = {
                     "status": "is_operational method missing"}
 

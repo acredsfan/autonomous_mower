@@ -27,7 +27,7 @@ def run_robot():
         logging.exception("An error occurred: %s", e)
     finally:
         # Cleanup
-        blade_controller.stop()
+        blade_controller.stop_blade()
         if robohat_driver:
             robohat_driver.shutdown()
         logging.info("Robot operation ended.")
@@ -45,8 +45,7 @@ def mow_yard():
     obstacle_algorithm = get_avoidance_algorithm()
 
     # Start the mower
-    robohat_driver.start()
-    blade_controller.start()
+    blade_controller.enable()
     path_planner.start()
     obstacle_algorithm.start()
     localization.start()

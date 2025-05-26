@@ -81,11 +81,6 @@ class Robot:
         Mow the yard autonomously.
         """
         # Start all components
-        (
-            self.motor_driver.start()
-            if hasattr(self.motor_driver, "start")
-            else None
-        )
         self.blade_controller.enable()
         self.path_planner.start()
         self.avoidance_algorithm.start()

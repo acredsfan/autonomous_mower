@@ -16,7 +16,7 @@ from typing import Dict, List, Any, Callable
 import matplotlib.pyplot as plt
 # from pathlib import Path
 
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
 logger = LoggerConfig.get_logger(__name__)
