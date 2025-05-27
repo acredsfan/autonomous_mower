@@ -1,15 +1,35 @@
 #!/bin/bash
 
 # CONFIGURATION
-SSID_FAST="Your_Primary_WiFi_SSID"
-PASS_FAST="Your_primary_wifi_password"
-SSID_SLOW="Your_Secondary_WiFi_SSID"
-PASS_SLOW="your_secondary_wifi_password"
-COUNTRY="US"
-GATEWAY_FAST="192.168.50.1" # Primary Wi-Fi gateway (for wlan1)
-GATEWAY_SLOW="192.168.50.1" # Secondary Wi-Fi gateway (for wlan0)
+DEFAULT_SSID_MAIN="Your_Primary_WiFi_SSID"
+DEFAULT_PASS_MAIN="Your_primary_wifi_password"
+DEFAULT_SSID_FALLBACK="Your_Secondary_WiFi_SSID"
+DEFAULT_PASS_FALLBACK="your_secondary_wifi_password"
+DEFAULT_COUNTRY="US"
+DEFAULT_GATEWAY_MAIN="192.168.50.1" # Main Wi-Fi gateway (for wlan1)
+DEFAULT_GATEWAY_FALLBACK="192.168.50.1" # Fallback Wi-Fi gateway (for wlan0)
 
 echo "Starting Dual Wi-Fi Setup..."
+echo "You will be prompted for configuration values. Press Enter to accept the default."
+
+read -p "Enter the SSID for your main Wi-Fi network (e.g., MyHomeWiFi) [default: ${DEFAULT_SSID_MAIN}]: " SSID_MAIN
+SSID_MAIN=${SSID_MAIN:-$DEFAULT_SSID_MAIN}
+read -s -p "Enter the password for your main Wi-Fi network (input will be hidden) [default: ${DEFAULT_PASS_MAIN}]: " PASS_MAIN
+echo
+PASS_MAIN=${PASS_MAIN:-$DEFAULT_PASS_MAIN}
+read -p "Enter the SSID for your fallback Wi-Fi network (e.g., MyGuestWiFi) [default: ${DEFAULT_SSID_FALLBACK}]: " SSID_FALLBACK
+SSID_FALLBACK=${SSID_FALLBACK:-$DEFAULT_SSID_FALLBACK}
+read -s -p "Enter the password for your fallback Wi-Fi network (input will be hidden) [default: ${DEFAULT_PASS_FALLBACK}]: " PASS_FALLBACK
+echo
+PASS_FALLBACK=${PASS_FALLBACK:-$DEFAULT_PASS_FALLBACK}
+read -p "Enter your two-letter ISO country code (e.g., US, GB) [default: ${DEFAULT_COUNTRY}]: " COUNTRY
+COUNTRY=${COUNTRY:-$DEFAULT_COUNTRY}
+read -p "Enter the gateway IP for your main Wi-Fi (wlan1) [default: ${DEFAULT_GATEWAY_MAIN}]: " GATEWAY_MAIN
+GATEWAY_MAIN=${GATEWAY_MAIN:-$DEFAULT_GATEWAY_MAIN}
+read -p "Enter the gateway IP for your fallback Wi-Fi (wlan0) [default: ${DEFAULT_GATEWAY_FALLBACK}]: " GATEWAY_FALLBACK
+GATEWAY_FALLBACK=${GATEWAY_FALLBACK:-$DEFAULT_GATEWAY_FALLBACK}
+
+echo # Add a blank line for readability
 
 # 1. Set global wpa_supplicant config with multiple networks
 echo "Creating global wpa_supplicant.conf..."
@@ -19,14 +39,14 @@ update_config=1
 country=$COUNTRY
 
 network={
-    ssid="$SSID_FAST"
-    psk="$PASS_FAST"
+    ssid="$SSID_MAIN"
+    psk="$PASS_MAIN"
     priority=2
 }
 
 network={
-    ssid="$SSID_SLOW"
-    psk="$PASS_SLOW"
+    ssid="$SSID_FALLBACK"
+    psk="$PASS_FALLBACK"
     priority=1
 }
 EOF
@@ -51,8 +71,8 @@ import time
 
 PRIMARY_IFACE = "wlan1"
 SECONDARY_IFACE = "wlan0"
-PRIMARY_GATEWAY = "$GATEWAY_FAST"
-SECONDARY_GATEWAY = "$GATEWAY_SLOW"
+PRIMARY_GATEWAY = "$GATEWAY_MAIN"
+SECONDARY_GATEWAY = "$GATEWAY_FALLBACK"
 PING_HOST = PRIMARY_GATEWAY
 FAIL_THRESHOLD = 3
 PING_INTERVAL = 5
