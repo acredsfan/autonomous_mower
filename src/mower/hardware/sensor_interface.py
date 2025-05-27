@@ -122,7 +122,6 @@ class EnhancedSensorInterface:
             )
             # Get safety status
             safety_status = self._sensors["bno085"].get_safety_status()
-
             return {
                 "acceleration": accel,
                 "heading": heading,
@@ -152,7 +151,8 @@ class EnhancedSensorInterface:
                 "solar_current": solar_data.get("current"),
                 "battery_voltage": battery_data.get("bus_voltage"),
                 "battery_current": battery_data.get("current"),
-                "battery_level": battery_data.get("charge_level"),
+                # Note: battery_level calculation would need to be implemented
+                # separately based on voltage/current readings if needed
             }
         except Exception as e:
             self._handle_sensor_error("ina3221", e)

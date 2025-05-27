@@ -46,7 +46,7 @@ setup(
         "utm>=0.7.0",
         "adafruit-circuitpython-bme280>=3.0.0",
         "adafruit-circuitpython-bno08x>=1.0.0",
-        "barbudor-circuitpython-ina3221>=2.0.0",
+        "adafruit-circuitpython-ina3221>=1.0.0",
         "adafruit-circuitpython-vl53l0x>=3.0.0",
         "picamera2>=0.3.12",
         "certifi>=2024.7.4",

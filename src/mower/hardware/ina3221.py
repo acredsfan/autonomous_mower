@@ -8,7 +8,7 @@ The INA3221 can measure voltage, current, and power on three separate channels.
 
 import board
 import busio
-from barbudor_ina3221.lite import INA3221
+import adafruit_ina3221
 from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
 
 # Initialize logger
@@ -22,14 +22,15 @@ class INA3221Sensor:
     This class provides methods to initialize the INA3221 sensor and read
     voltage, current and power measurements from its three channels.
     """
+
     @staticmethod
     def init_ina3221():
         """Initialize the INA3221 sensor"""
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
 
-            # Initialize INA3221 sensor
-            sensor = INA3221(i2c)
+            # Initialize INA3221 sensor with Adafruit library
+            sensor = adafruit_ina3221.INA3221(i2c)
             logger.info("INA3221 initialized successfully.")
             return sensor
         except (OSError, ValueError, RuntimeError) as e:  # Catch potential I2C errors
@@ -48,9 +49,15 @@ class INA3221Sensor:
             return {}
         try:
             if channel in [1, 2, 3]:
-                bus_voltage = sensor.bus_voltage(channel)
-                shunt_voltage = sensor.shunt_voltage(channel)
-                current = sensor.current(channel)
+                # Convert channel number to zero-based index for Adafruit
+                # library
+                channel_index = channel - 1
+
+                # Read voltage and current using Adafruit library API
+                bus_voltage = sensor[channel_index].bus_voltage
+                shunt_voltage = sensor[channel_index].shunt_voltage
+                current = sensor[channel_index].current
+
                 return {
                     "bus_voltage": round(bus_voltage, 2),
                     "shunt_voltage": round(shunt_voltage, 2),
