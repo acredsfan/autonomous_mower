@@ -18,6 +18,10 @@ warnings.filterwarnings(
 if importlib.util.find_spec("matplotlib") is None:
     pass  # matplotlib not available; suppress Axes3D warning if needed
 
+# --- Hard Version Check for Export Compatibility ---
+REQUIRED_TF_VERSION = "2.14"
+REQUIRED_FLATBUFFERS_VERSION = "23."
+
 
 def ensure_required_versions():
     import importlib
@@ -111,11 +115,6 @@ Usage:
 
 
 # --- Version Compatibility Check ---
-
-
-# --- Hard Version Check for Export Compatibility ---
-REQUIRED_TF_VERSION = "2.14"
-REQUIRED_FLATBUFFERS_VERSION = "23."
 
 
 def enforce_export_version_requirements():
