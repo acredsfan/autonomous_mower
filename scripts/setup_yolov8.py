@@ -23,79 +23,97 @@ REQUIRED_TF_VERSION = "2.14"
 REQUIRED_FLATBUFFERS_VERSION = "23."
 
 
+def get_installed_version(package_name):
+    """Get the installed version of a package using pip show."""
+    try:
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "show", package_name
+        ], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.split('\n'):
+                if line.startswith('Version:'):
+                    return line.split(':', 1)[1].strip()
+    except Exception:
+        pass
+    return None
+
+
 def ensure_required_versions():
-    import importlib
     import sys
     import subprocess
-    import os
-    tf_ver = None
-    flatbuffers_ver = None
-    # Check current versions
-    try:
-        tf_mod = importlib.import_module("tensorflow")
-        tf_ver = getattr(tf_mod, "__version__", None)
-    except ImportError:
-        pass
-    try:
-        fb_mod = importlib.import_module("flatbuffers")
-        flatbuffers_ver = getattr(fb_mod, "__version__", None)
-    except ImportError:
-        pass
+    # Check current installed versions using pip (not module imports)
+    tf_ver = get_installed_version("tensorflow")
+    flatbuffers_ver = get_installed_version("flatbuffers")
+    installations_needed = []
 
-    # Track if any version actually changes
-    version_changed = False
-
-    # Only install if missing or wrong version
-    if tf_ver is None or not tf_ver.startswith(REQUIRED_TF_VERSION):
-        print(f"Auto-downgrading TensorFlow to {REQUIRED_TF_VERSION}...")
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "install",
-            f"tensorflow=={REQUIRED_TF_VERSION}.*",
-            "--break-system-packages"
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print("Failed to install TensorFlow:", result.stderr)
-            sys.exit(1)
-        version_changed = True
-    # Re-import to check if version changed
-    try:
-        tf_mod = importlib.import_module("tensorflow")
-        tf_ver = getattr(tf_mod, "__version__", None)
-    except ImportError:
-        tf_ver = None
-
-    if (
-        flatbuffers_ver is None
-        or not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION)
-    ):
+    # Check TensorFlow version
+    if tf_ver is None:
+        print("TensorFlow not found - installing...")
+        tf_install_spec = f"tensorflow=={REQUIRED_TF_VERSION}.*"
+        installations_needed.append(("tensorflow", tf_install_spec))
+    elif not tf_ver.startswith(REQUIRED_TF_VERSION):
         print(
-            f"Auto-downgrading FlatBuffers to {REQUIRED_FLATBUFFERS_VERSION}...")
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "install",
-            f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*",
-            "--break-system-packages"
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print("Failed to install FlatBuffers:", result.stderr)
+            f"TensorFlow {tf_ver} found, downgrading to {REQUIRED_TF_VERSION}...")
+        tf_install_spec = f"tensorflow=={REQUIRED_TF_VERSION}.*"
+        installations_needed.append(("tensorflow", tf_install_spec))
+    else:
+        print(f"TensorFlow {tf_ver} is compatible.")
+
+    # Check FlatBuffers version
+    if flatbuffers_ver is None:
+        print("FlatBuffers not found - installing...")
+        fb_install_spec = f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*"
+        installations_needed.append(("flatbuffers", fb_install_spec))
+    elif not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
+        print(f"FlatBuffers {flatbuffers_ver} found, downgrading to "
+              f"{REQUIRED_FLATBUFFERS_VERSION}...")
+        fb_install_spec = f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*"
+        installations_needed.append(("flatbuffers", fb_install_spec))
+    else:
+        print(f"FlatBuffers {flatbuffers_ver} is compatible.")
+
+    # Install packages if needed
+    if installations_needed:
+        for package_name, install_spec in installations_needed:
+            print(f"Installing {install_spec}...")
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install",
+                install_spec,
+                "--break-system-packages"
+            ], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"Failed to install {package_name}: {result.stderr}")
+                sys.exit(1)
+
+        # Verify installations
+        print("Verifying installations...")
+        tf_ver_new = get_installed_version("tensorflow")
+        flatbuffers_ver_new = get_installed_version("flatbuffers")
+
+        if tf_ver_new and tf_ver_new.startswith(REQUIRED_TF_VERSION):
+            print(f"✓ TensorFlow {tf_ver_new} installed successfully")
+        else:
+            print(
+                f"✗ TensorFlow installation verification failed: {tf_ver_new}")
             sys.exit(1)
-        version_changed = True
-    # Re-import to check if version changed
-    try:
-        fb_mod = importlib.import_module("flatbuffers")
-        flatbuffers_ver = getattr(fb_mod, "__version__", None)
-    except ImportError:
-        flatbuffers_ver = None
 
-    # Only restart if a version was actually changed
-    if version_changed:
-        print("Restarting script to use correct TensorFlow/FlatBuffers versions...")
+        if (flatbuffers_ver_new and
+                flatbuffers_ver_new.startswith(REQUIRED_FLATBUFFERS_VERSION)):
+            print(
+                f"✓ FlatBuffers {flatbuffers_ver_new} installed successfully")
+        else:
+            print(f"✗ FlatBuffers installation verification failed: "
+                  f"{flatbuffers_ver_new}")
+            sys.exit(1)
+
+        print("All required versions installed. Restarting script with new packages...")
+        # Restart the script to pick up new package versions
+        import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
-    # If no version changed, continue as normal
+    else:
+        print("All required package versions are already satisfied.")
 
-# Ensure correct versions before anything else
 
-
-ensure_required_versions()
 # !/usr/bin/env python3
 """
 YOLOv8 TFLite Model Setup Script for Autonomous Mower (Revised for Export)
@@ -112,63 +130,6 @@ Usage:
   [--fp16 | --int8]
   [--data path/to/coco.yaml]
 """
-
-
-# --- Version Compatibility Check ---
-
-
-def enforce_export_version_requirements():
-    import importlib
-
-    missing = []
-    tf_ver = None
-    flatbuffers_ver = None
-
-    try:
-        tf_mod = importlib.import_module("tensorflow")
-        tf_ver = getattr(tf_mod, "__version__", None)
-    except ImportError:
-        missing.append("tensorflow")
-
-    try:
-        fb_mod = importlib.import_module("flatbuffers")
-        flatbuffers_ver = getattr(fb_mod, "__version__", None)
-    except ImportError:
-        missing.append("flatbuffers")
-
-    if missing:
-        for pkg in missing:
-            logging.error(
-                f"Required package '{pkg}' is not installed or importable."
-            )
-            logging.error(
-                f"Install it with: pip install '{pkg}'"
-            )
-        logging.error(
-            "Could not determine TensorFlow or FlatBuffers version. "
-            "Please ensure both are installed."
-        )
-        sys.exit(1)
-
-    if not tf_ver or not tf_ver.startswith(REQUIRED_TF_VERSION):
-        logging.error(
-            f"TensorFlow {REQUIRED_TF_VERSION}.x is required for YOLOv8 TFLite export. "
-            f"Found: {tf_ver}. Please downgrade: "
-            "pip install 'tensorflow==2.14.*'"
-        )
-        sys.exit(1)
-    if not flatbuffers_ver or not flatbuffers_ver.startswith(
-            REQUIRED_FLATBUFFERS_VERSION):
-        logging.error(
-            f"FlatBuffers 23.x is required for YOLOv8 TFLite export. "
-            f"Found: {flatbuffers_ver}. Please downgrade: "
-            "pip install 'flatbuffers==23.*'"
-        )
-        sys.exit(1)
-    logging.info(
-        f"TensorFlow {tf_ver} and FlatBuffers {flatbuffers_ver} "
-        "are compatible for export."
-    )
 
 
 # --- Add necessary imports ---
@@ -590,11 +551,11 @@ def main():
     """Main entry point."""
     args = parse_args()
 
-    # --- Enforce export dependency versions and fail fast if incompatible ---
+    # --- Ensure required package versions are installed ---
     try:
-        enforce_export_version_requirements()
+        ensure_required_versions()
     except Exception as e:
-        logging.error(f"Version check failed: {e}")
+        logging.error(f"Version check/installation failed: {e}")
         sys.exit(1)
 
     logging.info(f"--- Starting YOLOv8 {args.model} TFLite Setup ---")
