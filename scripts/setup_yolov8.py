@@ -1,4 +1,3 @@
-
 # Suppress matplotlib Axes3D warning globally
 import importlib.util
 import logging
@@ -41,6 +40,8 @@ def get_installed_version(package_name):
 def ensure_required_versions():
     import sys
     import subprocess
+    import os
+
     # Check current installed versions using pip (not module imports)
     tf_ver = get_installed_version("tensorflow")
     flatbuffers_ver = get_installed_version("flatbuffers")
@@ -71,6 +72,18 @@ def ensure_required_versions():
         installations_needed.append(("flatbuffers", fb_install_spec))
     else:
         print(f"FlatBuffers {flatbuffers_ver} is compatible.")
+
+    # Check for required ultralytics dependencies
+    required_deps = [
+        ("onnx", "onnx>=1.12.0,<1.18.0"),
+        ("protobuf", "protobuf>=4.21.6")
+    ]
+
+    for dep_name, dep_spec in required_deps:
+        dep_ver = get_installed_version(dep_name)
+        if dep_ver is None:
+            print(f"{dep_name} not found - installing...")
+            installations_needed.append((dep_name, dep_spec))
 
     # Install packages if needed
     if installations_needed:
@@ -104,14 +117,45 @@ def ensure_required_versions():
         else:
             print(f"✗ FlatBuffers installation verification failed: "
                   f"{flatbuffers_ver_new}")
-            sys.exit(1)
+            sys.exit(1)        # Verify ultralytics dependencies
+        for dep_name, _ in required_deps:
+            dep_ver_new = get_installed_version(dep_name)
+            if dep_ver_new:
+                print(f"✓ {dep_name} {dep_ver_new} installed successfully")
+            else:
+                print(f"✗ {dep_name} installation verification failed")
+                sys.exit(1)
 
         print("All required versions installed. Restarting script with new packages...")
         # Restart the script to pick up new package versions
-        import os
         os.execv(sys.executable, [sys.executable] + sys.argv)
     else:
         print("All required package versions are already satisfied.")
+
+    # Validate that TensorFlow is actually importable and has required
+    # attributes
+    try:
+        import tensorflow as tf
+        tf_version = getattr(tf, '__version__', None)
+        if tf_version is None:
+            print("⚠️  TensorFlow __version__ missing. Fixing installation...")
+            # Force clean reinstall
+            subprocess.run([
+                sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y",
+                "--break-system-packages"
+            ], capture_output=True)
+            subprocess.run([
+                sys.executable, "-m", "pip", "install",
+                f"tensorflow=={REQUIRED_TF_VERSION}.*",
+                "--break-system-packages", "--force-reinstall"
+            ], capture_output=True)
+
+            print("TensorFlow reinstalled. Restarting script...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        print(f"✓ TensorFlow {tf_version} is properly importable")
+    except ImportError as e:
+        print(f"✗ TensorFlow import failed: {e}")
+        sys.exit(1)
 
 
 # !/usr/bin/env python3
@@ -547,6 +591,58 @@ def update_env_file(model_path: Path, labelmap_path: Path):
         logging.error(f"Failed to write updated {env_file}: {e}")
 
 
+def fix_tensorflow_corruption():
+    """Fix TensorFlow installation if __version__ attribute is missing."""
+    try:
+        import tensorflow as tf
+        if not hasattr(tf, '__version__'):
+            print("⚠️  TensorFlow __version__ missing. Fixing installation...")
+            import subprocess
+            import sys
+            import os
+
+            # Force clean reinstall
+            subprocess.run([
+                sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y",
+                "--break-system-packages"
+            ], capture_output=True)
+            subprocess.run([
+                sys.executable, "-m", "pip", "install",
+                f"tensorflow=={REQUIRED_TF_VERSION}.*",
+                "--break-system-packages", "--force-reinstall"
+            ], capture_output=True)
+
+            print("TensorFlow reinstalled. Restarting script...")
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        else:
+            print(f"✓ TensorFlow {tf.__version__} is properly importable")
+    except ImportError:
+        pass  # Will be handled by ensure_required_versions
+
+
+def install_ultralytics_dependencies():
+    """Pre-install dependencies that ultralytics needs for TFLite export."""
+    import subprocess
+    import sys
+
+    dependencies = [
+        "onnx>=1.12.0,<1.18.0",
+        "protobuf>=4.21.6",
+    ]
+
+    print("Installing ultralytics dependencies...")
+    for dep in dependencies:
+        print(f"Installing {dep}...")
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "install", dep,
+            "--break-system-packages"
+        ], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Warning: Failed to install {dep}: {result.stderr}")
+        else:
+            print(f"✓ {dep} installed successfully")
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -554,6 +650,13 @@ def main():
     # --- Ensure required package versions are installed ---
     try:
         ensure_required_versions()
+
+        # Fix TensorFlow corruption if detected
+        fix_tensorflow_corruption()
+
+        # Pre-install ultralytics dependencies to avoid PEP 668 issues
+        install_ultralytics_dependencies()
+
     except Exception as e:
         logging.error(f"Version check/installation failed: {e}")
         sys.exit(1)
