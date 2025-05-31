@@ -923,50 +923,95 @@ setup_mower_service() {
     local SERVICE_FILE_NAME="autonomous-mower.service" 
     local GENERATED_SERVICE_FILE="/tmp/$SERVICE_FILE_NAME" 
     
+    # Get current user for service configuration
+    local CURRENT_USER
+    CURRENT_USER=$(whoami)
+    
     local VENV_PYTHON_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/python"
     # Assuming main_controller.py is the entry point for the service.
     # The project.scripts in pyproject.toml defines 'mower = "mower.main_controller:main"'
     # So, the service should run the 'mower' script installed by 'pip install -e .'
     # This script is typically created in $VENV_DIR/bin/
-    local MOWER_EXECUTABLE_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/mower"
-
-
+    local MOWER_EXECUTABLE_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/mower"    # Validate prerequisites
     if [ ! -f "$SERVICE_TEMPLATE_FILE" ]; then
         print_error "Service template file '$SERVICE_TEMPLATE_FILE' not found."
         POST_INSTALL_MESSAGES+="[ERROR] Service template '$SERVICE_TEMPLATE_FILE' not found.\\n"
         return 1
     fi
-    if [ ! -f "$MOWER_EXECUTABLE_PATH" ]; then # Check for the installed script
-        print_error "Mower executable script not found at '$MOWER_EXECUTABLE_PATH'. Ensure 'pip install -e .' was successful."
-        POST_INSTALL_MESSAGES+="[ERROR] Mower executable '$MOWER_EXECUTABLE_PATH' not found. Service may not work.\\n"
-        # Allow to proceed, user might fix manually or it's a path issue.
+    
+    if [ ! -f "$MOWER_EXECUTABLE_PATH" ]; then
+        print_error "Mower executable script not found at '$MOWER_EXECUTABLE_PATH'."
+        print_error "This indicates 'pip install -e .' was not successful or the virtual environment is not properly set up."
+        POST_INSTALL_MESSAGES+="[ERROR] Cannot install service: Mower executable missing at '$MOWER_EXECUTABLE_PATH'.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Run the script again or manually install with 'pip install -e .' in the virtual environment.\\n"
+        return 1
     fi
-
-    print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
+    
+    # Validate that the virtual environment Python exists
+    if [ ! -f "$VENV_PYTHON_PATH" ]; then
+        print_warning "Virtual environment Python not found at '$VENV_PYTHON_PATH'. Service may fail to start."
+    fi
+    
+    print_info "Service will run as user: $CURRENT_USER"
+    print_info "Mower executable path: $MOWER_EXECUTABLE_PATH"
+    print_info "Project root directory: $PROJECT_ROOT_DIR"print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
+    
+    # Validate that paths don't contain characters that could break sed
+    if [[ "$PROJECT_ROOT_DIR" == *"|"* ]] || [[ "$MOWER_EXECUTABLE_PATH" == *"|"* ]]; then
+        print_error "Project paths contain special characters that may cause service generation to fail."
+        return 1
+    fi
+    
+    # Generate service file with proper user substitution
     sed -e "s|{{PROJECT_ROOT_DIR}}|$PROJECT_ROOT_DIR|g" \
         -e "s|{{MOWER_EXECUTABLE_PATH}}|$MOWER_EXECUTABLE_PATH|g" \
+        -e "s|User=pi|User=$CURRENT_USER|g" \
+        -e "s|Group=pi|Group=$CURRENT_USER|g" \
         "$SERVICE_TEMPLATE_FILE" > "$GENERATED_SERVICE_FILE"
-    check_command "Generating service file" || return 1
     
-    print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
-    sudo cp "$GENERATED_SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE_NAME"
-    check_command "Copying service file" || return 1
+    if [ $? -ne 0 ]; then
+        print_error "Failed to generate service file from template"
+        return 1
+    fi
+      print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
+    if ! sudo cp "$GENERATED_SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE_NAME"; then
+        print_error "Failed to copy service file to /etc/systemd/system/"
+        rm -f "$GENERATED_SERVICE_FILE"
+        return 1
+    fi
     
-    sudo chmod 644 "/etc/systemd/system/$SERVICE_FILE_NAME"
-    check_command "Setting service file permissions" || return 1
-    rm "$GENERATED_SERVICE_FILE"
+    if ! sudo chmod 644 "/etc/systemd/system/$SERVICE_FILE_NAME"; then
+        print_error "Failed to set service file permissions"
+        return 1
+    fi
+    
+    # Clean up temporary file
+    rm -f "$GENERATED_SERVICE_FILE"
     
     print_info "Reloading systemd daemon..."
-    sudo systemctl daemon-reload
-    check_command "Reloading systemd daemon" || return 1
+    if ! sudo systemctl daemon-reload; then
+        print_error "Failed to reload systemd daemon"
+        return 1
+    fi
     
     print_info "Enabling autonomous mower service to start on boot..."
-    sudo systemctl enable "$SERVICE_FILE_NAME"
-    check_command "Enabling autonomous mower service" || return 1
-    
-    print_success "Autonomous mower service has been installed and enabled!"
-    POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled.\\n"
-    POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status $SERVICE_FILE_NAME' to check service status.\\n"
+    if ! sudo systemctl enable "$SERVICE_FILE_NAME"; then
+        print_error "Failed to enable autonomous mower service"
+        print_error "You may need to enable it manually with: sudo systemctl enable $SERVICE_FILE_NAME"
+        return 1
+    fi
+      # Verify service installation
+    if systemctl is-enabled --quiet "$SERVICE_FILE_NAME" 2>/dev/null; then
+        print_success "Autonomous mower service has been installed and enabled successfully!"
+        POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Service will start automatically on system boot.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status $SERVICE_FILE_NAME' to check service status.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl start $SERVICE_FILE_NAME' to start service now.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl stop $SERVICE_FILE_NAME' to stop service.\\n"
+    else
+        print_warning "Service was copied but may not be properly enabled"
+        POST_INSTALL_MESSAGES+="[WARNING] Service installation may not be complete. Check with 'systemctl status $SERVICE_FILE_NAME'.\\n"
+    fi
 }
 
 
