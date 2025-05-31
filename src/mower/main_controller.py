@@ -31,7 +31,8 @@ Configuration:
 """
 
 import json
-# import os # No longer used directly, Path.mkdir is used
+import os
+import platform
 import threading
 import time
 import signal  # Added for signal handling
@@ -41,35 +42,43 @@ from pathlib import Path
 from typing import Any, Optional
 from dotenv import load_dotenv
 
-from mower.hardware.gpio_manager import GPIOManager
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.tof import VL53L0XSensors
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.blade_controller import BladeController
-from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
-from mower.hardware.sensor_interface import get_sensor_interface
-from mower.navigation.localization import Localization
+# Always safe to import simulation modules and config
+from mower.simulation import enable_simulation
+from mower.utilities.logger_config import LoggerConfigInfo
+from mower.config_management.config_manager import get_config
 from mower.navigation.path_planner import (
     PathPlanner,
     PatternConfig,
-    LearningConfig,
     PatternType,
+    LearningConfig,
 )
 from mower.navigation.navigation import NavigationController
-from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from mower.navigation.localization import Localization
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
-from mower.ui.web_ui import WebInterface  # Assuming this is the correct import
-from mower.utilities.logger_config import LoggerConfigInfo
-from mower.config_management.config_manager import get_config
-# from mower.state_management.states import MowerState # Not used in this file
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from mower.ui.web_ui.web_interface import WebInterface
+from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.hardware.tof import VL53L0XSensors
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.gpio_manager import GPIOManager
+from mower.hardware.blade_controller import BladeController
+from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.camera_instance import get_camera_instance
+from mower.hardware.sensor_interface import get_sensor_interface
 
 # Load environment variables
 load_dotenv()
 
 # Initialize logging
 logger = LoggerConfigInfo.get_logger(__name__)
+
+# Enable simulation on Windows or when explicitly requested
+if (platform.system() == "Windows" or
+        os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")):
+    enable_simulation()
+    logger.info(
+        "Simulation mode enabled (running on Windows or USE_SIMULATION=true)")
 
 # Base directory for consistent file referencing
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -755,12 +764,15 @@ class ResourceManager:
             tof_sensors = self.get_resource("tof")
             if tof_sensors and hasattr(tof_sensors, 'get_distances'):
                 try:
-                    sensor_data["tof"] = tof_sensors.get_distances() # Use get_distances()
+                    # Use get_distances()
+                    sensor_data["tof"] = tof_sensors.get_distances()
                 except Exception as e:
                     logger.warning(f"Failed to get ToF data: {e}")
                     sensor_data["tof"] = {"error": str(e)}
             elif tof_sensors:
-                logger.warning("ToF sensors object present but 'get_distances' method missing.")
+                logger.warning(
+                    "ToF sensors object present but 'get_distances' method missing."
+                )
                 sensor_data["tof"] = {"error": "get_distances method missing"}
 
             # Power Monitor (INA3221) Data
@@ -790,14 +802,17 @@ class ResourceManager:
 
             # Blade Controller Status
             blade_controller = self.get_resource("blade")
-            if blade_controller and hasattr(blade_controller, "get_state"): # Use get_state()
+            # Use get_state()
+            if blade_controller and hasattr(blade_controller, "get_state"):
                 try:
                     sensor_data["blade_status"] = blade_controller.get_state()
                 except Exception as e:
                     logger.warning(f"Failed to get blade status: {e}")
                     sensor_data["blade_status"] = {"error": str(e)}
             elif blade_controller:
-                logger.warning("Blade controller object present but 'get_state' method missing.")
+                logger.warning(
+                    "Blade controller object present but 'get_state' method missing."
+                )
                 sensor_data["blade_status"] = {
                     "status": "get_state method missing"}
 
@@ -815,7 +830,8 @@ class ResourceManager:
 
             # Camera Status
             camera = self.get_resource("camera")
-            if camera and hasattr(camera, "is_operational"): # Use is_operational()
+            # Use is_operational()
+            if camera and hasattr(camera, "is_operational"):
                 try:
                     sensor_data["camera_status"] = {
                         "operational": camera.is_operational()
@@ -824,7 +840,9 @@ class ResourceManager:
                     logger.warning(f"Failed to get camera status: {e}")
                     sensor_data["camera_status"] = {"error": str(e)}
             elif camera:
-                logger.warning("Camera object present but 'is_operational' method missing.")
+                logger.warning(
+                    "Camera object present but 'is_operational' method missing."
+                )
                 sensor_data["camera_status"] = {
                     "status": "is_operational method missing"}
 

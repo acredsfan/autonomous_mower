@@ -1841,7 +1841,7 @@ def setup_final_verification() -> None:
         """
 Your autonomous mower has been configured successfully! Here are the next steps:
 
-1. Start the mower system with: python -m mower.main_controller
+1. Start the mower system with: python -m src.mower.main_controller
 2. Access the web interface (if enabled) at: http://localhost:5000 (or https for SSL)
 3. Use the web interface to define your mowing boundaries
 4. Test the system in simulation mode before deploying to hardware
