@@ -267,8 +267,8 @@ def ensure_env_file() -> None:
                     print_success(f"Set proper permissions for {ENV_FILE}")
                 else:
                     print_warning(
-                        f"Could not set permissions: {
-                            result.stderr}")
+                        f"Could not set permissions: "
+                        f"{result.stderr}")
             except Exception as e:
                 print_warning(f"Permission setting failed: {e}")
     elif not os.access(ENV_FILE, os.W_OK):
