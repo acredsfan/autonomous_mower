@@ -1555,8 +1555,7 @@ def setup_scheduling() -> None:
         print_info("You'll need a Google Weather API key for weather data.")
         print_help(
             "You can get an API key from the Google Cloud Console. "
-            "Enable the 'Weather API' (under Google Maps Platform) for your project."
-        )
+            "Enable the 'Weather API' (under Google Maps Platform) for your project.")
 
         weather_api_key = prompt_value(
             "Google Weather API Key",

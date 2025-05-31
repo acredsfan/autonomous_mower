@@ -265,13 +265,18 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 
 1. During installation, choose to install YOLOv8 models when prompted
 2. Alternatively, run the setup script manually:
+
    ```bash
    python3 scripts/setup_yolov8.py --model yolov8n
    ```
+
+   **Smart Model Detection:** The setup script will automatically scan for existing models in the `models/` directory and give you the option to use them instead of downloading new ones. This saves time and bandwidth when models are already available.
+
 3. Configure detection in .env file:
    ```
    USE_YOLOV8=True
-   YOLOV8_MODEL_PATH=/path/to/yolov8n.tflite
+   YOLO_MODEL_PATH=/path/to/yolov8n.tflite
+   YOLO_LABEL_PATH=/path/to/coco_labels.txt
    ```
 4. Test with:
    ```bash
@@ -321,8 +326,8 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    - Add or update these lines:
      ```
      # YOLOv8 configuration
-     YOLOV8_MODEL_PATH=models/yolov8n_float32.tflite
-     LABEL_MAP_PATH=models/coco_labels.txt
+     YOLO_MODEL_PATH=models/yolov8n_float32.tflite
+     YOLO_LABEL_PATH=models/coco_labels.txt
      USE_YOLOV8=True
      ```
 

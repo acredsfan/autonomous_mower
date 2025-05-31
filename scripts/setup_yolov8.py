@@ -6,6 +6,7 @@ import subprocess
 import argparse
 import sys
 import warnings
+from datetime import datetime
 warnings.filterwarnings(
     "ignore",
     message=(
@@ -643,6 +644,282 @@ def install_ultralytics_dependencies():
             print(f"✓ {dep} installed successfully")
 
 
+def scan_existing_models(models_dir: Path):
+    """Scan the models directory for existing TFLite files."""
+    if not models_dir.exists():
+        return []
+
+    models = []
+    try:
+        for file_path in models_dir.glob("*.tflite"):
+            if file_path.is_file():
+                stat = file_path.stat()
+                models.append({
+                    'path': file_path,
+                    'name': file_path.name,
+                    'size': stat.st_size,
+                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime(
+                        '%Y-%m-%d %H:%M:%S')
+                })
+    except Exception as e:
+        logging.warning(f"Error scanning models directory: {e}")
+
+    models.sort(key=lambda x: x['modified'], reverse=True)
+    return models
+
+
+def scan_existing_labels(models_dir: Path):
+    """Scan the models directory for existing label files."""
+    if not models_dir.exists():
+        return []
+
+    labels = []
+    label_patterns = ["*.txt", "*labels*"]
+
+    try:
+        for pattern in label_patterns:
+            for file_path in models_dir.glob(pattern):
+                if file_path.is_file() and file_path.suffix == '.txt':
+                    stat = file_path.stat()
+                    labels.append({
+                        'path': file_path,
+                        'name': file_path.name,
+                        'size': stat.st_size,
+                        'modified': datetime.fromtimestamp(stat.st_mtime).strftime(
+                            '%Y-%m-%d %H:%M:%S')
+                    })
+    except Exception as e:
+        logging.warning(f"Error scanning for label files: {e}")
+
+    # Remove duplicates
+    seen = set()
+    unique_labels = []
+    for label in labels:
+        if label['path'] not in seen:
+            unique_labels.append(label)
+            seen.add(label['path'])
+
+    unique_labels.sort(key=lambda x: x['modified'], reverse=True)
+    return unique_labels
+
+
+def format_file_size(size_bytes: int) -> str:
+    """Format file size in human-readable format."""
+    size = float(size_bytes)
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} TB"
+
+
+def display_existing_models(models: list, labels: list):
+    """Display existing models and labels in a user-friendly format."""
+    print("\n" + "=" * 60)
+    print("🔍 EXISTING MODELS DETECTED")
+    print("=" * 60)
+
+    if models:
+        print(f"\n📁 Found {len(models)} TFLite model(s):")
+        for i, model in enumerate(models, 1):
+            size_str = format_file_size(model['size'])
+            print(f"  {i}. {model['name']}")
+            print(f"     Size: {size_str} | Modified: {model['modified']}")
+    else:
+        print("\n📁 No TFLite models found in models directory")
+
+    if labels:
+        print(f"\n🏷️  Found {len(labels)} label file(s):")
+        for i, label in enumerate(labels, 1):
+            size_str = format_file_size(label['size'])
+            print(f"  {i}. {label['name']}")
+            print(f"     Size: {size_str} | Modified: {label['modified']}")
+    else:
+        print("\n🏷️  No label files found in models directory")
+
+
+def prompt_use_existing(models: list, labels: list) -> dict:
+    """Prompt user about what to do with existing models."""
+    print("\n" + "=" * 60)
+    print("⚙️  SETUP OPTIONS")
+    print("=" * 60)
+
+    if not models and not labels:
+        return {'action': 'download_new'}
+
+    print("\nWhat would you like to do?")
+    print("  1. 🔄 Download new YOLOv8 model (overwrite existing)")
+
+    if models:
+        print("  2. ♻️  Use existing TFLite model")
+
+    print("  3. ❌ Exit setup")
+
+    while True:
+        try:
+            choice = input("\nEnter your choice (1-3): ").strip()
+
+            if choice == "1":
+                return {'action': 'download_new'}
+            elif choice == "2" and models:
+                return prompt_select_existing_model(models, labels)
+            elif choice == "3":
+                return {'action': 'exit'}
+            else:
+                if choice == "2" and not models:
+                    print("❌ No existing models available to use.")
+                else:
+                    print("❌ Invalid choice. Please enter 1, 2, or 3.")
+        except KeyboardInterrupt:
+            print("\n\n❌ Setup interrupted by user.")
+            return {'action': 'exit'}
+        except EOFError:
+            print("\n\n❌ Setup interrupted.")
+            return {'action': 'exit'}
+
+
+def prompt_select_existing_model(models: list, labels: list) -> dict:
+    """Prompt user to select which existing model and label to use."""
+    selected_model = None
+    selected_label = None
+
+    # Select model
+    if len(models) == 1:
+        selected_model = models[0]
+        print(f"\n✅ Using model: {selected_model['name']}")
+    else:
+        print("\n📋 Select a TFLite model:")
+        for i, model in enumerate(models, 1):
+            size_str = format_file_size(model['size'])
+            print(f"  {i}. {model['name']} ({size_str})")
+
+        while True:
+            try:
+                choice = input(f"\nSelect model (1-{len(models)}): ").strip()
+                idx = int(choice) - 1
+                if 0 <= idx < len(models):
+                    selected_model = models[idx]
+                    break
+                else:
+                    print(
+                        f"❌ Please enter a number between 1 and {
+                            len(models)}")
+            except (ValueError, KeyboardInterrupt, EOFError):
+                print("\n❌ Invalid selection or interrupted.")
+                return {'action': 'exit'}
+
+    # Select label file
+    if labels:
+        if len(labels) == 1:
+            selected_label = labels[0]
+            print(f"✅ Using labels: {selected_label['name']}")
+        else:
+            print("\n📋 Select a label file:")
+            for i, label in enumerate(labels, 1):
+                size_str = format_file_size(label['size'])
+                print(f"  {i}. {label['name']} ({size_str})")
+            print(f"  {len(labels) + 1}. Skip label file (use existing .env)")
+
+            while True:
+                try:
+                    choice = input(
+                        f"\nSelect label file (1-{len(labels) + 1}): "
+                    ).strip()
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(labels):
+                        selected_label = labels[idx]
+                        break
+                    elif idx == len(labels):
+                        selected_label = None
+                        print("✅ Skipping label file selection")
+                        break
+                    else:
+                        print(
+                            f"❌ Please enter a number between 1 and "
+                            f"{len(labels) + 1}"
+                        )
+                except (ValueError, KeyboardInterrupt, EOFError):
+                    print("\n❌ Invalid selection or interrupted.")
+                    return {'action': 'exit'}
+
+    return {
+        'action': 'use_existing',
+        'model': selected_model,
+        'label': selected_label
+    }
+
+
+def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
+    """Configure the system to use existing model and label files."""
+    try:
+        model_path = model_info['path']
+
+        print("\n🔧 Configuring system to use existing model...")
+        print(f"   Model: {model_path.name}")
+
+        if label_info:
+            label_path = label_info['path']
+            print(f"   Labels: {label_path.name}")
+            update_env_file(model_path, label_path)
+        else:
+            print("   Labels: Using existing .env configuration")
+            # Update .env with just the model path, keep existing label
+            # settings
+            repo_root = get_repo_root()
+            env_file = repo_root / ".env"
+
+            # Make path relative to repo root
+            try:
+                relative_model_path = model_path.relative_to(repo_root)
+            except ValueError:
+                logging.warning(
+                    f"Model path ({model_path}) is outside repo root. "
+                    "Using absolute path."
+                )
+                relative_model_path = model_path
+
+            model_path_str = str(relative_model_path).replace("\\", "/")
+
+            lines = []
+            updated_model = False
+            updated_flag = False
+
+            if env_file.exists():
+                with open(env_file, "r") as f:
+                    lines = f.readlines()
+
+            output_lines = []
+            for line in lines:
+                stripped_line = line.strip()
+                if stripped_line.startswith("YOLO_MODEL_PATH="):
+                    output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+                    updated_model = True
+                elif stripped_line.startswith("USE_YOLOV8="):
+                    output_lines.append("USE_YOLOV8=True\n")
+                    updated_flag = True
+                else:
+                    output_lines.append(line)
+
+            # Add missing entries
+            if not updated_model:
+                if not any("# YOLOv8 configuration" in line
+                           for line in output_lines):
+                    output_lines.append("\n# YOLOv8 configuration\n")
+                output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+            if not updated_flag:
+                output_lines.append("USE_YOLOV8=True\n")
+
+            with open(env_file, "w") as f:
+                f.writelines(output_lines)
+
+        print("✅ Configuration updated successfully!")
+        return True
+
+    except Exception as e:
+        logging.error(f"Failed to configure existing model: {e}")
+        return False
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -668,8 +945,55 @@ def main():
     output_dir = args.output if args.output else repo_root / "models"
     output_dir = output_dir.resolve()  # Ensure absolute path
     logging.info(f"Repository root detected: {repo_root}")
-    #     sys.exit(1)
-    # logging.info("Dependencies checked/installed.")
+    logging.info(f"Output directory: {output_dir}")
+
+    # --- Check for Existing Models ---
+    logging.info("Scanning for existing YOLOv8 models...")
+    existing_models = scan_existing_models(output_dir)
+    existing_labels = scan_existing_labels(output_dir)
+
+    if existing_models:
+        display_existing_models(existing_models, existing_labels)
+        choice = prompt_use_existing()
+
+        if choice == "use":
+            if len(existing_models) == 1:
+                # Single model found - use it
+                model_info = existing_models[0]
+                label_info = existing_labels[0] if existing_labels else None
+                success = use_existing_model(model_info, label_info)
+                if success:
+                    logging.info("✅ Successfully configured existing model!")
+                    return
+                else:
+                    logging.error("❌ Failed to configure existing model.")
+                    logging.info("Continuing with download/export process...")
+            else:
+                # Multiple models - let user select
+                selected_model, selected_label = prompt_select_existing_model(
+                    existing_models, existing_labels
+                )
+                if selected_model:
+                    success = use_existing_model(
+                        selected_model, selected_label)
+                    if success:
+                        logging.info(
+                            "✅ Successfully configured existing model!")
+                        return
+                    else:
+                        logging.error("❌ Failed to configure existing model.")
+                        logging.info(
+                            "Continuing with download/export process...")
+                else:
+                    logging.info(
+                        "No model selected. Continuing with download...")
+        elif choice == "exit":
+            logging.info("Setup cancelled by user.")
+            return
+        # If choice == "download", continue with normal process
+        logging.info("Proceeding with model download/export...")
+    else:
+        logging.info("No existing models found. Proceeding with download...")
 
     # --- Prepare Export Arguments ---
     export_args = {
