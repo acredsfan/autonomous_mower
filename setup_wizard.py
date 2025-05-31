@@ -1652,8 +1652,8 @@ def setup_service_installation() -> None:
 
             if result.returncode != 0:
                 print_error(
-                    f"Failed to set service file permissions: {
-                        result.stderr}")
+                    f"Failed to set service file permissions: "
+                    f"{result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
@@ -1668,8 +1668,8 @@ def setup_service_installation() -> None:
 
             if result.returncode != 0:
                 print_error(
-                    f"Failed to reload systemd daemon: {
-                        result.stderr}")
+                    f"Failed to reload systemd daemon: "
+                    f"{result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
