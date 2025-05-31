@@ -13,7 +13,7 @@ Architecture:
     - Modular design for easy subsystem integration
 
 Usage:
-    from src.mower.main_controller import MainController
+    from mower.main_controller import MainController
     controller = MainController()
     controller.start()
 
@@ -43,29 +43,29 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 
 # Always safe to import simulation modules and config
-from src.mower.simulation import enable_simulation
-from src.mower.utilities.logger_config import LoggerConfigInfo
-from src.mower.config_management.config_manager import get_config
-from src.mower.navigation.path_planner import (
+from mower.simulation import enable_simulation
+from mower.utilities.logger_config import LoggerConfigInfo
+from mower.config_management.config_manager import get_config
+from mower.navigation.path_planner import (
     PathPlanner,
     PatternConfig,
     PatternType,
     LearningConfig,
 )
-from src.mower.navigation.navigation import NavigationController
-from src.mower.navigation.localization import Localization
-from src.mower.obstacle_detection.obstacle_detector import ObstacleDetector
-from src.mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
-from src.mower.ui.web_ui.web_interface import WebInterface
-from src.mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
-from src.mower.hardware.ina3221 import INA3221Sensor
-from src.mower.hardware.tof import VL53L0XSensors
-from src.mower.hardware.imu import BNO085Sensor
-from src.mower.hardware.gpio_manager import GPIOManager
-from src.mower.hardware.blade_controller import BladeController
-from src.mower.hardware.robohat import RoboHATDriver
-from src.mower.hardware.camera_instance import get_camera_instance
-from src.mower.hardware.sensor_interface import get_sensor_interface
+from mower.navigation.navigation import NavigationController
+from mower.navigation.localization import Localization
+from mower.obstacle_detection.obstacle_detector import ObstacleDetector
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from mower.ui.web_ui.web_interface import WebInterface
+from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.hardware.tof import VL53L0XSensors
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.gpio_manager import GPIOManager
+from mower.hardware.blade_controller import BladeController
+from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.camera_instance import get_camera_instance
+from mower.hardware.sensor_interface import get_sensor_interface
 
 # Load environment variables
 load_dotenv()
