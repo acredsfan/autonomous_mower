@@ -120,6 +120,61 @@ The installation script will:
 - Optionally install YOLOv8 models for improved object detection
 - Optionally set up Google Coral TPU if available
 
+#### Checkpoint/Resume Functionality
+
+The installation script supports checkpoint/resume functionality, allowing you to continue where you left off if interrupted or skip already completed sections when re-running:
+
+**First Installation:**
+
+```bash
+sudo ./install_requirements.sh
+```
+
+**Resume Installation After Interruption:**
+If the installation was interrupted or you want to re-run it:
+
+```bash
+sudo ./install_requirements.sh
+```
+
+The script will automatically:
+
+- Detect previous installation progress
+- Show you which steps were completed and when
+- Offer to skip completed steps or start fresh
+- Allow you to selectively re-run specific components
+
+**Example Resume Prompt:**
+
+```
+INFO: Previous installation found. This script supports checkpoint/resume functionality.
+
+INFO: Previously completed installation steps:
+  ✓ virtual_environment (completed: 2025-05-30 10:15:23)
+  ✓ system_packages (completed: 2025-05-30 10:18:12)
+  ✓ python_dependencies (completed: 2025-05-30 10:22:45)
+
+Do you want to reset all checkpoints and start fresh? (y/N)
+```
+
+**Manual Reset (Start Fresh):**
+
+```bash
+# Remove checkpoint file to start completely fresh
+rm .install_checkpoints
+sudo ./install_requirements.sh
+```
+
+**Benefits:**
+
+- ⏱️ **Time Saving**: Skip lengthy operations already completed
+- 🔄 **Resume After Interruption**: Continue where you left off if installation fails
+- 🛠️ **Development Friendly**: Re-run specific sections during testing/development
+- 🎯 **Selective Installation**: Choose which components to reinstall
+- 🔒 **Safe & Non-Destructive**: Won't break existing installations
+
+For detailed information about the checkpoint system, see [`INSTALL_CHECKPOINTS.md`](INSTALL_CHECKPOINTS.md).
+
 #### Note on Python Package Installation
 
 This project uses system-wide Python package installation with the `--break-system-packages` flag to bypass PEP 668 restrictions. This is because:

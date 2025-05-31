@@ -14,6 +14,128 @@ POST_INSTALL_MESSAGES=""
 CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
 VENV_DIR=".venv" # Define VENV_DIR globally for use in multiple functions
 
+# Checkpoint functionality
+CHECKPOINT_FILE=".install_checkpoints"
+
+# Function to mark a step as completed
+mark_step_completed() {
+    local step_name="$1"
+    echo "$step_name=$(date '+%Y-%m-%d %H:%M:%S')" >> "$CHECKPOINT_FILE"
+}
+
+# Function to check if a step is completed
+is_step_completed() {
+    local step_name="$1"
+    [ -f "$CHECKPOINT_FILE" ] && grep -q "^$step_name=" "$CHECKPOINT_FILE"
+}
+
+# Function to get checkpoint status
+get_checkpoint_status() {
+    local step_name="$1"
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        grep "^$step_name=" "$CHECKPOINT_FILE" | cut -d'=' -f2
+    else
+        echo ""
+    fi
+}
+
+# Function to list completed steps
+list_completed_steps() {
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        print_info "Previously completed installation steps:"
+        while IFS='=' read -r step timestamp; do
+            echo -e "  ${GREEN}✓${NC} $step (completed: $timestamp)"
+        done < "$CHECKPOINT_FILE"
+        echo ""
+    fi
+}
+
+# Function to prompt user to skip completed step
+prompt_skip_completed() {
+    local step_name="$1"
+    local description="$2"
+    
+    if is_step_completed "$step_name"; then
+        local completion_time=$(get_checkpoint_status "$step_name")
+        print_info "$description appears to be already completed (completed: $completion_time)"
+        read -p "Skip this step? (Y/n) " -n 1 -r; echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            print_info "Skipping $description..."
+            return 0  # Skip step
+        else
+            print_info "Re-running $description..."
+            return 1  # Don't skip step
+        fi
+    fi
+    return 1  # Don't skip step
+}
+
+# Function to auto-detect completed installations
+auto_detect_completed_steps() {
+    print_info "Auto-detecting completed installation steps..."
+    
+    # Check virtual environment
+    if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python" ]; then
+        if ! is_step_completed "virtual_environment"; then
+            mark_step_completed "virtual_environment"
+            print_info "✓ Detected existing virtual environment"
+        fi
+    fi
+    
+    # Check Python dependencies
+    if [ -f "$VENV_DIR/bin/pip" ]; then
+        local installed_packages=$("$VENV_DIR/bin/pip" list 2>/dev/null | wc -l)
+        if [ "$installed_packages" -gt 10 ] && ! is_step_completed "python_dependencies"; then
+            mark_step_completed "python_dependencies"
+            print_info "✓ Detected installed Python dependencies"
+        fi
+    fi
+    
+    # Check system packages
+    if command_exists i2c-detect && command_exists gpsd && ! is_step_completed "system_packages"; then
+        mark_step_completed "system_packages"
+        print_info "✓ Detected installed system packages"
+    fi
+    
+    # Check PYTHONPATH setup
+    if grep -q "PYTHONPATH.*src" /home/pi/.bashrc 2>/dev/null && ! is_step_completed "pythonpath_setup"; then
+        mark_step_completed "pythonpath_setup"
+        print_info "✓ Detected PYTHONPATH configuration"
+    fi
+    
+    # Check YOLOv8 models
+    if [ -f "models/yolov8n.pt" ] || [ -f "models/detect.tflite" ]; then
+        if ! is_step_completed "yolov8_setup"; then
+            mark_step_completed "yolov8_setup"
+            print_info "✓ Detected YOLOv8 models"
+        fi
+    fi
+    
+    # Check Coral TPU
+    if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && command_exists python3 && python3 -c "import pycoral" 2>/dev/null; then
+        if ! is_step_completed "coral_tpu_setup"; then
+            mark_step_completed "coral_tpu_setup"
+            print_info "✓ Detected Coral TPU installation"
+        fi
+    fi
+    
+    # Check watchdog
+    if systemctl is-enabled --quiet watchdog 2>/dev/null && [ -f "/etc/watchdog.conf" ]; then
+        if ! is_step_completed "hardware_watchdog"; then
+            mark_step_completed "hardware_watchdog"
+            print_info "✓ Detected hardware watchdog setup"
+        fi
+    fi
+    
+    # Check systemd service
+    if systemctl is-enabled --quiet autonomous-mower 2>/dev/null; then
+        if ! is_step_completed "systemd_service"; then
+            mark_step_completed "systemd_service"
+            print_info "✓ Detected systemd service installation"
+        fi
+    fi
+}
+
 # Function to print error messages
 print_error() {
     echo -e "${RED}ERROR: $1${NC}"
@@ -242,52 +364,370 @@ setup_additional_uart() {
 # Function to setup watchdog
 setup_watchdog() {
     print_info "Setting up hardware watchdog..."
+    
+    # Run diagnostics first
+    diagnose_watchdog_hardware
+    
+    # Check if we're on a Raspberry Pi first
+    local is_raspberry_pi=false
+    if [ -f /proc/cpuinfo ] && grep -q "Raspberry Pi" /proc/cpuinfo; then
+        is_raspberry_pi=true
+        print_info "Detected Raspberry Pi hardware."
+    elif [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model; then
+        is_raspberry_pi=true
+        print_info "Detected Raspberry Pi hardware."
+    else
+        print_warning "Non-Raspberry Pi system detected. Hardware watchdog may not be available."
+    fi
+    
+    # Install watchdog package
     if ! command -v watchdog >/dev/null 2>&1; then
-        sudo apt-get install -y watchdog
-        check_command "Installing watchdog package" || return 1
+        print_info "Installing watchdog package..."
+        if sudo apt-get update && sudo apt-get install -y watchdog; then
+            print_info "Watchdog package installed successfully."
+        else
+            print_error "Failed to install watchdog package."
+            return 1
+        fi
     else
         print_info "Watchdog package already installed."
     fi
 
-    sudo modprobe bcm2835_wdt
-    check_command "Loading bcm2835_wdt module" || print_warning "Failed to load bcm2835_wdt module. Watchdog might not function."
+    # Try to load watchdog module if on Raspberry Pi
+    if [ "$is_raspberry_pi" = true ]; then
+        print_info "Loading Raspberry Pi watchdog module..."
+        if sudo modprobe bcm2835_wdt 2>/dev/null; then
+            print_info "bcm2835_wdt module loaded successfully."
+            
+            # Add to /etc/modules for persistence
+            if ! grep -q "^bcm2835_wdt" /etc/modules; then
+                echo "bcm2835_wdt" | sudo tee -a /etc/modules > /dev/null
+                print_info "Added bcm2835_wdt to /etc/modules for persistence."
+            fi
+        else
+            print_warning "Failed to load bcm2835_wdt module. Watchdog may not function."
+        fi
+    fi    # Check if hardware watchdog device is available
+    if [ ! -e /dev/watchdog ]; then
+        print_warning "Hardware watchdog device /dev/watchdog not found."
+        if [ "$is_raspberry_pi" = true ]; then
+            print_warning "This may indicate a problem with the Raspberry Pi watchdog setup."
+            
+            # Check and fix boot configuration
+            local CONFIG_TXT_TARGET=$(get_config_txt_target)
+            if [ -n "$CONFIG_TXT_TARGET" ]; then
+                print_info "Checking boot configuration for watchdog settings..."
+                
+                if ! grep -q "dtparam=watchdog=on" "$CONFIG_TXT_TARGET" 2>/dev/null; then
+                    print_info "Watchdog not enabled in boot config. Adding dtparam=watchdog=on..."
+                    
+                    # Backup config.txt
+                    sudo cp "$CONFIG_TXT_TARGET" "${CONFIG_TXT_TARGET}.bak_watchdog_$(date +%Y%m%d_%H%M%S)"
+                    
+                    # Add watchdog parameter
+                    echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+                    echo "# Enable hardware watchdog" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+                    echo "dtparam=watchdog=on" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
+                    
+                    print_success "Added dtparam=watchdog=on to $CONFIG_TXT_TARGET"
+                    POST_INSTALL_MESSAGES+="[IMPORTANT] Watchdog enabled in boot config. A REBOOT is required for hardware watchdog to become available.\\n"
+                    
+                    print_warning "Skipping watchdog service setup until after reboot."
+                    print_info "After rebooting, you can run the installation again or manually start watchdog with: sudo systemctl start watchdog"
+                    return 0
+                else
+                    print_info "Watchdog is enabled in boot config but device not found."
+                    print_warning "This may require a reboot to take effect, or there might be a hardware issue."
+                fi
+            else
+                print_warning "Could not locate boot configuration file to enable watchdog."
+            fi
+            
+            print_info "You can manually enable the watchdog by adding 'dtparam=watchdog=on' to /boot/config.txt and rebooting."
+        else
+            print_warning "Hardware watchdog not available on this system. This is normal for non-Raspberry Pi systems."
+        fi
+        print_warning "Skipping watchdog service setup due to missing hardware support."
+        return 0
+    fi
 
-    if ! grep -q "^bcm2835_wdt" /etc/modules; then
-        echo "bcm2835_wdt" | sudo tee -a /etc/modules > /dev/null
-        print_info "Added bcm2835_wdt to /etc/modules."
-    else
-        print_info "bcm2835_wdt already in /etc/modules."
+    print_info "Hardware watchdog device found at /dev/watchdog."
+    
+    # Backup original watchdog.conf if it exists and no backup exists
+    if [ -f /etc/watchdog.conf ] && [ ! -f /etc/watchdog.conf.backup ]; then
+        if sudo cp /etc/watchdog.conf /etc/watchdog.conf.backup; then
+            print_info "Backed up original /etc/watchdog.conf"
+        else
+            print_warning "Failed to backup /etc/watchdog.conf"
+        fi
     fi
     
-    if sudo grep -q "^#watchdog-device" /etc/watchdog.conf; then
+    # Configure watchdog.conf
+    print_info "Configuring watchdog settings..."
+    
+    # Set watchdog device
+    if sudo grep -q "^#watchdog-device" /etc/watchdog.conf 2>/dev/null; then
         sudo sed -i 's|^#watchdog-device\s*=\s*/dev/watchdog|watchdog-device = /dev/watchdog|' /etc/watchdog.conf
         print_info "Uncommented watchdog-device in /etc/watchdog.conf."
-    elif ! sudo grep -q "^watchdog-device" /etc/watchdog.conf; then
+    elif ! sudo grep -q "^watchdog-device" /etc/watchdog.conf 2>/dev/null; then
         echo "watchdog-device = /dev/watchdog" | sudo tee -a /etc/watchdog.conf > /dev/null
         print_info "Added watchdog-device to /etc/watchdog.conf."
     fi
     
-    if sudo grep -q "^#max-load-1" /etc/watchdog.conf; then
+    # Set max load threshold
+    if sudo grep -q "^#max-load-1" /etc/watchdog.conf 2>/dev/null; then
         sudo sed -i 's|^#max-load-1\s*=\s*24|max-load-1 = 24|' /etc/watchdog.conf
         print_info "Uncommented max-load-1 in /etc/watchdog.conf."
-    elif ! sudo grep -q "^max-load-1" /etc/watchdog.conf; then
+    elif ! sudo grep -q "^max-load-1" /etc/watchdog.conf 2>/dev/null; then
         echo "max-load-1 = 24" | sudo tee -a /etc/watchdog.conf > /dev/null
         print_info "Added max-load-1 to /etc/watchdog.conf."
     fi
 
-    if ! sudo grep -q "^watchdog-timeout" /etc/watchdog.conf; then
+    # Set watchdog timeout
+    if ! sudo grep -q "^watchdog-timeout" /etc/watchdog.conf 2>/dev/null; then
         echo "watchdog-timeout = 15" | sudo tee -a /etc/watchdog.conf > /dev/null
         print_info "Added watchdog-timeout = 15 to /etc/watchdog.conf."
     else
         sudo sed -i 's|^watchdog-timeout\s*=.*|watchdog-timeout = 15|' /etc/watchdog.conf
-        print_info "Ensured watchdog-timeout is set to 15 in /etc/watchdog.conf."
+        print_info "Set watchdog-timeout to 15 seconds in /etc/watchdog.conf."
     fi
     
-    sudo systemctl enable watchdog
-    check_command "Enabling watchdog service" || return 1
-    sudo systemctl restart watchdog 
-    check_command "Starting/restarting watchdog service" || print_warning "Watchdog service failed to start/restart."
-    print_success "Hardware watchdog setup complete."
+    # Test watchdog configuration
+    print_info "Testing watchdog configuration..."
+    local config_test_output
+    config_test_output=$(sudo watchdog -t 1 -c /etc/watchdog.conf 2>&1)
+    local config_test_result=$?
+    
+    if [ $config_test_result -eq 0 ]; then
+        print_info "Watchdog configuration test passed."
+    else
+        print_warning "Watchdog configuration test failed with exit code $config_test_result"
+        print_warning "Test output: $config_test_output"
+        print_warning "Proceeding anyway, but service may not work properly."
+    fi
+      # Stop any existing watchdog service to avoid conflicts
+    if sudo systemctl is-active --quiet watchdog 2>/dev/null; then
+        print_info "Stopping existing watchdog service..."
+        sudo systemctl stop watchdog 2>/dev/null || true
+        sleep 2
+    fi
+    
+    # Disable first to clear any stale state
+    if sudo systemctl is-enabled --quiet watchdog 2>/dev/null; then
+        print_info "Disabling watchdog service to clear any stale state..."
+        sudo systemctl disable watchdog 2>/dev/null || true
+        sleep 1
+    fi
+    
+    # Reload systemd daemon to ensure clean state
+    print_info "Reloading systemd daemon..."
+    sudo systemctl daemon-reload
+    
+    # Enable watchdog service with better error handling
+    print_info "Enabling watchdog service..."
+    local enable_output
+    local enable_attempts=0
+    local max_enable_attempts=3
+    
+    while [ $enable_attempts -lt $max_enable_attempts ]; do
+        enable_attempts=$((enable_attempts + 1))
+        print_info "Enable attempt $enable_attempts of $max_enable_attempts..."
+        
+        enable_output=$(sudo systemctl enable watchdog 2>&1)
+        local enable_result=$?
+        
+        if [ $enable_result -eq 0 ]; then
+            print_info "Watchdog service enabled successfully."
+            break
+        else
+            print_warning "Enable attempt $enable_attempts failed (exit code: $enable_result)"
+            print_warning "Enable output: $enable_output"
+            
+            if [ $enable_attempts -lt $max_enable_attempts ]; then
+                print_info "Retrying in 2 seconds..."
+                sleep 2
+                # Try to reload systemd again
+                sudo systemctl daemon-reload
+            else
+                print_error "Failed to enable watchdog service after $max_enable_attempts attempts"
+                print_error "Final enable output: $enable_output"
+                
+                # Check if it's a SysV init issue
+                if echo "$enable_output" | grep -q "systemd-sysv-install"; then
+                    print_warning "Detected SysV init conflict. Attempting alternative approach..."
+                    
+                    # Try manual symlink approach
+                    if sudo ln -sf /lib/systemd/system/watchdog.service /etc/systemd/system/multi-user.target.wants/watchdog.service 2>/dev/null; then
+                        print_info "Created manual service symlink."
+                        sudo systemctl daemon-reload
+                        enable_result=0
+                        break
+                    fi
+                fi
+                
+                return 1
+            fi
+        fi
+    done
+      # Start watchdog service with detailed error handling and retry logic
+    print_info "Starting watchdog service..."
+    local start_output
+    local start_attempts=0
+    local max_start_attempts=3
+    
+    while [ $start_attempts -lt $max_start_attempts ]; do
+        start_attempts=$((start_attempts + 1))
+        print_info "Start attempt $start_attempts of $max_start_attempts..."
+        
+        # Ensure device is ready
+        if [ -e /dev/watchdog ]; then
+            print_info "Watchdog device /dev/watchdog is available."
+        else
+            print_warning "Watchdog device not available, waiting..."
+            sleep 2
+        fi
+        
+        start_output=$(sudo systemctl start watchdog 2>&1)
+        local start_result=$?
+        
+        if [ $start_result -eq 0 ]; then
+            print_success "Watchdog service started successfully."
+            # Verify service is actually running after successful start
+            if [ $start_result -eq 0 ]; then
+                sleep 3
+                if sudo systemctl is-active --quiet watchdog; then
+                    print_success "Watchdog service is running and active."
+                    
+                    # Show brief status
+                    local status_brief
+                    status_brief=$(sudo systemctl status watchdog --no-pager -l | head -10)
+                    print_info "Watchdog service status:\n$status_brief"
+                else
+                    print_warning "Watchdog service was started but is not currently active."
+                    print_info "Checking service status for more details..."
+                    
+                    local full_status
+                    full_status=$(sudo systemctl status watchdog --no-pager -l || true)
+                    print_warning "Full service status:\n$full_status"
+                    
+                    local recent_logs
+                    recent_logs=$(sudo journalctl -u watchdog --no-pager -l --since "5 minutes ago" || true)
+                    print_warning "Recent service logs:\n$recent_logs"
+                fi
+            fi
+            break
+        else
+            print_warning "Start attempt $start_attempts failed (exit code: $start_result)"
+            print_warning "Start output: $start_output"
+            
+            # Handle specific "Job canceled" issue
+            if echo "$start_output" | grep -q -i "canceled\|cancelled"; then
+                print_warning "Detected job cancellation. This is often due to timing issues."
+                print_info "Attempting to resolve by resetting service state..."
+                
+                # Reset the service state
+                sudo systemctl reset-failed watchdog 2>/dev/null || true
+                sudo systemctl daemon-reload
+                sleep 2
+                
+                if [ $start_attempts -lt $max_start_attempts ]; then
+                    print_info "Retrying start in 3 seconds..."
+                    sleep 3
+                    continue
+                fi
+            elif echo "$start_output" | grep -q -i "device\|hardware\|/dev/watchdog"; then
+                print_warning "Hardware device issue detected."
+                if [ ! -e /dev/watchdog ]; then
+                    print_error "Watchdog device /dev/watchdog is missing."
+                    break
+                fi
+            fi
+            
+            if [ $start_attempts -lt $max_start_attempts ]; then
+                print_info "Retrying in 2 seconds..."
+                sleep 2
+            else
+                print_error "Failed to start watchdog service after $max_start_attempts attempts"
+                print_error "Final start output: $start_output"
+                
+                # Get detailed information about why it failed
+                print_info "Checking service status for error details..."
+                local detailed_status
+                detailed_status=$(sudo systemctl status watchdog --no-pager -l || true)
+                print_error "Detailed service status:\n$detailed_status"
+                
+                # Check recent logs
+                print_info "Checking recent service logs..."
+                local error_logs
+                error_logs=$(sudo journalctl -u watchdog --no-pager -l --since "5 minutes ago" || true)
+                print_error "Recent error logs:\n$error_logs"
+                  # Check if the issue is due to hardware not being available
+                if echo "$start_output" | grep -q -i "device\|hardware\|/dev/watchdog"; then
+                    print_warning "The error appears to be related to hardware watchdog availability."
+                    print_warning "This is common on systems without proper watchdog hardware support."
+                    print_info "You can manually check hardware support with: ls -la /dev/watchdog*"
+                fi
+                
+                # Offer graceful degradation
+                print_warning "Watchdog service failed to start. The system will continue without hardware watchdog protection."
+                print_info "You can manually start the watchdog later with: sudo systemctl start watchdog"
+                POST_INSTALL_MESSAGES+="[WARNING] Hardware watchdog service failed to start. System will run without watchdog protection. Check logs with 'sudo journalctl -u watchdog' for details.\\n"
+                
+                # Don't return 1 here to allow installation to continue
+                print_info "Continuing installation without watchdog service..."
+                return 0
+            fi
+        fi
+    done
+    
+    print_success "Hardware watchdog setup completed successfully."
+    print_info "Watchdog will monitor system health and reboot if the system becomes unresponsive."
+}
+
+# Function to diagnose watchdog hardware support
+diagnose_watchdog_hardware() {
+    print_info "Diagnosing watchdog hardware support..."
+    
+    # Check for Raspberry Pi detection
+    if [ -f /proc/cpuinfo ] && grep -q "Raspberry Pi" /proc/cpuinfo; then
+        print_info "✓ Raspberry Pi detected in /proc/cpuinfo"
+    elif [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model; then
+        print_info "✓ Raspberry Pi detected in device tree"
+    else
+        print_warning "⚠ Non-Raspberry Pi system detected"
+    fi
+    
+    # Check for watchdog device
+    if [ -e /dev/watchdog ]; then
+        print_info "✓ Hardware watchdog device found: /dev/watchdog"
+        ls -la /dev/watchdog* 2>/dev/null || true
+    else
+        print_warning "⚠ No watchdog device found at /dev/watchdog"
+    fi
+    
+    # Check for watchdog module
+    if lsmod | grep -q bcm2835_wdt; then
+        print_info "✓ bcm2835_wdt module is loaded"
+    else
+        print_warning "⚠ bcm2835_wdt module is not loaded"
+    fi
+    
+    # Check /etc/modules
+    if grep -q "^bcm2835_wdt" /etc/modules 2>/dev/null; then
+        print_info "✓ bcm2835_wdt is in /etc/modules"
+    else
+        print_warning "⚠ bcm2835_wdt not found in /etc/modules"
+    fi
+    
+    # Check boot config
+    local CONFIG_TXT_TARGET=$(get_config_txt_target)
+    if [ -n "$CONFIG_TXT_TARGET" ]; then
+        if grep -q "dtparam=watchdog=on" "$CONFIG_TXT_TARGET" 2>/dev/null; then
+            print_info "✓ Watchdog enabled in boot config"
+        else
+            print_warning "⚠ Watchdog not explicitly enabled in boot config"
+        fi
+    fi
 }
 
 # Function to setup emergency stop
@@ -327,7 +767,7 @@ config['safety']['emergency_stop_gpio_pin'] = 7
 
 with open(config_file, 'w') as f:
     json.dump(config, f, indent=4)
-print(f'Updated {config_file} for physical emergency stop.')
+print(f'Updated {config_file} for physical e-stop.')
 "
         check_command "Updating $CONFIG_JSON_PATH for physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
     else
@@ -362,7 +802,7 @@ if 'safety' not in config: config['safety'] = {}
 config['safety']['use_physical_emergency_stop'] = False
 with open(config_file, 'w') as f:
     json.dump(config, f, indent=4)
-print(f'Updated {config_file} to disable physical emergency stop.')
+print(f'Updated {config_file} to disable physical e-stop.')
 "
         check_command "Updating $CONFIG_JSON_PATH to disable physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
     else
@@ -425,6 +865,10 @@ setup_yolov8() {
 }
 
 setup_virtual_environment() {
+    if prompt_skip_completed "virtual_environment" "Virtual environment setup"; then
+        return 0
+    fi
+    
     if [ -d "$VENV_DIR" ]; then
         print_info "Virtual environment '$VENV_DIR' already exists."
     else
@@ -435,9 +879,14 @@ setup_virtual_environment() {
     fi
     # No activation here; use explicit paths to venv executables.
     POST_INSTALL_MESSAGES+="[INFO] Python virtual environment is in '$VENV_DIR'. To activate manually for development, run 'source $VENV_DIR/bin/activate'.\\n"
+    mark_step_completed "virtual_environment"
 }
 
 install_python_dependencies() {
+    if prompt_skip_completed "python_dependencies" "Python dependencies installation"; then
+        return 0
+    fi
+    
     local VENV_PIP_CMD="$VENV_DIR/bin/pip"
     if [ ! -f "$VENV_PIP_CMD" ]; then
         print_error "Virtual environment pip not found at $VENV_PIP_CMD. Setup venv first."
@@ -462,6 +911,7 @@ install_python_dependencies() {
     check_command "Installing project in editable mode" || return 1
     
     print_success "Python dependencies installed successfully into $VENV_DIR."
+    mark_step_completed "python_dependencies"
 }
 
 setup_mower_service() {
@@ -523,6 +973,27 @@ setup_mower_service() {
 # --- Main Installation Logic ---
 print_info "Starting Autonomous Mower installation script..."
 
+# Check if this is a resume/retry installation
+if [ -f "$CHECKPOINT_FILE" ]; then
+    echo ""
+    print_info "Previous installation found. This script supports checkpoint/resume functionality."
+    echo ""
+    list_completed_steps
+    echo ""
+    read -p "Do you want to reset all checkpoints and start fresh? (y/N) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -f "$CHECKPOINT_FILE"
+        print_info "Checkpoints cleared. Starting fresh installation..."
+    else
+        print_info "Resuming installation. You'll be prompted to skip completed steps."
+    fi    echo ""
+fi
+
+# Auto-detect completed steps if not starting fresh
+if [ -f "$CHECKPOINT_FILE" ]; then
+    auto_detect_completed_steps
+fi
+
 if ! command_exists python3; then
     print_error "Python 3 is not installed. Please install Python 3 (>=3.9) and try again."
     exit 1
@@ -533,54 +1004,71 @@ if ! command_exists pip3 && ! command_exists "$VENV_DIR/bin/pip"; then
 fi
 print_success "Basic system checks (python3) passed."
 
+list_completed_steps
+
 setup_virtual_environment
 
-enable_required_interfaces
-validate_hardware
+if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
+    enable_required_interfaces
+    validate_hardware
+    mark_step_completed "hardware_interfaces"
+fi
 
 read -p "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_additional_uart
+    if ! prompt_skip_completed "additional_uart" "Additional UART setup"; then
+        setup_additional_uart
+        mark_step_completed "additional_uart"
+    fi
 else
     print_info "Skipping additional UART setup."
 fi
 
-print_info "Updating package lists and installing essential system dependencies..."
-sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
-check_command "Updating package list and upgrading system" || exit 1
+if ! prompt_skip_completed "system_packages" "System packages installation"; then
+    print_info "Updating package lists and installing essential system dependencies..."
+    sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
+    check_command "Updating package list and upgrading system" || exit 1
 
-sudo apt-get install -y \
-    python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
-    i2c-tools git libatlas-base-dev libhdf5-dev \
-    gpsd gpsd-clients python3-gps \
-    python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
-    python3-picamera2 \
-    wget curl gnupg \
-    gdal-bin libgdal-dev python3-gdal
-check_command "Installing core system packages" || exit 1
-print_success "Essential system dependencies installed."
+    sudo apt-get install -y \
+        python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
+        i2c-tools git libatlas-base-dev libhdf5-dev \
+        gpsd gpsd-clients python3-gps \
+        python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
+        python3-picamera2 \
+        wget curl gnupg \
+        gdal-bin libgdal-dev python3-gdal
+    check_command "Installing core system packages" || exit 1
+    print_success "Essential system dependencies installed."
+    mark_step_completed "system_packages"
+fi
 
 # INFO: The following lines modify .bashrc to add the project's src directory to PYTHONPATH.
 # This is generally NOT recommended if the project is installed in editable mode (pip install -e .)
 # from within an activated virtual environment, as the 'mower' package should be discoverable
 # by Python automatically. Consider removing these lines if using a venv and editable install.
-PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
-print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
-if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
-    echo "" >> /home/pi/.bashrc
-    echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
-    echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
-    print_success "Added PYTHONPATH to /home/pi/.bashrc."
-    POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
-else
-    print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+if ! prompt_skip_completed "pythonpath_setup" "PYTHONPATH configuration"; then
+    PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
+    print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+    if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
+        echo "" >> /home/pi/.bashrc
+        echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
+        echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
+        print_success "Added PYTHONPATH to /home/pi/.bashrc."
+        POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
+    else
+        print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+    fi
+    mark_step_completed "pythonpath_setup"
 fi
 
 install_python_dependencies
 
 read -p "Do you want to install/configure YOLOv8 models? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_yolov8 
+    if ! prompt_skip_completed "yolov8_setup" "YOLOv8 models installation"; then
+        setup_yolov8 
+        mark_step_completed "yolov8_setup"
+    fi
 else
     print_info "Skipping YOLOv8 model setup."
     POST_INSTALL_MESSAGES+="[INFO] YOLOv8 model setup was skipped.\\n"
@@ -588,38 +1076,39 @@ fi
 
 read -p "Do you want to install Coral TPU support (requires Coral USB Accelerator)? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Installing Coral TPU support..."
-    CORAL_INSTALLED_OK=false
-    if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
-        print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
-        POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
-        read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Skipping Coral TPU software installation."
+    if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
+        print_info "Installing Coral TPU support..."
+        CORAL_INSTALLED_OK=false
+        if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
+            POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
+            read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Skipping Coral TPU software installation."
+            else
+                print_info "Proceeding with Coral software installation despite no device detected."
+                CORAL_INSTALLED_OK=true # Assume user wants to proceed
+            fi
         else
-            print_info "Proceeding with Coral software installation despite no device detected."
-            CORAL_INSTALLED_OK=true # Assume user wants to proceed
+            CORAL_INSTALLED_OK=true # Device detected
         fi
-    else
-        CORAL_INSTALLED_OK=true # Device detected
-    fi
 
-    if $CORAL_INSTALLED_OK; then
-        print_info "Adding Coral package repository..."
-        echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-        check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
-        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-        check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
-        sudo apt-get update
-        check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
-        print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
-        sudo apt-get install -y libedgetpu1-std
-        check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-        
-        print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
-        VENV_PIP_CMD="$VENV_DIR/bin/pip"
-        if [ -f "$VENV_PIP_CMD" ]; then
-            if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then # Check both
+        if $CORAL_INSTALLED_OK; then
+            print_info "Adding Coral package repository..."
+            echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+            check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
+            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+            check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
+            sudo apt-get update
+            check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
+            print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
+            sudo apt-get install -y libedgetpu1-std
+            check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
+            
+            print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
+            VENV_PIP_CMD="$VENV_DIR/bin/pip"
+            if [ -f "$VENV_PIP_CMD" ]; then
+                if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then # Check both
                  "$VENV_PIP_CMD" install "pycoral" 
                  check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
             elif "$VENV_PIP_CMD" install -e ".[coral]"; then # Try extras
@@ -631,9 +1120,10 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             fi
         else
             print_error "Venv pip not found. Cannot install PyCoral."
-            POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
-        fi
+            POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"        fi
         print_success "Coral TPU support setup attempted."
+        mark_step_completed "coral_tpu_setup"
+    fi
     fi
 else
     print_info "Skipping Coral TPU support installation."
@@ -641,27 +1131,82 @@ fi
 
 read -p "Do you want to setup the hardware watchdog? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_watchdog 
+    if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
+        setup_watchdog 
+        mark_step_completed "hardware_watchdog"
+    fi
 else
     print_info "Skipping hardware watchdog setup."
 fi
 
 read -p "Do you want to setup a physical emergency stop button (GPIO7)? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_emergency_stop 
+    if ! prompt_skip_completed "emergency_stop" "Emergency stop button setup"; then
+        setup_emergency_stop 
+        mark_step_completed "emergency_stop"
+    fi
 else
-    skip_physical_emergency_stop 
+    if ! prompt_skip_completed "emergency_stop_skip" "Emergency stop button disable"; then
+        skip_physical_emergency_stop 
+        mark_step_completed "emergency_stop_skip"
+    fi
 fi
 
 read -p "Do you want to install and enable the systemd service for automatic startup? (y/n) " -n 1 -r; echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    setup_mower_service 
+    if ! prompt_skip_completed "systemd_service" "Systemd service installation"; then
+        setup_mower_service 
+        mark_step_completed "systemd_service"
+    fi
 else
     print_info "Skipping systemd service installation."
     POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
 fi
 
 print_success "Installation and setup process complete."
+
+show_installation_summary
+cleanup_checkpoints
+
+# Function to show installation summary and cleanup checkpoints on success
+show_installation_summary() {
+    echo ""
+    print_info "Installation Summary:"
+    echo ""
+    
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        local total_steps=0
+        local completed_steps=0
+        
+        # Count total possible steps
+        local all_steps=("virtual_environment" "hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
+        total_steps=${#all_steps[@]}
+        
+        # Count completed steps
+        for step in "${all_steps[@]}"; do
+            if is_step_completed "$step"; then
+                ((completed_steps++))
+            fi
+        done
+        
+        echo -e "  ${GREEN}Completed steps: $completed_steps/$total_steps${NC}"
+        echo ""
+        
+        # Show completed steps
+        print_info "Completed installation steps:"
+        while IFS='=' read -r step timestamp; do
+            echo -e "  ${GREEN}✓${NC} $step (completed: $timestamp)"
+        done < "$CHECKPOINT_FILE"
+    fi
+}
+
+# Function to cleanup checkpoints on successful completion
+cleanup_checkpoints() {
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        print_info "Installation completed successfully. Cleaning up checkpoint file..."
+        mv "$CHECKPOINT_FILE" "${CHECKPOINT_FILE}.completed.$(date '+%Y%m%d_%H%M%S')"        print_success "Checkpoint file archived for reference."
+    fi
+}
 
 if [ -n "$POST_INSTALL_MESSAGES" ]; then
     echo -e "\\n${YELLOW}--- Important Post-Installation Notes ---${NC}"
