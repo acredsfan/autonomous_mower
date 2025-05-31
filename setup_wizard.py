@@ -23,7 +23,8 @@ try:
     from dotenv import set_key
 except ImportError:
     print("Installing python-dotenv...")
-    os.system(f"{sys.executable} -m pip install python-dotenv")
+    os.system(
+        f"{sys.executable} -m pip install python-dotenv --break-system-packages")
     from dotenv import set_key
 
 # Constants
@@ -68,10 +69,9 @@ def install_dependencies() -> bool:
     for package in packages:
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", package],
-                capture_output=True,
-                text=True,
-            )
+                [sys.executable, "-m", "pip", "install", package,
+                 "--break-system-packages"],
+                capture_output=True, text=True,)
 
             if result.returncode == 0:
                 print_success(f"Successfully installed {package}")
