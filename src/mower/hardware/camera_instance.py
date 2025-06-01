@@ -224,15 +224,18 @@ class CameraInstance:
         # Check if initialized and try a quick frame capture
         if not self._is_initialized:
             logging.warning("Camera not initialized, checking status.")
-            if not self.initialize(): # Try to initialize if not already
-                logging.error("Camera failed to initialize for operational check.")
+            if not self.initialize():  # Try to initialize if not already
+                logging.error(
+                    "Camera failed to initialize for operational check.")
                 return False
 
         # Try to capture a frame as a health check
         try:
             if self._is_picamera:
                 # For PiCamera, check if it's running
-                if hasattr(self._camera, 'started') and not self._camera.started:
+                if hasattr(
+                        self._camera,
+                        'started') and not self._camera.started:
                     logging.warning("PiCamera is not running.")
                     return False
                 # A more robust check might involve trying to capture a test frame
@@ -241,7 +244,7 @@ class CameraInstance:
                 # if test_frame is None:
                 #     logging.warning("PiCamera failed to capture a test frame.")
                 #     return False
-            else: # OpenCV
+            else:  # OpenCV
                 if not self._camera.isOpened():
                     logging.warning("OpenCV camera is not open.")
                     return False

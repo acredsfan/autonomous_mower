@@ -132,7 +132,7 @@ src/mower/simulation/world_model.py.backup
 .blackboxrules
 .windsurfrules
 roo_models.json
-copilot-instructions.md
+copilot-instructions*.md
 mcp_server/
 mcp.json
 MCP_SERVER.md
@@ -143,3 +143,4 @@ linter_fixes.md
 fix_fstrings_README.md
 fix_fstrings.py
 linter_fixes.py
+library_update_report.md

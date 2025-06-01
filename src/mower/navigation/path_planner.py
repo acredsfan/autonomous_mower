@@ -6,12 +6,12 @@ different mowing patterns and learning-based optimization.
 """
 
 import json
-import os # Added for environment variables
-import requests # Added for API calls
+import os  # Added for environment variables
+import requests  # Added for API calls
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import List, Tuple, Optional, Dict, Any # Added Dict and Any
+from typing import List, Tuple, Optional, Dict, Any  # Added Dict and Any
 
 import numpy as np
 
@@ -79,12 +79,12 @@ class PathPlanner:
         self,
         pattern_config: PatternConfig,
         learning_config: Optional[LearningConfig] = None,
-        resource_manager=None,
+        resource_manager=None,  # Added resource_manager
     ):
         """Initialize the path planner."""
         self.pattern_config = pattern_config
         self.learning_config = learning_config or LearningConfig()
-        self.resource_manager = resource_manager
+        self.resource_manager = resource_manager  # Store resource_manager
         self.current_path = []
         self.completed_areas = set()
         self.obstacles = []
@@ -121,17 +121,17 @@ class PathPlanner:
             state = self._get_current_state()
             # Fetch elevation data for the generated path
             elevation_data = None
-            if path: # Only fetch if a path was generated
+            if path:  # Only fetch if a path was generated
                 elevation_data = get_elevation_for_path(path)
 
             reward = self._calculate_reward(path, elevation_data)
             self._update_q_table(
-                 state, self.pattern_config.pattern_type, reward)
+                state, self.pattern_config.pattern_type, reward)
             self._store_experience(
-                  state, self.pattern_config.pattern_type, reward)
+                state, self.pattern_config.pattern_type, reward)
 
             if self.step_count % self.learning_config.update_frequency == 0:
-                 self._update_model()
+                self._update_model()
 
             self.step_count += 1
 
@@ -179,6 +179,15 @@ class PathPlanner:
         except (TypeError, AttributeError) as e:
             logger.error("Error generating pattern path: %s", e)
             return []
+
+    def get_boundary_points(self) -> List[Tuple[float, float]]:
+        """Returns the current boundary points from the pattern_config."""
+        if self.pattern_config:
+            return self.pattern_config.boundary_points
+        logger.warning(
+            "PathPlanner: PatternConfig not available, cannot get boundary points."
+        )
+        return []
 
     def _generate_parallel_path(self) -> List[Tuple[float, float]]:
         """Generate parallel mowing pattern."""
@@ -622,49 +631,52 @@ class PathPlanner:
             return PatternType.PARALLEL
 
     def _calculate_reward(
-        self, path: List[Tuple[float, float]], elevation_data: Optional[List[float]] = None
-    ) -> float:
-        """Calculate reward for generated path, optionally considering elevation."""
-        try:
-            if not path:
-                return -1.0  # Penalty for invalid path
+            self, path: List[Tuple[float, float]],
+            elevation_data: Optional[List[float]] = None) -> float:
+        """Calculate reward based on path quality and elevation data."""
+        if not path:
+            return -100.0  # Penalize empty paths heavily
 
-            # Calculate path efficiency metrics
-            total_distance = self._calculate_path_distance(path)
-            coverage = self._calculate_coverage(path)
-            smoothness = self._calculate_smoothness(path)
+        # Base reward for path length (encourage efficiency)
+        total_distance = sum(
+            np.linalg.norm(np.array(path[i + 1]) - np.array(path[i]))
+            for i in range(len(path) - 1)
+        )
+        # Efficiency (add epsilon to avoid division by zero)
+        reward = 0.4 * (1.0 / (total_distance + 1e-6))
 
-            # Base reward
-            reward = (
-                0.4 * (1.0 / (total_distance + 1e-6))  # Efficiency (add epsilon to avoid division by zero)
-                + 0.4 * coverage  # Coverage
-                + 0.2 * smoothness  # Smoothness
-            )
+        # Penalize for obstacles (not implemented yet, placeholder)
+        # reward -= 0.3 * len(self.obstacles)
 
-            # Elevation penalty
-            if elevation_data and len(elevation_data) == len(path) and len(path) > 1:
-                elevation_penalty = 0.0
-                max_slope_penalty = 0.0
-                for i in range(len(path) - 1):
-                    elevation_diff = elevation_data[i+1] - elevation_data[i]
-                    distance_segment = np.linalg.norm(np.array(path[i+1]) - np.array(path[i]))
-                    if distance_segment > 1e-6: # Avoid division by zero for very short segments
-                        slope = elevation_diff / distance_segment
-                        # Penalize upward slopes more
-                        if elevation_diff > 0:
-                            elevation_penalty += elevation_diff * 0.01 # Example penalty factor
-                        # Penalize very steep slopes (e.g., > 20%)
-                        if abs(slope) > 0.20:
-                             max_slope_penalty += (abs(slope) - 0.20) * 0.1 # Example penalty factor
-                
-                reward -= elevation_penalty
-                reward -= max_slope_penalty
-                logger.debug(f"Elevation penalty applied: {elevation_penalty}, Max slope penalty: {max_slope_penalty}")
+        # Penalize for elevation changes if data is available
+        elevation_penalty = 0.0
+        max_slope_penalty = 0.0
+        if elevation_data and len(elevation_data) == len(path):
+            for i in range(len(path) - 1):
+                distance_segment = np.linalg.norm(
+                    np.array(path[i + 1]) - np.array(path[i])
+                )
+                # Avoid division by zero for very short segments
+                if distance_segment > 1e-6:
+                    elevation_diff = abs(
+                        elevation_data[i + 1] - elevation_data[i])
+                    slope = elevation_diff / distance_segment
 
-            return max(0.0, min(1.0, reward))
-        except Exception as e:
-            logger.error(f"Error calculating reward: {e}")
-            return 0.0
+                    # Penalize based on absolute elevation change
+                    # Example penalty factor
+                    elevation_penalty += elevation_diff * 0.01
+                    # Penalize for slopes exceeding a threshold (e.g., 20%)
+                    if abs(slope) > 0.20:
+                        # Example penalty factor
+                        max_slope_penalty += (abs(slope) - 0.20) * 0.1
+            reward -= 0.3 * (elevation_penalty + max_slope_penalty)
+            if elevation_penalty > 0 or max_slope_penalty > 0:
+                logger.debug(
+                    f"Elevation penalty: {elevation_penalty}, "
+                    f"Max slope penalty: {max_slope_penalty}"
+                )
+
+        return max(0.0, min(1.0, reward))
 
     def _calculate_path_distance(
             self, path: List[Tuple[float, float]]) -> float:
@@ -947,8 +959,8 @@ class PathPlanner:
             ]
 
             logger.info(
-                f"Boundary points updated: {self.pattern_config.boundary_points}"
-            )
+                f"Boundary points updated: {
+                    self.pattern_config.boundary_points}")
             return True
         except Exception as e:
             logger.error(f"Error setting boundary points: {e}")
@@ -957,93 +969,17 @@ class PathPlanner:
 
 # --- Elevation API Function ---
 def get_elevation_for_path(
-    path_coordinates: List[Tuple[float, float]]
+    path: List[Tuple[float, float]]
 ) -> Optional[List[float]]:
-    """
-    Fetches elevation data for a given path from Google Maps Elevation API.
-
-    Args:
-        path_coordinates: A list of (latitude, longitude) tuples.
-
-    Returns:
-        A list of elevation values (in meters) corresponding to the path coordinates,
-        or None if an error occurs or the API key is missing.
-    """
+    """Fetch elevation data for a given path using Google Maps Elevation API."""
     if not GOOGLE_MAPS_API_KEY:
-        logger.warning(
-            "Cannot fetch elevation data: GOOGLE_MAPS_API_KEY is not set."
-        )
+        logger.warning("GOOGLE_MAPS_API_KEY not set. Cannot fetch elevation.")
+        return None
+    if not path:
+        logger.warning("Path is empty. Cannot fetch elevation.")
         return None
 
-    if not path_coordinates:
-        return []
-
-    # API allows multiple points separated by '|'. Max URL length is a concern for very long paths.
-    # For simplicity, this example sends all points in one request.
-    # Consider batching for paths with >50-100 points (approx, depends on URL length).
-    # Max locations per request is 512.
-    max_locations_per_request = 512
-    all_elevations: List[float] = []
-
-    for i in range(0, len(path_coordinates), max_locations_per_request):
-        batch_coordinates = path_coordinates[i:i + max_locations_per_request]
-        locations_str = "|".join([f"{lat},{lon}" for lat, lon in batch_coordinates])
-        params = {"locations": locations_str, "key": GOOGLE_MAPS_API_KEY}
-
-        try:
-            response = requests.get(ELEVATION_API_URL, params=params, timeout=10) # Added timeout
-            response.raise_for_status()  # Raises an HTTPError for bad responses (4XX or 5XX)
-            data = response.json()
-
-            if data["status"] == "OK":
-                batch_elevations = [result["elevation"] for result in data["results"]]
-                all_elevations.extend(batch_elevations)
-            elif data["status"] == "OVER_QUERY_LIMIT":
-                logger.error(
-                    "Google Maps Elevation API: Query limit exceeded. "
-                    "Consider reducing request frequency or upgrading your plan."
-                )
-                return None # Potentially return partial data or handle differently
-            elif data["status"] == "REQUEST_DENIED":
-                logger.error(
-                    "Google Maps Elevation API: Request denied. "
-                    "Check your API key and ensure the Elevation API is enabled."
-                )
-                return None
-            elif data["status"] == "INVALID_REQUEST":
-                logger.error(
-                    f"Google Maps Elevation API: Invalid request. Locations: {locations_str}, Error: {data.get('error_message', '')}"
-                )
-                return None
-            else: # UNKNOWN_ERROR or other statuses
-                logger.error(
-                    f"Google Maps Elevation API: Error - {data['status']}. "
-                    f"Error message: {data.get('error_message', '')}"
-                )
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.error("Google Maps Elevation API: Request timed out.")
-            return None
-        except requests.exceptions.HTTPError as http_err:
-            err_response_text = http_err.response.text if http_err.response is not None else "No response body"
-            logger.error(f"Google Maps Elevation API: HTTP error occurred: {http_err} - {err_response_text}")
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Google Maps Elevation API: Request failed: {e}")
-            return None
-        except KeyError:
-            logger.error("Google Maps Elevation API: Invalid response format from API.")
-            return None
-        except json.JSONDecodeError:
-            logger.error("Google Maps Elevation API: Could not decode JSON response.")
-            return None
-            
-    if len(all_elevations) == len(path_coordinates):
-        return all_elevations
-    else:
-        logger.error(
-            "Mismatch between number of requested coordinates and received elevations."
-        )
-        return None
-# --- End Elevation API Function ---
+    # Google Elevation API has limits on the number of points per request
+    # and URL length. Chunk the path if necessary.
+    # Max 512 points per request.
+    # API allows multiple points separated by '|'.

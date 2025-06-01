@@ -2,7 +2,7 @@ import os
 import platform
 import threading
 import time
-from typing import Tuple
+from typing import Tuple, Any
 
 import serial
 import serial.tools.list_ports
@@ -56,6 +56,7 @@ class SerialPort:
         self.timeout = timeout
         self.receiver_buffer_size = receiver_buffer_size
         self.ser = None
+        self.data_buffer = ""  # ADDED: Buffer for incomplete lines
 
     def start(self):
         logger.debug(f"Attempting to open serial port {self.port}...")
@@ -180,7 +181,8 @@ class SerialPort:
         except UnicodeDecodeError:
             return (False, "")
 
-    def readln(self) -> Tuple[bool, str]:
+    # RENAMED from readln to read_line
+    def read_line(self) -> Tuple[bool, str]:
         """
         if there are characters waiting,
         then read a line from the serial port.
@@ -198,33 +200,55 @@ class SerialPort:
             return (False, "")  # Return empty string if port not open
 
         try:
-            waiting = self.buffered() > 0
-            if waiting:
-                buffer = self.ser.readline()
-                return (True, buffer.decode(self.charset))
-            return (False, "")
-        except (serial.serialutil.SerialException, TypeError):
-            logger.warning("Failed reading line from serial port")
-            return (False, "")
-        except UnicodeDecodeError:
-            logger.warning("Failed decoding unicode line from serial port")
+            # Check buffer first for a complete line
+            if '\n' in self.data_buffer:
+                line, self.data_buffer = self.data_buffer.split('\n', 1)
+                return (True, line + '\n')
+
+            # Read new data if buffer doesn't have a complete line
+            if self.ser.in_waiting > 0:
+                new_data = self.ser.read(self.ser.in_waiting).decode(
+                    self.charset, errors='ignore'
+                )
+                self.data_buffer += new_data
+                if '\n' in self.data_buffer:
+                    line, self.data_buffer = self.data_buffer.split('\n', 1)
+                    return (True, line + '\n')
+            return (False, "")  # No complete line found yet
+
+        except (serial.serialutil.SerialException, TypeError, UnicodeDecodeError) as e:
+            logger.warning(
+                f"Failed reading line from serial port {
+                    self.port}: {e}")
             return (False, "")
 
-    def writeBytes(self, value: bytes):
+    def get_parsed_data(self, parser_function) -> Tuple[bool, Any]:
+        """Reads a line and parses it using the provided function."""
+        # Changed from self.readln
+        success, line = self.read_line()
+        if success and line:
+            try:
+                parsed_data = parser_function(line)
+                return True, parsed_data
+            except Exception as e:
+                logger.error(f"Error parsing line '{line.strip()}': {e}")
+                return False, None
+        return False, None
+
+    def write(self, data: str) -> bool:
         """
-        write byte string to serial port
+        Write a string to the serial port.
+        Ensures the data is encoded to bytes before writing.
         """
         if self.ser is not None and self.ser.is_open:
             try:
-                self.ser.write(value)
-            except (serial.serialutil.SerialException, TypeError):
-                logger.warning("Can't write to serial port")
-
-    def write(self, value: str):
-        self.writeBytes(value.encode())
-
-    def writeln(self, value: str):
-        self.write(value + "\n")
+                # Encode the data to bytes using the configured charset
+                encoded_data = data.encode(self.charset)
+                self.ser.write(encoded_data)
+                return True
+            except (serial.serialutil.SerialException, TypeError) as e:
+                logger.warning(f"Can't write to serial port {self.port}: {e}")
+        return False
 
 
 class SerialLineReader:

@@ -1015,198 +1015,483 @@ setup_mower_service() {
 }
 
 
+# Function to show available installation features
+show_available_features() {
+    echo ""
+    print_info "Available installation features:"
+    echo ""
+    echo "  Core System:"
+    echo "    1.  Virtual Environment Setup"
+    echo "    2.  Hardware Interfaces (I2C, UART, Camera validation)"
+    echo "    3.  Additional UART (UART2 setup)"
+    echo "    4.  System Packages (i2c-tools, gpsd, etc.)"
+    echo "    5.  PYTHONPATH Configuration"
+    echo "    6.  Python Dependencies (from requirements.txt)"
+    echo ""
+    echo "  Computer Vision & AI:"
+    echo "    7.  YOLOv8 Models (obstacle detection)"
+    echo "    8.  Coral TPU Support (Edge TPU acceleration)"
+    echo ""
+    echo "  System Integration:"
+    echo "    9.  Hardware Watchdog (system reliability)"
+    echo "    10. Emergency Stop Button (GPIO7 safety)"
+    echo "    11. Systemd Service (auto-startup)"
+    echo ""
+}
+
+# Function to install specific feature by number
+install_specific_feature() {
+    local feature_num="$1"
+    
+    case "$feature_num" in
+        1)
+            print_info "Installing Virtual Environment Setup..."
+            setup_virtual_environment
+            ;;
+        2)
+            print_info "Installing Hardware Interfaces..."
+            enable_required_interfaces
+            validate_hardware
+            mark_step_completed "hardware_interfaces"
+            ;;
+        3)
+            print_info "Installing Additional UART..."
+            setup_additional_uart
+            mark_step_completed "additional_uart"
+            ;;
+        4)
+            print_info "Installing System Packages..."
+            print_info "Updating package lists and installing essential system dependencies..."
+            sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
+            check_command "Updating package list and upgrading system" || return 1
+
+            sudo apt-get install -y \
+                python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
+                i2c-tools git libatlas-base-dev libhdf5-dev \
+                gpsd gpsd-clients python3-gps \
+                python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
+                python3-picamera2 \
+                wget curl gnupg \
+                gdal-bin libgdal-dev python3-gdal
+            check_command "Installing core system packages" || return 1
+            print_success "Essential system dependencies installed."
+            mark_step_completed "system_packages"
+            ;;
+        5)
+            print_info "Installing PYTHONPATH Configuration..."
+            PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
+            print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+            if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
+                echo "" >> /home/pi/.bashrc
+                echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
+                echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
+                print_success "Added PYTHONPATH to /home/pi/.bashrc."
+                POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
+            else
+                print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+            fi
+            mark_step_completed "pythonpath_setup"
+            ;;
+        6)
+            print_info "Installing Python Dependencies..."
+            install_python_dependencies
+            ;;
+        7)
+            print_info "Installing YOLOv8 Models..."
+            setup_yolov8 
+            mark_step_completed "yolov8_setup"
+            ;;
+        8)
+            print_info "Installing Coral TPU Support..."
+            print_info "Installing Coral TPU support..."
+            CORAL_INSTALLED_OK=false
+            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+                print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
+                POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
+                read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    print_info "Skipping Coral TPU software installation."
+                    return 0
+                else
+                    print_info "Proceeding with Coral software installation despite no device detected."
+                    CORAL_INSTALLED_OK=true
+                fi
+            else
+                CORAL_INSTALLED_OK=true
+            fi
+
+            if $CORAL_INSTALLED_OK; then
+                print_info "Adding Coral package repository..."
+                echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+                check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
+                curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+                check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
+                sudo apt-get update
+                check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
+                print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
+                sudo apt-get install -y libedgetpu1-std
+                check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
+                
+                print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
+                VENV_PIP_CMD="$VENV_DIR/bin/pip"
+                if [ -f "$VENV_PIP_CMD" ]; then
+                    if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then
+                        "$VENV_PIP_CMD" install "pycoral" 
+                        check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
+                    elif "$VENV_PIP_CMD" install -e ".[coral]"; then
+                        check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
+                    else
+                        print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
+                        "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
+                        check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
+                    fi
+                else
+                    print_error "Venv pip not found. Cannot install PyCoral."
+                    POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
+                fi
+            fi
+            print_success "Coral TPU support setup attempted."
+            mark_step_completed "coral_tpu_setup"
+            ;;
+        9)
+            print_info "Installing Hardware Watchdog..."
+            setup_watchdog 
+            mark_step_completed "hardware_watchdog"
+            ;;
+        10)
+            print_info "Installing Emergency Stop Button..."
+            setup_emergency_stop 
+            mark_step_completed "emergency_stop"
+            ;;
+        11)
+            print_info "Installing Systemd Service..."
+            setup_mower_service 
+            mark_step_completed "systemd_service"
+            ;;
+        *)
+            print_error "Invalid feature number: $feature_num"
+            return 1
+            ;;
+    esac
+}
+
+# Function to show installation mode menu
+show_installation_menu() {
+    echo ""
+    echo "==============================================================================="
+    print_info "         Autonomous Mower Installation Script"
+    echo "==============================================================================="
+    echo ""
+    
+    # Show current status if checkpoints exist
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        print_info "Current Installation Status:"
+        list_completed_steps
+        echo ""
+    fi
+    
+    echo "Installation Modes:"
+    echo ""
+    echo "  1. Fresh Installation (install everything from scratch)"
+    echo "  2. Continue Installation (resume where you left off)"
+    echo "  3. Specific Feature Installation (install individual components)"
+    echo "  4. Show Installation Status (view current progress)"
+    echo "  5. Exit"
+    echo ""
+}
+
+# Function to handle specific feature installation menu
+handle_specific_feature_menu() {
+    while true; do
+        show_available_features
+        echo ""
+        read -p "Enter feature number to install (1-11), 'a' for all remaining, or 'q' to return to main menu: " choice
+        
+        case "$choice" in
+            [1-9])
+                install_specific_feature "$choice"
+                if [ $? -eq 0 ]; then
+                    print_success "Feature $choice installation completed."
+                else
+                    print_error "Feature $choice installation failed."
+                fi
+                echo ""
+                read -p "Press Enter to continue..." -r
+                ;;
+            10|11)
+                install_specific_feature "$choice"
+                if [ $? -eq 0 ]; then
+                    print_success "Feature $choice installation completed."
+                else
+                    print_error "Feature $choice installation failed."
+                fi
+                echo ""
+                read -p "Press Enter to continue..." -r
+                ;;
+            a|A)
+                print_info "Installing all remaining features..."
+                run_full_installation
+                break
+                ;;
+            q|Q)
+                break
+                ;;
+            *)
+                print_error "Invalid choice. Please enter a number 1-11, 'a', or 'q'."
+                ;;
+        esac
+    done
+}
+
+# Function to run the full installation logic
+run_full_installation() {
+    # Auto-detect completed steps if not starting fresh
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        auto_detect_completed_steps
+    fi
+
+    if ! command_exists python3; then
+        print_error "Python 3 is not installed. Please install Python 3 (>=3.9) and try again."
+        exit 1
+    fi
+    if ! command_exists pip3 && ! command_exists "$VENV_DIR/bin/pip"; then 
+        print_error "pip3 is not installed system-wide, and no venv pip found yet. Please install python3-pip."
+        exit 1
+    fi
+    print_success "Basic system checks (python3) passed."
+
+    list_completed_steps
+
+    setup_virtual_environment
+
+    if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
+        enable_required_interfaces
+        validate_hardware
+        mark_step_completed "hardware_interfaces"
+    fi
+
+    read -p "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "additional_uart" "Additional UART setup"; then
+            setup_additional_uart
+            mark_step_completed "additional_uart"
+        fi
+    else
+        print_info "Skipping additional UART setup."
+    fi
+
+    if ! prompt_skip_completed "system_packages" "System packages installation"; then
+        print_info "Updating package lists and installing essential system dependencies..."
+        sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
+        check_command "Updating package list and upgrading system" || exit 1
+
+        sudo apt-get install -y \
+            python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
+            i2c-tools git libatlas-base-dev libhdf5-dev \
+            gpsd gpsd-clients python3-gps \
+            python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
+            python3-picamera2 \
+            wget curl gnupg \
+            gdal-bin libgdal-dev python3-gdal
+        check_command "Installing core system packages" || exit 1
+        print_success "Essential system dependencies installed."
+        mark_step_completed "system_packages"
+    fi
+
+    # PYTHONPATH setup - see note in original code about editable installs
+    if ! prompt_skip_completed "pythonpath_setup" "PYTHONPATH configuration"; then
+        PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
+        print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+        if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
+            echo "" >> /home/pi/.bashrc
+            echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
+            echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
+            print_success "Added PYTHONPATH to /home/pi/.bashrc."
+            POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
+        else
+            print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+        fi
+        mark_step_completed "pythonpath_setup"
+    fi
+
+    install_python_dependencies
+
+    read -p "Do you want to install/configure YOLOv8 models? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "yolov8_setup" "YOLOv8 models installation"; then
+            setup_yolov8 
+            mark_step_completed "yolov8_setup"
+        fi
+    else
+        print_info "Skipping YOLOv8 model setup."
+        POST_INSTALL_MESSAGES+="[INFO] YOLOv8 model setup was skipped.\\n"
+    fi
+
+    read -p "Do you want to install Coral TPU support (requires Coral USB Accelerator)? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
+            print_info "Installing Coral TPU support..."
+            CORAL_INSTALLED_OK=false
+            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+                print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
+                POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
+                read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    print_info "Skipping Coral TPU software installation."
+                else
+                    print_info "Proceeding with Coral software installation despite no device detected."
+                    CORAL_INSTALLED_OK=true
+                fi
+            else
+                CORAL_INSTALLED_OK=true
+            fi
+
+            if $CORAL_INSTALLED_OK; then
+                print_info "Adding Coral package repository..."
+                echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+                check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
+                curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+                check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
+                sudo apt-get update
+                check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
+                print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
+                sudo apt-get install -y libedgetpu1-std
+                check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
+                
+                print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
+                VENV_PIP_CMD="$VENV_DIR/bin/pip"
+                if [ -f "$VENV_PIP_CMD" ]; then
+                    if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then
+                        "$VENV_PIP_CMD" install "pycoral" 
+                        check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
+                    elif "$VENV_PIP_CMD" install -e ".[coral]"; then
+                        check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
+                    else
+                        print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
+                        "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
+                        check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
+                    fi
+                else
+                    print_error "Venv pip not found. Cannot install PyCoral."
+                    POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
+                fi
+            fi
+            print_success "Coral TPU support setup attempted."
+            mark_step_completed "coral_tpu_setup"
+        fi
+    else
+        print_info "Skipping Coral TPU support installation."
+    fi
+
+    read -p "Do you want to setup the hardware watchdog? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
+            setup_watchdog 
+            mark_step_completed "hardware_watchdog"
+        fi
+    else
+        print_info "Skipping hardware watchdog setup."
+    fi
+
+    read -p "Do you want to setup a physical emergency stop button (GPIO7)? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "emergency_stop" "Emergency stop button setup"; then
+            setup_emergency_stop 
+            mark_step_completed "emergency_stop"
+        fi
+    else
+        if ! prompt_skip_completed "emergency_stop_skip" "Emergency stop button disable"; then
+            skip_physical_emergency_stop 
+            mark_step_completed "emergency_stop_skip"
+        fi
+    fi
+
+    read -p "Do you want to install and enable the systemd service for automatic startup? (y/n) " -n 1 -r; echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if ! prompt_skip_completed "systemd_service" "Systemd service installation"; then
+            setup_mower_service 
+            mark_step_completed "systemd_service"
+        fi
+    else
+        print_info "Skipping systemd service installation."
+        POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
+    fi
+}
+
 # --- Main Installation Logic ---
 print_info "Starting Autonomous Mower installation script..."
 
-# Check if this is a resume/retry installation
-if [ -f "$CHECKPOINT_FILE" ]; then
-    echo ""
-    print_info "Previous installation found. This script supports checkpoint/resume functionality."
-    echo ""
-    list_completed_steps
-    echo ""
-    read -p "Do you want to reset all checkpoints and start fresh? (y/N) " -n 1 -r; echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        rm -f "$CHECKPOINT_FILE"
-        print_info "Checkpoints cleared. Starting fresh installation..."
-    else
-        print_info "Resuming installation. You'll be prompted to skip completed steps."
-    fi    echo ""
-fi
-
-# Auto-detect completed steps if not starting fresh
-if [ -f "$CHECKPOINT_FILE" ]; then
-    auto_detect_completed_steps
-fi
-
-if ! command_exists python3; then
-    print_error "Python 3 is not installed. Please install Python 3 (>=3.9) and try again."
-    exit 1
-fi
-if ! command_exists pip3 && ! command_exists "$VENV_DIR/bin/pip"; then 
-    print_error "pip3 is not installed system-wide, and no venv pip found yet. Please install python3-pip."
-    exit 1
-fi
-print_success "Basic system checks (python3) passed."
-
-list_completed_steps
-
-setup_virtual_environment
-
-if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
-    enable_required_interfaces
-    validate_hardware
-    mark_step_completed "hardware_interfaces"
-fi
-
-read -p "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "additional_uart" "Additional UART setup"; then
-        setup_additional_uart
-        mark_step_completed "additional_uart"
-    fi
-else
-    print_info "Skipping additional UART setup."
-fi
-
-if ! prompt_skip_completed "system_packages" "System packages installation"; then
-    print_info "Updating package lists and installing essential system dependencies..."
-    sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
-    check_command "Updating package list and upgrading system" || exit 1
-
-    sudo apt-get install -y \
-        python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
-        i2c-tools git libatlas-base-dev libhdf5-dev \
-        gpsd gpsd-clients python3-gps \
-        python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
-        python3-picamera2 \
-        wget curl gnupg \
-        gdal-bin libgdal-dev python3-gdal
-    check_command "Installing core system packages" || exit 1
-    print_success "Essential system dependencies installed."
-    mark_step_completed "system_packages"
-fi
-
-# INFO: The following lines modify .bashrc to add the project's src directory to PYTHONPATH.
-# This is generally NOT recommended if the project is installed in editable mode (pip install -e .)
-# from within an activated virtual environment, as the 'mower' package should be discoverable
-# by Python automatically. Consider removing these lines if using a venv and editable install.
-if ! prompt_skip_completed "pythonpath_setup" "PYTHONPATH configuration"; then
-    PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
-    print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
-    if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
-        echo "" >> /home/pi/.bashrc
-        echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
-        echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
-        print_success "Added PYTHONPATH to /home/pi/.bashrc."
-        POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
-    else
-        print_info "PYTHONPATH already configured in /home/pi/.bashrc."
-    fi
-    mark_step_completed "pythonpath_setup"
-fi
-
-install_python_dependencies
-
-read -p "Do you want to install/configure YOLOv8 models? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "yolov8_setup" "YOLOv8 models installation"; then
-        setup_yolov8 
-        mark_step_completed "yolov8_setup"
-    fi
-else
-    print_info "Skipping YOLOv8 model setup."
-    POST_INSTALL_MESSAGES+="[INFO] YOLOv8 model setup was skipped.\\n"
-fi
-
-read -p "Do you want to install Coral TPU support (requires Coral USB Accelerator)? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
-        print_info "Installing Coral TPU support..."
-        CORAL_INSTALLED_OK=false
-        if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
-            print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
-            POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
-            read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                print_info "Skipping Coral TPU software installation."
-            else
-                print_info "Proceeding with Coral software installation despite no device detected."
-                CORAL_INSTALLED_OK=true # Assume user wants to proceed
+# Main installation menu loop
+while true; do
+    show_installation_menu
+    
+    read -p "Please select an installation mode (1-5): " choice
+    
+    case "$choice" in
+        1)
+            print_info "Starting fresh installation..."
+            if [ -f "$CHECKPOINT_FILE" ]; then
+                print_warning "Removing existing checkpoint file for fresh installation..."
+                rm -f "$CHECKPOINT_FILE"
             fi
-        else
-            CORAL_INSTALLED_OK=true # Device detected
-        fi
-
-        if $CORAL_INSTALLED_OK; then
-            print_info "Adding Coral package repository..."
-            echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-            check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
-            curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-            check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
-            sudo apt-get update
-            check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
-            print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
-            sudo apt-get install -y libedgetpu1-std
-            check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-            
-            print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
-            VENV_PIP_CMD="$VENV_DIR/bin/pip"
-            if [ -f "$VENV_PIP_CMD" ]; then
-                if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then # Check both
-                 "$VENV_PIP_CMD" install "pycoral" 
-                 check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
-            elif "$VENV_PIP_CMD" install -e ".[coral]"; then # Try extras
-                 check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
+            run_full_installation
+            break
+            ;;
+        2)
+            if [ -f "$CHECKPOINT_FILE" ]; then
+                print_info "Continuing previous installation..."
+                run_full_installation
             else
-                print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
-                "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
-                check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
+                print_info "No previous installation found. Starting fresh installation..."
+                run_full_installation
             fi
-        else
-            print_error "Venv pip not found. Cannot install PyCoral."
-            POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"        fi
-        print_success "Coral TPU support setup attempted."
-        mark_step_completed "coral_tpu_setup"
-    fi
-    fi
-else
-    print_info "Skipping Coral TPU support installation."
-fi
-
-read -p "Do you want to setup the hardware watchdog? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
-        setup_watchdog 
-        mark_step_completed "hardware_watchdog"
-    fi
-else
-    print_info "Skipping hardware watchdog setup."
-fi
-
-read -p "Do you want to setup a physical emergency stop button (GPIO7)? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "emergency_stop" "Emergency stop button setup"; then
-        setup_emergency_stop 
-        mark_step_completed "emergency_stop"
-    fi
-else
-    if ! prompt_skip_completed "emergency_stop_skip" "Emergency stop button disable"; then
-        skip_physical_emergency_stop 
-        mark_step_completed "emergency_stop_skip"
-    fi
-fi
-
-read -p "Do you want to install and enable the systemd service for automatic startup? (y/n) " -n 1 -r; echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if ! prompt_skip_completed "systemd_service" "Systemd service installation"; then
-        setup_mower_service 
-        mark_step_completed "systemd_service"
-    fi
-else
-    print_info "Skipping systemd service installation."
-    POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
-fi
+            break
+            ;;
+        3)
+            print_info "Entering specific feature installation mode..."
+            handle_specific_feature_menu
+            ;;
+        4)
+            echo ""
+            if [ -f "$CHECKPOINT_FILE" ]; then
+                list_completed_steps
+                
+                # Show uncompleted features
+                echo ""
+                print_info "Features not yet installed:"
+                local all_features=("virtual_environment" "hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
+                local uncompleted=()
+                
+                for feature in "${all_features[@]}"; do
+                    if ! is_step_completed "$feature"; then
+                        uncompleted+=("$feature")
+                    fi
+                done
+                
+                if [ ${#uncompleted[@]} -eq 0 ]; then
+                    print_success "All features appear to be installed!"
+                else
+                    for feature in "${uncompleted[@]}"; do
+                        echo -e "  ${YELLOW}○${NC} $feature"
+                    done
+                fi
+            else
+                print_info "No installation has been started yet."
+            fi
+            echo ""
+            read -p "Press Enter to continue..." -r
+            ;;
+        5)
+            print_info "Exiting installation script."
+            exit 0
+            ;;
+        *)
+            print_error "Invalid choice. Please enter a number between 1 and 5."
+            echo ""
+            read -p "Press Enter to continue..." -r
+            ;;
+    esac
+done
 
 print_success "Installation and setup process complete."
 

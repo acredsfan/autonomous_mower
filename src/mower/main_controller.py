@@ -38,11 +38,18 @@ import time
 import signal  # Added for signal handling
 import sys  # Added for sys.exit
 from enum import Enum
-from pathlib import Path
 from typing import Any, Optional
 from dotenv import load_dotenv
 
+# ADDED: Import initialize_config_manager and CONFIG_DIR from constants
+from mower.config_management import initialize_config_manager
+# Use an alias for clarity and to avoid conflict if CONFIG_DIR was defined
+# locally
+from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
+
 # Always safe to import simulation modules and config
+# mower.config_management.config_manager.get_config is used later,
+# will benefit from early init
 from mower.simulation import enable_simulation
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.config_management.config_manager import get_config
@@ -67,24 +74,64 @@ from mower.hardware.robohat import RoboHATDriver
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.sensor_interface import get_sensor_interface
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Initialize logging
+# ADDED: Define MAIN_CONFIG_FILE path using the imported APP_CONFIG_DIR
+MAIN_CONFIG_FILE = APP_CONFIG_DIR / "main_config.json"
+
+# ADDED: Ensure config directory and default main_config.json exist
+if not APP_CONFIG_DIR.exists():
+    APP_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+if not MAIN_CONFIG_FILE.exists():
+    default_main_config = {
+        "mower": {"name": "DefaultMowerName", "log_level": "INFO"},
+        "hardware": {"use_simulation": False},
+        "safety": {
+            "use_physical_emergency_stop": True,
+            "emergency_stop_pin": 7,
+            "watchdog_timeout": 15
+        }
+        # Add other essential default sections and keys as needed
+    }
+    with open(MAIN_CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(default_main_config, f, indent=2)
+    # Logger not initialized yet, so print to stdout
+    print(f"Created default configuration file: {MAIN_CONFIG_FILE}")
+
+
+# ADDED: Initialize the configuration manager early
+# This loads .env by default (if EnvironmentConfigurationSource finds it)
+# and then main_config.json.
+# Priority: main_config.json > .env > programmatic defaults.
+initialize_config_manager(
+    config_file=str(MAIN_CONFIG_FILE)
+)
+
+# Initialize logging (now uses config from initialize_config_manager)
 logger = LoggerConfigInfo.get_logger(__name__)
 
-# Enable simulation on Windows or when explicitly requested
-if (platform.system() == "Windows" or
-        os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")):
+# Enable simulation on Windows or when explicitly requested via config or .env
+# get_config will now use the initialized config_manager
+use_simulation_env = os.environ.get("USE_SIMULATION", "").lower()
+use_simulation_config = get_config("hardware.use_simulation", False)
+
+# CORRECTED: Multi-line if condition syntax
+if (
+    platform.system() == "Windows" or
+    use_simulation_env in ("true", "1", "yes") or
+    use_simulation_config
+):
     enable_simulation()
     logger.info(
-        "Simulation mode enabled (running on Windows or USE_SIMULATION=true)")
+        "Simulation mode enabled (Windows, USE_SIMULATION env, or config)"
+    )
 
-# Base directory for consistent file referencing
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-# Configuration directory
-CONFIG_DIR = BASE_DIR / "config"
+# REMOVED/COMMENTED OUT: Local BASE_DIR and CONFIG_DIR definition,
+# will use APP_CONFIG_DIR from constants
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent
+# CONFIG_DIR = BASE_DIR / "config"
 
 # Placeholder for watchdog interval, ensure this is appropriately defined
 WATCHDOG_INTERVAL_S = 10  # seconds, example value. Adjust as needed.
@@ -92,8 +139,6 @@ WATCHDOG_INTERVAL_S = 10  # seconds, example value. Adjust as needed.
 
 # System state enumeration
 class SystemState(Enum):
-    """Enumeration of possible system states."""
-
     IDLE = "idle"
     MOWING = "mowing"
     DOCKING = "docking"
@@ -110,7 +155,7 @@ class ResourceManager:
     accessing resources and ensures proper initialization order and cleanup.
     """
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None):  # config_path for specific additional files
         """
         Initialize the resource manager.
         """
@@ -118,8 +163,8 @@ class ResourceManager:
         self._resources = {}
         self._lock = threading.Lock()
         self.current_state = SystemState.IDLE  # Initialize current_state
-        # Path to user polygon config
-        self.user_polygon_path = CONFIG_DIR / "user_polygon.json"
+        # Path to user polygon config - UPDATED to use APP_CONFIG_DIR
+        self.user_polygon_path = APP_CONFIG_DIR / "user_polygon.json"
         # allow web UI to access resource manager
         self.resource_manager = self
 
@@ -134,15 +179,18 @@ class ResourceManager:
             "warning_interval": 30,  # seconds, configurable
         }
 
+        # This argument is for a specific additional config file, not the main
+        # one.
         if config_path:
             self._load_config(config_path)
 
     def _load_config(self, filename):
-        """Load a configuration file from the standard config location."""
-        config_path = self.user_polygon_path.parent / filename
-        if config_path.exists():
+        """Load a specific configuration file from the standard config location."""
+        # UPDATED to use APP_CONFIG_DIR
+        config_file_path = APP_CONFIG_DIR / filename
+        if config_file_path.exists():
             try:
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_file_path, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Error loading config file {filename}: {e}")
@@ -248,6 +296,7 @@ class ResourceManager:
                 self._resources["localization"] = None
 
             # Initialize pattern planner with learning capabilities
+            # get_config will use the globally initialized manager
             pattern_cfg = get_config("pattern_config", {})
             pattern_config = PatternConfig(
                 pattern_type=PatternType.PARALLEL,
@@ -266,7 +315,11 @@ class ResourceManager:
                 memory_size=1000,
                 batch_size=32,
                 update_frequency=100,
-                model_path=str(CONFIG_DIR / "models" / "pattern_planner.json"),
+                # UPDATED to use APP_CONFIG_DIR
+                model_path=str(
+                    APP_CONFIG_DIR /
+                    "models" /
+                    "pattern_planner.json"),
             )
 
             try:
@@ -357,13 +410,13 @@ class ResourceManager:
             return
 
         try:
-            # Set up configuration paths
-            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            # Set up configuration paths - UPDATED to use APP_CONFIG_DIR
+            # APP_CONFIG_DIR existence is ensured before config manager init.
+            # self.user_polygon_path already uses APP_CONFIG_DIR from __init__
             if not self.user_polygon_path.exists():
                 logger.warning(
                     f"User polygon file not found at "
-                    f"{self.user_polygon_path} "
-                    "creating default"
+                    f"{self.user_polygon_path}. Creating default."
                 )
                 with open(self.user_polygon_path, "w", encoding="utf-8") as f:
                     json.dump(
@@ -579,10 +632,11 @@ class ResourceManager:
         default_boundary = []
         try:
             path_planner = self.get_path_planner()
-            if path_planner and hasattr(path_planner, "get_boundary_points"):
-                # Prefer getting from path_planner if it's initialized and has
-                # them
-                boundary = path_planner.get_boundary_points()
+            # MODIFIED: Access boundary_points directly from
+            # path_planner.pattern_config
+            if path_planner and hasattr(path_planner, 'pattern_config') and \
+               hasattr(path_planner.pattern_config, 'boundary_points'):
+                boundary = path_planner.pattern_config.boundary_points
                 if boundary:
                     return boundary
 
@@ -662,20 +716,38 @@ class ResourceManager:
             dict: Battery voltage, current, percentage, or None if unavailable.
         """
         ina_sensor = self.get_resource("ina3221")
-        if ina_sensor and hasattr(ina_sensor, "get_battery_info"):
+        if ina_sensor:  # ina_sensor is the adafruit_ina3221.INA3221 object
             try:
-                return ina_sensor.get_battery_info()
+                # Assuming channel 1 is the main battery
+                # Actual channel usage should be verified based on hardware
+                # wiring
+                voltage = ina_sensor.bus_voltage(1)
+                current = ina_sensor.current(1)  # In Amps
+                power = voltage * current  # In Watts
+
+                # Placeholder for percentage calculation - this requires knowledge of
+                # battery capacity and voltage range (e.g., 12.6V full, 10.0V empty)
+                # For now, returning raw values.
+                # Example: if voltage > 12.5: percentage = 100.0
+                # elif voltage < 10.5: percentage = 0.0
+                # else: percentage = (voltage - 10.5) / (12.5 - 10.5) * 100
+                percentage = None  # Needs proper implementation
+
+                return {
+                    "voltage": voltage,
+                    "current": current,
+                    "power": power,
+                    "percentage": percentage,
+                    "status": "Data acquired",
+                }
             except Exception as e:
                 logger.warning(
                     f"Could not retrieve battery info from INA3221: {e}")
-        elif ina_sensor:  # If sensor exists but no get_battery_info
-            logger.warning(
-                "INA3221 sensor present but get_battery_info method is missing.")
         return {
             "voltage": None,
             "current": None,
             "power": None,
-            "percentage": None,  # Placeholder
+            "percentage": None,
             "status": "Battery sensor unavailable or error.",
         }
 
@@ -687,23 +759,46 @@ class ResourceManager:
         """
         gps_device = self.get_gps()  # Uses the on-demand init if needed
         if gps_device and hasattr(
-                gps_device, "read_data"):  # Assuming read_data gives parsed output
+                gps_device, "read_line"):  # MODIFIED: Check for read_line
             try:
-                # GPS parsing depends heavily on SerialPort and GPS module capabilities.
-                # Assume get_parsed_data if available, otherwise handle raw.
-                if hasattr(gps_device, "get_parsed_data"):
-                    data = gps_device.get_parsed_data()
-                    if data and "latitude" in data and "longitude" in data:
-                        return data
-                # Fallback for raw NMEA data
-                raw_data = gps_device.read_line()
-                if raw_data:
+                # GPS parsing depends heavily on SerialPort and GPS module
+                # capabilities.
+                raw_data_tuple = gps_device.read_line()  # MODIFIED: Call read_line
+                # Check if read was successful and data exists
+                if raw_data_tuple and raw_data_tuple[0]:
+                    raw_data = raw_data_tuple[1]
                     # Robust NMEA parsing should be in a dedicated GPS class/library.
                     # This is a simplified placeholder.
                     logger.debug(f"Raw GPS data: {raw_data}")
                     if "$GPGGA" in raw_data:  # Example check for GGA sentence
+                        # Basic parsing attempt (highly simplified)
+                        parts = raw_data.split(',')
+                        lat, lon = None, None
+                        if len(parts) > 5 and parts[2] and parts[4]:
+                            try:
+                                lat_raw = float(parts[2])
+                                lon_raw = float(parts[4])
+                                lat_deg = int(lat_raw / 100)
+                                lat_min = lat_raw % 100
+                                lon_deg = int(lon_raw / 100)
+                                lon_min = lon_raw % 100
+                                lat = lat_deg + (lat_min / 60)
+                                lon = lon_deg + (lon_min / 60)
+                                if parts[3] == 'S':
+                                    lat = -lat
+                                if parts[5] == 'W':
+                                    lon = -lon
+                                return {
+                                    "status": "Fix acquired (parsed GPGGA)",
+                                    "latitude": lat,
+                                    "longitude": lon,
+                                    "raw": raw_data
+                                }
+                            except ValueError:
+                                logger.warning(
+                                    f"Could not parse lat/lon from GPGGA: {raw_data}")
                         return {
-                            "status": "Fix acquired (raw data)",
+                            "status": "Fix acquired (raw GPGGA)",
                             "raw": raw_data}
                 return {
                     "status": "No GPS data or fix",
@@ -932,7 +1027,8 @@ class ResourceManager:
         nav_controller = self.get_navigation()
         if nav_controller and hasattr(nav_controller, "enable_manual_control"):
             try:
-                nav_controller.enable_manual_control()
+                nav_controller.enable_manual_control(
+                    True)  # MODIFIED: Pass True
                 # Consider a dedicated MANUAL_CONTROL state
                 self.current_state = SystemState.IDLE
                 logger.info("Manual control enabled.")
@@ -1084,7 +1180,9 @@ def main():
     6. Enters a main loop, waiting for a shutdown signal.
     7. Cleans up resources on exit.
     """
-    LoggerConfigInfo.setup_logging()
+    # MODIFIED: Changed setup_logging to configure_logging and fixed lint
+    # errors
+    LoggerConfigInfo.configure_logging()
     logger.info("Initializing autonomous mower system...")
 
     shutdown_flag = threading.Event()

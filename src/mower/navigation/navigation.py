@@ -49,6 +49,7 @@ class NavigationController:
         self.robohat_driver = robohat_driver
         self.sensor_interface = sensor_interface
         self.debug = debug
+        self.manual_control_enabled = False  # ADDED: manual control flag
 
         # Navigation parameters
         self.control_params = {
@@ -72,6 +73,26 @@ class NavigationController:
         )
 
         self.last_position_update = time.time()
+
+    def enable_manual_control(self, enable: bool):
+        """Enable or disable manual control mode."""
+        self.manual_control_enabled = enable
+        if enable:
+            logger.info("Manual control enabled.")
+            # Stop any autonomous movement
+            if hasattr(
+                    self.robohat_driver,
+                    'stop_motors'):  # Check if stop_motors exists
+                self.robohat_driver.stop_motors()
+            elif hasattr(self.robohat_driver, 'stop'):  # Fallback to generic stop
+                self.robohat_driver.stop()
+            else:
+                logger.warning(
+                    "Motor driver does not have a stop_motors or stop method."
+                )
+            self.status.is_moving = False
+        else:
+            logger.info("Manual control disabled.")
 
     def navigate_to_location(
         self, target_location: Tuple[float, float]
