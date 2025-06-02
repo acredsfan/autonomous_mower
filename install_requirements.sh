@@ -1371,7 +1371,7 @@ run_full_installation() {
             print_info "PYTHONPATH already configured in /home/pi/.bashrc."
         fi
         mark_step_completed "pythonpath_setup"
-    fi    install_python_dependencies
+    fi  ! install_python_dependencies
 
     prompt_user "Do you want to install/configure YOLOv8 models?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
