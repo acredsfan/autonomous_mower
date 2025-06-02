@@ -1440,7 +1440,8 @@ run_full_installation() {
         fi
     else
         print_info "Skipping Coral TPU support installation."
-    fi    prompt_user "Do you want to setup the hardware watchdog?" "y" "y/n"
+    fi
+    prompt_user "Do you want to setup the hardware watchdog?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
             setup_watchdog 
