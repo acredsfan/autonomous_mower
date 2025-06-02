@@ -9,6 +9,12 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# -----------------  Host detection  -----------------
+IS_PI=false
+if [[ -f /proc/device-tree/model ]] && grep -q "Raspberry Pi" /proc/device-tree/model; then
+    IS_PI=true
+fi
+
 # Global variable to collect messages for the end
 POST_INSTALL_MESSAGES=""
 CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
@@ -122,7 +128,7 @@ auto_detect_completed_steps() {
     fi
     
     # Check PYTHONPATH setup
-    if grep -q "PYTHONPATH.*src" /home/pi/.bashrc 2>/dev/null && ! is_step_completed "pythonpath_setup"; then
+    if grep -q "PYTHONPATH.*src" "$HOME/.bashrc" 2>/dev/null && ! is_step_completed "pythonpath_setup"; then
         mark_step_completed "pythonpath_setup"
         print_info "✓ Detected PYTHONPATH configuration"
     fi
@@ -240,6 +246,12 @@ prompt_continue() {
 
 # Function to find the target config.txt file
 get_config_txt_target() {
+    # Return empty string for non-Pi systems
+    if [ "$IS_PI" = false ]; then
+        echo ""
+        return
+    fi
+    
     local CONFIG_TXT_NEW="/boot/firmware/config.txt"
     local CONFIG_TXT_OLD="/boot/config.txt"
     if [ -f "$CONFIG_TXT_NEW" ]; then
@@ -253,6 +265,12 @@ get_config_txt_target() {
 
 # Function to attempt to enable I2C and Serial interfaces
 enable_required_interfaces() {
+    if [ "$IS_PI" = false ]; then
+        print_warning "Non-Raspberry Pi system detected. Skipping hardware interface configuration."
+        print_info "Hardware interfaces (I2C, UART) are Pi-specific and will be skipped for testing environments."
+        return 0
+    fi
+    
     print_info "Checking and attempting to enable required hardware interfaces (I2C, Primary UART)..."
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
     local CHANGES_MADE_CONFIG=false
@@ -324,6 +342,12 @@ enable_required_interfaces() {
 validate_hardware() {
     local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target) 
 
+    if [ "$IS_PI" = false ]; then
+        print_warning "Non-Raspberry Pi system detected. Skipping Pi-specific hardware validation."
+        print_info "Hardware validation is Pi-specific and will be skipped for testing environments."
+        return 0
+    fi
+
     if ! grep -q "Raspberry Pi" /proc/cpuinfo; then
         print_error "This script must be run on a Raspberry Pi"
         exit 1
@@ -393,6 +417,12 @@ validate_hardware() {
 
 # Function to setup an additional UART
 setup_additional_uart() {
+    if [ "$IS_PI" = false ]; then
+        print_warning "Non-Raspberry Pi system detected. Skipping additional UART configuration."
+        print_info "Additional UART configuration is Pi-specific and will be skipped for testing environments."
+        return 0
+    fi
+    
     print_info "Setting up additional UART (UART2)..."
     local DTOVERLAY_ENTRY="dtoverlay=uart2"
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
@@ -431,16 +461,12 @@ setup_watchdog() {
     # Run diagnostics first
     diagnose_watchdog_hardware
     
-    # Check if we're on a Raspberry Pi first
-    local is_raspberry_pi=false
-    if [ -f /proc/cpuinfo ] && grep -q "Raspberry Pi" /proc/cpuinfo; then
-        is_raspberry_pi=true
-        print_info "Detected Raspberry Pi hardware."
-    elif [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model; then
-        is_raspberry_pi=true
+    # Check if we're on a Raspberry Pi first using global IS_PI variable
+    if [ "$IS_PI" = true ]; then
         print_info "Detected Raspberry Pi hardware."
     else
         print_warning "Non-Raspberry Pi system detected. Hardware watchdog may not be available."
+        print_info "Installing watchdog package for compatibility, but hardware features will be limited."
     fi
     
     # Install watchdog package
@@ -457,7 +483,7 @@ setup_watchdog() {
     fi
 
     # Try to load watchdog module if on Raspberry Pi
-    if [ "$is_raspberry_pi" = true ]; then
+    if [ "$IS_PI" = true ]; then
         print_info "Loading Raspberry Pi watchdog module..."
         if sudo modprobe bcm2835_wdt 2>/dev/null; then
             print_info "bcm2835_wdt module loaded successfully."
@@ -473,7 +499,7 @@ setup_watchdog() {
     fi    # Check if hardware watchdog device is available
     if [ ! -e /dev/watchdog ]; then
         print_warning "Hardware watchdog device /dev/watchdog not found."
-        if [ "$is_raspberry_pi" = true ]; then
+        if [ "$IS_PI" = true ]; then
             print_warning "This may indicate a problem with the Raspberry Pi watchdog setup."
             
             # Check and fix boot configuration
@@ -751,13 +777,12 @@ setup_watchdog() {
 diagnose_watchdog_hardware() {
     print_info "Diagnosing watchdog hardware support..."
     
-    # Check for Raspberry Pi detection
-    if [ -f /proc/cpuinfo ] && grep -q "Raspberry Pi" /proc/cpuinfo; then
-        print_info "✓ Raspberry Pi detected in /proc/cpuinfo"
-    elif [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model; then
-        print_info "✓ Raspberry Pi detected in device tree"
+    # Check for Raspberry Pi detection using global IS_PI variable
+    if [ "$IS_PI" = true ]; then
+        print_info "✓ Raspberry Pi detected"
     else
-        print_warning "⚠ Non-Raspberry Pi system detected"
+        print_warning "⚠ Non-Raspberry Pi system detected. Hardware watchdog features will be limited."
+        return 0
     fi
     
     # Check for watchdog device
@@ -1177,30 +1202,60 @@ install_specific_feature() {
             sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
             check_command "Updating package list and upgrading system" || return 1
 
-            sudo apt-get install -y \
-                python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
-                i2c-tools git libatlas-base-dev libhdf5-dev \
-                gpsd gpsd-clients python3-gps \
-                python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
-                python3-picamera2 \
-                wget curl gnupg \
-                gdal-bin libgdal-dev python3-gdal
-            check_command "Installing core system packages" || return 1
+            # Base packages for all systems
+            local base_packages=(
+                "python3-venv" "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
+                "git" "libatlas-base-dev" "libhdf5-dev"
+                "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
+                "wget" "curl" "gnupg"
+                "gdal-bin" "libgdal-dev" "python3-gdal"
+            )
+            
+            # Pi-specific packages
+            local pi_packages=(
+                "i2c-tools"
+                "gpsd" "gpsd-clients" "python3-gps"
+                "python3-libgpiod"
+                "python3-picamera2"
+            )
+            
+            # Install base packages
+            print_info "Installing base system packages..."
+            sudo apt-get install -y "${base_packages[@]}"
+            check_command "Installing base system packages" || return 1
+            
+            # Install Pi-specific packages only on Raspberry Pi
+            if [ "$IS_PI" = true ]; then
+                print_info "Installing Raspberry Pi specific packages..."
+                sudo apt-get install -y "${pi_packages[@]}"
+                check_command "Installing Pi-specific packages" || print_warning "Some Pi-specific packages may have failed to install"
+            else
+                print_info "Skipping Pi-specific packages on non-Pi system."
+            fi
+            
             print_success "Essential system dependencies installed."
             mark_step_completed "system_packages"
             ;;
         5)
             print_info "Installing PYTHONPATH Configuration..."
-            PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
-            print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
-            if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
-                echo "" >> /home/pi/.bashrc
-                echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
-                echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
-                print_success "Added PYTHONPATH to /home/pi/.bashrc."
-                POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
+            PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd)
+            BASHRC_FILE="$HOME/.bashrc"
+            
+            # Use appropriate shell config file for current user
+            if [ "$IS_PI" = false ]; then
+                print_info "Non-Pi system detected. Setting up PYTHONPATH for current user: $USER"
             else
-                print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+                print_info "Setting up permanent PYTHONPATH in $BASHRC_FILE to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+            fi
+            
+            if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" "$BASHRC_FILE" 2>/dev/null; then
+                echo "" >> "$BASHRC_FILE"
+                echo "# Autonomous Mower Python Path" >> "$BASHRC_FILE"
+                echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> "$BASHRC_FILE"
+                print_success "Added PYTHONPATH to $BASHRC_FILE."
+                POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in $BASHRC_FILE. Source it or re-login.\\n"
+            else
+                print_info "PYTHONPATH already configured in $BASHRC_FILE."
             fi
             mark_step_completed "pythonpath_setup"
             ;;
@@ -1393,31 +1448,62 @@ run_full_installation() {
         sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
         check_command "Updating package list and upgrading system" || exit 1
 
-        sudo apt-get install -y \
-            python3-venv python3-pip python3-dev python3-setuptools python3-wheel \
-            i2c-tools git libatlas-base-dev libhdf5-dev \
-            gpsd gpsd-clients python3-gps \
-            python3-libgpiod libportaudio2 libportaudiocpp0 portaudio19-dev \
-            python3-picamera2 \
-            wget curl gnupg \
-            gdal-bin libgdal-dev python3-gdal
-        check_command "Installing core system packages" || exit 1
+        # Base packages for all systems
+        local base_packages=(
+            "python3-venv" "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
+            "git" "libatlas-base-dev" "libhdf5-dev"
+            "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
+            "wget" "curl" "gnupg"
+            "gdal-bin" "libgdal-dev" "python3-gdal"
+        )
+        
+        # Pi-specific packages
+        local pi_packages=(
+            "i2c-tools"
+            "gpsd" "gpsd-clients" "python3-gps"
+            "python3-libgpiod"
+            "python3-picamera2"
+        )
+        
+        # Install base packages
+        print_info "Installing base system packages..."
+        sudo apt-get install -y "${base_packages[@]}"
+        check_command "Installing base system packages" || exit 1
+        
+        # Install Pi-specific packages only on Raspberry Pi
+        if [ "$IS_PI" = true ]; then
+            print_info "Installing Raspberry Pi specific packages..."
+            sudo apt-get install -y "${pi_packages[@]}"
+            check_command "Installing Pi-specific packages" || print_warning "Some Pi-specific packages may have failed to install"
+        else
+            print_info "Skipping Pi-specific packages (i2c-tools, gpsd, python3-libgpiod, python3-picamera2) on non-Pi system."
+            POST_INSTALL_MESSAGES+="[INFO] Pi-specific hardware packages were skipped on non-Pi system.\\n"
+        fi
+        
         print_success "Essential system dependencies installed."
         mark_step_completed "system_packages"
     fi
 
     # PYTHONPATH setup - see note in original code about editable installs
     if ! prompt_skip_completed "pythonpath_setup" "PYTHONPATH configuration"; then
-        PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd) 
-        print_info "Setting up permanent PYTHONPATH in /home/pi/.bashrc to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
-        if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" /home/pi/.bashrc; then
-            echo "" >> /home/pi/.bashrc
-            echo "# Autonomous Mower Python Path" >> /home/pi/.bashrc
-            echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> /home/pi/.bashrc
-            print_success "Added PYTHONPATH to /home/pi/.bashrc."
-            POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in /home/pi/.bashrc. Source it or re-login.\\n"
+        PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd)
+        BASHRC_FILE="$HOME/.bashrc"
+        
+        # Use appropriate shell config file for current user
+        if [ "$IS_PI" = false ]; then
+            print_info "Non-Pi system detected. Setting up PYTHONPATH for current user: $USER"
         else
-            print_info "PYTHONPATH already configured in /home/pi/.bashrc."
+            print_info "Setting up permanent PYTHONPATH in $BASHRC_FILE to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
+        fi
+        
+        if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" "$BASHRC_FILE" 2>/dev/null; then
+            echo "" >> "$BASHRC_FILE"
+            echo "# Autonomous Mower Python Path" >> "$BASHRC_FILE"
+            echo "export PYTHONPATH=\"${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src:\${PYTHONPATH}\"" >> "$BASHRC_FILE"
+            print_success "Added PYTHONPATH to $BASHRC_FILE."
+            POST_INSTALL_MESSAGES+="[INFO] PYTHONPATH updated in $BASHRC_FILE. Source it or re-login.\\n"
+        else
+            print_info "PYTHONPATH already configured in $BASHRC_FILE."
         fi
         mark_step_completed "pythonpath_setup"
     fi
@@ -1524,11 +1610,33 @@ run_full_installation() {
         POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
     fi
     print_success "Full installation completed successfully."
+    
+    # Add host-specific completion messages
+    if [ "$IS_PI" = false ]; then
+        POST_INSTALL_MESSAGES+="[INFO] Installation completed on non-Raspberry Pi system. Pi-specific hardware features were skipped.\\n"
+        POST_INSTALL_MESSAGES+="[IMPORTANT] The autonomous mower application requires actual Raspberry Pi hardware to function fully.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] For development/testing purposes, you can run: python -m src.mower.main_controller --dry-run\\n"
+    fi
+    
     POST_INSTALL_MESSAGES+="[SUCCESS] Full installation completed successfully.\\n"
 }
 
 # --- Main Installation Logic ---
 print_info "Starting Autonomous Mower installation script..."
+
+# Show host detection status
+if [ "$IS_PI" = true ]; then
+    print_info "✓ Raspberry Pi system detected - full hardware support available"
+else
+    print_warning "⚠ Non-Raspberry Pi system detected"
+    print_info "  This installation will skip Pi-specific hardware features:"
+    print_info "  - I2C/UART interface configuration"
+    print_info "  - Hardware watchdog setup"
+    print_info "  - Pi-specific system packages (gpsd, i2c-tools, python3-picamera2, etc.)"
+    print_info "  - Boot configuration changes (config.txt modifications)"
+    print_info "  This is suitable for development/testing but the mower will only run properly on Pi hardware."
+    echo ""
+fi
 
 # Show non-interactive mode message if enabled
 if [ "$NON_INTERACTIVE" = true ]; then
