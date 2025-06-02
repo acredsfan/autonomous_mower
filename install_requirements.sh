@@ -1166,8 +1166,8 @@ install_specific_feature() {
             ;;
         8)
             print_info "Installing Coral TPU Support..."
-            print_info "Installing Coral TPU support..."
-            CORAL_INSTALLED_OK=false            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            CORAL_INSTALLED_OK=false
+            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
                 prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"
@@ -1388,8 +1388,7 @@ run_full_installation() {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
             print_info "Installing Coral TPU support..."
-            CORAL_INSTALLED_OK=false
-            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            CORAL_INSTALLED_OK=false            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
                 prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"

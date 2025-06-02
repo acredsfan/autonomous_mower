@@ -82,7 +82,31 @@ git clone https://github.com/acredsfan/autonomous_mower.git
 cd autonomous_mower
 ```
 
-### 3. Create Log Directory and Set Permissions
+### 3. Run Installation Script
+
+Use the interactive installation script to install dependencies and configure the system:
+
+```bash
+./install_requirements.sh
+```
+
+For a non-interactive installation that defaults most options to 'yes' (use with caution, review defaults in the script):
+
+```bash
+./install_requirements.sh -y
+# or
+./install_requirements.sh --yes
+# or
+./install_requirements.sh --non-interactive
+```
+
+To see all available options for the script:
+
+```bash
+./install_requirements.sh --help
+```
+
+### 4. Create Log Directory and Set Permissions
 
 Before running the installation script or service, you must create the log directory and set the correct permissions:
 
@@ -99,7 +123,7 @@ sudo chmod 755 /var/log/autonomous-mower
 
 These steps are required only once during initial setup. The service will use this directory for all logging operations.
 
-### 4. Installation
+### 5. Installation
 
 The installation script supports both interactive and non-interactive modes:
 
