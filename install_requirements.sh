@@ -795,83 +795,132 @@ diagnose_watchdog_hardware() {
 
 # Function to setup physical emergency stop
 setup_emergency_stop() {
-    print_info "Setting up physical emergency stop button (GPIO7)..."
-    echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport ; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'\''"' | sudo tee /etc/udev/rules.d/99-gpio-permissions.rules > /dev/null
-    echo 'SUBSYSTEM=="gpio", KERNEL=="gpio*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value ; chmod 660 /sys%p/active_low /sys%p/direction /sys%p/edge /sys%p/value'\''"' | sudo tee -a /etc/udev/rules.d/99-gpio-permissions.rules > /dev/null
-    
-    sudo udevadm control --reload-rules && sudo udevadm trigger
-    
-    print_info "Emergency stop button udev rules configured for GPIO7."
-    print_info "Please connect emergency stop button between GPIO7 and GND (NC type)."
-    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button configured for GPIO7. Ensure button is NC type connected to GPIO7 and GND.\\n"
+    if ! command_exists python3; then
+        print_error "python3 command not found. Cannot configure emergency stop."
+        return 1
+    fi
+    if [ -z "$CONFIG_JSON_PATH" ]; then
+        print_error "CONFIG_JSON_PATH shell variable is not set. Cannot configure emergency stop."
+        return 1
+    fi
 
-    local CONFIG_JSON_PATH="config/config.json"
-    # Ensure Python from venv is used if available and needed
-    local PYTHON_CMD="$VENV_DIR/bin/python"
-    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi # Fallback to system python3
+    # Export for the Python script
+    export CONFIG_JSON_PATH
 
-    if command_exists $PYTHON_CMD; then
-        $PYTHON_CMD -c "
-import json, os
-config_file = '$CONFIG_JSON_PATH'
-if os.path.exists(config_file):
+    python3 - <<EOF
+import json
+import os
+import sys
+
+config_file_path = os.environ.get('CONFIG_JSON_PATH')
+
+if not config_file_path:
+    print("Error: CONFIG_JSON_PATH environment variable is not set.", file=sys.stderr)
+    sys.exit(1)
+
+config = {}
+if os.path.exists(config_file_path):
     try:
-        with open(config_file, 'r') as f:
+        with open(config_file_path, 'r') as f:
             config = json.load(f)
     except json.JSONDecodeError:
-        config = {} 
+        print(f"Warning: Could not decode JSON from {config_file_path}. Initializing with an empty configuration.", file=sys.stderr)
+        config = {}
+    except Exception as e:
+        print(f"Error reading {config_file_path}: {e}", file=sys.stderr)
+        sys.exit(1) # Exit Python script with an error
 else:
-    os.makedirs(os.path.dirname(config_file), exist_ok=True)
-    config = {}
+    print(f"Info: Config file {config_file_path} not found. Creating a new one.")
+    # config is already initialized as {}
 
-if 'safety' not in config: config['safety'] = {}
+if 'safety' not in config:
+    config['safety'] = {}
+
 config['safety']['use_physical_emergency_stop'] = True
-config['safety']['emergency_stop_gpio_pin'] = 7 
+config['safety']['emergency_stop_gpio_pin'] = 7 # BCM pin 7 for emergency stop
 
-with open(config_file, 'w') as f:
-    json.dump(config, f, indent=4)
-print(f'Updated {config_file} for physical e-stop.')
-"
-        check_command "Updating $CONFIG_JSON_PATH for physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
-    else
-        print_warning "$PYTHON_CMD not found. Cannot automatically update $CONFIG_JSON_PATH."
-        POST_INSTALL_MESSAGES+="[WARNING] $PYTHON_CMD not found. Manually set 'use_physical_emergency_stop: true', 'emergency_stop_gpio_pin: 7' in $CONFIG_JSON_PATH.\\n"
+try:
+    with open(config_file_path, 'w') as f:
+        json.dump(config, f, indent=4)
+    print(f'Updated {config_file_path} to enable physical e-stop.')
+except IOError as e:
+    print(f"Error writing to {config_file_path}: {e}", file=sys.stderr)
+    sys.exit(1) # Exit Python script with an error
+except Exception as e:
+    print(f"An unexpected error occurred while writing {config_file_path}: {e}", file=sys.stderr)
+    sys.exit(1) # Exit Python script with an error
+EOF
+    local python_exit_status=$?
+    if [ $python_exit_status -ne 0 ]; then
+        print_error "Python script failed to configure emergency stop (exit code: $python_exit_status)."
+        return 1 # Return error from shell function
     fi
+    return 0
 }
 
+# Function to skip physical emergency stop configuration
 skip_physical_emergency_stop() {
-    print_info "Skipping physical emergency stop button configuration."
-    POST_INSTALL_MESSAGES+="[INFO] Physical emergency stop button was not set up. Software e-stop is available.\\n"
-    
-    local CONFIG_JSON_PATH="config/config.json"
-    local PYTHON_CMD="$VENV_DIR/bin/python"
-    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi
+    if ! command_exists python3; then
+        print_error "python3 command not found. Cannot configure emergency stop."
+        return 1
+    fi
+    if [ -z "$CONFIG_JSON_PATH" ]; then
+        print_error "CONFIG_JSON_PATH shell variable is not set. Cannot configure emergency stop."
+        return 1
+    fi
 
-    if command_exists $PYTHON_CMD; then
-        $PYTHON_CMD -c "
-import json, os
-config_file = '$CONFIG_JSON_PATH'
-if os.path.exists(config_file):
+    # Export for the Python script
+    export CONFIG_JSON_PATH
+
+    python3 - <<EOF
+import json
+import os
+import sys
+
+config_file_path = os.environ.get('CONFIG_JSON_PATH')
+
+if not config_file_path:
+    print("Error: CONFIG_JSON_PATH environment variable is not set.", file=sys.stderr)
+    sys.exit(1)
+
+config = {}
+if os.path.exists(config_file_path):
     try:
-        with open(config_file, 'r') as f:
+        with open(config_file_path, 'r') as f:
             config = json.load(f)
     except json.JSONDecodeError:
+        print(f"Warning: Could not decode JSON from {config_file_path}. Initializing with an empty configuration.", file=sys.stderr)
         config = {}
+    except Exception as e:
+        print(f"Error reading {config_file_path}: {e}", file=sys.stderr)
+        sys.exit(1) # Exit Python script with an error
 else:
-    os.makedirs(os.path.dirname(config_file), exist_ok=True)
-    config = {}
+    print(f"Info: Config file {config_file_path} not found. Creating a new one.")
+    # config is already initialized as {}
 
-if 'safety' not in config: config['safety'] = {}
+if 'safety' not in config:
+    config['safety'] = {}
+
 config['safety']['use_physical_emergency_stop'] = False
-with open(config_file, 'w') as f:
-    json.dump(config, f, indent=4)
-print(f'Updated {config_file} to disable physical e-stop.')
-"
-        check_command "Updating $CONFIG_JSON_PATH to disable physical e-stop" || print_warning "Failed to update $CONFIG_JSON_PATH."
-    else
-        print_warning "$PYTHON_CMD not found. Cannot automatically update $CONFIG_JSON_PATH."
-        POST_INSTALL_MESSAGES+="[WARNING] $PYTHON_CMD not found. Manually set 'use_physical_emergency_stop: false' in $CONFIG_JSON_PATH.\\n"
+# No need to explicitly remove 'emergency_stop_gpio_pin', can leave it if it exists
+
+try:
+    with open(config_file_path, 'w') as f:
+        json.dump(config, f, indent=4)
+    print(f'Updated {config_file_path} to disable physical e-stop.')
+except IOError as e:
+    print(f"Error writing to {config_file_path}: {e}", file=sys.stderr)
+    sys.exit(1) # Exit Python script with an error
+except Exception as e:
+    print(f"An unexpected error occurred while writing {config_file_path}: {e}", file=sys.stderr)
+    sys.exit(1) # Exit Python script with an error
+EOF
+    local python_exit_status=$?
+    if [ $python_exit_status -ne 0 ]; then
+        print_error "Python script failed to disable emergency stop (exit code: $python_exit_status)."
+        return 1 # Return error from shell function
     fi
+    return 0
 }
 
 # Function to setup YOLOv8 models
@@ -1474,6 +1523,8 @@ run_full_installation() {
         print_info "Skipping systemd service installation."
         POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
     fi
+    print_success "Full installation completed successfully."
+    POST_INSTALL_MESSAGES+="[SUCCESS] Full installation completed successfully.\\n"
 }
 
 # --- Main Installation Logic ---
@@ -1526,8 +1577,7 @@ while true; do
                 local uncompleted=()
                 
                 for feature in "${all_features[@]}"; do
-                    if ! is_step_completed "$feature"; then
-                        uncompleted+=("$feature")
+                    if ! is_step_completed "$feature"; then                        uncompleted+=("$feature")
                     fi
                 done
                 
