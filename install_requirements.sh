@@ -14,6 +14,31 @@ POST_INSTALL_MESSAGES=""
 CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
 VENV_DIR=".venv" # Define VENV_DIR globally for use in multiple functions
 
+# Non-interactive mode flag
+NON_INTERACTIVE=false
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -y|--yes|--non-interactive)
+            NON_INTERACTIVE=true
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  -y, --yes, --non-interactive    Run in non-interactive mode (auto-answer yes to all prompts)"
+            echo "  -h, --help                      Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use -h or --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
 # Checkpoint functionality
 CHECKPOINT_FILE=".install_checkpoints"
 
@@ -56,9 +81,8 @@ prompt_skip_completed() {
     local description="$2"
     
     if is_step_completed "$step_name"; then
-        local completion_time=$(get_checkpoint_status "$step_name")
-        print_info "$description appears to be already completed (completed: $completion_time)"
-        read -p "Skip this step? (Y/n) " -n 1 -r; echo
+        local completion_time=$(get_checkpoint_status "$step_name")        print_info "$description appears to be already completed (completed: $completion_time)"
+        prompt_user "Skip this step?" "Y" "Y/n"
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             print_info "Skipping $description..."
             return 0  # Skip step
@@ -170,6 +194,50 @@ check_command() {
     return 0
 }
 
+# Function to prompt user with support for non-interactive mode
+prompt_user() {
+    local prompt_text="$1"
+    local default_answer="${2:-y}"  # Default to 'y' if not specified
+    local options="${3:-y/n}"       # Default options format
+    
+    if [ "$NON_INTERACTIVE" = true ]; then
+        echo -e "${YELLOW}${prompt_text} (${options}) [NON-INTERACTIVE: defaulting to '${default_answer}']${NC}"
+        REPLY="$default_answer"
+        return 0
+    fi
+    
+    read -p "${prompt_text} (${options}) " -n 1 -r; echo
+    return 0
+}
+
+# Function to prompt user for selection with support for non-interactive mode
+prompt_selection() {
+    local prompt_text="$1"
+    local default_choice="${2:-1}"  # Default choice if not specified
+    
+    if [ "$NON_INTERACTIVE" = true ]; then
+        echo -e "${YELLOW}${prompt_text} [NON-INTERACTIVE: defaulting to '${default_choice}']${NC}"
+        choice="$default_choice"
+        return 0
+    fi
+    
+    read -p "${prompt_text} " choice
+    return 0
+}
+
+# Function to prompt for continuation (Enter to continue)
+prompt_continue() {
+    local prompt_text="${1:-Press Enter to continue...}"
+    
+    if [ "$NON_INTERACTIVE" = true ]; then
+        echo -e "${YELLOW}${prompt_text} [NON-INTERACTIVE: continuing automatically]${NC}"
+        return 0
+    fi
+    
+    read -p "${prompt_text}" -r
+    return 0
+}
+
 # Function to find the target config.txt file
 get_config_txt_target() {
     local CONFIG_TXT_NEW="/boot/firmware/config.txt"
@@ -262,16 +330,14 @@ validate_hardware() {
     fi
 
     PI_MODEL=$(tr -d '\0' < /proc/device-tree/model)
-    if [[ ! "$PI_MODEL" =~ "Raspberry Pi 4" ]]; then # Simplified check, adjust as needed
-        print_warning "This software is optimized for Raspberry Pi 4B 4GB or better. Current model: $PI_MODEL"
-        read -p "Continue anyway? (y/n) " -n 1 -r; echo
+    if [[ ! "$PI_MODEL" =~ "Raspberry Pi 4" ]]; then # Simplified check, adjust as needed        print_warning "This software is optimized for Raspberry Pi 4B 4GB or better. Current model: $PI_MODEL"
+        prompt_user "Continue anyway?" "n" "y/n"
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 
     TOTAL_MEM=$(free -m | awk '/^Mem:/{print $2}')
-    if [ "$TOTAL_MEM" -lt 3500 ]; then # Approx 3.5GB
-        print_warning "Recommended minimum RAM is 4GB, current: ${TOTAL_MEM}MB"
-        read -p "Continue anyway? (y/n) " -n 1 -r; echo
+    if [ "$TOTAL_MEM" -lt 3500 ]; then # Approx 3.5GB        print_warning "Recommended minimum RAM is 4GB, current: ${TOTAL_MEM}MB"
+        prompt_user "Continue anyway?" "n" "y/n"
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 
@@ -305,25 +371,22 @@ validate_hardware() {
             print_info "Testing camera capture..."
             if timeout 5 libcamera-still --immediate --timeout 1 -o /dev/null; then # Removed 2>/dev/null to see errors
                 print_success "Camera capture test succeeded."
-            else
-                print_warning "libcamera-still capture test failed. Camera might not be working correctly or is misconfigured."
+            else                print_warning "libcamera-still capture test failed. Camera might not be working correctly or is misconfigured."
                 POST_INSTALL_MESSAGES+="[WARNING] libcamera-still capture test failed. Check camera connection and configuration (e.g., /boot/firmware/config.txt for overlays like 'camera_auto_detect=1').\\n"
-                read -p "Continue installation despite camera test failure? (y/n) " -n 1 -r; echo
+                prompt_user "Continue installation despite camera test failure?" "n" "y/n"
                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
-            fi
-        else
+            fi        else
             print_warning "No camera detected by libcamera-still. Ensure camera is connected and enabled (e.g., via raspi-config or in /boot/config.txt or /boot/firmware/config.txt)."
             POST_INSTALL_MESSAGES+="[WARNING] No camera detected by libcamera-still. Ensure camera is connected and enabled. Obstacle detection with camera will not work.\\n"
-            read -p "Continue installation without a camera? (y/n) " -n 1 -r; echo
+            prompt_user "Continue installation without a camera?" "n" "y/n"
             if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
         fi
     elif ls /dev/video* >/dev/null 2>&1; then
         print_info "Legacy camera device(s) found: $(ls /dev/video*). Consider using libcamera stack."
-        POST_INSTALL_MESSAGES+="[INFO] Legacy camera device(s) found. For best results with Pi OS Bookworm and later, ensure you are using the libcamera stack and 'python3-picamera2'.\\n"
-    else
+        POST_INSTALL_MESSAGES+="[INFO] Legacy camera device(s) found. For best results with Pi OS Bookworm and later, ensure you are using the libcamera stack and 'python3-picamera2'.\\n"    else
         print_warning "No camera devices found (neither libcamera nor /dev/video*)."
         POST_INSTALL_MESSAGES+="[WARNING] No camera devices found. Obstacle detection with camera will not work.\\n"
-        read -p "Continue installation without a camera? (y/n) " -n 1 -r; echo
+        prompt_user "Continue installation without a camera?" "n" "y/n"
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then exit 1; fi
     fi
 }
@@ -730,7 +793,7 @@ diagnose_watchdog_hardware() {
     fi
 }
 
-# Function to setup emergency stop
+# Function to setup physical emergency stop
 setup_emergency_stop() {
     print_info "Setting up physical emergency stop button (GPIO7)..."
     echo 'SUBSYSTEM=="gpio", KERNEL=="gpiochip*", ACTION=="add", PROGRAM="/bin/sh -c '\''chown root:gpio /sys/class/gpio/export /sys/class/gpio/unexport ; chmod 220 /sys/class/gpio/export /sys/class/gpio/unexport'\''"' | sudo tee /etc/udev/rules.d/99-gpio-permissions.rules > /dev/null
@@ -1104,11 +1167,10 @@ install_specific_feature() {
         8)
             print_info "Installing Coral TPU Support..."
             print_info "Installing Coral TPU support..."
-            CORAL_INSTALLED_OK=false
-            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            CORAL_INSTALLED_OK=false            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
-                read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
+                prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"
                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                     print_info "Skipping Coral TPU software installation."
                     return 0
@@ -1205,7 +1267,7 @@ handle_specific_feature_menu() {
     while true; do
         show_available_features
         echo ""
-        read -p "Enter feature number to install (1-11), 'a' for all remaining, or 'q' to return to main menu: " choice
+        prompt_selection "Enter feature number to install (1-11), 'a' for all remaining, or 'q' to return to main menu:" "a"
         
         case "$choice" in
             [1-9])
@@ -1216,7 +1278,7 @@ handle_specific_feature_menu() {
                     print_error "Feature $choice installation failed."
                 fi
                 echo ""
-                read -p "Press Enter to continue..." -r
+                prompt_continue "Press Enter to continue..."
                 ;;
             10|11)
                 install_specific_feature "$choice"
@@ -1225,9 +1287,7 @@ handle_specific_feature_menu() {
                 else
                     print_error "Feature $choice installation failed."
                 fi
-                echo ""
-                read -p "Press Enter to continue..." -r
-                ;;
+                echo ""                ;;
             a|A)
                 print_info "Installing all remaining features..."
                 run_full_installation
@@ -1267,10 +1327,9 @@ run_full_installation() {
     if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
         enable_required_interfaces
         validate_hardware
-        mark_step_completed "hardware_interfaces"
-    fi
+        mark_step_completed "hardware_interfaces"    fi
 
-    read -p "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)? (y/n) " -n 1 -r; echo
+    prompt_user "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "additional_uart" "Additional UART setup"; then
             setup_additional_uart
@@ -1312,11 +1371,9 @@ run_full_installation() {
             print_info "PYTHONPATH already configured in /home/pi/.bashrc."
         fi
         mark_step_completed "pythonpath_setup"
-    fi
+    fi    install_python_dependencies
 
-    install_python_dependencies
-
-    read -p "Do you want to install/configure YOLOv8 models? (y/n) " -n 1 -r; echo
+    prompt_user "Do you want to install/configure YOLOv8 models?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "yolov8_setup" "YOLOv8 models installation"; then
             setup_yolov8 
@@ -1327,7 +1384,7 @@ run_full_installation() {
         POST_INSTALL_MESSAGES+="[INFO] YOLOv8 model setup was skipped.\\n"
     fi
 
-    read -p "Do you want to install Coral TPU support (requires Coral USB Accelerator)? (y/n) " -n 1 -r; echo
+    prompt_user "Do you want to install Coral TPU support (requires Coral USB Accelerator)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
             print_info "Installing Coral TPU support..."
@@ -1335,7 +1392,7 @@ run_full_installation() {
             if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
-                read -p "Continue Coral TPU software installation anyway? (y/n) " -n 1 -r; echo
+                prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"
                 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
                     print_info "Skipping Coral TPU software installation."
                 else
@@ -1381,9 +1438,7 @@ run_full_installation() {
         fi
     else
         print_info "Skipping Coral TPU support installation."
-    fi
-
-    read -p "Do you want to setup the hardware watchdog? (y/n) " -n 1 -r; echo
+    fi    prompt_user "Do you want to setup the hardware watchdog?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
             setup_watchdog 
@@ -1393,7 +1448,7 @@ run_full_installation() {
         print_info "Skipping hardware watchdog setup."
     fi
 
-    read -p "Do you want to setup a physical emergency stop button (GPIO7)? (y/n) " -n 1 -r; echo
+    prompt_user "Do you want to setup a physical emergency stop button (GPIO7)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "emergency_stop" "Emergency stop button setup"; then
             setup_emergency_stop 
@@ -1406,7 +1461,7 @@ run_full_installation() {
         fi
     fi
 
-    read -p "Do you want to install and enable the systemd service for automatic startup? (y/n) " -n 1 -r; echo
+    prompt_user "Do you want to install and enable the systemd service for automatic startup?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "systemd_service" "Systemd service installation"; then
             setup_mower_service 
@@ -1421,11 +1476,16 @@ run_full_installation() {
 # --- Main Installation Logic ---
 print_info "Starting Autonomous Mower installation script..."
 
+# Show non-interactive mode message if enabled
+if [ "$NON_INTERACTIVE" = true ]; then
+    print_info "Running in non-interactive mode - all prompts will default to 'yes'"
+fi
+
 # Main installation menu loop
 while true; do
     show_installation_menu
     
-    read -p "Please select an installation mode (1-5): " choice
+    prompt_selection "Please select an installation mode (1-5):" "1"
     
     case "$choice" in
         1)
@@ -1477,9 +1537,8 @@ while true; do
                 fi
             else
                 print_info "No installation has been started yet."
-            fi
-            echo ""
-            read -p "Press Enter to continue..." -r
+            fi            echo ""
+            prompt_continue "Press Enter to continue..."
             ;;
         5)
             print_info "Exiting installation script."
@@ -1488,7 +1547,7 @@ while true; do
         *)
             print_error "Invalid choice. Please enter a number between 1 and 5."
             echo ""
-            read -p "Press Enter to continue..." -r
+            prompt_continue "Press Enter to continue..."
             ;;
     esac
 done
@@ -1544,7 +1603,7 @@ if [ -n "$POST_INSTALL_MESSAGES" ]; then
 fi
 
 print_info "A REBOOT is highly recommended for all changes to take full effect."
-read -p "Reboot now? (y/n) " -n 1 -r; echo
+prompt_user "Reboot now?" "y" "y/n"
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_info "Rebooting system..."
     sudo reboot

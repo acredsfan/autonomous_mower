@@ -101,12 +101,48 @@ These steps are required only once during initial setup. The service will use th
 
 ### 4. Installation
 
+The installation script supports both interactive and non-interactive modes:
+
+#### Interactive Installation (Default)
+
 ```bash
 # Make the script executable
 chmod +x install_requirements.sh
 
 # Run the installation script with sudo
 sudo ./install_requirements.sh
+```
+
+#### Non-Interactive Installation
+
+For automated deployments, CI/CD pipelines, or when you want to accept all default options without prompts:
+
+```bash
+# Run in non-interactive mode (auto-answers "yes" to all prompts)
+sudo ./install_requirements.sh -y
+# or
+sudo ./install_requirements.sh --yes
+# or
+sudo ./install_requirements.sh --non-interactive
+```
+
+**Non-Interactive Mode Features:**
+
+- ✅ Automatically accepts all recommended installations
+- ✅ Uses safe defaults for all configuration options
+- ✅ Perfect for automated deployments and scripted installations
+- ✅ Shows clear progress indicators and selected defaults
+- ⚠️ Camera/hardware detection failures still default to "no" for safety
+
+#### Installation Script Options
+
+```bash
+# Show help and available options
+sudo ./install_requirements.sh --help
+
+# Available options:
+#   -y, --yes, --non-interactive    Run in non-interactive mode
+#   -h, --help                      Show help message
 ```
 
 The installation script will:
@@ -122,19 +158,29 @@ The installation script will:
 
 #### Checkpoint/Resume Functionality
 
-The installation script supports checkpoint/resume functionality, allowing you to continue where you left off if interrupted or skip already completed sections when re-running:
+The installation script supports checkpoint/resume functionality in both interactive and non-interactive modes, allowing you to continue where you left off if interrupted or skip already completed sections when re-running:
 
-**First Installation:**
+**First Installation (Interactive):**
 
 ```bash
 sudo ./install_requirements.sh
+```
+
+**First Installation (Non-Interactive):**
+
+```bash
+sudo ./install_requirements.sh -y
 ```
 
 **Resume Installation After Interruption:**
 If the installation was interrupted or you want to re-run it:
 
 ```bash
+# Interactive mode - you'll be prompted about each step
 sudo ./install_requirements.sh
+
+# Non-interactive mode - automatically continues with defaults
+sudo ./install_requirements.sh -y
 ```
 
 The script will automatically:
@@ -479,6 +525,40 @@ You can change this setting later by editing the configuration file.
 ## Troubleshooting
 
 Common issues and their solutions:
+
+### Installation Issues
+
+If you encounter problems during installation:
+
+1. **Use non-interactive mode for clean reinstallation:**
+
+```bash
+# Remove checkpoint file and start fresh
+rm -f .install_checkpoints
+sudo ./install_requirements.sh -y
+```
+
+2. **Check system requirements:**
+
+```bash
+# Verify Raspberry Pi OS version
+cat /etc/os-release
+# Should show Bookworm (12) or newer
+
+# Check Python version
+python3 --version
+# Should be 3.9 or newer
+```
+
+3. **For permission errors during installation:**
+
+```bash
+# Ensure script is executable
+chmod +x install_requirements.sh
+
+# Run with proper sudo
+sudo ./install_requirements.sh
+```
 
 ### Service Won't Start
 

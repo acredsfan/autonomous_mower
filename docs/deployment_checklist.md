@@ -11,6 +11,7 @@ This document tracks the progress of preparing the autonomous mower codebase for
 ### Consolidation Plan for robot.py and robot_di.py
 
 1. **Current Status**:
+
    - robot.py: Simple implementation with global functions, currently used in the project
    - robot_di.py: Better implementation with dependency injection, not actively used
 
@@ -32,11 +33,13 @@ This document tracks the progress of preparing the autonomous mower codebase for
 ### Raspberry Pi Compatibility Notes
 
 1. **GPIO Configuration**:
+
    - GPIO management is handled by the GPIOManager class
    - Pin mappings are documented in "Raspberry Pi GPIO.xlsx"
    - Installation scripts set up proper udev rules for GPIO access
 
 2. **Hardware Dependencies**:
+
    - Required Python packages are listed in requirements.txt, including RPi.GPIO
    - Hardware interfaces are properly abstracted with adapter classes
    - Simulation mode is available for testing without hardware
@@ -59,11 +62,14 @@ This document tracks the progress of preparing the autonomous mower codebase for
 ### Deployment Preparation Notes
 
 1. **Dependencies**:
+
    - All required dependencies are listed in requirements.txt
    - RPi.GPIO is included for Raspberry Pi GPIO access
    - Installation script (install_requirements.sh) is provided to set up the environment
+   - Support for both interactive and non-interactive installation modes (`-y` flag for automated deployments)
 
 2. **Logging Configuration**:
+
    - Logging is configured in utilities/logger_config.py
    - Log rotation is set up with 5 backup files
    - Logs are stored in the project root directory
@@ -82,6 +88,7 @@ This document tracks the progress of preparing the autonomous mower codebase for
 ### Testing Notes
 
 1. **Existing Test Infrastructure**:
+
    - Comprehensive test suite is available in the tests directory
    - Unit tests, integration tests, and simulation tests are implemented
    - Simulation mode allows testing without physical hardware
@@ -101,6 +108,7 @@ This document tracks the progress of preparing the autonomous mower codebase for
 ### Documentation Notes
 
 1. **Existing Documentation**:
+
    - README.md includes detailed setup instructions for Raspberry Pi
    - Hardware setup is documented with pin mappings
    - Environment configuration is well-documented
@@ -112,16 +120,16 @@ This document tracks the progress of preparing the autonomous mower codebase for
 
 ## Progress Tracking
 
-| Task | Status | Notes |
-|------|--------|-------|
-| Identify duplicate files | Completed | Found duplicate functionality between robot.py and robot_di.py. robot_di.py has a better implementation with dependency injection, but robot.py is the one currently used in the project. |
-| Check test_simulation_mode.py | Completed | This file imports RobotDI from robot_di.py, but the class is actually named Robot. The import isn't used in the code. |
-| Check hardcoded paths | Completed | Found several hardcoded paths for serial devices: GPS (/dev/ttyAMA0), RoboHAT MM1 (/dev/ttyACM1), IMU (/dev/ttyAMA2). Most are loaded from environment variables with fallbacks. |
-| Check GPIO configurations | Completed | GPIO management is well-structured with a dedicated GPIOManager class. The project includes an Excel file with GPIO pin mappings and installation scripts that set up proper udev rules for GPIO access. |
-| Create consolidation plan | Completed | Created a detailed plan to consolidate robot.py and robot_di.py, including steps to rename files, update imports, and test changes. |
-| Check dependencies | Completed | Verified that all required dependencies are listed in requirements.txt, including RPi.GPIO for Raspberry Pi GPIO access. |
-| Check logging configuration | Completed | Confirmed that logging is properly configured in utilities/logger_config.py with log rotation and appropriate log levels. |
-| Check error handling | Completed | Verified that error handling for hardware failures is implemented in the error_handling module with graceful degradation for component failures. |
-| Review documentation | Completed | Confirmed that README.md includes detailed setup instructions for Raspberry Pi and hardware setup is well-documented. |
-| Create deployment checklist | Completed | Created this deployment checklist to track progress and document findings. |
+| Task                            | Status    | Notes                                                                                                                                                                                                                                                 |
+| ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identify duplicate files        | Completed | Found duplicate functionality between robot.py and robot_di.py. robot_di.py has a better implementation with dependency injection, but robot.py is the one currently used in the project.                                                             |
+| Check test_simulation_mode.py   | Completed | This file imports RobotDI from robot_di.py, but the class is actually named Robot. The import isn't used in the code.                                                                                                                                 |
+| Check hardcoded paths           | Completed | Found several hardcoded paths for serial devices: GPS (/dev/ttyAMA0), RoboHAT MM1 (/dev/ttyACM1), IMU (/dev/ttyAMA2). Most are loaded from environment variables with fallbacks.                                                                      |
+| Check GPIO configurations       | Completed | GPIO management is well-structured with a dedicated GPIOManager class. The project includes an Excel file with GPIO pin mappings and installation scripts that set up proper udev rules for GPIO access.                                              |
+| Create consolidation plan       | Completed | Created a detailed plan to consolidate robot.py and robot_di.py, including steps to rename files, update imports, and test changes.                                                                                                                   |
+| Check dependencies              | Completed | Verified that all required dependencies are listed in requirements.txt, including RPi.GPIO for Raspberry Pi GPIO access.                                                                                                                              |
+| Check logging configuration     | Completed | Confirmed that logging is properly configured in utilities/logger_config.py with log rotation and appropriate log levels.                                                                                                                             |
+| Check error handling            | Completed | Verified that error handling for hardware failures is implemented in the error_handling module with graceful degradation for component failures.                                                                                                      |
+| Review documentation            | Completed | Confirmed that README.md includes detailed setup instructions for Raspberry Pi and hardware setup is well-documented.                                                                                                                                 |
+| Create deployment checklist     | Completed | Created this deployment checklist to track progress and document findings.                                                                                                                                                                            |
 | Create interactive setup wizard | Completed | Created setup_wizard.py, a comprehensive interactive setup script that guides users through the entire setup process, collects necessary tokens and credentials, adapts to user inputs, provides clear instructions, and updates configuration files. |
