@@ -1207,7 +1207,8 @@ install_specific_feature() {
                 "python3-venv" "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
                 "git" "libatlas-base-dev" "libhdf5-dev"
                 "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
-                "build-essential" "pkg-config" "libsystemd-dev"
+                "build-essential" "pkg-config"
+                "libsystemd-dev"
                 "wget" "curl" "gnupg"
                 "gdal-bin" "libgdal-dev" "python3-gdal"
             )
