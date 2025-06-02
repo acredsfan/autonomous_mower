@@ -409,8 +409,8 @@ class BNO085Sensor:
         heading = self.get_heading()
         roll = self.get_roll()
         pitch = self.get_pitch()
-        speed = 0  #TODO: Implement speed calculation based on acceleration data
-        compass = 0  #TODO: Implement compass data based on heading
+        speed = 0  # TODO: Implement speed calculation based on acceleration data
+        compass = 0  # TODO: Implement compass data based on heading
 
         # We'll provide some simulated values for the rest of the data
         return {
