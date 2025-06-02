@@ -29,6 +29,8 @@ The Autonomous Mower requires several hardware components to function properly. 
 - RoboHAT motor controller board
 - 2 x 12V Worm Gear DC motors (Hall Sensors added Separately) (for drive wheels)
 - 1 x 12V DC motor (for cutting blade such as a 997 DC motor)
+- Cytron MDDRC10 board for Wheel Motor controller
+- IBT-4 Driver for Blade Motor
 - 12V 20AH LiFePO4 Battery
 - Optional but recommended: Emergency stop button (normally closed)
 - GPS module with RTK compatibility (e.g., SparkFun GPS-RTK-SMA Kit)
