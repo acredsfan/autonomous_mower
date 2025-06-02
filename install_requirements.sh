@@ -1376,8 +1376,8 @@ run_full_installation() {
     if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
         enable_required_interfaces
         validate_hardware
-        mark_step_completed "hardware_interfaces"    fi
-
+        mark_step_completed "hardware_interfaces"    
+    fi
     prompt_user "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "additional_uart" "Additional UART setup"; then
@@ -1590,7 +1590,8 @@ while true; do
                 fi
             else
                 print_info "No installation has been started yet."
-            fi            echo ""
+            fi
+            echo ""
             prompt_continue "Press Enter to continue..."
             ;;
         5)
