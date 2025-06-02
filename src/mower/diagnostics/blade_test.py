@@ -17,11 +17,11 @@ import argparse
 from typing import Tuple
 from dotenv import set_key
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
 def test_blade_speeds(

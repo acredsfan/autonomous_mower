@@ -13,8 +13,8 @@ import requests
 
 # Use the project logger if available, else fallback
 try:
-    from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
-    logger = LoggerConfig.get_logger(__name__)
+    from mower.utilities.logger_config import LoggerConfigInfo
+    logger = LoggerConfigInfo.get_logger(__name__)
 except ImportError:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("network_diagnostics")

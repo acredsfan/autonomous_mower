@@ -17,10 +17,10 @@ from typing import Dict, Any, Tuple, Callable
 # from mower.hardware.imu import IMUStatus # Unused
 from mower.simulation.hardware_sim import SimulatedSensor
 from mower.simulation.world_model import get_world_instance  # Removed unused: Vector2D
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class SimulatedBNO085Sensor(SimulatedSensor):

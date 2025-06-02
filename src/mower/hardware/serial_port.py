@@ -8,13 +8,13 @@ import serial
 import serial.tools.list_ports
 from dotenv import load_dotenv
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Load environment variables from .env file in repository root
 load_dotenv()
 
 
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 GPS_PORT = os.getenv("GPS_SERIAL_PORT")

@@ -16,10 +16,10 @@ from typing import Dict, List, Any, Callable
 import matplotlib.pyplot as plt
 # from pathlib import Path
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class PerformanceProfiler:

@@ -14,7 +14,7 @@ import pynmea2
 import utm
 
 from mower.utilities.text_writer import CsvLogger
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 logger_config = LoggerConfig() # This will be used by existing code
 logger = logger_config.get_logger(__name__) # Standard logger for the module

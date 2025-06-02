@@ -43,10 +43,10 @@ from enum import Enum, auto
 from typing import Dict, List, Optional, Any
 import threading
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class MowerStatus(Enum):

@@ -12,10 +12,10 @@ import sqlite3
 from typing import Dict, Any, List, Optional, Callable, Tuple, Union
 from queue import Queue
 
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class ConnectionPool:

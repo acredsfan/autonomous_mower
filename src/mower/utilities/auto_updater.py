@@ -32,15 +32,15 @@ import os
 import shutil
 import subprocess
 import sys
-import time
+import time  # Re-added import
 from datetime import datetime
 from typing import Optional, Tuple
 
 # Import logger
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Constants
 DEFAULT_REPO_URL = "https://github.com/yourusername/autonomous_mower.git"
@@ -63,7 +63,7 @@ class AutoUpdater:
         self,
         repo_url: str = DEFAULT_REPO_URL,
         branch: str = DEFAULT_BRANCH,
-        repo_path: Optional[str] = None,
+        repo_path: Optional[str] = None,  # Added Optional for clarity, though default is handled
     ):
         """
         Initialize the auto updater.
@@ -76,7 +76,7 @@ class AutoUpdater:
         """
         self.repo_url = repo_url
         self.branch = branch
-        self.repo_path = repo_path or os.getcwd()
+        self.repo_path = repo_path or os.getcwd()  # Uses current working directory if None
         self.update_in_progress = False
         self.backup_created = False
         self.service_was_running = False
@@ -96,9 +96,8 @@ class AutoUpdater:
 
             # Fetch the latest changes
             logger.info(
-                f"Fetching latest changes from {
-                    self.repo_url}, branch {
-                    self.branch}")
+                f"Fetching latest changes from {self.repo_url}, branch {self.branch}"
+            )
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -164,9 +163,9 @@ class AutoUpdater:
             error_msg = f"Error checking for updates: {e.stderr}"
             logger.error(error_msg)
             return False, error_msg
-        except Exception as e:
+        except Exception as e:  # Catch broader exceptions as well
             error_msg = f"Error checking for updates: {str(e)}"
-            logger.error(error_msg)
+            logger.error(error_msg, exc_info=True)  # Add exc_info for more details
             return False, error_msg
 
     def create_backup(self) -> bool:

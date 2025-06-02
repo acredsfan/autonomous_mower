@@ -9,7 +9,7 @@ import numpy as np
 from shapely.geometry import Point, Polygon
 
 from mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.constants import (
     max_lat,
     max_lng,
@@ -20,7 +20,7 @@ from mower.constants import (
 
 
 LoggerConfig.configure_logging()
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))

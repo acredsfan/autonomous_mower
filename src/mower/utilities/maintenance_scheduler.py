@@ -38,14 +38,11 @@ import json
 import os
 import time
 from datetime import datetime, timedelta
-from enum import Enum, auto
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union, Any
-
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from typing import Dict, List, Optional, Any
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class MaintenanceInterval:
@@ -245,12 +242,7 @@ class MaintenanceTask:
             result["remaining"]["hours"] = hours_remaining
             if hours_remaining <= 0:
                 result["due_now"] = True
-                result[
-                    "reason"
- (
-     f"Operating hours exceeded ({hours_since_last:.1f} > {self.interval"
-     f".hours:.1f})"
- )
+                result["reason"] = f"Operating hours exceeded ({hours_since_last:.1f} > {self.interval.hours:.1f})"
 
         if self.interval.days is not None:
             days_since_last = (current_time - self.last_completed).total_seconds() / (
@@ -274,12 +266,7 @@ class MaintenanceTask:
             result["remaining"]["distance_km"] = distance_remaining
             if distance_remaining <= 0 and not result["due_now"]:
                 result["due_now"] = True
-                result[
-                    "reason"
- (
-     f"Distance exceeded ({distance_since_last:.1f} > {self.interval"
-     f".distance_km:.1f})"
- )
+                result["reason"] = f"Distance exceeded ({distance_since_last:.1f} > {self.interval.distance_km:.1f})"
 
         if self.interval.mowing_cycles is not None:
             cycles_since_last = (
@@ -290,13 +277,7 @@ class MaintenanceTask:
             result["remaining"]["mowing_cycles"] = cycles_remaining
             if cycles_remaining <= 0 and not result["due_now"]:
                 result["due_now"] = True
-                result[
-                    "reason"
- (
-     f"Mowing cycles exceeded ({cycles_since_last} > {self.interval"
-     f".mowing_cycles})"
- )
-
+                result["reason"] = f"Mowing cycles exceeded ({cycles_since_last} > {self.interval.mowing_cycles})"
         return result
 
     def to_dict(self) -> Dict[str, Any]:
@@ -638,7 +619,7 @@ class MaintenanceScheduler:
         future_time = current_time + timedelta(days=days_ahead)
 
         # Estimate future metrics based on average daily usage
-        days_of_history = 30  # Use up to 30 days of history for estimation
+        # days_of_history = 30  # Use up to 30 days of history for estimation
 
         # Calculate daily averages
         daily_hours = 0.0
@@ -853,7 +834,7 @@ class MaintenanceScheduler:
 
         elif format_type == "html":
             html = "<html><head><title>Maintenance Schedule</title></head><body>"
-            html += f"<h1>Maintenance Schedule</h1>"
+            html += "<h1>Maintenance Schedule</h1>"
             html += f"<p>Generated on {current_time.strftime('%Y-%m-%d %H:%M')}</p>"
 
             html += "<h2>Current Metrics</h2>"
@@ -871,13 +852,13 @@ class MaintenanceScheduler:
                     "<th>Est. Time</th><th>Parts Required</th></tr>"
                 )
                 for task in due_tasks:
-                    html += f"<tr>"
+                    html += "<tr>"
                     html += f"<td>{task['priority']}</td>"
                     html += f"<td>{task['description']}</td>"
                     html += f"<td>{task['reason']}</td>"
                     html += f"<td>{task['estimated_duration_minutes']} min</td>"
                     html += f"<td>{'Yes' if task['requires_parts'] else 'No'}</td>"
-                    html += f"</tr>"
+                    html += "</tr>"
                 html += "</table>"
             else:
                 html += "<h2>Due Tasks</h2>"
@@ -886,17 +867,25 @@ class MaintenanceScheduler:
             if upcoming_tasks:
                 html += "<h2>Upcoming Tasks</h2>"
                 html += "<table border='1'>"
-                html += "<tr><th>Priority</th><th>Task</th><th>Days Until Due</th><th>Est. Time</th><th>Parts Required</th></tr>"
+                html += (
+                    "<tr>"
+                    "<th>Priority</th>"
+                    "<th>Task</th>"
+                    "<th>Days Until Due</th>"
+                    "<th>Est. Time</th>"
+                    "<th>Parts Required</th>"
+                    "</tr>"
+                )
                 for task in upcoming_tasks:
                     days = task.get("days_until_due")
                     days_str = f"{days:.1f}" if days is not None else "Unknown"
-                    html += f"<tr>"
+                    html += "<tr>"
                     html += f"<td>{task['priority']}</td>"
                     html += f"<td>{task['description']}</td>"
                     html += f"<td>{days_str}</td>"
                     html += f"<td>{task['estimated_duration_minutes']} min</td>"
                     html += f"<td>{'Yes' if task['requires_parts'] else 'No'}</td>"
-                    html += f"</tr>"
+                    html += "</tr>"
                 html += "</table>"
             else:
                 html += "<h2>Upcoming Tasks</h2>"
@@ -904,51 +893,5 @@ class MaintenanceScheduler:
 
             html += "</body></html>"
             return html
-
-        else:  # text format
-            text = "MAINTENANCE SCHEDULE\n"
-            text += "=" * 80 + "\n"
-            text += f"Generated on {current_time.strftime('%Y-%m-%d %H:%M')}\n\n"
-
-            text += "CURRENT METRICS\n"
-            text += "-" * 80 + "\n"
-            text += f"Runtime: {self.current_metrics['hours']:.1f} hours\n"
-            text += f"Distance: {self.current_metrics['distance_km']:.1f} km\n"
-            text += f"Mowing Cycles: {self.current_metrics['mowing_cycles']}\n\n"
-
-            text += "DUE TASKS\n"
-            text += "-" * 80 + "\n"
-            if due_tasks:
-                for task in due_tasks:
-                    text += f"Priority {task['priority']}: {task['description']}\n"
-                    text += f"  Reason: {task['reason']}\n"
- (f"  Estimated Time: {task['estimated_duration_minutes']} minutes\n
-  f"
- (f"  Parts Required: {'Yes' if task['requires_parts'] else 'No'}\n
-  f"
-                    if task.get("instructions"):
-                        text += (
-                            f"  Instructions:\n    "
-                            + task["instructions"].replace("\n", "\n    ")
-                            + "\n"
-                        )
-                    text += "\n"
-            else:
-                text += "No tasks currently due.\n\n"
-
-            text += "UPCOMING TASKS\n"
-            text += "-" * 80 + "\n"
-            if upcoming_tasks:
-                for task in upcoming_tasks:
-                    days = task.get("days_until_due")
-                    days_str = f"{days:.1f}" if days is not None else "Unknown"
-                    text += f"Priority {task['priority']}: {task['description']}\n"
-                    text += f"  Days Until Due: {days_str}\n"
- (f"  Estimated Time: {task['estimated_duration_minutes']} minutes\n
-  f"
- (f"  Parts Required: {'Yes' if task['requires_parts'] else 'No'}\n\n
-  f"
-            else:
-                text += "No upcoming tasks within the next 30 days.\n\n"
-
-            return text
+        else:
+            return ""

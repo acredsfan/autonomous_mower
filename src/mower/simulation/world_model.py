@@ -336,10 +336,14 @@ class Robot:
 
     def __repr__(self) -> str:
         """String representation of robot."""
- (
-     f"Robot(pos={self.position}, heading={self.heading:.2f} rad, vel="
-     f"{self.velocity})"
- )
+        return (
+            f"Robot(pos={self.position}, heading={self.heading:.2f}, "
+            f"velocity={self.velocity}, angular_velocity={self.angular_velocity:.2f}, "
+            f"blade_running={self.blade_running}, blade_speed={self.blade_speed:.2f}, "
+            f"battery_voltage={self.battery_voltage:.2f}, "
+            f"battery_current={self.battery_current:.2f}, "
+            f"motor_speeds={self.motor_speeds})"
+        )
 
     def update(self, dt: float) -> None:
         """
@@ -555,7 +559,7 @@ class VirtualWorld:
             position: Position to check from
             direction: Direction to check in
             max_range: Maximum range to check        Returns:
-            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and 
+            Tuple[float, Optional[Obstacle]]: Distance to nearest obstacle and
                 the obstacle itself (or max_range, None if no obstacle found)
         """
         with self._lock:
@@ -619,13 +623,13 @@ class VirtualWorld:
             }
 
     def set_robot_position(
-        self, position: Vector2D, heading: float = None
+        self, position: Vector2D, heading: Optional[float] = None
     ) -> None:
         """
-        Set the robot's position and optionally heading.        Args:
+        Set the robot's position and optionally heading.
+        Args:
             position: New position for the robot
-            heading: New heading for the robot in radians (if None, keeps 
-                current heading)
+            heading: New heading for the robot in radians (if None, keeps current heading)
         """
         with self._lock:
             self.robot.position = position

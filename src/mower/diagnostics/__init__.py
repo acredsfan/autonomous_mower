@@ -17,7 +17,7 @@ Modules:
     sensor_test: Visualization and validation of all sensor data
 """
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)

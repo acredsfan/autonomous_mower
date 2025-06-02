@@ -29,9 +29,9 @@ from typing import Dict, Optional, Any
 import logging as logging_levels
 
 # Configure logging
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 try:
     from mower.main_controller import ResourceManager

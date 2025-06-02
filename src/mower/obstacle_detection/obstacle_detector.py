@@ -24,10 +24,10 @@ from PIL import Image
 
 from mower.obstacle_detection.sort import Sort  # Import SORT
 from mower.hardware.camera_instance import get_camera_instance
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()

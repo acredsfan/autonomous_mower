@@ -22,7 +22,7 @@ import http.server
 import socketserver
 from pathlib import Path
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
 
 try:
@@ -34,7 +34,7 @@ except ImportError:
     sys.exit(1)
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
 def capture_test_image(

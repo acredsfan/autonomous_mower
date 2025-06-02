@@ -29,15 +29,14 @@ Example usage:
 """
 
 import functools
-import logging
 import time
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class ComponentStatus(Enum):
@@ -142,10 +141,7 @@ class GracefulDegradationHandler:
             recovery_interval=recovery_interval,
         )
         logger.info(
-            (
-                f"Registered component '{name}' with {len(fallbacks) if"
-                f" fallbacks else 0} fallbacks"
-            )
+            (f"Registered component '{name}' with {len(fallbacks) if fallbacks else 0} fallbacks")
         )
 
     def register_degradation_callback(

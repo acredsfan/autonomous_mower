@@ -1,4 +1,4 @@
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 import time
 import platform
 import random
@@ -15,7 +15,7 @@ if platform.system() == "Linux":
 
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 _DEFAULT_I2C_ADDRESS = 0x29
 _LEFT_SENSOR_TARGET_ADDRESS = 0x29

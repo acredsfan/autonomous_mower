@@ -87,7 +87,7 @@ exclude_dirs = ["tests", "venv", ".venv", ".git", ".tox", "build", "dist"]
 skips = ["B101", "B104", "B311"]
 
 [tool.black]
-line-length = 79
+line-length = 120
 target-version = ["py39", "py310", "py311"]
 include = '\.pyi?$'
 exclude = '''
@@ -105,11 +105,11 @@ exclude = '''
 '''
 
 [tool.autopep8]
-max_line_length = 79
-line_length = 79
+max_line_length = 120
+line_length = 120
 args = [
     "--in-place",
-    "--max-line-length=79",
+    "--max-line-length=120",
     "--aggressive",
     "--aggressive",
     "--aggressive",
@@ -121,7 +121,7 @@ args = [
 
 [tool.isort]
 profile = "black"
-line_length = 79
+line_length = 120
 multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0

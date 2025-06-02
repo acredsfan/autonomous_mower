@@ -15,10 +15,10 @@ from typing import Dict, Any, Optional
 
 from mower.simulation.hardware_sim import SimulatedSensor
 from mower.simulation.world_model import get_world_instance, Vector2D
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class SimulatedVL53L0XSensors(SimulatedSensor):

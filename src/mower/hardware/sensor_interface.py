@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from datetime import datetime
 import board
 import busio
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.tof import VL53L0XSensors
 
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
 @dataclass
@@ -113,9 +113,11 @@ class EnhancedSensorInterface:
             return {}
 
         try:
-            accel = BNO085Sensor.read_bno085_accel(self._sensors["bno085"])
-            heading = BNO085Sensor.calculate_heading(self._sensors["bno085"])
-            roll = BNO085Sensor.calculate_roll(self._sensors["bno085"])
+            # Read IMU data using the get_sensor_data method in BNO085Sensor Class
+            # Retrive acceleration, heading, roll, speed, and compass data
+            SensorData = self.BNO085Sensor.get_sensor_data()
+            heading = BNO085Sensor.get_sensor_data(self=self._sensors["bno085"], "heading")
+            roll = BNO085Sensor.get_sensor_data(self=self._sensors["bno085"], "roll")
             speed = BNO085Sensor.calculate_speed(self._sensors["bno085"])
             compass = BNO085Sensor.read_bno085_magnetometer(
                 self._sensors["bno085"]

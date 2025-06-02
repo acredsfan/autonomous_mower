@@ -12,10 +12,10 @@ import cv2
 from typing import Dict, Any
 
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class ImageProcessingOptimizer:

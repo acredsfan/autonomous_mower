@@ -14,9 +14,9 @@ import logging
 from enum import Enum
 
 from mower.interfaces.weather import WeatherServiceInterface
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class WeatherCondition(Enum):

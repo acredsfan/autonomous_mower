@@ -41,10 +41,10 @@ import tempfile
 from typing import Dict, List, Optional, Tuple, Any
 
 # Import logger
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Constants
 BACKUP_DIR = "/var/backups/autonomous-mower"

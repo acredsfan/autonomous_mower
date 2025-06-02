@@ -12,13 +12,13 @@ import cv2
 from dotenv import load_dotenv
 from typing import Optional, Union
 
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Load environment variables
 load_dotenv()
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 # Camera configuration from environment variables
 FPS = int(os.getenv("STREAMING_FPS", 15))

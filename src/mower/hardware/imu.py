@@ -24,6 +24,7 @@ import time
 import threading
 import platform
 import random
+from turtle import speed
 from typing import Dict, Any
 from enum import Enum
 
@@ -37,7 +38,7 @@ if platform.system() == "Linux":
         pass
 
 from dotenv import load_dotenv
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.hardware.serial_port import SerialPort
 
 # BNO085 Constants
@@ -49,7 +50,7 @@ SHTP_REPORT_PRODUCT_ID_REQUEST = 0xF9
 SENSOR_REPORTID_ROTATION_VECTOR = 0x05
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -408,6 +409,8 @@ class BNO085Sensor:
         heading = self.get_heading()
         roll = self.get_roll()
         pitch = self.get_pitch()
+        speed = 0  #TODO: Implement speed calculation based on acceleration data
+        compass = 0  #TODO: Implement compass data based on heading
 
         # We'll provide some simulated values for the rest of the data
         return {
@@ -429,7 +432,8 @@ class BNO085Sensor:
                 "z": random.uniform(-0.1, 0.1) if not self.is_hardware_available else 0,
             },
             "calibration": self.get_calibration(),
-            "safety": self.get_safety_status(),
+            "speed": speed,
+            "compass": compass,
         }
 
 

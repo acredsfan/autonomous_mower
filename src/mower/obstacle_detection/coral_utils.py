@@ -19,9 +19,9 @@ it's not.
 """
 
 # Configure logging
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Try to import Coral libraries, with graceful fallback if not available
 try:

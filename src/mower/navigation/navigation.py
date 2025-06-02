@@ -8,9 +8,9 @@ from dataclasses import dataclass
 
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.gps import GpsLatestPosition, GpsPosition
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 @dataclass

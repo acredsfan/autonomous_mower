@@ -4,10 +4,10 @@ from json import JSONDecodeError
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 # Load .env variables
 load_dotenv()

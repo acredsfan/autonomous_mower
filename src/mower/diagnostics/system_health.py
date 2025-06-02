@@ -42,10 +42,10 @@ from typing import Dict, List, Optional, Any
 from mower.diagnostics.hardware_test import (
     initialize_resource_manager,
 )
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # Constants
 HEALTH_CHECK_INTERVAL = 300  # 5 minutes
@@ -747,8 +747,9 @@ def main():
             # Run a full health check
             health_status = health_monitor.run_full_health_check()
 
-            # Output the results            if args.output == "json":
-            print(json.dumps(health_status, indent=2))
+            # Output the results
+            if args.output == "json":
+                print(json.dumps(health_status, indent=2))
             else:
                 print("\n" + "=" * 80)
                 print(

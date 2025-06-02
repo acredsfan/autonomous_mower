@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import socket
-import time
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -62,7 +61,7 @@ class AuditLogger:
     in a format suitable for security auditing and compliance.
     """
 
-    def __init__(self, log_dir: Union[str, Path] = None):
+    def __init__(self, log_dir: Optional[Union[str, Path]] = None):
         """Initialize the audit logger.
 
         Args:
@@ -76,7 +75,16 @@ class AuditLogger:
             log_dir = Path(log_dir)
 
         # Create log directory if it doesn't exist
-        log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            # Use the standard logger to report this critical setup error
+            # Initialize a temporary logger if self.error_logger is not yet available
+            temp_error_logger = LoggerConfigInfo.get_logger(__name__ + ".init_error")
+            temp_error_logger.error(f"Failed to create audit log directory {log_dir}: {e}")
+            # Depending on policy, you might re-raise or exit
+            # For now, we'll let it continue, but logging will likely fail.
+            # Consider a fallback mechanism or a more robust error handling strategy.
 
         # Set up the audit logger
         self.logger = logging.getLogger("audit")
@@ -88,20 +96,30 @@ class AuditLogger:
 
         # Create a file handler for the audit log
         log_file = log_dir / "audit.log"
-        handler = logging.FileHandler(log_file)
+        try:
+            handler = logging.FileHandler(log_file)
 
-        # Create a formatter for the audit log
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        handler.setFormatter(formatter)
+            # Create a formatter for the audit log
+            formatter = logging.Formatter(
+                "%(asctime)s - %(levelname)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+            handler.setFormatter(formatter)
 
-        # Add the handler to the logger
-        self.logger.addHandler(handler)
+            # Add the handler to the logger
+            self.logger.addHandler(handler)
+        except OSError as e:
+            temp_error_logger = LoggerConfigInfo.get_logger(__name__ + ".handler_error")
+            temp_error_logger.error(f"Failed to create audit log file handler for {log_file}: {e}")
+            # Audit logging will not function if this fails.
 
         # Get hostname for audit records
-        self.hostname = socket.gethostname()
+        try:
+            self.hostname = socket.gethostname()
+        except socket.gaierror:
+            self.hostname = "unknown_host"
+            temp_error_logger = LoggerConfigInfo.get_logger(__name__ + ".hostname_error")
+            temp_error_logger.warning("Failed to get hostname for audit logs.")
 
         # Get standard logger for internal errors
         self.error_logger = LoggerConfigInfo.get_logger(__name__)
@@ -109,9 +127,9 @@ class AuditLogger:
     def log_event(
         self,
         event_type: AuditEventType,
-        user: str = None,
-        ip_address: str = None,
-        details: Dict[str, Any] = None,
+        user: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
         success: bool = True,
     ) -> None:
         """Log a security audit event.
@@ -125,7 +143,7 @@ class AuditLogger:
         """
         try:
             # Create the audit record
-            audit_record = {
+            audit_record: Dict[str, Any] = {
                 "timestamp": datetime.now().isoformat(),
                 "event_type": event_type.value,
                 "hostname": self.hostname,
@@ -143,8 +161,21 @@ class AuditLogger:
 
             # Log the audit record
             self.logger.info(json.dumps(audit_record))
+        except AttributeError as e:  # Catch if self.logger or self.hostname is not set due to init errors
+            # This might happen if __init__ failed to set up the logger or hostname
+            # Log to a fallback or print if absolutely necessary and no other logger is available
+            # For now, using the error_logger if available, or a temp one.
+            fallback_logger = getattr(self, 'error_logger',
+                                      LoggerConfigInfo.get_logger(__name__ + ".log_event_error"))
+            fallback_logger.error(
+                f"AuditLogger not properly initialized. Failed to log audit event: {e}",
+                exc_info=True
+            )
         except Exception as e:
-            self.error_logger.error(f"Failed to log audit event: {e}")
+            # Use self.error_logger if available, otherwise a temporary one
+            current_error_logger = getattr(self, 'error_logger',
+                                           LoggerConfigInfo.get_logger(__name__ + ".log_event_error"))
+            current_error_logger.error(f"Failed to log audit event: {e}", exc_info=True)
 
     def log_login(self, user: str, ip_address: str, success: bool) -> None:
         """Log a login event.
@@ -251,7 +282,7 @@ class AuditLogger:
         )
 
     def log_suspicious_activity(
-        self, ip_address: str, activity: str, details: Dict[str, Any] = None
+        self, ip_address: str, activity: str, details: Optional[Dict[str, Any]] = None  # Added Optional
     ) -> None:
         """Log a suspicious activity event.
 
@@ -260,13 +291,12 @@ class AuditLogger:
             activity: Description of the suspicious activity.
             details: Additional details about the suspicious activity.
         """
-        if details is None:
-            details = {}
-        details["activity"] = activity
+        current_details = details if details is not None else {}  # Create new dict if None
+        current_details["activity"] = activity  # Add activity to the new or existing dict
         self.log_event(
             AuditEventType.SUSPICIOUS_ACTIVITY,
             ip_address=ip_address,
-            details=details,
+            details=current_details,  # Use the modified dict
             success=False,
         )
 

@@ -33,11 +33,11 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 
 from mower.config_management.constants import CONFIG_DIR
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
 
 # Initialize logger
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 
 class IMUCalibration:

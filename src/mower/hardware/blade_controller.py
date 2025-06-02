@@ -5,9 +5,9 @@ This module provides control over the mower's blade motor.
 """
 
 from mower.hardware.gpio_manager import GPIOManager
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
-logging = LoggerConfig.get_logger(__name__)
+logging = LoggerConfigInfo.get_logger(__name__)
 
 # GPIO pins for blade control
 BLADE_ENABLE_PIN = 22  # This pin will be used for PWM speed control

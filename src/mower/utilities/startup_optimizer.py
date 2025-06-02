@@ -12,10 +12,10 @@ import functools
 from typing import Dict, Any, List, Optional, Callable, Set, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class LazyLoader:

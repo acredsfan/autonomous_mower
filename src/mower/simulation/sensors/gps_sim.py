@@ -14,10 +14,10 @@ from typing import Dict, Any, Optional, List, Tuple, Union, Type
 
 from mower.simulation.hardware_sim import SimulatedSensor
 from mower.simulation.world_model import get_world_instance, Vector2D
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class SimulatedGpsPosition(SimulatedSensor):
@@ -226,25 +226,9 @@ class SimulatedGpsPosition(SimulatedSensor):
 
         # Generate time string
         gps_time = time.gmtime(timestamp)
-        time_str = f"{
-            gps_time.tm_hour: 02d} {
-            gps_time.tm_min: 02d} {
-            gps_time.tm_sec: 02d} "
- (f"{gps_time.tm_mday:02d}{gps_time.tm_mon:02d}{gps_time.tm_year % 100:02d}
-  f"        # Generate GPRMC sentence
-        # $GPRMC,time,status,lat,lat_dir,lng,lng_dir,speed,track,date,
-        # mag_var,mag_var_dir,mode*checksum
-        status = "A" if self.state["fix_quality"] > 0 else "V"
-        speed = 0.0  # Speed in knots
-        track = 0.0  # Track angle in degrees
-        mag_var = 0.0  # Magnetic variation
-        mag_var_dir = "E"  # Magnetic variation direction
-        mode = "A"  # Autonomous mode
-
- (
-     f"$GPRMC,{time_str},{status},{lat_nmea},{lat_dir},{lng_nmea},"
-     f"{lng_dir},{speed:.1f},{track:.1f},{date_str},{mag_var:.1f},{mag_var_dir},{mode}"
- )
+        time_str = f"{gps_time.tm_hour:02d}{gps_time.tm_min:02d}{gps_time.tm_sec:02d}"
+        date_str = f"{gps_time.tm_year % 100:02d}{gps_time.tm_mon:02d}{gps_time.tm_mday:02d}"
+        time_str = f"{time_str}.{int(timestamp % 1 * 1e3):03d}"  # Add milliseconds
         rmc_checksum = self._calculate_nmea_checksum(rmc)
         rmc = f"{rmc}*{rmc_checksum:02X}"
 

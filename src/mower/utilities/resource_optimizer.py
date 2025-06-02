@@ -13,10 +13,10 @@ import threading
 import functools
 from typing import Dict, Any, List, Optional, Callable, Set
 
-from mower.utilities.logger_config import LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class ResourceOptimizer:
@@ -374,19 +374,9 @@ class ResourceOptimizer:
         usage = self.get_resource_usage()
 
         logger.info("Resource Usage:")
-        logger.info(
-            (
-                f"  Memory: {usage['memory']['percent']}% used ({usage"
-                f"['memory']['used'] / 1024 / 1024:.1f} MB)"
-            )
-        )
-        logger.info(f"  CPU: {usage['cpu']['percent']}% used")
-        logger.info(
-            (
-                f"  Pool hits/misses: {usage['stats']['pool_hits']}/"
-                f"{usage['stats']['pool_misses']}"
-            )
-        )
+        logger.info(f"Memory: {usage['memory']['percent']}% used ({usage['memory']['used'] / 1024 / 1024:.1f} MB)")
+        logger.info(f"CPU: {usage['cpu']['percent']}% used")
+        logger.info(f"Pool hits/misses: {usage['stats']['pool_hits']}/{usage['stats']['pool_misses']}")
         logger.info(f"  GC collections: {usage['stats']['gc_collections']}")
 
     def cleanup(self):

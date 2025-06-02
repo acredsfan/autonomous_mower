@@ -9,10 +9,10 @@ The INA3221 can measure voltage, current, and power on three separate channels.
 import board
 import busio
 import adafruit_ina3221
-from mower.utilities.logger_config import LoggerConfigInfo as LoggerConfig
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
-logger = LoggerConfig.get_logger(__name__)
+logger = LoggerConfigInfo.get_logger(__name__)
 
 
 class INA3221Sensor:
