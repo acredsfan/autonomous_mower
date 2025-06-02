@@ -6,6 +6,7 @@ from datetime import datetime
 import board
 import busio
 from mower.utilities.logger_config import LoggerConfigInfo
+from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import INA3221Sensor
@@ -36,31 +37,69 @@ def _init_bno085():
         return None
 
 
-class EnhancedSensorInterface:
+class EnhancedSensorInterface(HardwareSensorInterface):
     """
     Enhanced sensor interface with improved error handling, health monitoring,
     and safety features.
     """
 
     def __init__(self):
-        self.sensor_data = None
-        self._data = None
-        self._error_thresholds = None
-        self._sensor_status = None
-        self._stop_event = None
-        self._sensors = None
+        self.sensor_data = {}
+        self._data = {}
+        self._error_thresholds = {
+            "bme280": 5,
+            "bno085": 5,
+            "ina3221": 5,
+            "vl53l0x": 5,
+        }
+        self._sensor_status = {}
+        self._stop_event = threading.Event()
+        self._sensors = {}
         self.shutdown_lines = None
         self._i2c = None
-        self._locks = None
+        self._locks = {
+            "i2c": threading.Lock(),
+            "data": threading.Lock(),
+            "status": threading.Lock(),
+        }
+
+        # Initialize sensor status for all sensors
+        for sensor_name in ["bme280", "bno085", "ina3221", "vl53l0x"]:
+            self._sensor_status[sensor_name] = SensorStatus(
+                working=False,
+                last_reading=datetime.now(),
+                error_count=0,
+                last_error=None,
+            )
 
         # Initialize I2C bus
         try:
             self._i2c = busio.I2C(board.SCL, board.SDA)
-            self._locks = {"i2c": threading.Lock()}
             logging.info("I2C bus initialized successfully")
         except Exception as e:
             _log_error("I2C bus initialization failed", e)
-            raise
+            raise        # Initialize all sensors
+        self._initialize_sensors()
+
+    def _initialize_sensors(self) -> None:
+        """Initialize all sensors."""
+        self._sensors["bme280"] = self.__initialize()
+        self._sensors["bno085"] = _init_bno085()
+        self._sensors["ina3221"] = self._init_ina3221()
+        self._sensors["vl53l0x"] = self._init_vl53l0x()
+
+    def start(self) -> None:
+        """Start the sensor interface."""
+        self._start_monitoring()
+        logging.info("Sensor interface started successfully")
+
+    def stop(self) -> None:
+        """Stop the sensor interface."""
+        self.shutdown()
+
+    def cleanup(self) -> None:
+        """Clean up resources used by the sensor interface."""
+        self._cleanup_sensors()
 
     def __initialize(self):
         """Initialize BME280 sensor."""
@@ -84,8 +123,18 @@ class EnhancedSensorInterface:
         """Initialize VL53L0X sensors."""
         try:
             with self._locks["i2c"]:
+                # For now, return None if shutdown pins are not configured
+                # This should be configured based on the actual hardware setup
+                if self.shutdown_lines is None:
+                    logging.warning("VL53L0X shutdown lines not configured, skipping initialization")
+                    return None
+                    
                 return VL53L0XSensors.init_vl53l0x_sensors(
-                    self._i2c, self.shutdown_lines
+                    self._i2c,
+                    self.shutdown_lines.get("left"),
+                    self.shutdown_lines.get("right"),
+                    left_target_addr=0x30,
+                    right_target_addr=0x31,
                 )
         except Exception as e:
             _log_error("VL53L0X initialization failed", e)
@@ -113,23 +162,45 @@ class EnhancedSensorInterface:
             return {}
 
         try:
-            # Read IMU data using the get_sensor_data method in BNO085Sensor Class
-            # Retrive acceleration, heading, roll, speed, and compass data
-            SensorData = self.BNO085Sensor.get_sensor_data()
-            heading = BNO085Sensor.get_sensor_data(self=self._sensors["bno085"], "heading")
-            roll = BNO085Sensor.get_sensor_data(self=self._sensors["bno085"], "roll")
-            speed = BNO085Sensor.calculate_speed(self._sensors["bno085"])
-            compass = BNO085Sensor.read_bno085_magnetometer(
-                self._sensors["bno085"]
-            )
-            # Get safety status
-            safety_status = self._sensors["bno085"].get_safety_status()
+            # Get IMU instance
+            imu = self._sensors["bno085"]
+            
+            # Read acceleration data
+            accel = imu.get_acceleration()
+            
+            # Read other sensor data
+            heading = imu.get_heading()
+            roll = imu.get_roll()
+            pitch = imu.get_pitch()
+            
+            # Get gyroscope and magnetometer data
+            gyro = imu.get_gyroscope()
+            magnetometer = imu.get_magnetometer()
+            
+            # Get calibration and safety status
+            calibration = imu.get_calibration()
+            safety_status = imu.get_safety_status()
+            
             return {
-                "acceleration": accel,
+                "acceleration": {
+                    "x": accel[0],
+                    "y": accel[1],
+                    "z": accel[2]
+                },
+                "gyroscope": {
+                    "x": gyro[0],
+                    "y": gyro[1],
+                    "z": gyro[2]
+                },
+                "magnetometer": {
+                    "x": magnetometer[0],
+                    "y": magnetometer[1],
+                    "z": magnetometer[2]
+                },
                 "heading": heading,
                 "roll": roll,
-                "speed": speed,
-                "compass": compass,
+                "pitch": pitch,
+                "calibration": calibration,
                 "safety_status": safety_status,
             }
         except Exception as e:
@@ -301,8 +372,43 @@ class EnhancedSensorInterface:
                 for sensor in critical_sensors
             )
 
-    def _init_sensor_with_retry(self, sensor_name, initializer):
-        pass
+    def _init_sensor_with_retry(self, sensor_name: str, initializer) -> None:
+        """
+        Initialize a sensor with retry logic.
+        
+        Args:
+            sensor_name: Name of the sensor to initialize
+            initializer: Function to call for initialization
+        """
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                sensor = initializer()
+                if sensor is not None:
+                    self._sensors[sensor_name] = sensor
+                    with self._locks["status"]:
+                        status = self._sensor_status[sensor_name]
+                        status.working = True
+                        status.error_count = 0
+                        status.last_error = None
+                    logging.info(f"Successfully initialized {sensor_name} on attempt {attempt + 1}")
+                    return
+                else:
+                    logging.warning(f"Sensor {sensor_name} initialization returned None on attempt {attempt + 1}")
+            except Exception as e:
+                logging.warning(f"Failed to initialize {sensor_name} on attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+        
+        # Mark sensor as failed after all retries
+        with self._locks["status"]:
+            status = self._sensor_status[sensor_name]
+            status.working = False
+            status.error_count = max_retries
+            status.last_error = f"Failed to initialize after {max_retries} attempts"
+        logging.error(f"Failed to initialize {sensor_name} after {max_retries} attempts")
 
 
 def _check_proximity_violation(sensor_data: Dict) -> bool:
