@@ -64,7 +64,8 @@ if [ ! -f "$REQ_FILE" ]; then
     exit 1
 fi
 print_info "Installing Python dependencies from $REQ_FILE..."
-	pip install --only-binary=:all: -r "$REQ_FILE"
+	pip install --only-binary=:all: --no-binary=imutils -r requirements-ubuntu2404.txt
+
 
 # 7. (Optional) Install dev/test requirements if present
 if [ -f "requirements-ubuntu2404.txt" ]; then
