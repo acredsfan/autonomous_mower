@@ -133,3 +133,7 @@ skip_glob = ["venv/*", ".venv/*", ".git/*", ".tox/*", "build/*", "dist/*"]
 [tool.mypy]
 mypy_path = "src"
 ignore_missing_imports = true
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503", "D100", "D104"]

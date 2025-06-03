@@ -23,14 +23,14 @@ repos:
     hooks:
       - id: black
         language_version: python3
-        args: [--line-length=88]
+        args: [--line-length=120]
         exclude: ^(venv/|\.venv/|\.git/|\.tox/|build/|dist/)
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
     hooks:
       - id: isort
-        args: ["--profile", "black", "--line-length", "78"]
+        args: ["--profile", "black", "--line-length", "120"]
         exclude: ^(venv/|\.venv/|\.git/|\.tox/|build/|dist/)
 
   - repo: https://github.com/pycqa/flake8
@@ -41,7 +41,7 @@ repos:
           - flake8-docstrings>=1.6.0
           - flake8-bugbear>=22.1.11
         args:
-          - --max-line-length=88
+          - --max-line-length=120
           - --extend-ignore=E203,W503,D100,D104
         exclude: venv|\\.venv|\\.git|\\.tox|build|dist
 
