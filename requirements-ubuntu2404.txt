@@ -15,7 +15,7 @@ python-dotenv>=1.1.0
 Flask>=3.0.0
 Flask-SocketIO>=5.5.1
 geopy>=2.4.1
-imutils>=0.5.4
+imutils
 networkx>=2.6.0
 pathfinding>=1.0.0
 Rtree>=1.0.0
