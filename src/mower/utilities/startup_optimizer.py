@@ -5,12 +5,12 @@ This module provides tools for optimizing the startup time of the application
 by implementing lazy loading, parallel initialization, and prioritized loading.
 """
 
-import time
-import threading
-import importlib
 import functools
-from typing import Dict, Any, List, Optional, Callable, Set, Tuple
+import importlib
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -41,10 +41,7 @@ class LazyLoader:
         self.loaded = False
 
         logger.debug(
-            (
-                f"Created lazy loader for {module_path}{f'.{class_name}'"
-                f" if class_name else ''}"
-            )
+            f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}"
         )
 
     def __call__(self, *args, **kwargs):
@@ -75,9 +72,7 @@ class LazyLoader:
         self.module = importlib.import_module(self.module_path)
         self.loaded = True
         load_time = time.time() - start_time
-        logger.debug(
-            f"Lazy loaded {self.module_path} in {load_time:.4f} seconds"
-        )
+        logger.debug(f"Lazy loaded {self.module_path} in {load_time:.4f} seconds")
 
 
 class StartupOptimizer:
@@ -120,9 +115,7 @@ class StartupOptimizer:
         logger.debug(f"Registered lazy loader for {name}")
         return loader
 
-    def register_component_dependency(
-        self, component: str, depends_on: List[str]
-    ):
+    def register_component_dependency(self, component: str, depends_on: List[str]):
         """
         Register dependencies between components.
 
@@ -207,14 +200,10 @@ class StartupOptimizer:
 
         if parallel:
             # Initialize components in parallel
-            with ThreadPoolExecutor(
-                max_workers=self.thread_pool_size
-            ) as executor:
+            with ThreadPoolExecutor(max_workers=self.thread_pool_size) as executor:
                 # Submit initialization tasks
                 future_to_component = {
-                    executor.submit(
-                        self._initialize_component, component
-                    ): component
+                    executor.submit(self._initialize_component, component): component
                     for component in components
                 }
 
@@ -254,9 +243,7 @@ class StartupOptimizer:
         # Check if dependencies are initialized
         for dependency in self.component_dependencies.get(component, []):
             if dependency not in self.initialized_components:
-                logger.debug(
-                    f"Initializing dependency {dependency} for {component}"
-                )
+                logger.debug(f"Initializing dependency {dependency} for {component}")
                 self._initialize_component(dependency)
 
         # Initialize the component
@@ -267,9 +254,7 @@ class StartupOptimizer:
         self.initialization_times[component] = initialization_time
         self.initialized_components.add(component)
 
-        logger.info(
-            f"Initialized {component} in {initialization_time:.4f} seconds"
-        )
+        logger.info(f"Initialized {component} in {initialization_time:.4f} seconds")
         return instance
 
     def get_initialization_times(self) -> Dict[str, float]:
@@ -387,9 +372,7 @@ def optimize_startup():
         "NavigationController",
     )
 
-    optimizer.register_lazy_loader(
-        "web_ui", "mower.ui.web_ui.server", "WebServer"
-    )
+    optimizer.register_lazy_loader("web_ui", "mower.ui.web_ui.server", "WebServer")
 
     # Register component dependencies
     optimizer.register_component_dependency(
@@ -454,9 +437,7 @@ def measure_startup_time(func: Callable):
     result = func()
     execution_time = time.time() - start_time
 
-    logger.info(
-        f"Function {func.__name__} executed in {execution_time:.4f} seconds"
-    )
+    logger.info(f"Function {func.__name__} executed in {execution_time:.4f} seconds")
 
     return result, execution_time
 
@@ -473,6 +454,7 @@ def compare_startup_times():
     # Measure unoptimized startup time
     def unoptimized_startup():
         from mower.config_management.config_manager import ConfigManager
+        from mower.navigation.navigation import NavigationController
         from mower.navigation.path_planner import (
             PathPlanner,
             PatternConfig,
@@ -481,7 +463,6 @@ def compare_startup_times():
         from mower.obstacle_detection.obstacle_detector import (
             ObstacleDetector,
         )
-        from mower.navigation.navigation import NavigationController
 
         config_manager = ConfigManager()
 

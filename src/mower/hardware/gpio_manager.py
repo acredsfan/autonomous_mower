@@ -6,7 +6,7 @@ library for hardware interaction and simulation.
 @hardware_interface
 """
 
-from typing import Optional, Dict, Union, Any
+from typing import Any, Dict, Optional, Union
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -15,14 +15,12 @@ logger = LoggerConfigInfo.get_logger(__name__)
 # Attempt to import gpiozero and specific device types
 try:
     from gpiozero import Device as GpioZeroDevice
+    from gpiozero.exc import BadPinFactory as BadPinFactoryReal
+    from gpiozero.exc import GPIOZeroError as GPIOZeroErrorReal
+    from gpiozero.exc import PinFixedPull as PinFixedPullReal
+    from gpiozero.exc import PinInvalidFunction as PinInvalidFunctionReal
+    from gpiozero.exc import PinSetInput as PinSetInputReal
     from gpiozero.pins.mock import MockFactory as GpioZeroMockFactory
-    from gpiozero.exc import (
-        GPIOZeroError as GPIOZeroErrorReal,
-        PinInvalidFunction as PinInvalidFunctionReal,
-        PinSetInput as PinSetInputReal,
-        PinFixedPull as PinFixedPullReal,
-        BadPinFactory as BadPinFactoryReal,
-    )
 
     # Alias to local names for compatibility with dummy fallback
     GPIOZeroError = GPIOZeroErrorReal  # type: ignore[assignment]
@@ -46,8 +44,7 @@ try:
             logger.info("gpiozero running with MockFactory for simulation.")
         except Exception as e_mock:
             GPIOZERO_AVAILABLE = False
-            logger.error(
-                f"Failed to initialize gpiozero with MockFactory: {e_mock}")
+            logger.error(f"Failed to initialize gpiozero with MockFactory: {e_mock}")
     except Exception as e_factory:  # Catch any other Device.pin_factory access issues
         GPIOZERO_AVAILABLE = False
         logger.warning(
@@ -67,22 +64,27 @@ except ImportError:
 
     class GPIOZeroError(Exception):
         """Dummy GPIOZeroError for simulation mode."""
+
         pass
 
     class PinInvalidFunction(GPIOZeroError):
         """Dummy PinInvalidFunction for simulation mode."""
+
         pass
 
     class PinSetInput(GPIOZeroError):
         """Dummy PinSetInput for simulation mode."""
+
         pass
 
     class PinFixedPull(GPIOZeroError):
         """Dummy PinFixedPull for simulation mode."""
+
         pass
 
     class BadPinFactory(GPIOZeroError):
         """Dummy BadPinFactory for simulation mode."""
+
         pass
         """Dummy PinFixedPull for simulation mode."""
         pass
@@ -135,14 +137,20 @@ except ImportError:
     class Device:  # type: ignore
         pin_factory: Optional[MockFactory] = None  # Add class attribute
 
-        def __init__(self, pin=None, pin_factory=None):  # pin_factory arg for consistency
+        def __init__(
+            self, pin=None, pin_factory=None
+        ):  # pin_factory arg for consistency
             self.pin = pin  # Stores the pin number
-            self._value = 0  # Use _value for internal storage (digital state or PWM duty cycle)
+            self._value = (
+                0  # Use _value for internal storage (digital state or PWM duty cycle)
+            )
             # If a specific pin_factory is provided, use it. Otherwise, use
             # class default.
             if pin_factory is not None:
                 self._pin_factory = pin_factory
-            elif Device.pin_factory is None and not GPIOZERO_AVAILABLE:  # Auto-init for dummy
+            elif (
+                Device.pin_factory is None and not GPIOZERO_AVAILABLE
+            ):  # Auto-init for dummy
                 Device.pin_factory = MockFactory()
                 self._pin_factory = Device.pin_factory
             else:
@@ -157,9 +165,11 @@ except ImportError:
 
         @property
         def value(self):
-            if hasattr(self, '_mock_pin_obj') and isinstance(self, PWMOutputDevice):  # Check if PWM type
+            if hasattr(self, "_mock_pin_obj") and isinstance(
+                self, PWMOutputDevice
+            ):  # Check if PWM type
                 return self._mock_pin_obj._duty_cycle
-            elif hasattr(self, '_mock_pin_obj'):
+            elif hasattr(self, "_mock_pin_obj"):
                 return self._mock_pin_obj.state
             return self._value
 
@@ -167,7 +177,7 @@ except ImportError:
         def value(self, val):
             # This setter is used by OutputDevice (0/1) and PWMOutputDevice (0.0-1.0)
             self._value = val
-            if hasattr(self, '_mock_pin_obj'):
+            if hasattr(self, "_mock_pin_obj"):
                 if isinstance(self, PWMOutputDevice):  # Check if PWM type
                     self._mock_pin_obj._duty_cycle = float(val)
                 elif val:
@@ -177,14 +187,17 @@ except ImportError:
 
     class OutputDevice(Device):  # type: ignore
         def __init__(
-                self,
-                pin=None,
-                active_high: bool = True,
-                initial_value: bool = False,  # bool for OutputDevice
-                pin_factory=None):
+            self,
+            pin=None,
+            active_high: bool = True,
+            initial_value: bool = False,  # bool for OutputDevice
+            pin_factory=None,
+        ):
             super().__init__(pin, pin_factory=pin_factory)
             self.active_high = active_high
-            effective_initial_value = initial_value if initial_value is not None else False
+            effective_initial_value = (
+                initial_value if initial_value is not None else False
+            )
             if effective_initial_value:
                 self.on()
             else:
@@ -203,28 +216,28 @@ except ImportError:
             active_high: bool = True,
             initial_value: float = 0.0,
             frequency: int = 100,
-            pin_factory=None
+            pin_factory=None,
         ):
             super().__init__(pin, pin_factory=pin_factory)
             self.active_high = active_high  # Though less relevant for PWM duty cycle
             self.frequency = frequency
             # initial_value for PWMOutputDevice is duty cycle (0.0 to 1.0)
             self.value = float(initial_value) if initial_value is not None else 0.0
-            if hasattr(self, '_mock_pin_obj'):
+            if hasattr(self, "_mock_pin_obj"):
                 self._mock_pin_obj.frequency = frequency
 
         # 'value' property (0.0-1.0 for duty cycle) is inherited from Device and its setter handles it.
         # 'frequency' property
         @property
         def frequency(self):
-            if hasattr(self, '_mock_pin_obj'):
+            if hasattr(self, "_mock_pin_obj"):
                 return self._mock_pin_obj.frequency
             return self._frequency_val
 
         @frequency.setter
         def frequency(self, freq: int):
             self._frequency_val = freq
-            if hasattr(self, '_mock_pin_obj'):
+            if hasattr(self, "_mock_pin_obj"):
                 self._mock_pin_obj.frequency = freq
 
         def on(self):  # Set to full duty cycle
@@ -270,12 +283,12 @@ class GPIOManager:
     # @gpio_pin_usage {pin_number} (BCM) - {purpose}
     # These will be documented per instance of device creation.
     PIN_CONFIG: Dict[str, int] = {
-        "BLADE_ENABLE": 17,    # @gpio_pin_usage 17 (BCM) - Blade PWM Control
+        "BLADE_ENABLE": 17,  # @gpio_pin_usage 17 (BCM) - Blade PWM Control
         "BLADE_DIRECTION": 27,  # @gpio_pin_usage 27 (BCM) - Blade Direction
         # @gpio_pin_usage 7 (BCM) - Emergency Stop Button
         "EMERGENCY_STOP": 7,
-        "MOTOR_LEFT": 22,      # @gpio_pin_usage 22 (BCM) - Left Motor Control (Purpose TBD: Enable or RoboHAT related)
-        "MOTOR_RIGHT": 23,     # @gpio_pin_usage 23 (BCM) - Right Motor Control (Purpose TBD: Enable or RoboHAT related)
+        "MOTOR_LEFT": 22,  # @gpio_pin_usage 22 (BCM) - Left Motor Control (Purpose TBD: Enable or RoboHAT related)
+        "MOTOR_RIGHT": 23,  # @gpio_pin_usage 23 (BCM) - Right Motor Control (Purpose TBD: Enable or RoboHAT related)
     }
 
     def __init__(self, simulate: bool = False):
@@ -291,19 +304,24 @@ class GPIOManager:
 
         # Set up references to the correct exception/device classes for the current mode
         if GPIOZERO_AVAILABLE:
-            from gpiozero import Device as GpioZeroDevice_real
-            from gpiozero import OutputDevice as GpioZeroOutputDevice_real
-            from gpiozero import PWMOutputDevice as GpioZeroPWMOutputDevice_real
-            from gpiozero import InputDevice as GpioZeroInputDevice_real
             from gpiozero import Button as GpioZeroButton_real
-            from gpiozero.pins.mock import MockFactory as GpioZeroMockFactory_real
-            from gpiozero.exc import (
-                GPIOZeroError as GPIOZeroErrorReal,
-                PinInvalidFunction as PinInvalidFunctionReal,
-                PinSetInput as PinSetInputReal,
-                PinFixedPull as PinFixedPullReal,
-                BadPinFactory as BadPinFactoryReal,
+            from gpiozero import Device as GpioZeroDevice_real
+            from gpiozero import InputDevice as GpioZeroInputDevice_real
+            from gpiozero import OutputDevice as GpioZeroOutputDevice_real
+            from gpiozero import (
+                PWMOutputDevice as GpioZeroPWMOutputDevice_real,
             )
+            from gpiozero.exc import BadPinFactory as BadPinFactoryReal
+            from gpiozero.exc import GPIOZeroError as GPIOZeroErrorReal
+            from gpiozero.exc import PinFixedPull as PinFixedPullReal
+            from gpiozero.exc import (
+                PinInvalidFunction as PinInvalidFunctionReal,
+            )
+            from gpiozero.exc import PinSetInput as PinSetInputReal
+            from gpiozero.pins.mock import (
+                MockFactory as GpioZeroMockFactory_real,
+            )
+
             self._DeviceClass = GpioZeroDevice_real
             self._OutputDeviceClass = GpioZeroOutputDevice_real
             self._PWMOutputDeviceClass = GpioZeroPWMOutputDevice_real
@@ -333,19 +351,26 @@ class GPIOManager:
             if GPIOZERO_AVAILABLE and not simulate:
                 logger.warning(
                     "gpiozero seemed available but failed initial factory setup, "
-                    "forcing MockFactory for simulation.")
+                    "forcing MockFactory for simulation."
+                )
                 try:
                     # type: ignore is needed for mypy compatibility
                     self._DeviceClass.pin_factory = self._MockFactoryClass()  # type: ignore[attr-defined,assignment]
                     logger.info("Using gpiozero.MockFactory for forced simulation.")
                 except Exception as e_mock_force:
-                    logger.error(f"Failed to set gpiozero.MockFactory during forced sim: {e_mock_force}")
+                    logger.error(
+                        f"Failed to set gpiozero.MockFactory during forced sim: {e_mock_force}"
+                    )
             elif GPIOZERO_AVAILABLE and simulate:
                 try:
                     self._DeviceClass.pin_factory = self._MockFactoryClass()  # type: ignore[attr-defined,assignment]
-                    logger.info("Using gpiozero.MockFactory for user-requested simulation.")
+                    logger.info(
+                        "Using gpiozero.MockFactory for user-requested simulation."
+                    )
                 except Exception as e_mock_user:
-                    logger.error(f"Failed to set gpiozero.MockFactory for user sim: {e_mock_user}")
+                    logger.error(
+                        f"Failed to set gpiozero.MockFactory for user sim: {e_mock_user}"
+                    )
             else:
                 if Device.pin_factory is None:
                     Device.pin_factory = MockFactory()
@@ -354,13 +379,18 @@ class GPIOManager:
                 )
         else:  # Hardware mode with gpiozero
             if GPIOZERO_AVAILABLE:
-                from gpiozero import Device as GpioZeroDevice_real  # Real gpiozero Device
+                from gpiozero import (
+                    Device as GpioZeroDevice_real,  # Real gpiozero Device
+                )
+
                 logger.info(
                     f"GPIOManager running with hardware access via gpiozero "
-                    f"and pin factory: {GpioZeroDevice_real.pin_factory.__class__.__name__}")
+                    f"and pin factory: {GpioZeroDevice_real.pin_factory.__class__.__name__}"
+                )
             else:  # Should not happen if logic is correct
                 logger.error(
-                    "In hardware mode but GPIOZERO_AVAILABLE is False. This is a bug.")
+                    "In hardware mode but GPIOZERO_AVAILABLE is False. This is a bug."
+                )
 
     def _get_pin_obj(self, pin: int) -> Optional[Any]:  # Device object
         if pin not in self._devices:
@@ -372,7 +402,9 @@ class GPIOManager:
         self,
         pin: int,
         pin_type: str = "out",  # "out", "in", "button", "pwm"
-        initial_value: Optional[Union[bool, float]] = None,  # For "out" (bool) or "pwm" (float)
+        initial_value: Optional[
+            Union[bool, float]
+        ] = None,  # For "out" (bool) or "pwm" (float)
         pull_up: Optional[bool] = None,  # For "in" or "button"
         active_high: Optional[bool] = True,  # For OutputDevice, PWMOutputDevice
         frequency: Optional[int] = None,  # For "pwm"
@@ -396,7 +428,8 @@ class GPIOManager:
         """
         if pin in self._devices:
             logger.warning(
-                f"Pin {pin} already configured. Cleaning up before re-configuring.")
+                f"Pin {pin} already configured. Cleaning up before re-configuring."
+            )
             self.cleanup_pin(pin)
 
         try:
@@ -417,9 +450,12 @@ class GPIOManager:
                         return False
                     # Dummy PWMOutputDevice expects int for initial_value, so use 0
                     device = PWMOutputDeviceClass(
-                        pin, initial_value=0,
-                        frequency=frequency, active_high=active_high if active_high is not None else True,
-                        pin_factory=current_pin_factory_instance)
+                        pin,
+                        initial_value=0,
+                        frequency=frequency,
+                        active_high=active_high if active_high is not None else True,
+                        pin_factory=current_pin_factory_instance,
+                    )
                     # Set value after instantiation if initial_value is provided
                     if initial_value is not None:
                         try:
@@ -428,27 +464,33 @@ class GPIOManager:
                             pass
                 elif pin_type == "out":
                     device = OutputDeviceClass(
-                        pin, initial_value=bool(initial_value) if initial_value is not None else False,
+                        pin,
+                        initial_value=(
+                            bool(initial_value) if initial_value is not None else False
+                        ),
                         active_high=active_high if active_high is not None else True,
-                        pin_factory=current_pin_factory_instance)
+                        pin_factory=current_pin_factory_instance,
+                    )
                 elif pin_type == "in":
                     # For dummy InputDevice, pull_up can be None or bool; for real, must be bool
                     device = InputDeviceClass(
                         pin,
                         pull_up=bool(pull_up) if pull_up is not None else False,
-                        pin_factory=current_pin_factory_instance
+                        pin_factory=current_pin_factory_instance,
                     )
                 elif pin_type == "button":
                     device = ButtonClass(
                         pin,
                         pull_up=pull_up if pull_up is not None else PULL_UP,
-                        pin_factory=current_pin_factory_instance
+                        pin_factory=current_pin_factory_instance,
                     )
                 else:
                     logger.error(f"Invalid pin_type '{pin_type}' for pin {pin}.")
                     return False
                 self._devices[pin] = device
-                logger.debug(f"Simulated (dummy class) setup for pin {pin} as {pin_type}")
+                logger.debug(
+                    f"Simulated (dummy class) setup for pin {pin} as {pin_type}"
+                )
                 return True
 
             # Real hardware OR gpiozero with MockFactory
@@ -459,8 +501,11 @@ class GPIOManager:
                 # Real PWMOutputDevice expects float for initial_value, but fallback to 0 if error
                 # Real PWMOutputDevice expects float for initial_value, but fallback to 0 if error
                 device = PWMOutputDeviceClass(
-                    pin, initial_value=0,
-                    frequency=frequency, active_high=active_high if active_high is not None else True)
+                    pin,
+                    initial_value=0,
+                    frequency=frequency,
+                    active_high=active_high if active_high is not None else True,
+                )
                 if initial_value is not None:
                     try:
                         device.value = float(initial_value)
@@ -473,15 +518,21 @@ class GPIOManager:
                 )
             elif pin_type == "out":
                 device = OutputDeviceClass(
-                    pin, initial_value=bool(initial_value) if initial_value is not None else False,
-                    active_high=active_high if active_high is not None else True)
+                    pin,
+                    initial_value=(
+                        bool(initial_value) if initial_value is not None else False
+                    ),
+                    active_high=active_high if active_high is not None else True,
+                )
                 logger.info(
                     f"Pin {pin} configured as {OutputDeviceClass.__name__}, "
-                    f"initial_value={getattr(device, 'value', None)}, active_high={active_high}")
+                    f"initial_value={getattr(device, 'value', None)}, active_high={active_high}"
+                )
             elif pin_type == "in":
                 try:
                     device = InputDeviceClass(
-                        pin, pull_up=pull_up if pull_up is not None else False)
+                        pin, pull_up=pull_up if pull_up is not None else False
+                    )
                 except TypeError:
                     device = InputDeviceClass(pin)
                 logger.info(
@@ -490,9 +541,11 @@ class GPIOManager:
                 )
             elif pin_type == "button":
                 device = ButtonClass(
-                    pin, pull_up=pull_up if pull_up is not None else PULL_UP)
+                    pin, pull_up=pull_up if pull_up is not None else PULL_UP
+                )
                 logger.info(
-                    f"Pin {pin} configured as {ButtonClass.__name__} with pull_up={getattr(device, 'pull_up', None)}")
+                    f"Pin {pin} configured as {ButtonClass.__name__} with pull_up={getattr(device, 'pull_up', None)}"
+                )
             else:
                 logger.error(f"Invalid pin_type '{pin_type}' for pin {pin}.")
                 return False
@@ -501,16 +554,24 @@ class GPIOManager:
             return True
 
         except (
-            self._GPIOZeroError, self._PinInvalidFunction, self._PinSetInput, self._PinFixedPull, ValueError
+            self._GPIOZeroError,
+            self._PinInvalidFunction,
+            self._PinSetInput,
+            self._PinFixedPull,
+            ValueError,
         ) as e:
             logger.error(
-                f"Error setting up GPIO pin {pin} (type: {pin_type}) with gpiozero: {e}")
+                f"Error setting up GPIO pin {pin} (type: {pin_type}) with gpiozero: {e}"
+            )
             if GPIOZERO_AVAILABLE and not self._simulation_mode:
-                logger.warning("Consider forcing simulation mode if hardware access is problematic.")
+                logger.warning(
+                    "Consider forcing simulation mode if hardware access is problematic."
+                )
             return False
         except Exception as e_setup:  # Catch-all for unexpected issues
             logger.error(
-                f"Unexpected error setting up GPIO pin {pin} (type: {pin_type}): {e_setup}")
+                f"Unexpected error setting up GPIO pin {pin} (type: {pin_type}): {e_setup}"
+            )
             return False
 
     def cleanup_pin(self, pin: int) -> None:
@@ -527,13 +588,12 @@ class GPIOManager:
                 logger.info(f"Closed and cleaned up pin {pin}.")
             except GPIOZeroError as e_gpio_close:  # type: ignore
                 logger.error(
-                    f"Error closing gpiozero device for pin {pin}: {e_gpio_close}")
+                    f"Error closing gpiozero device for pin {pin}: {e_gpio_close}"
+                )
             except Exception as e_close:  # Catch-all for unexpected issues
-                logger.error(
-                    f"Unexpected error cleaning up pin {pin}: {e_close}")
+                logger.error(f"Unexpected error cleaning up pin {pin}: {e_close}")
         else:
-            logger.debug(
-                f"Pin {pin} not found for cleanup or already cleaned.")
+            logger.debug(f"Pin {pin} not found for cleanup or already cleaned.")
 
     def cleanup_all(self) -> None:
         """Clean up all GPIO pins by closing all managed gpiozero devices."""
@@ -565,6 +625,7 @@ class GPIOManager:
         is_pwm_device = False
         if GPIOZERO_AVAILABLE:
             from gpiozero import PWMOutputDevice as RealPWMOutputDevice
+
             if isinstance(device, RealPWMOutputDevice):
                 is_pwm_device = True
         elif not GPIOZERO_AVAILABLE and isinstance(device, self._PWMOutputDeviceClass):
@@ -577,7 +638,9 @@ class GPIOManager:
             )
             return self.set_pin_duty_cycle(pin, 1.0 if value else 0.0)
 
-        is_dummy_simulation_output = not GPIOZERO_AVAILABLE and isinstance(device, OutputDevice)
+        is_dummy_simulation_output = not GPIOZERO_AVAILABLE and isinstance(
+            device, OutputDevice
+        )
         if is_dummy_simulation_output:
             if hasattr(device, "value"):
                 if value:
@@ -585,14 +648,18 @@ class GPIOManager:
                 else:
                     device.off()
                 logger.debug(
-                    f"Simulated (dummy OutputDevice) set pin {pin} to {'ON' if value else 'OFF'}")
+                    f"Simulated (dummy OutputDevice) set pin {pin} to {'ON' if value else 'OFF'}"
+                )
                 return True
             logger.warning(
-                f"Simulated (dummy) pin {pin} cannot be set (not dummy OutputDevice or no value attr).")
+                f"Simulated (dummy) pin {pin} cannot be set (not dummy OutputDevice or no value attr)."
+            )
             return False
 
         # If GPIOZERO_AVAILABLE (either real OutputDevice or its MockFactory OutputDevice)
-        if GPIOZERO_AVAILABLE and isinstance(device, OutputDevice):  # gpiozero.OutputDevice
+        if GPIOZERO_AVAILABLE and isinstance(
+            device, OutputDevice
+        ):  # gpiozero.OutputDevice
             try:
                 if value:
                     device.on()
@@ -610,7 +677,9 @@ class GPIOManager:
                 logger.error(f"Unexpected error setting pin {pin}: {e_set}")
                 return False
 
-        logger.warning(f"Cannot set pin {pin}: not a recognized OutputDevice or unhandled simulation case.")
+        logger.warning(
+            f"Cannot set pin {pin}: not a recognized OutputDevice or unhandled simulation case."
+        )
         return False
 
     def set_pin_duty_cycle(self, pin: int, duty_cycle: float) -> bool:
@@ -631,27 +700,37 @@ class GPIOManager:
         # Clamp duty_cycle
         duty_cycle = max(0.0, min(1.0, duty_cycle))
 
-        is_dummy_pwm_device = not GPIOZERO_AVAILABLE and isinstance(device, self._PWMOutputDeviceClass)
+        is_dummy_pwm_device = not GPIOZERO_AVAILABLE and isinstance(
+            device, self._PWMOutputDeviceClass
+        )
 
         if is_dummy_pwm_device:
             device.value = duty_cycle
-            logger.debug(f"Simulated (dummy PWM) set pin {pin} duty cycle to {duty_cycle:.2f}")
+            logger.debug(
+                f"Simulated (dummy PWM) set pin {pin} duty cycle to {duty_cycle:.2f}"
+            )
             return True
 
         # If GPIOZERO_AVAILABLE (real PWMOutputDevice or its MockFactory PWMOutputDevice)
         if GPIOZERO_AVAILABLE and isinstance(device, PWMOutputDevice):
             try:
                 device.value = duty_cycle
-                logger.debug(f"Set PWM pin {pin} duty cycle to {duty_cycle:.2f} (actual: {device.value:.2f})")
+                logger.debug(
+                    f"Set PWM pin {pin} duty cycle to {duty_cycle:.2f} (actual: {device.value:.2f})"
+                )
                 return True
             except (GPIOZeroError, PinInvalidFunction) as e_pwm_set:
                 logger.error(f"Error setting PWM pin {pin} duty cycle: {e_pwm_set}")
                 return False
             except Exception as e_set:
-                logger.error(f"Unexpected error setting PWM pin {pin} duty cycle: {e_set}")
+                logger.error(
+                    f"Unexpected error setting PWM pin {pin} duty cycle: {e_set}"
+                )
                 return False
 
-        logger.warning(f"Cannot set duty cycle for pin {pin}: not a recognized PWMOutputDevice.")
+        logger.warning(
+            f"Cannot set duty cycle for pin {pin}: not a recognized PWMOutputDevice."
+        )
         return False
 
     def get_pin(self, pin: int) -> Optional[Union[bool, float]]:
@@ -676,13 +755,18 @@ class GPIOManager:
                 logger.debug(f"Simulated (dummy) get pin {pin} value: {val}")
                 return val
             logger.warning(
-                f"Simulated (dummy) pin {pin} cannot be read (no value attr or unhandled type).")
+                f"Simulated (dummy) pin {pin} cannot be read (no value attr or unhandled type)."
+            )
             return None
 
         # If GPIOZERO_AVAILABLE (real or its MockFactory)
-        if isinstance(device, (InputDevice, OutputDevice, Button, PWMOutputDevice)):  # gpiozero types
+        if isinstance(
+            device, (InputDevice, OutputDevice, Button, PWMOutputDevice)
+        ):  # gpiozero types
             try:
-                val = device.value  # gpiozero .value is 0/1 for digital, 0.0-1.0 for PWM
+                val = (
+                    device.value
+                )  # gpiozero .value is 0/1 for digital, 0.0-1.0 for PWM
                 if isinstance(device, PWMOutputDevice):
                     logger.debug(f"Get PWM pin {pin} duty cycle: {float(val):.2f}")
                     return float(val)
@@ -697,7 +781,8 @@ class GPIOManager:
                 return None
 
         logger.warning(
-            f"Cannot get pin {pin} value: not a recognized gpiozero device type for this method.")
+            f"Cannot get pin {pin} value: not a recognized gpiozero device type for this method."
+        )
         return None
 
     def is_pin_active(self, pin: int) -> Optional[bool]:
@@ -718,20 +803,23 @@ class GPIOManager:
         is_dummy_simulation = not GPIOZERO_AVAILABLE
 
         if isinstance(
-                device,
-                Button):  # Covers both gpiozero.Button and our dummy Button
+            device, Button
+        ):  # Covers both gpiozero.Button and our dummy Button
             try:
                 if is_dummy_simulation:  # Our own dummy Button
-                    active = device.is_pressed  # Relies on external simulation setting this
+                    active = (
+                        device.is_pressed
+                    )  # Relies on external simulation setting this
                 else:  # gpiozero Button (real or Mock)
                     active = device.is_pressed
                 logger.debug(
-                    f"Button {pin} active (is_pressed): {active}, value: {
-                        device.value}")
+                    f"Button {pin} active (is_pressed): {active}, value: {device.value}"
+                )
                 return active
             except (GPIOZeroError, PinInvalidFunction) as e_button_active:
                 logger.error(
-                    f"Error checking Button {pin} active state: {e_button_active}")
+                    f"Error checking Button {pin} active state: {e_button_active}"
+                )
                 return None
         elif isinstance(device, InputDevice):  # Covers gpiozero.InputDevice and dummy
             try:
@@ -740,9 +828,12 @@ class GPIOManager:
                 return active
             except (GPIOZeroError, PinInvalidFunction) as e_input_active:
                 logger.error(
-                    f"Error checking InputDevice {pin} active state: {e_input_active}")
+                    f"Error checking InputDevice {pin} active state: {e_input_active}"
+                )
                 return None
-        elif isinstance(device, self._OutputDeviceClass):  # Covers gpiozero.OutputDevice and dummy
+        elif isinstance(
+            device, self._OutputDeviceClass
+        ):  # Covers gpiozero.OutputDevice and dummy
             val = self.get_pin(pin)
             # Only return bool or None
             if isinstance(val, bool) or val is None:
@@ -819,28 +910,27 @@ class GPIOManager:
                         device.hold_time = hold_time  # type: ignore
                     else:
                         logger.warning(
-                            "\'when_held\' used without specifying hold_time, "
+                            "'when_held' used without specifying hold_time, "
                             "using default."
                         )
 
                 setattr(device, event_type, callback_function)
 
-                logger.info(
-                    f"Event detection \'{event_type}\' added to pin {pin}.")
+                logger.info(f"Event detection '{event_type}' added to pin {pin}.")
                 return True
             else:
                 logger.error(
                     f"Device for pin {pin} (type: {type(device).__name__}) "
-                    f"does not support event \'{event_type}\'."
+                    f"does not support event '{event_type}'."
                 )
                 return False
         except (GPIOZeroError, AttributeError) as e_gpio_event:  # type: ignore
-            logger.error(
-                f"Error adding event detection to pin {pin}: {e_gpio_event}")
+            logger.error(f"Error adding event detection to pin {pin}: {e_gpio_event}")
             return False
         except Exception as e_event:  # Catch-all for unexpected issues
             logger.error(
-                f"Unexpected error adding event detection to pin {pin}: {e_event}")
+                f"Unexpected error adding event detection to pin {pin}: {e_event}"
+            )
             return False
 
     def remove_event_detect(self, pin: int, event_type: str):
@@ -859,14 +949,11 @@ class GPIOManager:
         is_dummy_simulation = not GPIOZERO_AVAILABLE
 
         if is_dummy_simulation:
-            if hasattr(
-                    device,
-                    event_type) and getattr(
-                    device,
-                    event_type) is not None:
+            if hasattr(device, event_type) and getattr(device, event_type) is not None:
                 setattr(device, event_type, None)
                 logger.info(
-                    f"Event detection '{event_type}' removed from pin {pin} in dummy simulation.")
+                    f"Event detection '{event_type}' removed from pin {pin} in dummy simulation."
+                )
             else:
                 logger.warning(
                     f"Dummy device for pin {pin} does not have event '{event_type}' "
@@ -876,25 +963,22 @@ class GPIOManager:
 
         # If GPIOZERO_AVAILABLE (real or its MockFactory)
         try:
-            if hasattr(
-                    device,
-                    event_type) and getattr(
-                    device,
-                    event_type) is not None:
+            if hasattr(device, event_type) and getattr(device, event_type) is not None:
                 setattr(device, event_type, None)  # Clear the event handler
-                logger.info(
-                    f"Event detection \'{event_type}\' removed from pin {pin}.")
+                logger.info(f"Event detection '{event_type}' removed from pin {pin}.")
             else:
                 logger.warning(
-                    f"Device for pin {pin} does not have event \'{event_type}\' "
+                    f"Device for pin {pin} does not have event '{event_type}' "
                     f"to remove or it was not set."
                 )
         except (GPIOZeroError, AttributeError) as e_gpio_remove_event:  # type: ignore
             logger.error(
-                f"Error removing event detection from pin {pin}: {e_gpio_remove_event}")
+                f"Error removing event detection from pin {pin}: {e_gpio_remove_event}"
+            )
         except Exception as e_remove_event:  # Catch-all for unexpected issues
             logger.error(
-                f"Unexpected error removing event detection from pin {pin}: {e_remove_event}")
+                f"Unexpected error removing event detection from pin {pin}: {e_remove_event}"
+            )
 
 
 # Example Usage (Illustrative)
@@ -910,8 +994,13 @@ if __name__ == "__main__":
     # Check if gpiozero is available and if its pin_factory is a MockFactory
     gpiozero_is_mocked = False
     if GPIOZERO_AVAILABLE:
-        from gpiozero import Device as GpioZeroDevice_real  # Real gpiozero Device
-        from gpiozero.pins.mock import MockFactory as GpioZeroMockFactory_real  # Real MockFactory
+        from gpiozero import (
+            Device as GpioZeroDevice_real,  # Real gpiozero Device
+        )
+        from gpiozero.pins.mock import (
+            MockFactory as GpioZeroMockFactory_real,  # Real MockFactory
+        )
+
         if isinstance(GpioZeroDevice_real.pin_factory, GpioZeroMockFactory_real):
             gpiozero_is_mocked = True
 
@@ -921,7 +1010,9 @@ if __name__ == "__main__":
 
     # Example with PWM pin
     pwm_pin_example = GPIOManager.PIN_CONFIG["BLADE_ENABLE"]  # Using pin 17 as PWM
-    if manager.setup_pin(pwm_pin_example, pin_type="pwm", frequency=100, initial_value=0.1):
+    if manager.setup_pin(
+        pwm_pin_example, pin_type="pwm", frequency=100, initial_value=0.1
+    ):
         logger.info(f"PWM pin {pwm_pin_example} setup with 10% duty cycle.")
         time.sleep(0.1)
         manager.set_pin_duty_cycle(pwm_pin_example, 0.5)
@@ -938,7 +1029,9 @@ if __name__ == "__main__":
     else:
         logger.error(f"Failed to set up PWM pin {pwm_pin_example}.")
 
-    led_pin = GPIOManager.PIN_CONFIG.get("MOTOR_LEFT", 22)  # Use a different pin if BLADE_ENABLE is 17
+    led_pin = GPIOManager.PIN_CONFIG.get(
+        "MOTOR_LEFT", 22
+    )  # Use a different pin if BLADE_ENABLE is 17
     button_pin = GPIOManager.PIN_CONFIG["EMERGENCY_STOP"]
 
     if manager.setup_pin(led_pin, pin_type="out", initial_value=False):
@@ -957,7 +1050,10 @@ if __name__ == "__main__":
         if pwm_pin_example in manager._devices:
             current_pwm_val = manager.get_pin(pwm_pin_example)
             if isinstance(current_pwm_val, float):
-                manager.set_pin_duty_cycle(pwm_pin_example, 1.0 - current_pwm_val if current_pwm_val > 0 else 0.2)
+                manager.set_pin_duty_cycle(
+                    pwm_pin_example,
+                    1.0 - current_pwm_val if current_pwm_val > 0 else 0.2,
+                )
 
     def button_released_callback_example():
         logger.info(f"Button on pin {button_pin} released! (Example)")
@@ -968,38 +1064,54 @@ if __name__ == "__main__":
             button_pin,
             button_pressed_callback_example,
             "when_pressed",
-            bounce_time=0.05)
+            bounce_time=0.05,
+        )
         manager.add_event_detect(
             button_pin, button_released_callback_example, "when_released"
         )
         logger.info(
-            f"Event detection added for button {button_pin}. Press/release the button.")
+            f"Event detection added for button {button_pin}. Press/release the button."
+        )
 
         # Simulation handling for example
         is_gpiozero_fully_available_and_mocked = False
         try:
             if GPIOZERO_AVAILABLE:
                 from gpiozero import Device as GpioZeroDevice_real
-                from gpiozero.pins.mock import MockFactory as GpioZeroMockFactory_real
+                from gpiozero.pins.mock import (
+                    MockFactory as GpioZeroMockFactory_real,
+                )
+
                 is_gpiozero_fully_available_and_mocked = isinstance(
-                    getattr(GpioZeroDevice_real, 'pin_factory', None), GpioZeroMockFactory_real)
+                    getattr(GpioZeroDevice_real, "pin_factory", None),
+                    GpioZeroMockFactory_real,
+                )
             else:
                 # Use manager's class references for Device and MockFactory
                 is_gpiozero_fully_available_and_mocked = isinstance(
-                    getattr(manager._DeviceClass, 'pin_factory', None), manager._MockFactoryClass)
+                    getattr(manager._DeviceClass, "pin_factory", None),
+                    manager._MockFactoryClass,
+                )
         except Exception:
             is_gpiozero_fully_available_and_mocked = False
 
-        is_dummy_mode_active = manager._simulation_mode and not is_gpiozero_fully_available_and_mocked
+        is_dummy_mode_active = (
+            manager._simulation_mode and not is_gpiozero_fully_available_and_mocked
+        )
 
         if manager._simulation_mode:
             logger.info("Simulating button press and release for example...")
             if is_gpiozero_fully_available_and_mocked:
                 try:
                     from gpiozero import Device as GpioZeroDevice_real_sim
-                    from gpiozero.pins.mock import MockPin as GpioZeroMockPin_real_sim
+                    from gpiozero.pins.mock import (
+                        MockPin as GpioZeroMockPin_real_sim,
+                    )
+
                     if GpioZeroDevice_real_sim.pin_factory is not None:
-                        mock_pin_obj = GpioZeroDevice_real_sim.pin_factory.pin(button_pin)
+                        mock_pin_obj = GpioZeroDevice_real_sim.pin_factory.pin(
+                            button_pin
+                        )
                         if isinstance(mock_pin_obj, GpioZeroMockPin_real_sim):
                             mock_pin_obj.drive_low()
                             time.sleep(0.05)
@@ -1011,18 +1123,28 @@ if __name__ == "__main__":
                                 f"Got {type(mock_pin_obj)}"
                             )
                     else:
-                        logger.warning("gpiozero.Device.pin_factory not available for detailed simulation.")
+                        logger.warning(
+                            "gpiozero.Device.pin_factory not available for detailed simulation."
+                        )
                 except Exception as e_sim_press:
-                    logger.error(f"Error during gpiozero.MockPin simulation: {e_sim_press}")
+                    logger.error(
+                        f"Error during gpiozero.MockPin simulation: {e_sim_press}"
+                    )
 
             elif is_dummy_mode_active:  # Using our dummy classes
-                logger.info("Basic dummy sim: Manually calling button callbacks for example.")
+                logger.info(
+                    "Basic dummy sim: Manually calling button callbacks for example."
+                )
                 button_device_obj = manager._get_pin_obj(button_pin)
-                if isinstance(button_device_obj, manager._ButtonClass):  # Our dummy Button
+                if isinstance(
+                    button_device_obj, manager._ButtonClass
+                ):  # Our dummy Button
                     button_device_obj.is_pressed = True
                 button_pressed_callback_example()
                 time.sleep(0.05)
-                if isinstance(button_device_obj, manager._ButtonClass):  # Our dummy Button
+                if isinstance(
+                    button_device_obj, manager._ButtonClass
+                ):  # Our dummy Button
                     button_device_obj.is_pressed = False
                 button_released_callback_example()
         else:  # Running on hardware
