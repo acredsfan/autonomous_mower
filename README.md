@@ -82,29 +82,93 @@ git clone https://github.com/acredsfan/autonomous_mower.git
 cd autonomous_mower
 ```
 
-### 3. Run Installation Script
+### Installation Options
 
-Use the interactive installation script to install dependencies and configure the system:
+This project offers two main methods for installing dependencies and configuring the system.
+
+#### Option 1: System-wide Installation (Recommended for Dedicated Hardware)
+
+This is the original installation method, suitable if your Raspberry Pi is fully dedicated to running the autonomous mower. It installs Python packages system-wide, which can be simpler for a single-purpose device. For more details on why this method installs packages globally, see the "Note on Python Package Installation" section below.
+
+**Instructions:**
 
 ```bash
-./install_requirements.sh
+# Make the script executable
+chmod +x install_requirements.sh
+
+# Run the installation script with sudo (for system packages and hardware setup)
+sudo ./install_requirements.sh
 ```
+
+**Non-Interactive Mode:**
 
 For a non-interactive installation that defaults most options to 'yes' (use with caution, review defaults in the script):
-
 ```bash
-./install_requirements.sh -y
+sudo ./install_requirements.sh -y
 # or
-./install_requirements.sh --yes
+sudo ./install_requirements.sh --yes
 # or
-./install_requirements.sh --non-interactive
+sudo ./install_requirements.sh --non-interactive
 ```
 
+**Help:**
 To see all available options for the script:
-
 ```bash
 ./install_requirements.sh --help
 ```
+
+This script will guide you through installing system packages, Python dependencies (system-wide), configuring hardware, setting up the systemd service, and more. It also supports checkpoint/resume functionality (see details further down).
+
+
+#### Option 2: Virtual Environment Installation (Recommended for Development / Shared Systems)
+
+This method uses a Python virtual environment to install dependencies, which offers several benefits:
+- **Isolation:** Project dependencies are kept separate from the system's global Python environment.
+- **Conflict Prevention:** Reduces the chance of conflicts with other Python projects or system tools.
+- **Version Management:** Makes it easier to manage project-specific package versions.
+- **Cleanliness:** Keeps your global Python site-packages directory tidy.
+
+This is recommended if you use your Raspberry Pi for other projects or prefer a cleaner separation of dependencies.
+
+**Instructions:**
+
+```bash
+# Make the new script executable
+chmod +x install_requirements_venv.sh
+
+# Run the installation script (sudo might still be needed for initial system packages like 'python3-venv' and hardware setup)
+sudo ./install_requirements_venv.sh
+```
+
+The virtual environment will be created in a directory named `.venv` within the project root.
+
+**Non-Interactive Mode:**
+This script also supports non-interactive mode:
+```bash
+sudo ./install_requirements_venv.sh -y
+# or
+sudo ./install_requirements_venv.sh --yes
+# or
+sudo ./install_requirements_venv.sh --non-interactive
+```
+
+**Help:**
+To see all available options for this script:
+```bash
+./install_requirements_venv.sh --help
+```
+
+**Using the Virtual Environment Manually:**
+After installation, if you need to run mower scripts manually (outside of the systemd service, which handles this automatically), you should first activate the virtual environment:
+```bash
+source .venv/bin/activate
+```
+Alternatively, you can prefix commands with the VENV's Python interpreter:
+```bash
+.venv/bin/python your_script.py
+```
+
+This script also supports checkpoint/resume functionality.
 
 ### 4. Create Log Directory and Set Permissions
 
@@ -123,62 +187,7 @@ sudo chmod 755 /var/log/autonomous-mower
 
 These steps are required only once during initial setup. The service will use this directory for all logging operations.
 
-### 5. Installation
-
-The installation script supports both interactive and non-interactive modes:
-
-#### Interactive Installation (Default)
-
-```bash
-# Make the script executable
-chmod +x install_requirements.sh
-
-# Run the installation script with sudo
-sudo ./install_requirements.sh
-```
-
-#### Non-Interactive Installation
-
-For automated deployments, CI/CD pipelines, or when you want to accept all default options without prompts:
-
-```bash
-# Run in non-interactive mode (auto-answers "yes" to all prompts)
-sudo ./install_requirements.sh -y
-# or
-sudo ./install_requirements.sh --yes
-# or
-sudo ./install_requirements.sh --non-interactive
-```
-
-**Non-Interactive Mode Features:**
-
-- ✅ Automatically accepts all recommended installations
-- ✅ Uses safe defaults for all configuration options
-- ✅ Perfect for automated deployments and scripted installations
-- ✅ Shows clear progress indicators and selected defaults
-- ⚠️ Camera/hardware detection failures still default to "no" for safety
-
-#### Installation Script Options
-
-```bash
-# Show help and available options
-sudo ./install_requirements.sh --help
-
-# Available options:
-#   -y, --yes, --non-interactive    Run in non-interactive mode
-#   -h, --help                      Show help message
-```
-
-The installation script will:
-
-- Install required system packages
-- Install required Python packages system-wide
-- Set up PYTHONPATH environment variable permanently
-- Set up the systemd service
-- Configure hardware interfaces
-- Set up the watchdog timer
-- Optionally install YOLOv8 models for improved object detection
-- Optionally set up Google Coral TPU if available
+*(The "### 5. Installation" section and its sub-sections like "Interactive Installation", "Non-Interactive Installation", "Installation Script Options" are now integrated into "### Installation Options" above. The general information about what the scripts do and checkpoint/resume functionality applies to both scripts and is detailed below.)*
 
 #### Checkpoint/Resume Functionality
 
@@ -247,7 +256,9 @@ For detailed information about the checkpoint system, see [`INSTALL_CHECKPOINTS.
 
 #### Note on Python Package Installation
 
-This project uses system-wide Python package installation with the `--break-system-packages` flag to bypass PEP 668 restrictions. This is because:
+This note primarily explains the rationale behind the **system-wide installation approach (Option 1, using `install_requirements.sh`)**. If you prefer to use a virtual environment to keep dependencies isolated, please see **Option 2: Virtual Environment Installation** above.
+
+The system-wide method uses Python package installation with the `--break-system-packages` flag (for `pip3`) to bypass PEP 668 restrictions. This is because:
 
 1. The mower requires direct access to hardware interfaces (GPIO, I2C, etc.)
 2. It's a dedicated device running only the mower software
