@@ -26,7 +26,7 @@ watchdog>=5.0.0
 ultralytics>=8.1.0
 onnx>=1.15.0
 onnxruntime>=1.16.0
-psutil>=7.0.0
+psutil>=6.0.0
 systemd-python>=234; sys_platform == "linux"  # For systemd integration on Linux
 python-daemon>=3.0.1
 supervisor>=4.2.5  # For process management
@@ -65,7 +65,7 @@ sphinx-rtd-theme>=2.0.0  # Theme for Sphinx
 pre-commit>=3.6.0  # For managing pre-commit hooks
 Flask-Cors>=5.0.1  # For handling Cross-Origin Resource Sharing in Flask
 scipy>=1.10.1  # Scientific computing library
-pydantic>=2.11.5  # Data validation
+pydantic>=2.6.0  # Data validation
 Flask-Babel==4.0.0  # For Flask internationalization/localization
 
 # --------------------
