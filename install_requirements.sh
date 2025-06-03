@@ -18,7 +18,7 @@ fi
 # Global variable to collect messages for the end
 POST_INSTALL_MESSAGES=""
 CONFIG_TXT_FOUND_BY_ENABLE_FUNC=false
-VENV_DIR=".venv" # Define VENV_DIR globally for use in multiple functions
+
 
 # Non-interactive mode flag
 NON_INTERACTIVE=false
@@ -104,22 +104,7 @@ prompt_skip_completed() {
 auto_detect_completed_steps() {
     print_info "Auto-detecting completed installation steps..."
     
-    # Check virtual environment
-    if [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/python" ]; then
-        if ! is_step_completed "virtual_environment"; then
-            mark_step_completed "virtual_environment"
-            print_info "✓ Detected existing virtual environment"
-        fi
-    fi
-    
-    # Check Python dependencies
-    if [ -f "$VENV_DIR/bin/pip" ]; then
-        local installed_packages=$("$VENV_DIR/bin/pip" list 2>/dev/null | wc -l)
-        if [ "$installed_packages" -gt 10 ] && ! is_step_completed "python_dependencies"; then
-            mark_step_completed "python_dependencies"
-            print_info "✓ Detected installed Python dependencies"
-        fi
-    fi
+
     
     # Check system packages
     if command_exists i2c-detect && command_exists gpsd && ! is_step_completed "system_packages"; then
@@ -948,39 +933,38 @@ EOF
     return 0
 }
 
-# Function to setup YOLOv8 models
+
+# Function to setup YOLOv8 models (system-wide, no venv)
 setup_yolov8() {
     print_info "Setting up YOLOv8 for obstacle detection..."
-    local PYTHON_CMD="$VENV_DIR/bin/python"
-    local PIP_CMD="$VENV_DIR/bin/pip"
-    if [ ! -f "$PYTHON_CMD" ]; then PYTHON_CMD="python3"; fi
-    if [ ! -f "$PIP_CMD" ]; then PIP_CMD="pip3"; fi
+    local PYTHON_CMD="python3"
+    local PIP_CMD="pip3"
 
     print_info "Checking for ultralytics package (using $PIP_CMD)..."
-    if ! "$PYTHON_CMD" -m pip show ultralytics > /dev/null 2>&1; then # Use python -m pip for consistency
+    if ! "$PYTHON_CMD" -m pip show ultralytics > /dev/null 2>&1; then
         print_info "ultralytics package not found. Installing..."
         if dpkg -s python3-sympy &> /dev/null; then
             print_info "System python3-sympy detected. Consider removing it ('sudo apt-get remove python3-sympy') if ultralytics has issues."
         fi
-        "$PIP_CMD" install --upgrade --upgrade-strategy eager "ultralytics>=8.1.0"
+        "$PIP_CMD" install --break-system-packages --upgrade --upgrade-strategy eager "ultralytics>=8.1.0"
         check_command "Installing ultralytics package" || { print_error "Ultralytics installation failed."; return 1; }
     else
         print_success "ultralytics package already installed."
-        "$PIP_CMD" install --upgrade "ultralytics>=8.1.0" # Ensure version
+        "$PIP_CMD" install --break-system-packages --upgrade "ultralytics>=8.1.0"
     fi
 
     print_info "Pre-installing/checking TFLite export dependencies for ultralytics (using $PIP_CMD)..."
-    "$PIP_CMD" install \
+    "$PIP_CMD" install --break-system-packages \
         "tf_keras" "sng4onnx>=1.0.1" "onnx_graphsurgeon>=0.3.26" "ai-edge-litert>=1.2.0" \
         "onnx>=1.15.0" "onnx2tf>=1.17.0" "onnxslim>=0.1.46" "onnxruntime>=1.16.0"
     check_command "Installing/checking TFLite export dependencies" || print_warning "Failed to install/check some TFLite export dependencies."
-    
+
     mkdir -p src/mower/obstacle_detection/models
     check_command "Creating models directory src/mower/obstacle_detection/models" || return 1
-    
+
     print_info "Running YOLOv8 setup script (scripts/setup_yolov8.py using $PYTHON_CMD)..."
     if [ -f "scripts/setup_yolov8.py" ]; then
-        "$PYTHON_CMD" scripts/setup_yolov8.py --model yolov8n 
+        "$PYTHON_CMD" scripts/setup_yolov8.py --model yolov8n
         check_command "Setting up YOLOv8 models via script" || {
             print_error "YOLOv8 model setup script failed."
             POST_INSTALL_MESSAGES+="[ERROR] YOLOv8 model setup script failed.\\n"
@@ -991,7 +975,7 @@ setup_yolov8() {
         POST_INSTALL_MESSAGES+="[ERROR] scripts/setup_yolov8.py not found. YOLOv8 models not configured.\\n"
         return 1
     fi
-    
+
     if [ -f "src/mower/obstacle_detection/models/yolov8n_float32.tflite" ] || [ -f "src/mower/obstacle_detection/models/yolov8n.tflite" ]; then
         print_success "YOLOv8 TFLite model found."
     else
@@ -1001,54 +985,34 @@ setup_yolov8() {
     print_success "YOLOv8 setup function completed."
 }
 
-setup_virtual_environment() {
-    if prompt_skip_completed "virtual_environment" "Virtual environment setup"; then
-        return 0
-    fi
-    
-    if [ -d "$VENV_DIR" ]; then
-        print_info "Virtual environment '$VENV_DIR' already exists."
-    else
-        print_info "Creating Python virtual environment in '$VENV_DIR'..."
-        python3 -m venv "$VENV_DIR"
-        check_command "Creating virtual environment" || { print_error "Failed to create virtual environment."; exit 1; }
-        print_success "Virtual environment created."
-    fi
-    # No activation here; use explicit paths to venv executables.
-    POST_INSTALL_MESSAGES+="[INFO] Python virtual environment is in '$VENV_DIR'. To activate manually for development, run 'source $VENV_DIR/bin/activate'.\\n"
-    mark_step_completed "virtual_environment"
-}
 
+# Function to install Python dependencies system-wide
 install_python_dependencies() {
-    if prompt_skip_completed "python_dependencies" "Python dependencies installation"; then
-        return 0
-    fi
-    
-    local VENV_PIP_CMD="$VENV_DIR/bin/pip"
-    if [ ! -f "$VENV_PIP_CMD" ]; then
-        print_error "Virtual environment pip not found at $VENV_PIP_CMD. Setup venv first."
+    print_info "Installing Python dependencies system-wide..."
+    local PIP_CMD="pip3"
+    if ! command_exists "$PIP_CMD"; then
+        print_error "pip3 not found. Please install python3-pip."
         return 1
     fi
 
-    print_info "Upgrading pip in virtual environment ($VENV_PIP_CMD)..."
-    "$VENV_PIP_CMD" install --upgrade pip
-    check_command "Upgrading pip in venv" || return 1
+    print_info "Upgrading pip..."
+    "$PIP_CMD" install --break-system-packages --upgrade pip
+    check_command "Upgrading pip" || return 1
 
-    print_info "Installing Python dependencies from requirements.txt into venv..."
+    print_info "Installing Python dependencies from requirements.txt..."
     if [ -f "requirements.txt" ]; then
-        "$VENV_PIP_CMD" install -r requirements.txt
+        "$PIP_CMD" install --break-system-packages -r requirements.txt
         check_command "Installing dependencies from requirements.txt" || return 1
     else
         print_error "requirements.txt not found."
         return 1
     fi
 
-    print_info "Installing project in editable mode into virtual environment..."
-    "$VENV_PIP_CMD" install -e .
+    print_info "Installing project in editable mode..."
+    "$PIP_CMD" install --break-system-packages -e .
     check_command "Installing project in editable mode" || return 1
-    
-    print_success "Python dependencies installed successfully into $VENV_DIR."
-    mark_step_completed "python_dependencies"
+
+    print_success "Python dependencies installed system-wide."
 }
 
 setup_mower_service() {
@@ -1064,80 +1028,61 @@ setup_mower_service() {
     local CURRENT_USER
     CURRENT_USER=$(whoami)
     
-    local VENV_PYTHON_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/python"
-    # Assuming main_controller.py is the entry point for the service.
-    # The project.scripts in pyproject.toml defines 'mower = "mower.main_controller:main"'
-    # So, the service should run the 'mower' script installed by 'pip install -e .'
-    # This script is typically created in $VENV_DIR/bin/
-    local MOWER_EXECUTABLE_PATH="$PROJECT_ROOT_DIR/$VENV_DIR/bin/mower"    # Validate prerequisites
-    if [ ! -f "$SERVICE_TEMPLATE_FILE" ]; then
-        print_error "Service template file '$SERVICE_TEMPLATE_FILE' not found."
-        POST_INSTALL_MESSAGES+="[ERROR] Service template '$SERVICE_TEMPLATE_FILE' not found.\\n"
+
+    # Use system-wide mower executable (installed by pip3 install -e .)
+    local MOWER_EXECUTABLE_PATH="$(command -v mower)"
+    if [ -z "$MOWER_EXECUTABLE_PATH" ]; then
+        print_error "System-wide 'mower' executable not found. Ensure 'pip3 install -e .' was successful."
+        POST_INSTALL_MESSAGES+="[ERROR] Cannot install service: System-wide 'mower' executable missing.\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Run the script again or manually install with 'pip3 install -e .'.\\n"
         return 1
     fi
-    
-    if [ ! -f "$MOWER_EXECUTABLE_PATH" ]; then
-        print_error "Mower executable script not found at '$MOWER_EXECUTABLE_PATH'."
-        print_error "This indicates 'pip install -e .' was not successful or the virtual environment is not properly set up."
-        POST_INSTALL_MESSAGES+="[ERROR] Cannot install service: Mower executable missing at '$MOWER_EXECUTABLE_PATH'.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Run the script again or manually install with 'pip install -e .' in the virtual environment.\\n"
-        return 1
-    fi
-    
-    # Validate that the virtual environment Python exists
-    if [ ! -f "$VENV_PYTHON_PATH" ]; then
-        print_warning "Virtual environment Python not found at '$VENV_PYTHON_PATH'. Service may fail to start."
-    fi
-    
+
     print_info "Service will run as user: $CURRENT_USER"
     print_info "Mower executable path: $MOWER_EXECUTABLE_PATH"
-    print_info "Project root directory: $PROJECT_ROOT_DIR"print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
-    
-    # Validate that paths don't contain characters that could break sed
-    if [[ "$PROJECT_ROOT_DIR" == *"|"* ]] || [[ "$MOWER_EXECUTABLE_PATH" == *"|"* ]]; then
-        print_error "Project paths contain special characters that may cause service generation to fail."
-        return 1
-    fi
-    
+    print_info "Project root directory: $PROJECT_ROOT_DIR"
+    print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
+
     # Generate service file with proper user substitution
     sed -e "s|{{PROJECT_ROOT_DIR}}|$PROJECT_ROOT_DIR|g" \
         -e "s|{{MOWER_EXECUTABLE_PATH}}|$MOWER_EXECUTABLE_PATH|g" \
         -e "s|User=pi|User=$CURRENT_USER|g" \
         -e "s|Group=pi|Group=$CURRENT_USER|g" \
         "$SERVICE_TEMPLATE_FILE" > "$GENERATED_SERVICE_FILE"
-    
+
     if [ $? -ne 0 ]; then
         print_error "Failed to generate service file from template"
         return 1
     fi
-      print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
+    print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
     if ! sudo cp "$GENERATED_SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE_NAME"; then
         print_error "Failed to copy service file to /etc/systemd/system/"
         rm -f "$GENERATED_SERVICE_FILE"
         return 1
     fi
-    
+
     if ! sudo chmod 644 "/etc/systemd/system/$SERVICE_FILE_NAME"; then
         print_error "Failed to set service file permissions"
         return 1
     fi
-    
+
     # Clean up temporary file
     rm -f "$GENERATED_SERVICE_FILE"
-    
+
     print_info "Reloading systemd daemon..."
     if ! sudo systemctl daemon-reload; then
         print_error "Failed to reload systemd daemon"
         return 1
     fi
-    
+
     print_info "Enabling autonomous mower service to start on boot..."
     if ! sudo systemctl enable "$SERVICE_FILE_NAME"; then
         print_error "Failed to enable autonomous mower service"
         print_error "You may need to enable it manually with: sudo systemctl enable $SERVICE_FILE_NAME"
         return 1
     fi
-      # Verify service installation
+
+    # Verify service installation
     if systemctl is-enabled --quiet "$SERVICE_FILE_NAME" 2>/dev/null; then
         print_success "Autonomous mower service has been installed and enabled successfully!"
         POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled.\\n"
@@ -1158,12 +1103,11 @@ show_available_features() {
     print_info "Available installation features:"
     echo ""
     echo "  Core System:"
-    echo "    1.  Virtual Environment Setup"
-    echo "    2.  Hardware Interfaces (I2C, UART, Camera validation)"
-    echo "    3.  Additional UART (UART2 setup)"
-    echo "    4.  System Packages (i2c-tools, gpsd, etc.)"
-    echo "    5.  PYTHONPATH Configuration"
-    echo "    6.  Python Dependencies (from requirements.txt)"
+    echo "    1.  Hardware Interfaces (I2C, UART, Camera validation)"
+    echo "    2.  Additional UART (UART2 setup)"
+    echo "    3.  System Packages (i2c-tools, gpsd, etc.)"
+    echo "    4.  PYTHONPATH Configuration"
+    echo "    5.  Python Dependencies (from requirements.txt)"
     echo ""
     echo "  Computer Vision & AI:"
     echo "    7.  YOLOv8 Models (obstacle detection)"
@@ -1182,21 +1126,17 @@ install_specific_feature() {
     
     case "$feature_num" in
         1)
-            print_info "Installing Virtual Environment Setup..."
-            setup_virtual_environment
-            ;;
-        2)
             print_info "Installing Hardware Interfaces..."
             enable_required_interfaces
             validate_hardware
             mark_step_completed "hardware_interfaces"
             ;;
-        3)
+        2)
             print_info "Installing Additional UART..."
             setup_additional_uart
             mark_step_completed "additional_uart"
             ;;
-        4)
+        3)
             print_info "Installing System Packages..."
             print_info "Updating package lists and installing essential system dependencies..."
             sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get autoremove -y
@@ -1204,11 +1144,10 @@ install_specific_feature() {
 
             # Base packages for all systems
             local base_packages=(
-                "python3-venv" "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
+                "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
                 "git" "libatlas-base-dev" "libhdf5-dev"
                 "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
                 "build-essential" "pkg-config"
-                "libsystemd-dev"
                 "wget" "curl" "gnupg"
                 "gdal-bin" "libgdal-dev" "python3-gdal"
             )
@@ -1238,7 +1177,7 @@ install_specific_feature() {
             print_success "Essential system dependencies installed."
             mark_step_completed "system_packages"
             ;;
-        5)
+        4)
             print_info "Installing PYTHONPATH Configuration..."
             PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd)
             BASHRC_FILE="$HOME/.bashrc"
@@ -1261,7 +1200,7 @@ install_specific_feature() {
             fi
             mark_step_completed "pythonpath_setup"
             ;;
-        6)
+        5)
             print_info "Installing Python Dependencies..."
             install_python_dependencies
             ;;
@@ -1299,24 +1238,10 @@ install_specific_feature() {
                 print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
                 sudo apt-get install -y libedgetpu1-std
                 check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-                
-                print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
-                VENV_PIP_CMD="$VENV_DIR/bin/pip"
-                if [ -f "$VENV_PIP_CMD" ]; then
-                    if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then
-                        "$VENV_PIP_CMD" install "pycoral" 
-                        check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
-                    elif "$VENV_PIP_CMD" install -e ".[coral]"; then
-                        check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
-                    else
-                        print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
-                        "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
-                        check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
-                    fi
-                else
-                    print_error "Venv pip not found. Cannot install PyCoral."
-                    POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
-                fi
+
+                print_info "Installing PyCoral library (official Coral method: python3-pycoral)..."
+                sudo apt-get install -y python3-pycoral
+                check_command "Installing python3-pycoral" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install python3-pycoral via apt.\\n"
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
@@ -1420,15 +1345,14 @@ run_full_installation() {
         print_error "Python 3 is not installed. Please install Python 3 (>=3.9) and try again."
         exit 1
     fi
-    if ! command_exists pip3 && ! command_exists "$VENV_DIR/bin/pip"; then 
-        print_error "pip3 is not installed system-wide, and no venv pip found yet. Please install python3-pip."
+
+    if ! command_exists pip3; then
+        print_error "pip3 is not installed system-wide. Please install python3-pip."
         exit 1
     fi
     print_success "Basic system checks (python3) passed."
 
     list_completed_steps
-
-    setup_virtual_environment
 
     if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
         enable_required_interfaces
@@ -1452,7 +1376,7 @@ run_full_installation() {
 
         # Base packages for all systems
         local base_packages=(
-            "python3-venv" "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
+            "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
             "git" "libatlas-base-dev" "libhdf5-dev"
             "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
             "wget" "curl" "gnupg"
@@ -1683,7 +1607,7 @@ while true; do
                 # Show uncompleted features
                 echo ""
                 print_info "Features not yet installed:"
-                local all_features=("virtual_environment" "hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
+        local all_features=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
                 local uncompleted=()
                 
                 for feature in "${all_features[@]}"; do
@@ -1732,7 +1656,7 @@ show_installation_summary() {
         local completed_steps=0
         
         # Count total possible steps
-        local all_steps=("virtual_environment" "hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
+        local all_steps=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
         total_steps=${#all_steps[@]}
         
         # Count completed steps
