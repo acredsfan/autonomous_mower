@@ -8,7 +8,7 @@
 # Core Dependencies
 # --------------------
 numpy>=1.26.0,<2.2.0
-opencv-python>=4.11.0.86
+opencv-python-headless==4.11.0.86
 Pillow>=10.3.0
 PyYAML>=6.0.2
 python-dotenv>=1.1.0

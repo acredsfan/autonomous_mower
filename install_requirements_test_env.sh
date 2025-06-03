@@ -36,8 +36,9 @@ print_info "Ubuntu 24.04 detected."
 
 # 2. Update and install system dependencies
 print_info "Updating apt and installing system dependencies..."
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-venv python3-dev build-essential git libffi-dev libssl-dev \
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq --no-install-recommends install python3 python3-pip \
+    python3-venv python3-dev build-essential git libffi-dev libssl-dev \
     libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev libhdf5-dev libatlas-base-dev libpq-dev \
     libxml2-dev libxslt1-dev libyaml-dev libfreetype6-dev pkg-config
 
@@ -66,9 +67,9 @@ print_info "Installing Python dependencies from $REQ_FILE..."
 pip install -r "$REQ_FILE"
 
 # 7. (Optional) Install dev/test requirements if present
-if [ -f "requirements-dev.txt" ]; then
-    print_info "Installing dev dependencies from requirements-dev.txt..."
-    pip install -r requirements-dev.txt
+if [ -f "requirements-ubuntu2404.txt" ]; then
+    print_info "Installing dev dependencies from requirements-ubuntu2404.txt..."
+    pip install -r requirements-ubuntu2404.txt
 fi
 
 # 8. (Optional) Pre-commit hooks
