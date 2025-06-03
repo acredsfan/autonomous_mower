@@ -1478,23 +1478,9 @@ run_full_installation() {
                 sudo apt-get install -y libedgetpu1-std
                 check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
                 
-                print_info "Installing PyCoral library (using pip from $VENV_DIR)..."
-                VENV_PIP_CMD="$VENV_DIR/bin/pip"
-                if [ -f "$VENV_PIP_CMD" ]; then
-                    if grep -q "pycoral" requirements.txt || grep -q "pycoral" pyproject.toml; then
-                        "$VENV_PIP_CMD" install "pycoral" 
-                        check_command "Installing pycoral from venv" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via pip.\\n"
-                    elif "$VENV_PIP_CMD" install -e ".[coral]"; then
-                        check_command "Installing project with [coral] extra" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install [coral] extra.\\n"
-                    else
-                        print_warning "pycoral not in requirements/pyproject.toml or [coral] extra failed. Attempting direct install."
-                        "$VENV_PIP_CMD" install "pycoral>=2.0.0" 
-                        check_command "Installing pycoral directly" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral directly.\\n"
-                    fi
-                else
-                    print_error "Venv pip not found. Cannot install PyCoral."
-                    POST_INSTALL_MESSAGES+="[ERROR] Venv pip not found, PyCoral not installed.\\n"
-                fi
+                print_info "Installing PyCoral library (python3-pycoral via apt)..."
+                sudo apt-get install -y python3-pycoral
+                check_command "Installing python3-pycoral" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install python3-pycoral via apt.\n"
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
