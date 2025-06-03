@@ -8,7 +8,7 @@
 # Core Dependencies
 # --------------------
 numpy>=2.2.6
-opencv-python>=4.8.1.78
+opencv-python>=4.11.0.86
 Pillow>=10.3.0
 PyYAML>=6.0.2
 python-dotenv>=1.1.0
@@ -19,8 +19,8 @@ imutils>=0.5.4
 networkx>=2.6.0
 pathfinding>=1.0.0
 Rtree>=1.0.0
-Shapely>=2.0.7
-tensorflow>=2.15.0  # Using full TensorFlow for general Ubuntu systems
+Shapely>=2.1.1
+tensorflow>=2.19.0  # Using full TensorFlow for general Ubuntu systems
 colorama>=0.4.4
 watchdog>=5.0.0
 ultralytics>=8.1.0
