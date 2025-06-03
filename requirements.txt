@@ -29,7 +29,7 @@ onnxruntime>=1.16.0
 psutil>=7.0.0
 py3nvml>=0.2.7
 pyudev>=0.24.3; sys_platform == "linux"
-systemd-python>=234; sys_platform == "linux"
+systemd-python>=234
 python-daemon>=3.0.1
 supervisor>=4.2.5
 prometheus_client>=0.17.0
