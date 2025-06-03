@@ -36,11 +36,11 @@ print_info "Ubuntu 24.04 detected."
 
 # 2. Update and install system dependencies
 print_info "Updating apt and installing system dependencies..."
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq update
-sudo DEBIAN_FRONTEND=noninteractive apt-get -y -qq --no-install-recommends install python3 python3-pip \
-    python3-venv python3-dev build-essential git libffi-dev libssl-dev \
-    libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev libhdf5-dev libatlas-base-dev libpq-dev \
-    libxml2-dev libxslt1-dev libyaml-dev libfreetype6-dev pkg-config
+sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
+sudo DEBIAN_FRONTEND=noninteractive apt-get -qq --no-install-recommends install -y \
+    python3 python3-pip python3-venv python3-dev build-essential git \
+    libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev \
+    libhdf5-dev libatlas-base-dev libpq-dev libfreetype6-dev pkg-config
 
 # 3. (Optional) Install additional system packages for test/dev
 sudo apt-get install -y net-tools curl unzip
