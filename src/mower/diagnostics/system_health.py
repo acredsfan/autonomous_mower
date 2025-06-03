@@ -30,18 +30,17 @@ Example usage:
 import argparse
 import json
 import os
-import psutil
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
+import psutil
 
 # Import hardware test suite
-from mower.diagnostics.hardware_test import (
-    initialize_resource_manager,
-)
+from mower.diagnostics.hardware_test import initialize_resource_manager
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
@@ -122,10 +121,7 @@ class SystemHealth:
                 issues.append(f"Critical memory usage: {memory_percent}%")
             if disk_percent > CRITICAL_DISK_THRESHOLD:
                 issues.append(f"Critical disk usage: {disk_percent}%")
-            if (
-                cpu_temp is not None
-                and cpu_temp > CRITICAL_TEMPERATURE_THRESHOLD
-            ):
+            if cpu_temp is not None and cpu_temp > CRITICAL_TEMPERATURE_THRESHOLD:
                 issues.append(f"Critical CPU temperature: {cpu_temp}°C")
 
             # Create system health report
@@ -233,9 +229,7 @@ class SystemHealth:
                         "status": "error",
                         "error": "IMU not available or not returning data",
                     }
-                    issues.append(
-                        "IMU sensor not available or not returning data"
-                    )
+                    issues.append("IMU sensor not available or not returning data")
             except Exception as e:
                 hardware_health["imu"] = {"status": "error", "error": str(e)}
                 issues.append(f"IMU sensor error: {str(e)}")
@@ -266,9 +260,7 @@ class SystemHealth:
                         issues.append(f"Low battery: {battery_percent}%")
                     elif battery_percent < 30:
                         status = "warning"
-                        issues.append(
-                            f"Battery level low: {battery_percent}%"
-                        )
+                        issues.append(f"Battery level low: {battery_percent}%")
 
                     hardware_health["battery"] = {
                         "status": status,
@@ -283,7 +275,8 @@ class SystemHealth:
             except Exception as e:
                 hardware_health["battery"] = {
                     "status": "error",
-                    "error": str(e), }
+                    "error": str(e),
+                }
                 issues.append(f"Battery monitor error: {str(e)}")
 
             # Check motors and other components
@@ -299,10 +292,10 @@ class SystemHealth:
                             hardware_health[component] = {"status": "ok"}
                         else:
                             hardware_health[component] = {
-                                "status": "error", "error": f"{component} controller not available", }
-                            issues.append(
-                                f"{component} controller not available"
-                            )
+                                "status": "error",
+                                "error": f"{component} controller not available",
+                            }
+                            issues.append(f"{component} controller not available")
                 except Exception as e:
                     hardware_health[component] = {
                         "status": "error",
@@ -415,9 +408,7 @@ class SystemHealth:
                             "crash_count": crash_count,
                             "error": f"High number of errors: {error_count}",
                         }
-                        issues.append(
-                            f"High number of errors in logs: {error_count}"
-                        )
+                        issues.append(f"High number of errors in logs: {error_count}")
                     else:
                         software_health["logs"] = {
                             "status": "ok",
@@ -470,7 +461,7 @@ class SystemHealth:
             List[str]: List of recommendations.
         """
         recommendations = []
-        issues = self.health_status["issues"]        # System recommendations
+        issues = self.health_status["issues"]  # System recommendations
         if any("Critical CPU usage" in issue for issue in issues):
             recommendations.append(
                 "Reduce CPU load by disabling non-essential services or "
@@ -480,9 +471,7 @@ class SystemHealth:
             recommendations.append(
                 "Free up memory by restarting the mower service or the entire system"
             )
-        if any(
-            "Critical disk usage" in issue for issue in issues
-        ):
+        if any("Critical disk usage" in issue for issue in issues):
             recommendations.append(
                 "Free up disk space by removing old logs or unnecessary files"
             )
@@ -493,9 +482,7 @@ class SystemHealth:
 
         # Hardware recommendations
         if any("IMU sensor" in issue for issue in issues):
-            recommendations.append(
-                "Check IMU sensor connections and configuration"
-            )
+            recommendations.append("Check IMU sensor connections and configuration")
         if any("GPS not" in issue for issue in issues):
             recommendations.append(
                 "Move to an area with better GPS reception or check GPS antenna"
@@ -515,7 +502,7 @@ class SystemHealth:
         if any("Camera" in issue for issue in issues):
             recommendations.append(
                 "Check camera connections and configuration"
-            )        # Software recommendations
+            )  # Software recommendations
         if any("Mower service not running" in issue for issue in issues):
             recommendations.append(
                 "Start the mower service with: "
@@ -525,9 +512,7 @@ class SystemHealth:
             recommendations.append(
                 "Check error logs for crash details and consider updating software"
             )
-        if any(
-            "High number of errors" in issue for issue in issues
-        ):
+        if any("High number of errors" in issue for issue in issues):
             recommendations.append(
                 "Review error logs to identify and fix recurring issues"
             )
@@ -615,9 +600,7 @@ class SystemHealth:
             # List all health reports
             reports = []
             for filename in os.listdir(HEALTH_REPORT_DIR):
-                if filename.startswith(
-                    "health_report_"
-                ) and filename.endswith(".json"):
+                if filename.startswith("health_report_") and filename.endswith(".json"):
                     filepath = os.path.join(HEALTH_REPORT_DIR, filename)
                     reports.append((filepath, os.path.getmtime(filepath)))
 
@@ -643,9 +626,7 @@ class SystemHealth:
             callback: Function to call with health status after each check.
         """
         try:
-            logger.info(
-                f"Starting health monitoring with interval {interval} seconds"
-            )
+            logger.info(f"Starting health monitoring with interval {interval} seconds")
             while True:
                 # Run a full health check
                 health_status = self.run_full_health_check()
@@ -657,12 +638,10 @@ class SystemHealth:
                 # Log critical issues
                 if health_status["status"] == "critical":
                     logger.critical(
-                        f"Critical health issues detected: {
-                            health_status['issues']}")
-                elif health_status["status"] == "error":
-                    logger.error(
-                        f"Health errors detected: {health_status['issues']}"
+                        f"Critical health issues detected: {health_status['issues']}"
                     )
+                elif health_status["status"] == "error":
+                    logger.error(f"Health errors detected: {health_status['issues']}")
                 elif health_status["status"] == "warning":
                     logger.warning(
                         f"Health warnings detected: {health_status['issues']}"
@@ -731,9 +710,7 @@ def main():
         "--output",
         choices=["text", "json"],
         default="text",
-        help=(
-            "Output format (default: text)"
-        ),
+        help=("Output format (default: text)"),
     )
 
     args = parser.parse_args()
@@ -756,19 +733,14 @@ def main():
                     f"AUTONOMOUS MOWER HEALTH REPORT - "
                     f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
                 )
-                print("=" * 80)
                 print(
-                    f"Overall Status: {
-                        health_status.get(
-                            'status',
-                            'unknown').upper()}")
+                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
+                )
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")
                 print("\nRecommendations:")
-                for recommendation in health_status.get(
-                    "recommendations", []
-                ):
+                for recommendation in health_status.get("recommendations", []):
                     print(f"  - {recommendation}")
                 print("=" * 80)
 
@@ -791,12 +763,11 @@ def main():
                 print(
                     (
                         f"AUTONOMOUS MOWER {args.check.upper()} HEALTH"
-                        f" CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                        f" CHECK - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                    )
                 )
                 print("=" * 80)
-                print(
-                    f"Status: {result.get('status', 'unknown').upper()}"
-                )
+                print(f"Status: {result.get('status', 'unknown').upper()}")
                 if "issues" in result:
                     print("\nIssues:")
                     for issue in result["issues"]:

@@ -2,7 +2,7 @@ import os
 import platform
 import threading
 import time
-from typing import Tuple, Any
+from typing import Any, Tuple
 
 import serial
 import serial.tools.list_ports
@@ -85,9 +85,7 @@ class SerialPort:
             # For now, let's re-raise to make startup failure explicit
             raise
         except Exception as e:
-            logger.error(
-                f"Unexpected error opening serial port {
-                    self.port}: {e}")
+            logger.error(f"Unexpected error opening serial port {self.port}: {e}")
             self.ser = None
             raise
         return self
@@ -103,17 +101,11 @@ class SerialPort:
             except serial.SerialException as e:
                 logger.error(f"SerialException closing port {self.port}: {e}")
             except Exception as e:
-                logger.error(
-                    f"Unexpected error closing serial port {
-                        self.port}: {e}")
+                logger.error(f"Unexpected error closing serial port {self.port}: {e}")
         elif self.ser is None:
-            logger.debug(
-                f"Serial port {
-                    self.port} was already None, nothing to close.")
+            logger.debug(f"Serial port {self.port} was already None, nothing to close.")
         else:  # Not None but not open
-            logger.debug(
-                f"Serial port {
-                    self.port} was not open, nothing to close.")
+            logger.debug(f"Serial port {self.port} was not open, nothing to close.")
         return self
 
     @staticmethod
@@ -201,25 +193,23 @@ class SerialPort:
 
         try:
             # Check buffer first for a complete line
-            if '\n' in self.data_buffer:
-                line, self.data_buffer = self.data_buffer.split('\n', 1)
-                return (True, line + '\n')
+            if "\n" in self.data_buffer:
+                line, self.data_buffer = self.data_buffer.split("\n", 1)
+                return (True, line + "\n")
 
             # Read new data if buffer doesn't have a complete line
             if self.ser.in_waiting > 0:
                 new_data = self.ser.read(self.ser.in_waiting).decode(
-                    self.charset, errors='ignore'
+                    self.charset, errors="ignore"
                 )
                 self.data_buffer += new_data
-                if '\n' in self.data_buffer:
-                    line, self.data_buffer = self.data_buffer.split('\n', 1)
-                    return (True, line + '\n')
+                if "\n" in self.data_buffer:
+                    line, self.data_buffer = self.data_buffer.split("\n", 1)
+                    return (True, line + "\n")
             return (False, "")  # No complete line found yet
 
         except (serial.serialutil.SerialException, TypeError, UnicodeDecodeError) as e:
-            logger.warning(
-                f"Failed reading line from serial port {
-                    self.port}: {e}")
+            logger.warning(f"Failed reading line from serial port {self.port}: {e}")
             return (False, "")
 
     def get_parsed_data(self, parser_function) -> Tuple[bool, Any]:
@@ -258,11 +248,7 @@ class SerialLineReader:
 
     _instance = None
 
-    def __init__(
-            self,
-            serial: SerialPort,
-            max_lines: int = 0,
-            debug: bool = False):
+    def __init__(self, serial: SerialPort, max_lines: int = 0, debug: bool = False):
         self.serial = serial
         self.max_lines = max_lines
         self.debug = debug
@@ -387,8 +373,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.samples < 0:
-        print("Samples per read cycle,"
-              "greater than zero OR zero for unlimited")
+        print("Samples per read cycle," "greater than zero OR zero for unlimited")
         parser.print_help()
         sys.exit(0)
 
@@ -409,8 +394,7 @@ if __name__ == "__main__":
         )
 
         if args.threaded:
-            update_thread = threading.Thread(
-                target=line_reader.update, args=())
+            update_thread = threading.Thread(target=line_reader.update, args=())
             update_thread.start()
 
         def read_lines():
