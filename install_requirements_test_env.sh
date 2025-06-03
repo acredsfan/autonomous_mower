@@ -38,7 +38,7 @@ print_info "Ubuntu 24.04 detected."
 print_info "Updating apt and installing system dependencies..."
 sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
 sudo DEBIAN_FRONTEND=noninteractive apt-get -qq --no-install-recommends install -y \
-    python3 python3-pip python3-venv python3-dev build-essential git \
+    python3-pip python3-venv python3-dev build-essential git \
     libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev \
     libhdf5-dev libatlas-base-dev libpq-dev libfreetype6-dev pkg-config
 
