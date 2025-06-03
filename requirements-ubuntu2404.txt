@@ -20,12 +20,12 @@ networkx>=2.6.0
 pathfinding>=1.0.0
 Rtree>=1.0.0
 Shapely>=2.1.1
-tensorflow>=2.19.0  # Using full TensorFlow for general Ubuntu systems
+# tensorflow>=2.19.0  # Using full TensorFlow for general Ubuntu systems
 colorama>=0.4.4
 watchdog>=5.0.0
-ultralytics>=8.1.0
-onnx>=1.15.0
-onnxruntime>=1.16.0
+# ultralytics>=8.1.0
+# onnx>=1.15.0
+# onnxruntime>=1.16.0
 psutil>=6.0.0
 systemd-python>=234; sys_platform == "linux"  # For systemd integration on Linux
 python-daemon>=3.0.1
