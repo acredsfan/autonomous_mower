@@ -5,12 +5,11 @@ This module provides tools for optimizing database operations
 by implementing batching, connection pooling, and query optimization.
 """
 
-import functools
 import sqlite3
 import threading
 import time
 from queue import Queue
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -291,6 +290,7 @@ class BatchProcessor:
                 conn.commit()
 
             logger.debug(f"Processed batch of {len(batch)} updates for table {table}")
+        except Exception as e:  # noqa: BLE001
             logger.error(f"Error processing update batch: {e}")
             conn.rollback()
         finally:

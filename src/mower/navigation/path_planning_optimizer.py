@@ -7,7 +7,7 @@ and improving their performance.
 
 import functools
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict
 
 import numpy as np
 
@@ -232,7 +232,7 @@ def optimize_path_planner(path_planner: PathPlanner) -> PathPlanner:
     Returns:
         The optimized path planner
     """
-    optimizer = PathPlanningOptimizer(path_planner)
+    PathPlanningOptimizer(path_planner)
     return path_planner
 
 
@@ -251,9 +251,9 @@ def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Di
 
     # Benchmark generate_path
     generate_times = []
-    for i in range(iterations):
+    for _ in range(iterations):
         start_time = time.time()
-        path = path_planner.generate_path()
+        path_planner.generate_path()
         end_time = time.time()
         generate_times.append(end_time - start_time)
 
@@ -273,7 +273,7 @@ def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Di
         }
     }
 
-    logger.info(f"Path generation benchmark results:")
+    logger.info("Path generation benchmark results:")
     logger.info(f"  Average time: {avg_time:.4f} seconds")
     logger.info(f"  Standard deviation: {std_time:.4f} seconds")
     logger.info(f"  Min/Max time: {min_time:.4f}/{max_time:.4f} seconds")
@@ -316,7 +316,7 @@ def compare_path_planners(
         "improvement_percent": improvement,
     }
 
-    logger.info(f"Performance comparison results:")
+    logger.info("Performance comparison results:")
     logger.info(f"  Original average time: {original_avg:.4f} seconds")
     logger.info(f"  Optimized average time: {optimized_avg:.4f} seconds")
     logger.info(f"  Improvement: {improvement:.2f}%")

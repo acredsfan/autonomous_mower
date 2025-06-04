@@ -12,7 +12,7 @@ from mower.constants import max_lat, max_lng, min_lat, min_lng, polygon_coordina
 from mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
 from mower.utilities.logger_config import LoggerConfigInfo
 
-LoggerConfig.configure_logging()
+LoggerConfigInfo.configure_logging()
 logging = LoggerConfigInfo.get_logger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

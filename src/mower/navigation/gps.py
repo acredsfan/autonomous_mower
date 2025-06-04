@@ -15,8 +15,7 @@ import utm
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.utilities.text_writer import CsvLogger
 
-logger_config = LoggerConfig()  # This will be used by existing code
-logger = logger_config.get_logger(__name__)  # Standard logger for the module
+logger = LoggerConfigInfo.get_logger(__name__)
 
 # --- Google Geocoding API Configuration ---
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY")
