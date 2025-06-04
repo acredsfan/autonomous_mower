@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Suppress matplotlib Axes3D warning globally
 import argparse
 import importlib.util
@@ -35,6 +36,7 @@ def get_installed_version(package_name):
 
 
 def ensure_required_versions():
+    """Ensure TensorFlow and flatbuffers meet minimum versions."""
     import os
     import subprocess
     import sys
@@ -355,9 +357,7 @@ def install_dependencies():
 
 
 def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
-    """
-    Exports the specified YOLOv8 model to TFLite format locally.
-    """
+    """Export the YOLOv8 model to TFLite format."""
     try:
         pt_model_name = f"{model_name}.pt"
         logging.info(f"Loading base model: {pt_model_name}...")
@@ -450,7 +450,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
 
 
 def save_label_map(output_dir: Path):
-    """Saves the COCO label map to the specified directory."""
+    """Save the COCO label map to the specified directory."""
     labelmap_path = output_dir / "coco_labels.txt"
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -873,9 +873,8 @@ def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
 
 
 def main():
-    """Main entry point."""
+    """Run the YOLOv8 setup process."""
     args = parse_args()
-
     # --- Ensure required package versions are installed ---
     try:
         ensure_required_versions()
