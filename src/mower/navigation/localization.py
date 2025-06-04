@@ -8,12 +8,12 @@ from typing import Dict, Tuple
 import numpy as np
 from shapely.geometry import Point, Polygon
 
+from core.logger import configure_logging, get_logger
 from mower.constants import max_lat, max_lng, min_lat, min_lng, polygon_coordinates
 from mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
-from mower.utilities.logger_config import LoggerConfigInfo
 
-LoggerConfigInfo.configure_logging()
-logging = LoggerConfigInfo.get_logger(__name__)
+configure_logging()
+logging = get_logger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -362,18 +362,19 @@ def main():
     try:
         while True:
             status = localization.update()
-            print(
-                f"Position: ({status['latitude']:.6f}, "
-                f"{status['longitude']:.6f})\n"
-                f"Heading: {status['heading']:.1f}°\n"
-                f"Accuracy: {status['accuracy']:.2f}m\n"
-                f"In Bounds: {status['in_bounds']}\n"
-                f"Update Age: {localization.get_last_update_age():.1f}s"
+            logging.info(
+                "Position: (%0.6f, %0.6f)\nHeading: %0.1f°\nAccuracy: %0.2fm\nIn Bounds: %s\nUpdate Age: %0.1fs",
+                status["latitude"],
+                status["longitude"],
+                status["heading"],
+                status["accuracy"],
+                status["in_bounds"],
+                localization.get_last_update_age(),
             )
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print("\nProgram terminated by user.")
+        logging.info("Program terminated by user.")
 
 
 if __name__ == "__main__":
