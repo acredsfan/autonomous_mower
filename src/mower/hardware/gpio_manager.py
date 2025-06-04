@@ -329,7 +329,6 @@ class GPIOManager:
                     "gpiozero seemed available but failed initial factory setup, " "forcing MockFactory for simulation."
                 )
                 try:
-                    # type: ignore is needed for mypy compatibility
                     self._DeviceClass.pin_factory = self._MockFactoryClass()  # type: ignore[attr-defined,assignment]
                     logger.info("Using gpiozero.MockFactory for forced simulation.")
                 except Exception as e_mock_force:

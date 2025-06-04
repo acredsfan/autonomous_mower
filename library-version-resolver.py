@@ -7,8 +7,6 @@ Designed to run in VS Code on Windows for Raspberry Pi target deployment
 
 import argparse
 import re
-import argparse
-import re
 import subprocess
 import sys
 from dataclasses import dataclass

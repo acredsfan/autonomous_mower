@@ -10,11 +10,11 @@ import sys
 # import json
 from pathlib import Path
 
-from src.mower.hardware.imu_fixed import BNO085Sensor  # type: ignore[import]
-from src.mower.hardware.tof_fixed import VL53L0XSensors  # type: ignore[import]
+from mower.hardware.imu_fixed import BNO085Sensor  # type: ignore[import]
+from mower.hardware.tof_fixed import VL53L0XSensors  # type: ignore[import]
 
 # import os
-from src.mower.ui.web_ui.app import create_app
+from mower.ui.web_ui.app import create_app
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent
