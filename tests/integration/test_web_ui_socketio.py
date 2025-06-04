@@ -34,8 +34,7 @@ class TestWebUISocketIO:
         # 1. Setup: Use app_with_socketio fixture.
         # 2. Action: Client attempts to connect.
         # 3. Assert: client.is_connected() is True.
-        pytest.skip(
-            "Test not yet implemented. Requires Flask - SocketIO test client.")
+        pytest.skip("Test not yet implemented. Requires Flask - SocketIO test client.")
 
     def test_status_update_event_emission(self):  # Use app_with_socketio
         """
@@ -62,9 +61,11 @@ class TestWebUISocketIO:
         # 1. Setup:
         # - app_with_socketio fixture.
         # - Mock Mower / ResourceManager method called by the command.
-        # 2. Action: client.emit(
-            'mower_command',
-            {'command': 'start'})(or similar).
+        # 2. Action:
+        # client.emit(
+        #     'mower_command',
+        #     {'command': 'start'}
+        # )  # or similar
         # 3. Assert:
         # - Corresponding Mower / ResourceManager method called with correct args.
         # - (Optional) Client receives an acknowledgment or status update.

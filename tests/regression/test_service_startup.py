@@ -45,9 +45,7 @@ class TestServiceStartupIssues:
     @patch("os.path.exists")
     @patch("os.makedirs")
     @patch("os.chmod")
-    def test_log_directory_creation(
-        self, mock_chmod, mock_makedirs, mock_exists
-    ):
+    def test_log_directory_creation(self, mock_chmod, mock_makedirs, mock_exists):
         """Test that the log directory is created if it does not exist.
 
         This tests the fix for the issue mentioned in the README.md troubleshooting section:
@@ -69,7 +67,7 @@ class TestServiceStartupIssues:
                     controller._initialize_logging()
 
         # Verify that os.makedirs was called to create the log directory
-        mock_makedirs.assert _called_with(self.log_dir, exist_ok=True)
+        mock_makedirs.assert_called_with(self.log_dir, exist_ok=True)
 
         # Verify that os.chmod was called to set the permissions
         mock_chmod.assert_called()
@@ -128,9 +126,7 @@ class TestServiceStartupIssues:
                     controller._initialize_logging()
 
         # Verify that FileHandler was called to create the log files
-        assert (
-            mock_file_handler.call_count > 0
-        ), "FileHandler should be called to create log files"
+        assert mock_file_handler.call_count > 0, "FileHandler should be called to create log files"
 
     @patch("importlib.import_module")
     def test_python_environment(self, mock_import_module):
@@ -145,12 +141,8 @@ class TestServiceStartupIssues:
         mock_import_module.return_value = mock_module
 
         # Create a ResourceManager instance
-        with patch(
-            "mower.main_controller.ResourceManager._initialize_hardware"
-        ):
-            with patch(
-                "mower.main_controller.ResourceManager._initialize_software"
-            ):
+        with patch("mower.main_controller.ResourceManager._initialize_hardware"):
+            with patch("mower.main_controller.ResourceManager._initialize_software"):
                 resource_manager = ResourceManager()
 
                 # Call the method that would import modules

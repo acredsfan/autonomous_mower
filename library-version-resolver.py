@@ -7,6 +7,8 @@ Designed to run in VS Code on Windows for Raspberry Pi target deployment
 
 import argparse
 import re
+import argparse
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -18,6 +20,7 @@ from typing import Dict, List, Optional, Set, Tuple
 @dataclass
 class LibraryInfo:
     """Information about a library and its versions"""
+
     name: str
     current_version: Optional[str]
     latest_version: Optional[str]
@@ -37,35 +40,29 @@ class ProjectLibraryUpdater:
         "lgpio": None,  # Backend for gpiozero on Bookworm
         "smbus2": ">=0.4.0",  # I2C communication
         "pyserial": ">=3.5",  # UART communication
-
         # Sensor Libraries
         "adafruit-circuitpython-gps": ">=3.10.0",
         "adafruit-circuitpython-bno055": ">=5.4.0",
         "VL53L1X": ">=0.0.5",  # ToF sensors
-
         # Computer Vision
         "opencv-python-headless": ">=4.8.0",  # Headless for Pi
         "tflite-runtime": "==2.14.0",  # Exact version for Coral TPU
         "Pillow": ">=10.0.0",
-
         # Web Framework
         "fastapi": ">=0.110.0",
         "uvicorn": ">=0.29.0",
         "pydantic": ">=2.7.0",
         "websockets": ">=12.0",
         "aiofiles": ">=23.0.0",
-
         # Async and System
         "aiohttp": ">=3.9.0",
         "python-multipart": ">=0.0.9",
-
         # Utilities
         "python-dotenv": ">=1.0.0",
         "pyyaml": ">=6.0",
         "numpy": ">=1.24.0,<2.0.0",  # Many libraries don't support numpy 2.0 yet
         "setuptools": ">=69.0.0",
         "wheel": ">=0.42.0",
-
         # Development Tools
         "pytest": ">=8.0.0",
         "pytest-asyncio": ">=0.23.0",
@@ -74,7 +71,6 @@ class ProjectLibraryUpdater:
         "mypy": ">=1.9.0",
         "pylint": ">=3.0.0",
         "isort": ">=5.13.0",
-
         # Additional project dependencies
         "requests": ">=2.31.0",
         "psutil": ">=5.9.0",
@@ -96,40 +92,40 @@ class ProjectLibraryUpdater:
         ".github/workflows/*.yml",
         "scripts/setup_*.py",
         "docs/*.md",
-        ".github/copilot-instructions.md"
+        ".github/copilot-instructions.md",
     ]
 
     # Patterns to match library definitions in different file types
     PATTERNS = {
         ".txt": [
-            (r'^([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+.*?)$', 'requirements'),
-            (r'^([a-zA-Z0-9\-_.]+)$', 'requirements_simple')
+            (r"^([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+.*?)$", "requirements"),
+            (r"^([a-zA-Z0-9\-_.]+)$", "requirements_simple"),
         ],
         ".sh": [
-            (r'pip3?\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)', 'pip_install'),
-            (r'pip3?\s+install\s+"([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)"', 'pip_install_quoted'),
-            (r'apt-get\s+install\s+.*?python3?-([a-zA-Z0-9\-_.]+)', 'apt_install'),
-            (r'PACKAGE_VERSION="([0-9.]+)"', 'version_var')
+            (r"pip3?\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)", "pip_install"),
+            (r'pip3?\s+install\s+"([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)"', "pip_install_quoted"),
+            (r"apt-get\s+install\s+.*?python3?-([a-zA-Z0-9\-_.]+)", "apt_install"),
+            (r'PACKAGE_VERSION="([0-9.]+)"', "version_var"),
         ],
         ".py": [
-            (r'install_requires\s*=\s*\[(.*?)\]', 'setup_py_requires'),
-            (r'"([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)"', 'string_requirement'),
-            (r'\'([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)\'', 'string_requirement'),
-            (r'([a-zA-Z0-9\-_.]+)==([0-9.]+)', 'version_comment'),
+            (r"install_requires\s*=\s*\[(.*?)\]", "setup_py_requires"),
+            (r'"([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)"', "string_requirement"),
+            (r"\'([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)\'", "string_requirement"),
+            (r"([a-zA-Z0-9\-_.]+)==([0-9.]+)", "version_comment"),
         ],
         ".yml": [
-            (r'pip3?\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)', 'pip_install'),
-            (r'python\s+-m\s+pip\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)', 'pip_install'),
+            (r"pip3?\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)", "pip_install"),
+            (r"python\s+-m\s+pip\s+install\s+([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)", "pip_install"),
         ],
         ".md": [
-            (r'([a-zA-Z0-9\-_.]+)==([0-9.]+)', 'version_reference'),
-            (r'`([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)`', 'code_block_version'),
-            (r'```python\n.*?([a-zA-Z0-9\-_.]+)==([0-9.]+).*?\n```', 'python_code_block'),
+            (r"([a-zA-Z0-9\-_.]+)==([0-9.]+)", "version_reference"),
+            (r"`([a-zA-Z0-9\-_.]+)(==|>=|<=|>|<|~=)([0-9.]+)`", "code_block_version"),
+            (r"```python\n.*?([a-zA-Z0-9\-_.]+)==([0-9.]+).*?\n```", "python_code_block"),
         ],
         ".toml": [
-            (r'([a-zA-Z0-9\-_.]+)\s*=\s*"(==|>=|<=|>|<|~=)([0-9.]+)"', 'toml_dependency'),
-            (r'([a-zA-Z0-9\-_.]+)\s*=\s*\{version\s*=\s*"(==|>=|<=|>|<|~=)([0-9.]+)"', 'toml_table'),
-        ]
+            (r'([a-zA-Z0-9\-_.]+)\s*=\s*"(==|>=|<=|>|<|~=)([0-9.]+)"', "toml_dependency"),
+            (r'([a-zA-Z0-9\-_.]+)\s*=\s*\{version\s*=\s*"(==|>=|<=|>|<|~=)([0-9.]+)"', "toml_table"),
+        ],
     }
 
     def __init__(self, project_root: str = "."):
@@ -143,22 +139,21 @@ class ProjectLibraryUpdater:
         try:
             # Use pip index versions or pip search
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "index", "versions", package],
-                capture_output=True, text=True, check=False
+                [sys.executable, "-m", "pip", "index", "versions", package], capture_output=True, text=True, check=False
             )
             if result.returncode == 0:
                 # Parse the output to find available versions
-                lines = result.stdout.split('\n')
+                lines = result.stdout.split("\n")
                 for line in lines:
-                    if 'Available versions:' in line:
-                        versions = line.split(':', 1)[1].strip().split(', ')
+                    if "Available versions:" in line:
+                        versions = line.split(":", 1)[1].strip().split(", ")
                         if versions:
                             return versions[0]
             else:
                 # Fallback to pip show for simpler lookup
                 import requests
-                response = requests.get(
-                    f"https://pypi.org/pypi/{package}/json", timeout=5)
+
+                response = requests.get(f"https://pypi.org/pypi/{package}/json", timeout=5)
                 if response.status_code == 200:
                     data = response.json()
                     return data.get("info", {}).get("version")
@@ -166,8 +161,7 @@ class ProjectLibraryUpdater:
             print(f"Warning: Could not fetch version for {package}: {e}")
         return None
 
-    def check_compatibility(
-            self, package: str, version: str) -> Tuple[bool, str]:
+    def check_compatibility(self, package: str, version: str) -> Tuple[bool, str]:
         """Check if a specific version is compatible with our constraints"""
         # Special cases for Raspberry Pi deployment
         if package == "tflite-runtime":
@@ -185,9 +179,7 @@ class ProjectLibraryUpdater:
 
     def resolve_dependencies(self) -> Dict[str, LibraryInfo]:
         """Resolve all dependencies and check compatibility"""
-        print(
-            f"Resolving dependencies for Raspberry Pi (Python {
-                self.python_version})")
+        print(f"Resolving dependencies for Raspberry Pi (Python {self.python_version})")
         print("=" * 70)
 
         for package, constraint in self.CORE_LIBRARIES.items():
@@ -201,8 +193,7 @@ class ProjectLibraryUpdater:
             notes = ""
 
             if latest:
-                is_compat, compat_note = self.check_compatibility(
-                    package, latest)
+                is_compat, compat_note = self.check_compatibility(package, latest)
                 if not is_compat:
                     # For some packages, we have specific versions we know work
                     if package == "tflite-runtime":
@@ -223,7 +214,7 @@ class ProjectLibraryUpdater:
                 latest_compatible=compatible_version,
                 constraints=[constraint] if constraint else [],
                 is_compatible=is_compatible,
-                notes=notes.strip()
+                notes=notes.strip(),
             )
 
         return self.results
@@ -265,7 +256,7 @@ class ProjectLibraryUpdater:
                 return False
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
@@ -275,7 +266,7 @@ class ProjectLibraryUpdater:
             for pattern, pattern_type in patterns:
                 if pattern_type == "requirements":
                     # Simple line-by-line replacement for requirements files
-                    lines = content.split('\n')
+                    lines = content.split("\n")
                     new_lines = []
                     for line in lines:
                         match = re.match(pattern, line.strip())
@@ -283,8 +274,7 @@ class ProjectLibraryUpdater:
                             lib_name = match.group(1)
                             if lib_name in self.results and self.results[lib_name].latest_compatible:
                                 # Keep the same operator type
-                                operator = match.group(2) if len(
-                                    match.groups()) > 1 else "=="
+                                operator = match.group(2) if len(match.groups()) > 1 else "=="
                                 new_version = self.results[lib_name].latest_compatible
                                 new_line = f"{lib_name}{operator}{new_version}"
                                 new_lines.append(new_line)
@@ -293,28 +283,25 @@ class ProjectLibraryUpdater:
                                 new_lines.append(line)
                         else:
                             new_lines.append(line)
-                    content = '\n'.join(new_lines)
+                    content = "\n".join(new_lines)
 
                 elif pattern_type in ["pip_install", "pip_install_quoted"]:
                     # Update pip install commands
                     def replacer(match):
                         lib_name = match.group(1)
                         if lib_name in self.results and self.results[lib_name].latest_compatible:
-                            operator = match.group(2) if len(
-                                match.groups()) > 1 else "=="
+                            operator = match.group(2) if len(match.groups()) > 1 else "=="
                             new_version = self.results[lib_name].latest_compatible
                             return match.group(0).replace(
-                                f"{lib_name}{operator}{match.group(3)}",
-                                f"{lib_name}{operator}{new_version}"
+                                f"{lib_name}{operator}{match.group(3)}", f"{lib_name}{operator}{new_version}"
                             )
                         return match.group(0)
 
-                    content = re.sub(
-                        pattern, replacer, content, flags=re.MULTILINE)
+                    content = re.sub(pattern, replacer, content, flags=re.MULTILINE)
 
             # Only write if content changed
             if content != original_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 self.updated_files.append(str(file_path))
                 return True
@@ -332,17 +319,15 @@ class ProjectLibraryUpdater:
             return
 
         try:
-            with open(instructions_path, 'r', encoding='utf-8') as f:
+            with open(instructions_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Find the library versions section
             start_marker = "## Current Library Versions"
-            end_marker = "```"
 
             start_idx = content.find(start_marker)
             if start_idx == -1:
-                print(
-                    "Warning: Could not find library versions section in copilot-instructions.md")
+                print("Warning: Could not find library versions section in copilot-instructions.md")
                 return
 
             # Find the code block after the header
@@ -359,25 +344,17 @@ class ProjectLibraryUpdater:
 
             # Categorize libraries
             categories = {
-                "GPIO Libraries": [
-                    "gpiozero",
-                    "lgpio"],
+                "GPIO Libraries": ["gpiozero", "lgpio"],
                 "Sensor Libraries": [
                     "adafruit-circuitpython-gps",
                     "adafruit-circuitpython-bno055",
                     "pyserial",
                     "VL53L1X",
-                    "smbus2"],
-                "Computer Vision": [
-                    "opencv-python-headless",
-                    "tflite-runtime",
-                    "Pillow"],
-                "Web Framework": [
-                    "fastapi",
-                    "uvicorn",
-                    "pydantic",
-                    "websockets",
-                    "aiofiles"]}
+                    "smbus2",
+                ],
+                "Computer Vision": ["opencv-python-headless", "tflite-runtime", "Pillow"],
+                "Web Framework": ["fastapi", "uvicorn", "pydantic", "websockets", "aiofiles"],
+            }
 
             for category, libs in categories.items():
                 new_libs.append(f"\n# {category}")
@@ -385,22 +362,16 @@ class ProjectLibraryUpdater:
                     if lib in self.results and self.results[lib].latest_compatible:
                         version = self.results[lib].latest_compatible
                         if lib == "tflite-runtime":
-                            new_libs.append(
-                                f"{lib}=={version}  # Exact version for Coral TPU")
+                            new_libs.append(f"{lib}=={version}  # Exact version for Coral TPU")
                         elif lib == "opencv-python-headless":
-                            new_libs.append(
-                                f"{lib}=={version}  # Headless for Pi")
+                            new_libs.append(f"{lib}=={version}  # Headless for Pi")
                         else:
                             new_libs.append(f"{lib}=={version}")
 
             # Replace the content
-            new_content = (
-                content[:code_start + 10] +
-                "\n" + "\n".join(new_libs) + "\n" +
-                content[code_end:]
-            )
+            new_content = content[: code_start + 10] + "\n" + "\n".join(new_libs) + "\n" + content[code_end:]
 
-            with open(instructions_path, 'w', encoding='utf-8') as f:
+            with open(instructions_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
 
             self.updated_files.append(str(instructions_path))
@@ -413,11 +384,10 @@ class ProjectLibraryUpdater:
         """Generate a summary report"""
         report_path = self.project_root / "library_update_report.md"
 
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write("# Library Update Report\n\n")
             f.write(f"**Generated**: {datetime.now().isoformat()}\n")
-            f.write(
-                f"**Target Platform**: Raspberry Pi with Python {self.python_version}\n\n")
+            f.write(f"**Target Platform**: Raspberry Pi with Python {self.python_version}\n\n")
 
             f.write("## Updated Libraries\n\n")
             f.write("| Library | Version | Notes |\n")
@@ -426,12 +396,9 @@ class ProjectLibraryUpdater:
             for info in sorted(self.results.values(), key=lambda x: x.name):
                 if info.latest_compatible:
                     notes = info.notes or "Compatible"
-                    f.write(
-                        f"| {
-                            info.name} | {
-                            info.latest_compatible} | {notes} |\n")
+                    f.write(f"| {info.name} | {info.latest_compatible} | {notes} |\n")
 
-            f.write(f"\n## Updated Files\n\n")
+            f.write("\n## Updated Files\n\n")
             for file in self.updated_files:
                 f.write(f"- {file}\n")
 
@@ -439,15 +406,9 @@ class ProjectLibraryUpdater:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Update library versions across Autonomous Mower project")
-    parser.add_argument(
-        "--project-root",
-        help="Project root directory",
-        default=".")
-    parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Show what would be updated without making changes")
+    parser = argparse.ArgumentParser(description="Update library versions across Autonomous Mower project")
+    parser.add_argument("--project-root", help="Project root directory", default=".")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would be updated without making changes")
 
     args = parser.parse_args()
 
@@ -474,7 +435,7 @@ def main():
     for file in files:
         print(f"Checking {file}...")
         if updater.update_file(file):
-            print(f"  ✓ Updated")
+            print("  ✓ Updated")
 
     # Update copilot instructions specifically
     updater.update_copilot_instructions()
