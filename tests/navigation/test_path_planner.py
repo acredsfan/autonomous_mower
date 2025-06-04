@@ -3,9 +3,8 @@ import os
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
-import numpy as np  # numpy is used by the module under test indirectly
 import requests  # For requests.exceptions
 
 # Add the project's 'src' directory to the Python path
@@ -15,16 +14,7 @@ if str(src_root) not in sys.path:
     sys.path.insert(0, str(src_root))
 
 # Now imports should work as 'from mower.module...'
-from mower.navigation.path_planner import ELEVATION_API_URL
-from mower.navigation.path_planner import GOOGLE_MAPS_API_KEY as MODULE_API_KEY_FROM_MODULE
-from mower.navigation.path_planner import (
-    LearningConfig,
-    PathPlanner,
-    PatternConfig,
-    PatternType,
-    get_elevation_for_path,
-)
-from mower.navigation.path_planner import logger as path_planner_logger
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure a specific logger for tests
@@ -154,7 +144,8 @@ class TestPathPlannerElevation(unittest.TestCase):
     def test_get_elevation_api_error_over_query_limit(self, mock_requests_get, mock_logger_error):
         self._run_get_elevation_test_with_mocked_api(
             {"results": [], "status": "OVER_QUERY_LIMIT"},
-            "Google Maps Elevation API: Query limit exceeded. Consider reducing request frequency or upgrading your plan.",
+            "Google Maps Elevation API: Query limit exceeded. Consider reducing request frequency or upgrading "
+            "your plan.",
             mock_logger_error,
             mock_requests_get,
         )
