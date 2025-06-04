@@ -7,10 +7,9 @@ by implementing lazy loading, parallel initialization, and prioritized loading.
 
 import functools
 import importlib
-import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -486,7 +485,7 @@ def compare_startup_times():
         "improvement_percent": improvement,
     }
 
-    logger.info(f"Startup time comparison:")
+    logger.info("Startup time comparison:")
     logger.info(f"  Unoptimized: {unoptimized_time:.4f} seconds")
     logger.info(f"  Optimized: {optimized_time:.4f} seconds")
     logger.info(f"  Improvement: {improvement:.2f}%")
