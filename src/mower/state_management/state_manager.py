@@ -7,11 +7,10 @@ and validation for the autonomous mower.
 
 import threading
 import time
-from typing import Callable, Dict, List, Optional, Set, Tuple, Any
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from mower.state_management.states import MowerState, is_valid_transition
 from mower.utilities.logger_config import LoggerConfigInfo
-
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -47,20 +46,14 @@ class StateManager:
         self._current_state = initial_state
         self._previous_state = None
         self._error_condition = None
-        self._transition_history: List[
-            Tuple[float, MowerState, MowerState]
-        ] = []
+        self._transition_history: List[Tuple[float, MowerState, MowerState]] = []
         self._state_entry_time = time.time()
         self._lock = threading.RLock()
-        self._transition_callbacks: Dict[
-            Tuple[MowerState, MowerState], List[Callable]
-        ] = {}
+        self._transition_callbacks: Dict[Tuple[MowerState, MowerState], List[Callable]] = {}
         self._state_entry_callbacks: Dict[MowerState, List[Callable]] = {}
         self._state_exit_callbacks: Dict[MowerState, List[Callable]] = {}
 
-        logger.info(
-            f"State manager initialized with state: {initial_state.name}"
-        )
+        logger.info(f"State manager initialized with state: {initial_state.name}")
 
     @property
     def current_state(self) -> MowerState:
@@ -133,10 +126,7 @@ class StateManager:
         with self._lock:
             # Check if the transition is valid
             if not self.can_transition_to(target_state):
-                error_msg = (
-                    f"Invalid state transition: {self._current_state.name} -> "
-                    f"{target_state.name}"
-                )
+                error_msg = f"Invalid state transition: {self._current_state.name} -> " f"{target_state.name}"
                 logger.error(error_msg)
                 raise StateTransitionError(error_msg)
 
@@ -167,16 +157,12 @@ class StateManager:
                 self._transition_history = self._transition_history[-100:]
 
             # Call transition callbacks
-            self._call_transition_callbacks(
-                previous_state, target_state, context
-            )
+            self._call_transition_callbacks(previous_state, target_state, context)
 
             # Call entry callbacks for the new state
             self._call_state_entry_callbacks(target_state, context)
 
-            logger.info(
-                f"State transition: {previous_state.name} -> {target_state.name}"
-            )
+            logger.info(f"State transition: {previous_state.name} -> {target_state.name}")
 
             return True
 
@@ -191,19 +177,11 @@ class StateManager:
             self._error_condition = error_condition
 
             # If not already in an error state, transition to ERROR
-            if (
-                self._current_state != MowerState.ERROR
-                and self._current_state != MowerState.EMERGENCY_STOP
-            ):
+            if self._current_state != MowerState.ERROR and self._current_state != MowerState.EMERGENCY_STOP:
                 try:
-                    self.transition_to(
-                        MowerState.ERROR, error_condition=error_condition
-                    )
+                    self.transition_to(MowerState.ERROR, error_condition=error_condition)
                 except StateTransitionError:
-                    logger.error(
-                        f"Failed to transition to ERROR state from "
-                        f"{self._current_state.name}"
-                    )
+                    logger.error(f"Failed to transition to ERROR state from " f"{self._current_state.name}")
 
     def clear_error_condition(self) -> None:
         """Clear the current error condition."""
@@ -285,13 +263,9 @@ class StateManager:
             try:
                 callback(from_state, to_state, context)
             except Exception as e:
-                logger.error(
-                    f"Error in transition callback {callback.__name__}: {e}"
-                )
+                logger.error(f"Error in transition callback {callback.__name__}: {e}")
 
-    def _call_state_entry_callbacks(
-        self, state: MowerState, context: Dict[str, Any]
-    ) -> None:
+    def _call_state_entry_callbacks(self, state: MowerState, context: Dict[str, Any]) -> None:
         """
         Call all registered callbacks for entering a state.
 
@@ -305,13 +279,9 @@ class StateManager:
             try:
                 callback(state, context)
             except Exception as e:
-                logger.error(
-                    f"Error in state entry callback {callback.__name__}: {e}"
-                )
+                logger.error(f"Error in state entry callback {callback.__name__}: {e}")
 
-    def _call_state_exit_callbacks(
-        self, state: MowerState, context: Dict[str, Any]
-    ) -> None:
+    def _call_state_exit_callbacks(self, state: MowerState, context: Dict[str, Any]) -> None:
         """
         Call all registered callbacks for exiting a state.
 
@@ -325,9 +295,7 @@ class StateManager:
             try:
                 callback(state, context)
             except Exception as e:
-                logger.error(
-                    f"Error in state exit callback {callback.__name__}: {e}"
-                )
+                logger.error(f"Error in state exit callback {callback.__name__}: {e}")
 
     def get_state_info(self) -> Dict[str, Any]:
         """
@@ -343,15 +311,8 @@ class StateManager:
                 "current_state_display_name": self._current_state.display_name,
                 "current_state_description": self._current_state.description,
                 "current_state_category": self._current_state.category.name,
-                "previous_state": (
-                    self._previous_state.name
-                    if self._previous_state
-                    else None
-                ),
+                "previous_state": (self._previous_state.name if self._previous_state else None),
                 "error_condition": self._error_condition,
                 "time_in_current_state": self.time_in_current_state,
-                "allowed_transitions": [
-                    state.name
-                    for state in self._current_state.allowed_transitions
-                ],
+                "allowed_transitions": [state.name for state in self._current_state.allowed_transitions],
             }

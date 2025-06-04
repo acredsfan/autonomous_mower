@@ -765,7 +765,7 @@
 
         // Memory Usage
         const memoryPercent = Math.round((data.memoryUsage.used / data.memoryUsage.total) * 100);
-        document.getElementById('memoryUsageValue').textContent = 
+        document.getElementById('memoryUsageValue').textContent =
             `${data.memoryUsage.used} MB / ${data.memoryUsage.total} MB`;
         const memoryBar = document.getElementById('memoryUsageBar');
         memoryBar.style.width = memoryPercent + '%';
@@ -781,7 +781,7 @@
 
         // Disk Usage
         const diskPercent = Math.round((data.diskUsage.used / data.diskUsage.total) * 100);
-        document.getElementById('diskUsageValue').textContent = 
+        document.getElementById('diskUsageValue').textContent =
             `${data.diskUsage.used} GB / ${data.diskUsage.total} GB`;
         const diskBar = document.getElementById('diskUsageBar');
         diskBar.style.width = diskPercent + '%';

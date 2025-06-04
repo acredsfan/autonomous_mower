@@ -2,7 +2,6 @@
 Test module for test_hardware_fixtures.py.
 """
 
-
 from .hardware_fixtures import MockGPIOPin, MockPWM
 
 

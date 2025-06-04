@@ -10,10 +10,10 @@ throughout the codebase.
 import logging
 import threading
 import time
-from typing import Dict, List, Optional, Any, Callable, Set
+from typing import Any, Callable, Dict, List, Optional, Set
 
-from mower.error_handling.exceptions import MowerError
 from mower.error_handling.error_codes import ErrorCode, get_error_details
+from mower.error_handling.exceptions import MowerError
 
 
 class ErrorReporter:
@@ -38,9 +38,7 @@ class ErrorReporter:
         self.critical_errors: Set[ErrorCode] = set()
         self.lock = threading.RLock()
 
-    def report_error(
-        self, error: MowerError, log_level: int = logging.ERROR
-    ) -> None:
+    def report_error(self, error: MowerError, log_level: int = logging.ERROR) -> None:
         """
         Report an error.
 
@@ -77,13 +75,9 @@ class ErrorReporter:
                 try:
                     handler_func(error)
                 except Exception as e:
-                    self.logger.error(
-                        f"Error in error handler {handler_name}: {e}"
-                    )
+                    self.logger.error(f"Error in error handler {handler_name}: {e}")
 
-    def register_error_handler(
-        self, name: str, handler: Callable[[MowerError], None]
-    ) -> None:
+    def register_error_handler(self, name: str, handler: Callable[[MowerError], None]) -> None:
         """
         Register an error handler.
 

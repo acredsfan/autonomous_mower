@@ -7,9 +7,9 @@ support for different GPS modules and positioning systems.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class GPSFixType(Enum):
@@ -172,9 +172,7 @@ class RTKGPSModuleInterface(GPSModuleInterface):
         pass
 
     @abstractmethod
-    def set_rtk_base_position(
-        self, latitude: float, longitude: float, altitude: float
-    ) -> bool:
+    def set_rtk_base_position(self, latitude: float, longitude: float, altitude: float) -> bool:
         """
         Set the position of the RTK base station.
 
@@ -242,9 +240,7 @@ class PositioningSystemInterface(ABC):
         pass
 
     @abstractmethod
-    def register_positioning_source(
-        self, source_id: str, source: Any
-    ) -> bool:
+    def register_positioning_source(self, source_id: str, source: Any) -> bool:
         """
         Register a positioning source with the system.
 

@@ -8,18 +8,18 @@ implementing consistent error handling patterns throughout the codebase.
 
 import logging
 import time
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 from mower.error_handling import (
-    MowerError,
-    HardwareError,
-    NavigationError,
     ErrorCode,
-    report_error,
-    with_error_handling,
+    HardwareError,
+    MowerError,
+    NavigationError,
     error_context,
-    safe_call,
     get_error_reporter,
+    report_error,
+    safe_call,
+    with_error_handling,
 )
 
 

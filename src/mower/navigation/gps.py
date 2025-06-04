@@ -1,23 +1,22 @@
 import argparse
+import json
 import operator
+import os
 import threading
 import time
-from functools import reduce
-import os
-import urllib.request
 import urllib.parse
-import json
-from typing import Optional, Tuple, List, Dict, Any # Added List, Dict, Any
-
+import urllib.request
+from functools import reduce
+from typing import Any, Dict, List, Optional, Tuple  # Added List, Dict, Any
 
 import pynmea2
 import utm
 
-from mower.utilities.text_writer import CsvLogger
 from mower.utilities.logger_config import LoggerConfigInfo
+from mower.utilities.text_writer import CsvLogger
 
-logger_config = LoggerConfig() # This will be used by existing code
-logger = logger_config.get_logger(__name__) # Standard logger for the module
+logger_config = LoggerConfig()  # This will be used by existing code
+logger = logger_config.get_logger(__name__)  # Standard logger for the module
 
 # --- Google Geocoding API Configuration ---
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY")
@@ -211,9 +210,7 @@ class GpsPlayer(metaclass=SingletonMeta):
                         next_nmea_time = self.starttime + offset_nmea_time
                         within_time = next_nmea_time <= now
                         if within_time:
-                            nmea_sentences.append(
-                                (next_nmea_time, next_nmea[1])
-                            )
+                            nmea_sentences.append((next_nmea_time, next_nmea[1]))
                             self.index += 1
         return nmea_sentences
 
@@ -255,10 +252,7 @@ def parse_gps_position(line, debug=False):
     if message in ["GPRMC", "GNRMC"]:
         calculated_checksum = calculate_nmea_checksum(line)
         if nmea_checksum != calculated_checksum:
-            logger.info(
-                "NMEA checksum does not match: %s != %s",
-                nmea_checksum, calculated_checksum
-            )
+            logger.info("NMEA checksum does not match: %s != %s", nmea_checksum, calculated_checksum)
             return None
 
         if debug:
@@ -269,10 +263,7 @@ def parse_gps_position(line, debug=False):
                 return None
 
         if nmea_parts[2] == "V":
-            logger.info(
-                "GPS receiver warning; position not valid. "
-                "Ignoring invalid position."
-            )
+            logger.info("GPS receiver warning; position not valid. " "Ignoring invalid position.")
             return None
 
         longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
@@ -284,7 +275,7 @@ def parse_gps_position(line, debug=False):
         #     if hasattr(msg, 'latitude') and msg.latitude != latitude:
         #         logger.info("Latitude mismatch %s != %s", msg.latitude, latitude)
 
-        utm_position = utm.from_latlon(latitude, longitude)        # if debug:
+        utm_position = utm.from_latlon(latitude, longitude)  # if debug:
         #     logger.info(
         #         "UTM easting = %s, UTM northing = %s",
         #         utm_position[0], utm_position[1]
@@ -337,6 +328,7 @@ if __name__ == "__main__":
 
     import numpy as np
     import readchar
+
     from mower.hardware.serial_port import SerialPort
 
     def stats(data):
@@ -420,9 +412,7 @@ if __name__ == "__main__":
 
             # calculate the ellipsoid at the
             # given multiple of the standard deviation.
-            self.theta = np.degrees(
-                np.arctan2(*self.eigenvectors[:, 0][::-1])
-            )
+            self.theta = np.degrees(np.arctan2(*self.eigenvectors[:, 0][::-1]))
             self.width, self.height = 2 * nstd * np.sqrt(self.eigenvalues)
 
         def is_inside(self, x, y):
@@ -449,14 +439,8 @@ if __name__ == "__main__":
             # coordinate system of the ellipse (it's center)
             # and then rotate the point and do a normal ellipse test
             #
-            part1 = (
-                (cos_theta * x_translated + sin_theta * y_translated)
-                / self.width
-            ) ** 2
-            part2 = (
-                (sin_theta * x_translated - cos_theta * y_translated)
-                / self.height
-            ) ** 2
+            part1 = ((cos_theta * x_translated + sin_theta * y_translated) / self.width) ** 2
+            part2 = ((sin_theta * x_translated - cos_theta * y_translated) / self.height) ** 2
             return (part1 + part2) <= 1
 
         def is_in_range(self, x, y):
@@ -609,8 +593,7 @@ if __name__ == "__main__":
         "--waypoints",
         type=int,
         default=0,
-        help="Number of waypoints to collect; > 0 to collect"
-        "waypoints, 0 to just log position",
+        help="Number of waypoints to collect; > 0 to collect" "waypoints, 0 to just log position",
     )
     parser.add_argument(
         "-nstd",
@@ -619,19 +602,12 @@ if __name__ == "__main__":
         default=1.0,
         help="multiple of standard deviation for ellipse.",
     )
-    parser.add_argument(
-        "-th", "--threaded", action="store_true", help="run in threaded mode."
-    )
-    parser.add_argument(
-        "-db", "--debug", action="store_true", help="Enable extra logging"
-    )
+    parser.add_argument("-th", "--threaded", action="store_true", help="run in threaded mode.")
+    parser.add_argument("-db", "--debug", action="store_true", help="Enable extra logging")
     args = parser.parse_args()
 
     if args.waypoints < 0:
-        print(
-            "Use waypoints > 0 to collect waypoints"
-            "use 0 waypoints to just log position"
-        )
+        print("Use waypoints > 0 to collect waypoints" "use 0 waypoints to just log position")
         parser.print_help()
         sys.exit(0)
 
@@ -661,12 +637,8 @@ if __name__ == "__main__":
     from mower.hardware.serial_port import SerialLineReader
 
     try:
-        serial_port = SerialPort(
-            args.serial, baudrate=args.baudrate, timeout=args.timeout
-        )
-        line_reader = SerialLineReader(
-            serial_port, max_lines=args.samples, debug=args.debug
-        )
+        serial_port = SerialPort(args.serial, baudrate=args.baudrate, timeout=args.timeout)
+        line_reader = SerialLineReader(serial_port, max_lines=args.samples, debug=args.debug)
         position_reader = GpsNmeaPositions(args.debug)
 
         # start the threaded part
@@ -675,19 +647,13 @@ if __name__ == "__main__":
         if args.threaded:
 
             def start_thread():
-                update_thread = threading.Thread(
-                    target=line_reader.update, args=()
-                )
+                update_thread = threading.Thread(target=line_reader.update, args=())
                 update_thread.start()
 
             start_thread()
 
         def read_gps():
-            lines = (
-                line_reader.run_threaded()
-                if args.threaded
-                else line_reader.run()
-            )
+            lines = line_reader.run_threaded() if args.threaded else line_reader.run()
             positions = position_reader.run(lines)
             return positions
 
@@ -717,10 +683,7 @@ if __name__ == "__main__":
                     count = len(waypoint_samples)
                     print(f"Collected {count} so far...")
                     if count > samples_per_waypoint:
-                        print(
-                            f"...done.  Collected {count} samples"
-                            f"for waypoint #{len(waypoints) + 1}"
-                        )
+                        print(f"...done.  Collected {count} samples" f"for waypoint #{len(waypoints) + 1}")
                         #
                         # model a waypoint as a rotated ellipsoid
                         # that represents a 95% confidence interval
@@ -735,29 +698,18 @@ if __name__ == "__main__":
                             if args.debug:
                                 plot(waypoints)
                 elif state == "test_prompt":
-                    print(
-                        "Waypoints are recorded."
-                        "Now walk around and see when in a waypoint."
-                    )
+                    print("Waypoints are recorded." "Now walk around and see when in a waypoint.")
                     state = "test"
                 elif state == "test":
                     for ts, x, y in readings:
                         print(f"Your position is ({x}, {y})")
                         hit, index = is_in_waypoint_range(waypoints, x, y)
                         if hit:
-                            print(
-                                f"You are within the sample"
-                                f"range of waypoint #{index + 1}"
-                            )
+                            print(f"You are within the sample" f"range of waypoint #{index + 1}")
                         std_deviation = 1.0
-                        hit, index = is_in_waypoint_std(
-                            waypoints, x, y, std_deviation
-                        )
+                        hit, index = is_in_waypoint_std(waypoints, x, y, std_deviation)
                         if hit:
-                            print(
-                                f"You are within {std_deviation} std devs"
-                                f"of the center of waypoint #{index + 1}"
-                            )
+                            print(f"You are within {std_deviation} std devs" f"of the center of waypoint #{index + 1}")
                         hit, index = is_in_waypoint(waypoints, x, y)
                         if hit:
                             print(f"You are at waypoint ellipse #{index + 1}")
@@ -776,6 +728,7 @@ if __name__ == "__main__":
         if update_thread is not None:
             update_thread.join()  # wait for thread to end
 
+
 # --- Google Geocoding API Function ---
 def address_to_coordinates(address_string: str) -> Optional[Tuple[float, float]]:
     """
@@ -789,9 +742,7 @@ def address_to_coordinates(address_string: str) -> Optional[Tuple[float, float]]
         A tuple of (latitude, longitude) if successful, or None otherwise.
     """
     if not GOOGLE_MAPS_API_KEY:
-        logger.error(
-            "Cannot perform geocoding: GOOGLE_MAPS_API_KEY is not set."
-        )
+        logger.error("Cannot perform geocoding: GOOGLE_MAPS_API_KEY is not set.")
         return None
 
     if not address_string:
@@ -811,7 +762,7 @@ def address_to_coordinates(address_string: str) -> Optional[Tuple[float, float]]
     except json.JSONDecodeError:
         logger.error("Failed to decode JSON response from Geocoding API.")
         return None
-    except Exception as e: # Catch any other unexpected errors during request/parsing
+    except Exception as e:  # Catch any other unexpected errors during request/parsing
         logger.error(f"Unexpected error during geocoding API call: {e}")
         return None
 
@@ -823,40 +774,27 @@ def address_to_coordinates(address_string: str) -> Optional[Tuple[float, float]]
             if location and "lat" in location and "lng" in location:
                 return location["lat"], location["lng"]
             else:
-                logger.error(
-                    "Geocoding API 'OK' status but location data is malformed."
-                )
+                logger.error("Geocoding API 'OK' status but location data is malformed.")
                 return None
         else:
-            logger.error(
-                "Geocoding API 'OK' status but no results found."
-            )
+            logger.error("Geocoding API 'OK' status but no results found.")
             return None
     elif status == "ZERO_RESULTS":
-        logger.warning(
-            f"Address '{address_string}' not found by Geocoding API (ZERO_RESULTS)."
-        )
+        logger.warning(f"Address '{address_string}' not found by Geocoding API (ZERO_RESULTS).")
         return None
     elif status == "OVER_QUERY_LIMIT":
-        logger.error(
-            "Geocoding API query limit exceeded. Check usage and billing."
-        )
+        logger.error("Geocoding API query limit exceeded. Check usage and billing.")
         return None
     elif status == "REQUEST_DENIED":
-        logger.error(
-            "Geocoding API request denied. Verify API key and permissions."
-        )
+        logger.error("Geocoding API request denied. Verify API key and permissions.")
         return None
     elif status == "INVALID_REQUEST":
-        logger.error(
-            f"Geocoding API invalid request. Sent params: {params}, Error: {data.get('error_message', 'N/A')}"
-        )
+        logger.error(f"Geocoding API invalid request. Sent params: {params}, Error: {data.get('error_message', 'N/A')}")
         return None
-    else: # UNKNOWN_ERROR or other statuses
-        logger.error(
-            f"Geocoding API returned an unhandled status: {status}. Error: {data.get('error_message', 'N/A')}"
-        )
+    else:  # UNKNOWN_ERROR or other statuses
+        logger.error(f"Geocoding API returned an unhandled status: {status}. Error: {data.get('error_message', 'N/A')}")
         return None
+
 
 # --- End Google Geocoding API Function ---
 
@@ -865,7 +803,7 @@ def address_to_coordinates(address_string: str) -> Optional[Tuple[float, float]]
 def get_location_from_wifi_cell(
     wifi_access_points: Optional[List[Dict[str, Any]]] = None,
     cell_towers: Optional[List[Dict[str, Any]]] = None,
-    consider_ip: bool = True
+    consider_ip: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """
     Determines location based on WiFi access points, cell towers, and IP address
@@ -893,9 +831,9 @@ def get_location_from_wifi_cell(
         request_body_dict["wifiAccessPoints"] = wifi_access_points
     if cell_towers:
         request_body_dict["cellTowers"] = cell_towers
-    if not wifi_access_points and not cell_towers: # Only include considerIp if no other signals
+    if not wifi_access_points and not cell_towers:  # Only include considerIp if no other signals
         request_body_dict["considerIp"] = consider_ip
-    
+
     # If only consider_ip is true, and others are empty, the dict might be just {"considerIp": True}
     # The API expects at least one signal or considerIp.
     # If all are false/empty, we already returned above.
@@ -905,10 +843,7 @@ def get_location_from_wifi_cell(
 
     try:
         req = urllib.request.Request(
-            url,
-            data=request_body_json,
-            headers={"Content-Type": "application/json"},
-            method="POST"
+            url, data=request_body_json, headers={"Content-Type": "application/json"}, method="POST"
         )
         with urllib.request.urlopen(req, timeout=10) as response:
             response_body = response.read().decode("utf-8")
@@ -921,15 +856,14 @@ def get_location_from_wifi_cell(
             elif "error" in data and isinstance(data["error"], dict):
                 logger.warning(f"Geolocation API returned an error object: {data['error']}")
                 return {"error": "APIError", "details": data["error"]}
-            else: # Unexpected success response structure
+            else:  # Unexpected success response structure
                 logger.error(f"Geolocation API success response malformed: {data}")
                 return {"error": "Malformed success response", "details": str(data)}
-
 
     except urllib.error.HTTPError as e:
         error_details = f"HTTP {e.code}: {e.reason}"
         try:
-            if e.fp: # Try to read error body from API
+            if e.fp:  # Try to read error body from API
                 error_response_body = e.read().decode("utf-8")
                 error_data = json.loads(error_response_body)
                 if "error" in error_data and isinstance(error_data["error"], dict):
@@ -937,15 +871,17 @@ def get_location_from_wifi_cell(
                     return {"error": "APIHTTPError", "details": error_data["error"]}
                 else:
                     error_details = f"HTTP {e.code}: {e.reason} - Body: {error_response_body}"
-            else: # No body from HTTPError
-                 logger.error(f"HTTP error from Geolocation API: {e.code} {e.reason} (no body)")
+            else:  # No body from HTTPError
+                logger.error(f"HTTP error from Geolocation API: {e.code} {e.reason} (no body)")
 
         except json.JSONDecodeError:
-            logger.error(f"HTTP error from Geolocation API (could not parse error body): {e.code} {e.reason} - Body: {error_response_body if 'error_response_body' in locals() else 'N/A'}")
+            logger.error(
+                f"HTTP error from Geolocation API (could not parse error body): {e.code} {e.reason} - Body: {error_response_body if 'error_response_body' in locals() else 'N/A'}"
+            )
             error_details = f"HTTP {e.code}: {e.reason} (unparseable error body)"
-        except Exception as inner_e: # Catch other errors during error handling
+        except Exception as inner_e:  # Catch other errors during error handling
             logger.error(f"Further error processing HTTPError for Geolocation API: {inner_e}")
-        
+
         return {"error": "APIHTTPError", "details": error_details}
 
     except urllib.error.URLError as e:
@@ -957,5 +893,6 @@ def get_location_from_wifi_cell(
     except Exception as e:
         logger.error(f"Unexpected error during Geolocation API call: {e}", exc_info=True)
         return {"error": "UnexpectedError", "details": str(e)}
+
 
 # --- End Google Geolocation API Function ---

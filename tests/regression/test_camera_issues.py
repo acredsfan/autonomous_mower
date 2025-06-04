@@ -6,12 +6,14 @@ This module contains regression tests for camera-related issues.
 
 # os is used in @patch("os.path.exists") decorators
 import os  # noqa: F401
-import sys
-import pytest
+
 # subprocess is used in @patch("subprocess.run") decorators
 import subprocess  # noqa: F401
+import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -59,18 +61,14 @@ class TestCameraIssues:
         troubleshooting section: "Camera Issues" - "Check camera connection and enable"
         """
         # Mock subprocess.run to return success for camera check
-        mock_run.return_value = MagicMock(
-            return_code=0, stdout=b"supported = 1 detected=1"
-        )
+        mock_run.return_value = MagicMock(return_code=0, stdout=b"supported = 1 detected=1")
 
         # Create a Camera instance
         with patch("mower.hardware.camera.Camera._initialize_picamera"):
             camera = Camera()
 
             # Call the method that would check the camera connection
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_enabled"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_enabled") as mock_check:
                 mock_check.return_value = True
                 camera.initialize()
 
@@ -91,18 +89,14 @@ class TestCameraIssues:
         troubleshooting section: "Camera Issues" - "Check camera connection and enable"
         """
         # Mock subprocess.run to return failure for camera check
-        mock_run.return_value = MagicMock(
-            return_code=0, stdout=b"supported = 1 detected=0"
-        )
+        mock_run.return_value = MagicMock(return_code=0, stdout=b"supported = 1 detected=0")
 
         # Create a Camera instance
         with patch("mower.hardware.camera.Camera._initialize_picamera"):
             camera = Camera()
 
             # Call the method that would check the camera connection
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_enabled"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_enabled") as mock_check:
                 mock_check.return_value = False
 
                 # The initialize method should raise an exception if the camera
@@ -138,9 +132,7 @@ class TestCameraIssues:
             camera = Camera()
 
             # Call the method that would check the camera device files
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_devices"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_devices") as mock_check:
                 mock_check.return_value = True
                 camera.initialize()
 
@@ -164,9 +156,7 @@ class TestCameraIssues:
             camera = Camera()
 
             # Call the method that would check the camera device files
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_devices"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_devices") as mock_check:
                 mock_check.return_value = False
 
                 # The initialize method should raise an exception if the camera
@@ -198,9 +188,7 @@ class TestCameraIssues:
             camera = Camera()
 
             # Call the method that would check the camera permissions
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_permissions"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_permissions") as mock_check:
                 mock_check.return_value = True
                 camera.initialize()
 
@@ -216,18 +204,14 @@ class TestCameraIssues:
         troubleshooting section: "Camera Issues" - "Check camera permissions"
         """
         # Mock subprocess.run to return failure for camera permissions check
-        mock_run.return_value = MagicMock(
-            return_code=0, stdout=b"pi"
-        )  # 'video' group missing
+        mock_run.return_value = MagicMock(return_code=0, stdout=b"pi")  # 'video' group missing
 
         # Create a Camera instance
         with patch("mower.hardware.camera.Camera._initialize_picamera"):
             camera = Camera()
 
             # Call the method that would check the camera permissions
-            with patch(
-                "mower.hardware.camera.Camera._check_camera_permissions"
-            ) as mock_check:
+            with patch("mower.hardware.camera.Camera._check_camera_permissions") as mock_check:
                 mock_check.return_value = False
 
                 # The initialize method should raise an exception if the camera
@@ -275,9 +259,7 @@ class TestCameraIssues:
         mock_picamera.assert_called()
 
         # Verify that the camera was configured
-        assert (
-            mock_camera.method_calls
-        ), "Camera should be configured after initialization"
+        assert mock_camera.method_calls, "Camera should be configured after initialization"
 
 
 if __name__ == "__main__":

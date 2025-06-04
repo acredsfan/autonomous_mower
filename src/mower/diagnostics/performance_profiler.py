@@ -7,16 +7,19 @@ optimization strategies.
 """
 
 import cProfile
-import pstats
 import io
-import time
 import os
-import numpy as np
-from typing import Dict, List, Any, Callable
+import pstats
+import time
+from typing import Any, Callable, Dict, List
+
 import matplotlib.pyplot as plt
-# from pathlib import Path
+import numpy as np
 
 from mower.utilities.logger_config import LoggerConfigInfo
+
+# from pathlib import Path
+
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -44,12 +47,9 @@ class PerformanceProfiler:
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
-        logger.info(
-            f"Performance profiler initialized with output directory: {output_dir}")
+        logger.info(f"Performance profiler initialized with output directory: {output_dir}")
 
-    def profile_function(
-        self, func: Callable, *args, **kwargs
-    ) -> Dict[str, Any]:
+    def profile_function(self, func: Callable, *args, **kwargs) -> Dict[str, Any]:
         """
         Profile a function and return performance metrics.
 
@@ -98,17 +98,11 @@ class PerformanceProfiler:
             "result": result,
         }
 
-        logger.info(
-            (
-                f"Profiled {func.__name__}: {execution_time:.4f} seconds"
-                f", {total_calls} calls")
-            )
+        logger.info((f"Profiled {func.__name__}: {execution_time:.4f} seconds" f", {total_calls} calls"))
 
         return metrics
 
-    def profile_component(
-        self, name: str, func: Callable, iterations: int = 10, *args, **kwargs
-    ) -> Dict[str, Any]:
+    def profile_component(self, name: str, func: Callable, iterations: int = 10, *args, **kwargs) -> Dict[str, Any]:
         """
         Profile a component multiple times and calculate average performance.
 
@@ -186,16 +180,9 @@ class PerformanceProfiler:
         with open(stats_file, "w") as f:
             f.write(f"Component: {name}\n")
             f.write(f"Iterations: {results['iterations']}\n")
-            f.write(
-                f"Average execution time: {results['avg_time']:.4f} seconds\n"
-            )
-            f.write(
-                f"Standard deviation: {results['std_time']:.4f} seconds\n"
-            )
-            f.write(
-                f"Min/Max time: {results['min_time']:.4f}"
-                f"/{results['max_time']:.4f} seconds\n"
-            )
+            f.write(f"Average execution time: {results['avg_time']:.4f} seconds\n")
+            f.write(f"Standard deviation: {results['std_time']:.4f} seconds\n")
+            f.write(f"Min/Max time: {results['min_time']:.4f}" f"/{results['max_time']:.4f} seconds\n")
             f.write(f"Average function calls: {results['avg_calls']:.1f}\n\n")
             f.write("Detailed statistics:\n")
             f.write(results["last_stats"])
@@ -268,9 +255,7 @@ class PerformanceProfiler:
 
         logger.info(f"Saved component comparison to {self.output_dir}")
 
-    def profile_path_planning(
-        self, pattern_config, learning_config=None, iterations: int = 5
-    ) -> Dict[str, Any]:
+    def profile_path_planning(self, pattern_config, learning_config=None, iterations: int = 5) -> Dict[str, Any]:
         """
         Profile the path planning component.
 
@@ -299,9 +284,7 @@ class PerformanceProfiler:
 
         return results
 
-    def profile_obstacle_detection(
-        self, iterations: int = 5
-    ) -> Dict[str, Any]:
+    def profile_obstacle_detection(self, iterations: int = 5) -> Dict[str, Any]:
         """
         Profile the obstacle detection component.
 
@@ -311,10 +294,8 @@ class PerformanceProfiler:
         Returns:
             Dictionary of performance metrics
         """
-        from mower.obstacle_detection.obstacle_detector import (
-            get_obstacle_detector,
-        )
         from mower.hardware.camera_instance import capture_frame
+        from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
 
         # Get obstacle detector
         detector = get_obstacle_detector()
@@ -384,9 +365,7 @@ class PerformanceProfiler:
 
         # Profile obstacle detector initialization
         def init_obstacle_detector():
-            from mower.obstacle_detection.obstacle_detector import (
-                ObstacleDetector,
-            )
+            from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 
             detector = ObstacleDetector()
             return detector
@@ -399,11 +378,7 @@ class PerformanceProfiler:
 
         # Profile path planner initialization
         def init_path_planner():
-            from mower.navigation.path_planner import (
-                PathPlanner,
-                PatternConfig,
-                PatternType,
-            )
+            from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
 
             config = PatternConfig(
                 pattern_type=PatternType.PARALLEL,

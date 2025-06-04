@@ -4,13 +4,14 @@ sensor data when running on Windows
 or in simulation mode.
 """
 
+import logging
 import os
+import platform
+import random
+
 # import math
 import time
-import random
-import platform
-import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -45,9 +46,7 @@ def should_use_simulation() -> bool:
         bool: True if simulation should be used
     """
     # Check environment variable
-    sim_env = os.environ.get(
-        "USE_SIMULATION", "").lower() in (
-        "true", "1", "yes")
+    sim_env = os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")
 
     # Check if we're running on Windows
     return IS_WINDOWS or sim_env
@@ -73,19 +72,13 @@ def get_simulated_sensor_data() -> Dict[str, Any]:
             {
                 "last_update": current_time,
                 "heading": (_sim_data_cache["heading"] + random.uniform(-5, 5)) % 360,
-                "pitch": max(
-                    -30, min(30, _sim_data_cache["pitch"] + random.uniform(-1, 1))
-                ),
-                "roll": max(
-                    -30, min(30, _sim_data_cache["roll"] + random.uniform(-1, 1))
-                ),
+                "pitch": max(-30, min(30, _sim_data_cache["pitch"] + random.uniform(-1, 1))),
+                "roll": max(-30, min(30, _sim_data_cache["roll"] + random.uniform(-1, 1))),
                 "temperature": max(
                     10,
                     min(40, _sim_data_cache["temperature"] + random.uniform(-0.2, 0.2)),
                 ),
-                "humidity": max(
-                    20, min(90, _sim_data_cache["humidity"] + random.uniform(-1, 1))
-                ),
+                "humidity": max(20, min(90, _sim_data_cache["humidity"] + random.uniform(-1, 1))),
                 "pressure": max(
                     980,
                     min(1030, _sim_data_cache["pressure"] + random.uniform(-0.5, 0.5)),
@@ -113,10 +106,8 @@ def get_simulated_sensor_data() -> Dict[str, Any]:
             "pitch": _sim_data_cache["pitch"],
             "calibration": "Simulated",
             "safety_status": {
-                "tilt_warning": abs(_sim_data_cache["roll"]) > 20
-                or abs(_sim_data_cache["pitch"]) > 20,
-                "tilt_error": abs(_sim_data_cache["roll"]) > 30
-                or abs(_sim_data_cache["pitch"]) > 30,
+                "tilt_warning": abs(_sim_data_cache["roll"]) > 20 or abs(_sim_data_cache["pitch"]) > 20,
+                "tilt_error": abs(_sim_data_cache["roll"]) > 30 or abs(_sim_data_cache["pitch"]) > 30,
                 "vibration_warning": False,
                 "vibration_error": False,
                 "impact_detected": False,
@@ -148,10 +139,7 @@ def get_simulated_sensor_data() -> Dict[str, Any]:
     }
 
 
-def update_simulated_motor_data(
-        left_speed: float = None,
-        right_speed: float = None,
-        blade_speed: float = None) -> None:
+def update_simulated_motor_data(left_speed: float = None, right_speed: float = None, blade_speed: float = None) -> None:
     """
     Update the simulated motor values to reflect commands sent by the user.
 

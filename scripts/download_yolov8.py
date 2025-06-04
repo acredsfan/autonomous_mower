@@ -22,16 +22,15 @@ This change fixes the 404 error and ensures the model is always available in the
 correct format.
 """
 
-import sys
-import subprocess
 import os
+import subprocess
+import sys
 
 
 def main():
     # Build the command to invoke the export script
     script_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        "..", "src", "mower", "obstacle_detection", "yolov8_downloads.py"
+        os.path.dirname(os.path.abspath(__file__)), "..", "src", "mower", "obstacle_detection", "yolov8_downloads.py"
     )
     script_path = os.path.normpath(script_path)
 

@@ -20,9 +20,7 @@ from mower.utilities.logger_config import LoggerConfigInfo
 logging = LoggerConfigInfo.get_logger(__name__)
 
 # Add project root to Python path
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Global instance
 _web_interface: Optional[WebInterface] = None

@@ -2,17 +2,14 @@
 Test module for test_path_planner_properties.py.
 """
 
-import pytest
-from hypothesis import given, strategies as st, settings, assume
-import numpy as np
 from typing import List, Tuple
 
-from mower.navigation.path_planner import (
-    PathPlanner,
-    PatternConfig,
-    LearningConfig,
-    PatternType,
-)
+import numpy as np
+import pytest
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
 
 
 # Helper strategies for generating test data

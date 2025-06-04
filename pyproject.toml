@@ -80,7 +80,7 @@ dev = [
 mower = "mower.main_controller:main"
 mower-test = "mower.diagnostics.hardware_test:main"
 mower-calibrate = "mower.diagnostics.imu_calibration:main"
-mower-logs = "mower.utilities.logging_config:view_logs" 
+mower-logs = "mower.utilities.logging_config:view_logs"
 
 [tool.bandit]
 exclude_dirs = ["tests", "venv", ".venv", ".git", ".tox", "build", "dist"]

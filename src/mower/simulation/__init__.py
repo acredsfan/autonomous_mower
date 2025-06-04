@@ -7,9 +7,9 @@ hardware components and a virtual world environment for testing navigation,
 obstacle avoidance, and other features.
 """
 
-import os
 import logging
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+import os
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 # Check if simulation mode is enabled via environment variable
 SIMULATION_ENABLED = os.environ.get("USE_SIMULATION", "False").lower() in (

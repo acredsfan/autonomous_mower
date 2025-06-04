@@ -1,9 +1,11 @@
 """
 Test module for test_service_startup.py.
 """
+
 import threading
+
 # import pytest # pytest is implicitly used by test functions
-from mower.main_controller import main, ResourceManager
+from mower.main_controller import ResourceManager, main
 
 
 def test_main_controller_startup(monkeypatch):
@@ -15,9 +17,7 @@ def test_main_controller_startup(monkeypatch):
     after the first wait.
     """
     # Avoid starting the web interface
-    monkeypatch.setattr(
-        ResourceManager, "start_web_interface", lambda self: None
-    )
+    monkeypatch.setattr(ResourceManager, "start_web_interface", lambda self: None)
 
     # Patch threading.Event.wait to trigger exit
     original_wait = threading.Event.wait

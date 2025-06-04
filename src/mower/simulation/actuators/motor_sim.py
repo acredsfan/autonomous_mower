@@ -6,12 +6,12 @@ with the virtual world model to provide realistic motor control behavior without
 requiring physical hardware.
 """
 
-import time
 import threading
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+import time
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from mower.simulation.hardware_sim import SimulatedActuator
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import Vector2D, get_world_instance
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
@@ -75,9 +75,7 @@ class SimulatedRoboHATDriver(SimulatedActuator):
 
         # If the key is left_speed or right_speed, update the robot's motor speeds
         if key in ["left_speed", "right_speed"]:
-            self.world.set_robot_motor_speeds(
-                self.state["left_speed"], self.state["right_speed"]
-            )
+            self.world.set_robot_motor_speeds(self.state["left_speed"], self.state["right_speed"])
 
     # RoboHATDriver interface methods
 
@@ -145,12 +143,8 @@ class SimulatedRoboHATDriver(SimulatedActuator):
             throttle: Throttle value (-1.0 to 1.0)
         """
         # Check if values are valid
-        if not self.is_valid_pwm_value(
-            steering
-        ) or not self.is_valid_pwm_value(throttle):
-            logger.warning(
-                f"Invalid PWM values: steering={steering}, throttle={throttle}"
-            )
+        if not self.is_valid_pwm_value(steering) or not self.is_valid_pwm_value(throttle):
+            logger.warning(f"Invalid PWM values: steering={steering}, throttle={throttle}")
             return
 
         # Set pulse
@@ -185,9 +179,7 @@ class SimulatedRoboHATDriver(SimulatedActuator):
 
         # Log if debug is enabled
         if self.state["debug"]:
-            logger.debug(
-                f"Set motors: left={left_speed}, right={right_speed}"
-            )
+            logger.debug(f"Set motors: left={left_speed}, right={right_speed}")
 
     def forward(self, speed: float = 1.0) -> None:
         """

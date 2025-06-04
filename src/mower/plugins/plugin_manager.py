@@ -10,14 +10,9 @@ import inspect
 import os
 import pkgutil
 import sys
-from typing import Dict, List, Optional, Type, TypeVar, Generic, Any
+from typing import Any, Dict, Generic, List, Optional, Type, TypeVar
 
-from mower.plugins.plugin_base import (
-    Plugin,
-    SensorPlugin,
-    DetectionPlugin,
-    AvoidancePlugin,
-)
+from mower.plugins.plugin_base import AvoidancePlugin, DetectionPlugin, Plugin, SensorPlugin
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -47,9 +42,7 @@ class PluginManager(Generic[T]):
         self.plugin_instances: Dict[str, T] = {}
         self.plugin_dirs: List[str] = []
 
-        logger.info(
-            f"Initialized plugin manager for {plugin_base_class.__name__}"
-        )
+        logger.info(f"Initialized plugin manager for {plugin_base_class.__name__}")
 
     def register_plugin(self, plugin_class: Type[T]) -> bool:
         """
@@ -65,8 +58,7 @@ class PluginManager(Generic[T]):
             # Check if the plugin class is a subclass of the base class
             if not issubclass(plugin_class, self.plugin_base_class):
                 logger.error(
-                    f"Plugin class {plugin_class.__name__} is not a subclass of "
-                    f"{self.plugin_base_class.__name__}"
+                    f"Plugin class {plugin_class.__name__} is not a subclass of " f"{self.plugin_base_class.__name__}"
                 )
                 return False
 
@@ -77,22 +69,17 @@ class PluginManager(Generic[T]):
             # Check if a plugin with this ID is already registered
             if plugin_id in self.plugins:
                 logger.warning(
-                    f"Plugin with ID {plugin_id} is already registered "
-                    f"({self.plugins[plugin_id].__name__})"
+                    f"Plugin with ID {plugin_id} is already registered " f"({self.plugins[plugin_id].__name__})"
                 )
                 return False
 
             # Register the plugin
             self.plugins[plugin_id] = plugin_class
-            logger.info(
-                f"Registered plugin {plugin_class.__name__} with ID {plugin_id}"
-            )
+            logger.info(f"Registered plugin {plugin_class.__name__} with ID {plugin_id}")
             return True
 
         except Exception as e:
-            logger.error(
-                f"Error registering plugin {plugin_class.__name__}: {e}"
-            )
+            logger.error(f"Error registering plugin {plugin_class.__name__}: {e}")
             return False
 
     def unregister_plugin(self, plugin_id: str) -> bool:
@@ -107,9 +94,7 @@ class PluginManager(Generic[T]):
         """
         try:
             if plugin_id not in self.plugins:
-                logger.warning(
-                    f"Plugin with ID {plugin_id} is not registered"
-                )
+                logger.warning(f"Plugin with ID {plugin_id} is not registered")
                 return False
 
             # Clean up the plugin instance if it exists
@@ -117,18 +102,14 @@ class PluginManager(Generic[T]):
                 try:
                     self.plugin_instances[plugin_id].cleanup()
                 except Exception as e:
-                    logger.error(
-                        f"Error cleaning up plugin instance {plugin_id}: {e}"
-                    )
+                    logger.error(f"Error cleaning up plugin instance {plugin_id}: {e}")
 
                 del self.plugin_instances[plugin_id]
 
             # Unregister the plugin
             plugin_name = self.plugins[plugin_id].__name__
             del self.plugins[plugin_id]
-            logger.info(
-                f"Unregistered plugin {plugin_name} with ID {plugin_id}"
-            )
+            logger.info(f"Unregistered plugin {plugin_name} with ID {plugin_id}")
             return True
 
         except Exception as e:
@@ -148,9 +129,7 @@ class PluginManager(Generic[T]):
         try:
             # Check if the plugin is registered
             if plugin_id not in self.plugins:
-                logger.warning(
-                    f"Plugin with ID {plugin_id} is not registered"
-                )
+                logger.warning(f"Plugin with ID {plugin_id} is not registered")
                 return None
 
             # Check if the plugin instance already exists
@@ -163,17 +142,12 @@ class PluginManager(Generic[T]):
 
             # Initialize the plugin
             if not plugin_instance.initialize():
-                logger.error(
-                    f"Failed to initialize plugin {plugin_class.__name__}"
-                )
+                logger.error(f"Failed to initialize plugin {plugin_class.__name__}")
                 return None
 
             # Store the plugin instance
             self.plugin_instances[plugin_id] = plugin_instance
-            logger.info(
-                f"Created instance of plugin {plugin_class.__name__} "
-                f"with ID {plugin_id}"
-            )
+            logger.info(f"Created instance of plugin {plugin_class.__name__} " f"with ID {plugin_id}")
             return plugin_instance
 
         except Exception as e:
@@ -211,11 +185,7 @@ class PluginManager(Generic[T]):
         Returns:
             List[T]: List of all plugin instances
         """
-        return [
-            self.get_plugin(plugin_id)
-            for plugin_id in self.plugins
-            if self.get_plugin(plugin_id) is not None
-        ]
+        return [self.get_plugin(plugin_id) for plugin_id in self.plugins if self.get_plugin(plugin_id) is not None]
 
     def add_plugin_directory(self, directory: str) -> bool:
         """
@@ -233,9 +203,7 @@ class PluginManager(Generic[T]):
                 return False
 
             if directory in self.plugin_dirs:
-                logger.warning(
-                    f"Plugin directory {directory} is already registered"
-                )
+                logger.warning(f"Plugin directory {directory} is already registered")
                 return False
 
             self.plugin_dirs.append(directory)
@@ -298,10 +266,7 @@ class PluginManager(Generic[T]):
 
                     # Find plugin classes in the module
                     for _, obj in inspect.getmembers(module, inspect.isclass):
-                        if (
-                            issubclass(obj, self.plugin_base_class)
-                            and obj != self.plugin_base_class
-                        ):
+                        if issubclass(obj, self.plugin_base_class) and obj != self.plugin_base_class:
                             if self.register_plugin(obj):
                                 count += 1
 
@@ -311,17 +276,13 @@ class PluginManager(Generic[T]):
             return count
 
         except Exception as e:
-            logger.error(
-                f"Error discovering plugins in directory {directory}: {e}"
-            )
+            logger.error(f"Error discovering plugins in directory {directory}: {e}")
             return count
 
     def cleanup(self) -> None:
         """Clean up all plugin instances."""
         try:
-            for plugin_id, plugin_instance in list(
-                self.plugin_instances.items()
-            ):
+            for plugin_id, plugin_instance in list(self.plugin_instances.items()):
                 try:
                     plugin_instance.cleanup()
                     logger.info(f"Cleaned up plugin {plugin_id}")

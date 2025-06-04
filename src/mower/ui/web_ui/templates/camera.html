@@ -41,7 +41,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize camera status based on global connection status
         updateCameraStatus();
-        
+
         // Refresh button handler
         const refreshBtn = document.getElementById('refreshCameraBtn');
         if (refreshBtn) {
@@ -54,27 +54,27 @@
                 }
             });
         }
-        
+
         // Handle camera feed events
         const cameraFeed = document.getElementById('cameraFeed');
         const overlay = document.getElementById('cameraOverlay');
-        
+
         if (cameraFeed && overlay) {
             cameraFeed.onload = function() {
                 overlay.style.display = 'none';
             };
-            
+
             cameraFeed.onerror = function() {
                 overlay.style.display = 'flex';
             };
         }
     });
-    
+
     // Update camera connection status
     function updateCameraStatus() {
         const statusIndicator = document.getElementById('cameraConnectionStatus');
         const statusText = document.getElementById('cameraStatusText');
-        
+
         if (statusIndicator && statusText) {
             if (typeof isConnected !== 'undefined' && isConnected) {
                 statusIndicator.className = 'status-indicator status-online';
@@ -92,7 +92,7 @@
         max-width: 800px;
         margin: 0 auto;
     }
-    
+
     .camera-container {
         position: relative;
         width: 100%;
@@ -102,7 +102,7 @@
         border-radius: 4px;
         overflow: hidden;
     }
-    
+
     .camera-feed {
         position: absolute;
         top: 0;
@@ -111,7 +111,7 @@
         height: 100%;
         object-fit: cover;
     }
-    
+
     .camera-overlay {
         position: absolute;
         top: 0;

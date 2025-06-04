@@ -2,30 +2,23 @@
 Test module for hardware_fixtures.py.
 """
 
-# Correct class, keep alias
-from mower.simulation.actuators.motor_sim import (
-    SimulatedRoboHATDriver as SimulatedMotorController
-)
-from mower.simulation.actuators.blade_sim import SimulatedBladeController
-# Correct class, keep alias
-from mower.simulation.sensors.tof_sim import (
-    SimulatedVL53L0XSensors as SimulatedToF
-)
-# Correct class, keep alias
-from mower.simulation.sensors.imu_sim import (
-    SimulatedBNO085Sensor as SimulatedImu
-)
-from mower.simulation.sensors.gps_sim import (
-    SimulatedGpsPosition,
-    SimulatedGpsLatestPosition,
-)
-from mower.simulation.world_model import (
-    get_world_instance,
-    reset_world,
-)
-from mower.simulation import enable_simulation, is_simulation_enabled
-import pytest
 import logging
+
+import pytest
+
+from mower.simulation import enable_simulation, is_simulation_enabled
+from mower.simulation.actuators.blade_sim import SimulatedBladeController
+
+# Correct class, keep alias
+from mower.simulation.actuators.motor_sim import SimulatedRoboHATDriver as SimulatedMotorController
+from mower.simulation.sensors.gps_sim import SimulatedGpsLatestPosition, SimulatedGpsPosition
+
+# Correct class, keep alias
+from mower.simulation.sensors.imu_sim import SimulatedBNO085Sensor as SimulatedImu
+
+# Correct class, keep alias
+from mower.simulation.sensors.tof_sim import SimulatedVL53L0XSensors as SimulatedToF
+from mower.simulation.world_model import get_world_instance, reset_world
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -229,9 +222,7 @@ def sim_motor_controller(sim_world):
 
 
 @pytest.fixture(scope="function")
-def sim_hardware(
-    sim_gps, sim_imu, sim_tof, sim_blade_controller, sim_motor_controller
-):
+def sim_hardware(sim_gps, sim_imu, sim_tof, sim_blade_controller, sim_motor_controller):
     """
     Fixture for all simulated hardware components.
 

@@ -23,7 +23,7 @@ class ConfigurationSource(ABC):
     This interface defines the contract that all configuration sources
     must adhere to.
     """
-    
+
     @abstractmethod
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -36,7 +36,7 @@ class ConfigurationSource(ABC):
         Returns:
             Any: Configuration value
         """
-    
+
     @abstractmethod
     def set(self, key: str, value: Any) -> None:
         """
@@ -206,7 +206,7 @@ class EnvironmentConfigurationSource(ConfigurationSource):
                 continue
 
             # Remove prefix from key
-            config_key = key[len(self.prefix):] if self.prefix else key
+            config_key = key[len(self.prefix) :] if self.prefix else key
 
             # Convert value to appropriate type
             if value.lower() in ["true", "yes", "y", "1"]:

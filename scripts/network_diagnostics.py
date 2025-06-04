@@ -18,16 +18,10 @@ def main():
     print("Running network diagnostics...")
     result = run_preflight_check()
     if result:
-        print(
-            "Network diagnostics PASSED: "
-            "All required network resources are reachable."
-        )
+        print("Network diagnostics PASSED: " "All required network resources are reachable.")
         sys.exit(0)
     else:
-        print(
-            "Network diagnostics FAILED: "
-            "Please resolve network issues before setup or downloads."
-        )
+        print("Network diagnostics FAILED: " "Please resolve network issues before setup or downloads.")
         sys.exit(1)
 
 

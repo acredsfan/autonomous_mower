@@ -5,12 +5,12 @@ to protect against injection attacks and other security vulnerabilities.
 It also includes address validation using Google's Address Validation API.
 """
 
-import re
 import json
 import os
-import urllib.request
+import re
 import urllib.parse
-from typing import Any, Dict, List, Optional, Union, Tuple
+import urllib.request
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from flask import Request
 from werkzeug.datastructures import ImmutableMultiDict
@@ -54,9 +54,7 @@ def sanitize_string(value: str) -> str:
     return sanitized
 
 
-def validate_coordinates(
-    coordinates: List[Dict[str, float]]
-) -> Tuple[bool, str]:
+def validate_coordinates(coordinates: List[Dict[str, float]]) -> Tuple[bool, str]:
     """Validate a list of GPS coordinates.
 
     Args:
@@ -78,9 +76,7 @@ def validate_coordinates(
         if "lat" not in point or "lng" not in point:
             return False, "Each coordinate must have 'lat' and 'lng' keys"
 
-        if not isinstance(point.get("lat"), (int, float)) or not isinstance(
-            point.get("lng"), (int, float)
-        ):
+        if not isinstance(point.get("lat"), (int, float)) or not isinstance(point.get("lng"), (int, float)):
             return False, "Latitude and longitude must be numbers"
 
         if point.get("lat") < -90 or point.get("lat") > 90:
@@ -254,8 +250,7 @@ def validate_ip_address(ip: str) -> bool:
         True if the IP address is valid, False otherwise.
     """
     ip_pattern = re.compile(
-        r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}"
-        r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+        r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}" r"(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
     )
 
     return bool(ip_pattern.match(ip))
@@ -338,9 +333,7 @@ def validate_address(address_input: Dict[str, Any]) -> Dict[str, Any]:
     request_body = json.dumps(address_input).encode("utf-8")
 
     try:
-        req = urllib.request.Request(
-            api_url, data=request_body, headers={"Content-Type": "application/json"}
-        )
+        req = urllib.request.Request(api_url, data=request_body, headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=10) as response:
             response_body = response.read().decode("utf-8")
             data = json.loads(response_body)
@@ -368,7 +361,7 @@ def validate_address(address_input: Dict[str, Any]) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Unexpected error during Address Validation API call: {e}")
-        return default_error_response # Use a generic error for truly unexpected issues
+        return default_error_response  # Use a generic error for truly unexpected issues
 
     # Process the API response
     validation_result = data.get("result", {})
@@ -379,7 +372,7 @@ def validate_address(address_input: Dict[str, Any]) -> Dict[str, Any]:
     # No critical issues like missing required fields.
     is_valid = False
     validation_granularity = verdict.get("validationGranularity")
-    
+
     if validation_granularity in ["PREMISE", "SUB_PREMISE"]:
         # Check for problematic flags.
         # Depending on strictness, hasUnconfirmedComponents or hasInferredComponents might be acceptable.
@@ -394,6 +387,8 @@ def validate_address(address_input: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "isValid": is_valid,
         "validationResult": validation_result,
-        "error": None, # No error if API call was successful
+        "error": None,  # No error if API call was successful
     }
+
+
 # --- End Google Address Validation API Function ---

@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from pathlib import Path
 
 from dotenv import load_dotenv
+
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -25,10 +26,7 @@ try:
     coords = data if isinstance(data, list) else []
     if not isinstance(coords, list):
         logging.warning(
-            (
-                "Invalid polygon_coordinates: expected list, got %s. "
-                "Using empty list."
-            ),
+            ("Invalid polygon_coordinates: expected list, got %s. " "Using empty list."),
             type(coords),
         )
         polygon_coordinates = []
@@ -38,15 +36,10 @@ try:
             if isinstance(coord, dict) and "lat" in coord and "lng" in coord:
                 filtered.append(coord)
             else:
-                logging.warning(
-                    "Skipping invalid coordinate at index %d: %s", idx, coord
-                )
+                logging.warning("Skipping invalid coordinate at index %d: %s", idx, coord)
         polygon_coordinates = filtered
 except (FileNotFoundError, JSONDecodeError) as e:
-    logging.warning(
-        "User polygon config file not found. "
-        "Initializing with an empty list."
-    )
+    logging.warning("User polygon config file not found. " "Initializing with an empty list.")
     logging.debug("polygon load error: %s", e)
     polygon_coordinates = []
 
@@ -81,16 +74,8 @@ JOYSTICK_DEADZONE = 0.1
 SHOW_STEERING_VALUE = True  # Update this based on your use case
 
 # Derived constants for UI limits
-latitudes = [
-    coord["lat"]
-    for coord in polygon_coordinates
-    if isinstance(coord, dict) and "lat" in coord
-]
-longitudes = [
-    coord["lng"]
-    for coord in polygon_coordinates
-    if isinstance(coord, dict) and "lng" in coord
-]
+latitudes = [coord["lat"] for coord in polygon_coordinates if isinstance(coord, dict) and "lat" in coord]
+longitudes = [coord["lng"] for coord in polygon_coordinates if isinstance(coord, dict) and "lng" in coord]
 
 min_lat = min(latitudes) if latitudes else 10
 max_lat = max(latitudes) if latitudes else 11

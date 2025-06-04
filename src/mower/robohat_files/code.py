@@ -3,6 +3,7 @@ rp2040_code.py - Hybrid: RC input by default, can be disabled via UART
 """
 
 import time
+
 import board
 import busio
 import neopixel
@@ -128,18 +129,11 @@ def main():
                     try:
                         serial_steering = int(parts[0].strip())
                         serial_throttle = int(parts[1].strip())
-                        print(
-                            f"Serial control => S={serial_steering}, "
-                            f"T={serial_throttle}"
-                        )
+                        print(f"Serial control => S={serial_steering}, " f"T={serial_throttle}")
                         # If RC is disabled, apply these pulses
                         if not rc_control_enabled:
-                            steering_pwm.duty_cycle = us_to_duty(
-                                serial_steering
-                            )
-                            throttle_pwm.duty_cycle = us_to_duty(
-                                serial_throttle
-                            )
+                            steering_pwm.duty_cycle = us_to_duty(serial_steering)
+                            throttle_pwm.duty_cycle = us_to_duty(serial_throttle)
                     except ValueError:
                         print("Parse error for steering, throttle.")
                 buffer_str = ""

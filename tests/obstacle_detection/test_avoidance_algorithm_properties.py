@@ -2,19 +2,16 @@
 Test module for test_avoidance_algorithm_properties.py.
 """
 
-import pytest
-from hypothesis import given, strategies as st, settings, assume
-import numpy as np
-from unittest.mock import MagicMock, patch
 import math
-from typing import List, Tuple, Dict, Any
+from typing import Any, Dict, List, Tuple
+from unittest.mock import MagicMock, patch
 
-from mower.obstacle_detection.avoidance_algorithm import (
-    AvoidanceAlgorithm,
-    AvoidanceState,
-    NavigationStatus,
-    Obstacle,
-)
+import numpy as np
+import pytest
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
+
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm, AvoidanceState, NavigationStatus, Obstacle
 
 
 # Helper strategies for generating test data

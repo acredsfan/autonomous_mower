@@ -8,9 +8,10 @@ only one instance of the camera is active at a time.
 import os
 import socket
 import threading
+from typing import Optional, Union
+
 import cv2
 from dotenv import load_dotenv
-from typing import Optional, Union
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -34,9 +35,7 @@ try:
     PICAMERA_AVAILABLE = True
 except ImportError:
     PICAMERA_AVAILABLE = False
-    logging.warning(
-        "picamera2 not available. Using OpenCV camera or simulation."
-    )
+    logging.warning("picamera2 not available. Using OpenCV camera or simulation.")
 
 # Global camera instance
 _camera_instance = None
@@ -225,17 +224,14 @@ class CameraInstance:
         if not self._is_initialized:
             logging.warning("Camera not initialized, checking status.")
             if not self.initialize():  # Try to initialize if not already
-                logging.error(
-                    "Camera failed to initialize for operational check.")
+                logging.error("Camera failed to initialize for operational check.")
                 return False
 
         # Try to capture a frame as a health check
         try:
             if self._is_picamera:
                 # For PiCamera, check if it's running
-                if hasattr(
-                        self._camera,
-                        'started') and not self._camera.started:
+                if hasattr(self._camera, "started") and not self._camera.started:
                     logging.warning("PiCamera is not running.")
                     return False
                 # A more robust check might involve trying to capture a test frame

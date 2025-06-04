@@ -5,16 +5,13 @@ This module provides tools for optimizing path planning algorithms
 and improving their performance.
 """
 
-import time
 import functools
-import numpy as np
-from typing import List, Tuple, Dict, Any, Optional, Callable
+import time
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from mower.navigation.path_planner import (
-    PathPlanner,
-    PatternConfig,
-    PatternType,
-)
+import numpy as np
+
+from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -79,9 +76,7 @@ class PathPlanningOptimizer:
             # Cache the path
             self.path_cache[cache_key] = path
 
-            logger.debug(
-                f"Path generation took {generation_time:.4f} seconds"
-            )
+            logger.debug(f"Path generation took {generation_time:.4f} seconds")
             return path
 
         # Replace the original method with the cached version
@@ -111,9 +106,7 @@ class PathPlanningOptimizer:
     def _cache_boundary_calculations(self):
         """Cache boundary calculations."""
         # Cache the _find_boundary_intersections method
-        original_find_intersections = (
-            self.path_planner._find_boundary_intersections
-        )
+        original_find_intersections = self.path_planner._find_boundary_intersections
 
         @functools.wraps(original_find_intersections)
         def cached_find_intersections(start, end, boundary):
@@ -137,16 +130,12 @@ class PathPlanningOptimizer:
             return intersections
 
         # Replace the original method with the cached version
-        self.path_planner._find_boundary_intersections = (
-            cached_find_intersections
-        )
+        self.path_planner._find_boundary_intersections = cached_find_intersections
 
     def _apply_vectorization(self):
         """Apply vectorization to performance-critical methods."""
         # Optimize the _calculate_path_distance method
-        original_calculate_distance = (
-            self.path_planner._calculate_path_distance
-        )
+        original_calculate_distance = self.path_planner._calculate_path_distance
 
         @functools.wraps(original_calculate_distance)
         def vectorized_calculate_distance(path):
@@ -171,9 +160,7 @@ class PathPlanningOptimizer:
                 return original_calculate_distance(path)
 
         # Replace the original method with the vectorized version
-        self.path_planner._calculate_path_distance = (
-            vectorized_calculate_distance
-        )
+        self.path_planner._calculate_path_distance = vectorized_calculate_distance
 
         # Optimize the _point_in_polygon method
         original_point_in_polygon = self.path_planner._point_in_polygon
@@ -195,9 +182,7 @@ class PathPlanningOptimizer:
                     # Check if the ray from point crosses this edge
                     if ((polygon_y[i] > y) != (polygon_y[j] > y)) and (
                         x
-                        < (polygon_x[j] - polygon_x[i])
-                        * (y - polygon_y[i])
-                        / (polygon_y[j] - polygon_y[i])
+                        < (polygon_x[j] - polygon_x[i]) * (y - polygon_y[i]) / (polygon_y[j] - polygon_y[i])
                         + polygon_x[i]
                     ):
                         inside = not inside
@@ -205,9 +190,7 @@ class PathPlanningOptimizer:
 
                 return inside
             except Exception as e:
-                logger.error(
-                    f"Error in vectorized point-in-polygon test: {e}"
-                )
+                logger.error(f"Error in vectorized point-in-polygon test: {e}")
                 # Fall back to original method
                 return original_point_in_polygon(point, polygon)
 
@@ -253,9 +236,7 @@ def optimize_path_planner(path_planner: PathPlanner) -> PathPlanner:
     return path_planner
 
 
-def benchmark_path_planner(
-    path_planner: PathPlanner, iterations: int = 5
-) -> Dict[str, Any]:
+def benchmark_path_planner(path_planner: PathPlanner, iterations: int = 5) -> Dict[str, Any]:
     """
     Benchmark a path planner's performance.
 

@@ -5,14 +5,13 @@ Defines a Pydantic model for validating configuration files.
 Allows extra fields for backward compatibility.
 """
 
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field, ValidationError, Extra
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Extra, Field, ValidationError
 
 
 class RemoteAccessConfig(BaseModel):
-    REMOTE_ACCESS_TYPE: str = Field(
-        default="port_forward",
-        description="Type of remote access")
+    REMOTE_ACCESS_TYPE: str = Field(default="port_forward", description="Type of remote access")
     WEB_UI_PORT: Optional[int] = Field(default=8080, description="Web UI port")
     DDNS_PROVIDER: Optional[str] = None
     DDNS_DOMAIN: Optional[str] = None

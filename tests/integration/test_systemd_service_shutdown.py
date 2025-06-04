@@ -1,12 +1,14 @@
 """
 Test module for test_systemd_service_shutdown.py.
 """
-import pytest
+
 # import os # Not used yet
 import signal
-import time
 import threading
+import time
 from unittest.mock import MagicMock  # , patch # Patch not used yet
+
+import pytest
 
 # Assuming MainController is the primary entry point and resource manager
 # from mower.main_controller import MainController, ResourceManager
@@ -51,11 +53,10 @@ class TestSystemdServiceShutdown:
         return {
             "resource_manager": mock_resource_manager,
             # "main_controller": mock_main_controller,
-            "shutdown_event": _shutdown_event_for_test
+            "shutdown_event": _shutdown_event_for_test,
         }
 
-    def test_sigterm_triggers_graceful_shutdown(
-            self, mock_main_controller_components):
+    def test_sigterm_triggers_graceful_shutdown(self, mock_main_controller_components):
         """
         Test that sending SIGTERM to the process running the main controller
         results in a graceful shutdown and resource cleanup.
@@ -76,8 +77,7 @@ class TestSystemdServiceShutdown:
         signal.signal(signal.SIGTERM, test_signal_handler)
 
         main_thread = threading.Thread(
-            target=simplified_main_loop_for_test,
-            args=(resource_manager_mock, shutdown_event)
+            target=simplified_main_loop_for_test, args=(resource_manager_mock, shutdown_event)
         )
 
         try:

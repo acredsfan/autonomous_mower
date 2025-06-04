@@ -1,6 +1,6 @@
 /**
  * Autonomous Mower - Helper Functions
- * 
+ *
  * This file contains helper functions for improved error handling,
  * user feedback, and contextual help throughout the application.
  */
@@ -9,10 +9,10 @@
 const AlertSystem = {
     // Alert container ID
     containerId: 'alertsContainer',
-    
+
     // Default duration for alerts in milliseconds
     defaultDuration: 5000,
-    
+
     // Show an alert message
     show: function(message, type = 'info', duration = this.defaultDuration) {
         const container = document.getElementById(this.containerId);
@@ -20,21 +20,21 @@ const AlertSystem = {
             console.error('Alert container not found. Create a div with id "alertsContainer".');
             return;
         }
-        
+
         // Create alert ID
         const alertId = 'alert_' + Date.now();
-        
+
         // Create alert element
         const alertElement = document.createElement('div');
         alertElement.id = alertId;
         alertElement.className = `alert alert-${type} d-flex justify-between align-center`;
-        
+
         // Add icon based on type
         let icon = 'info-circle';
         if (type === 'success') icon = 'check-circle';
         if (type === 'warning') icon = 'exclamation-triangle';
         if (type === 'danger') icon = 'exclamation-circle';
-        
+
         // Set alert content
         alertElement.innerHTML = `
             <div class="alert-icon"><i class="fas fa-${icon}"></i></div>
@@ -43,45 +43,45 @@ const AlertSystem = {
                 <i class="fas fa-times"></i>
             </button>
         `;
-        
+
         // Add to container
         container.appendChild(alertElement);
-        
+
         // Add animation class
         setTimeout(() => {
             alertElement.classList.add('show');
         }, 10);
-        
+
         // Auto-dismiss if duration is set
         if (duration > 0) {
             setTimeout(() => {
                 this.dismiss(alertId);
             }, duration);
         }
-        
+
         return alertId;
     },
-    
+
     // Show a success alert
     success: function(message, duration = this.defaultDuration) {
         return this.show(message, 'success', duration);
     },
-    
+
     // Show an info alert
     info: function(message, duration = this.defaultDuration) {
         return this.show(message, 'info', duration);
     },
-    
+
     // Show a warning alert
     warning: function(message, duration = this.defaultDuration) {
         return this.show(message, 'warning', duration);
     },
-    
+
     // Show an error alert
     error: function(message, duration = this.defaultDuration) {
         return this.show(message, 'danger', duration);
     },
-    
+
     // Dismiss an alert by ID
     dismiss: function(alertId) {
         const alertElement = document.getElementById(alertId);
@@ -94,7 +94,7 @@ const AlertSystem = {
             }, 300);
         }
     },
-    
+
     // Dismiss all alerts
     dismissAll: function() {
         const container = document.getElementById(this.containerId);
@@ -116,22 +116,22 @@ const FormValidator = {
             console.error(`Form with ID "${formId}" not found.`);
             return false;
         }
-        
+
         let isValid = true;
         const errorMessages = [];
-        
+
         // Get all form elements
         const elements = form.elements;
-        
+
         // Check each element
         for (let i = 0; i < elements.length; i++) {
             const element = elements[i];
-            
+
             // Skip buttons, hidden fields, etc.
             if (element.type === 'submit' || element.type === 'button' || element.type === 'hidden') {
                 continue;
             }
-            
+
             // Check required fields
             if (element.hasAttribute('required') && !element.value.trim()) {
                 isValid = false;
@@ -139,7 +139,7 @@ const FormValidator = {
                 errorMessages.push(`${element.name || 'Field'} is required`);
                 continue;
             }
-            
+
             // Check min/max for number inputs
             if (element.type === 'number') {
                 const value = parseFloat(element.value);
@@ -149,7 +149,7 @@ const FormValidator = {
                         this.markInvalid(element, `Minimum value is ${element.getAttribute('min')}`);
                         errorMessages.push(`${element.name || 'Field'} must be at least ${element.getAttribute('min')}`);
                     }
-                    
+
                     if (element.hasAttribute('max') && value > parseFloat(element.getAttribute('max'))) {
                         isValid = false;
                         this.markInvalid(element, `Maximum value is ${element.getAttribute('max')}`);
@@ -157,9 +157,9 @@ const FormValidator = {
                     }
                 }
             }
-            
+
             // Check pattern for text inputs
-            if ((element.type === 'text' || element.type === 'email' || element.type === 'tel') && 
+            if ((element.type === 'text' || element.type === 'email' || element.type === 'tel') &&
                 element.hasAttribute('pattern') && element.value.trim()) {
                 const pattern = new RegExp(element.getAttribute('pattern'));
                 if (!pattern.test(element.value)) {
@@ -168,7 +168,7 @@ const FormValidator = {
                     errorMessages.push(`${element.name || 'Field'} has an invalid format`);
                 }
             }
-            
+
             // Check email format
             if (element.type === 'email' && element.value.trim()) {
                 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -178,26 +178,26 @@ const FormValidator = {
                     errorMessages.push('Invalid email address');
                 }
             }
-            
+
             // If valid, mark as valid
             if (element.classList.contains('is-invalid')) {
                 this.markValid(element);
             }
         }
-        
+
         // Show error message if form is invalid
         if (!isValid && errorMessages.length > 0) {
             AlertSystem.error('Please correct the following errors: ' + errorMessages.join(', '));
         }
-        
+
         return isValid;
     },
-    
+
     // Mark a field as invalid
     markInvalid: function(element, message) {
         element.classList.add('is-invalid');
         element.classList.remove('is-valid');
-        
+
         // Add error message
         let feedbackElement = element.nextElementSibling;
         if (!feedbackElement || !feedbackElement.classList.contains('invalid-feedback')) {
@@ -205,22 +205,22 @@ const FormValidator = {
             feedbackElement.className = 'invalid-feedback';
             element.parentNode.insertBefore(feedbackElement, element.nextSibling);
         }
-        
+
         feedbackElement.textContent = message;
     },
-    
+
     // Mark a field as valid
     markValid: function(element) {
         element.classList.remove('is-invalid');
         element.classList.add('is-valid');
-        
+
         // Remove error message
         const feedbackElement = element.nextElementSibling;
         if (feedbackElement && feedbackElement.classList.contains('invalid-feedback')) {
             feedbackElement.remove();
         }
     },
-    
+
     // Reset form validation
     reset: function(formId) {
         const form = document.getElementById(formId);
@@ -228,13 +228,13 @@ const FormValidator = {
             console.error(`Form with ID "${formId}" not found.`);
             return;
         }
-        
+
         // Reset all form elements
         const elements = form.elements;
         for (let i = 0; i < elements.length; i++) {
             const element = elements[i];
             element.classList.remove('is-invalid', 'is-valid');
-            
+
             // Remove error messages
             const feedbackElement = element.nextElementSibling;
             if (feedbackElement && feedbackElement.classList.contains('invalid-feedback')) {
@@ -255,7 +255,7 @@ const ContextualHelp = {
             tooltip.id = 'contextual-tooltip';
             tooltip.className = 'contextual-tooltip';
             document.body.appendChild(tooltip);
-            
+
             // Add styles if not in CSS
             if (!document.getElementById('contextual-tooltip-styles')) {
                 const style = document.createElement('style');
@@ -274,7 +274,7 @@ const ContextualHelp = {
                         transition: opacity 0.3s;
                         pointer-events: none;
                     }
-                    
+
                     .contextual-tooltip::after {
                         content: '';
                         position: absolute;
@@ -285,11 +285,11 @@ const ContextualHelp = {
                         border-style: solid;
                         border-color: #333 transparent transparent transparent;
                     }
-                    
+
                     .contextual-tooltip.show {
                         opacity: 1;
                     }
-                    
+
                     .help-icon {
                         display: inline-block;
                         width: 16px;
@@ -307,22 +307,22 @@ const ContextualHelp = {
                 document.head.appendChild(style);
             }
         }
-        
+
         // Position tooltip above the element
         const rect = element.getBoundingClientRect();
         tooltip.style.left = (rect.left + rect.width / 2 - 125) + 'px'; // Center tooltip
         tooltip.style.top = (rect.top - 40) + 'px'; // Position above element
-        
+
         // Set message and show tooltip
         tooltip.textContent = message;
         tooltip.classList.add('show');
-        
+
         // Hide tooltip after 3 seconds
         setTimeout(() => {
             tooltip.classList.remove('show');
         }, 3000);
     },
-    
+
     // Add help icons to elements with data-help attribute
     init: function() {
         document.querySelectorAll('[data-help]').forEach(element => {
@@ -332,13 +332,13 @@ const ContextualHelp = {
                 helpIcon.className = 'help-icon';
                 helpIcon.innerHTML = '?';
                 helpIcon.title = 'Click for help';
-                
+
                 // Add click handler
                 helpIcon.addEventListener('click', function(e) {
                     e.preventDefault();
                     ContextualHelp.showTooltip(this, element.getAttribute('data-help'));
                 });
-                
+
                 // Add after element
                 element.parentNode.insertBefore(helpIcon, element.nextSibling);
             }
@@ -352,7 +352,7 @@ const ApiHandler = {
     sendCommand: function(command, params = {}, callback = null) {
         // Show loading indicator
         const loadingId = AlertSystem.info('Processing request...', 0);
-        
+
         // Send command
         fetch('/api/' + command, {
             method: 'POST',
@@ -371,13 +371,13 @@ const ApiHandler = {
         .then(data => {
             // Hide loading indicator
             AlertSystem.dismiss(loadingId);
-            
+
             // Handle success
             if (data.success) {
                 if (data.message) {
                     AlertSystem.success(data.message);
                 }
-                
+
                 // Call callback if provided
                 if (callback) {
                     callback(data);
@@ -386,7 +386,7 @@ const ApiHandler = {
                 // Handle error
                 const errorMessage = data.error || 'Unknown error occurred';
                 AlertSystem.error(errorMessage);
-                
+
                 // Call callback with error
                 if (callback) {
                     callback(data);
@@ -396,22 +396,22 @@ const ApiHandler = {
         .catch(error => {
             // Hide loading indicator
             AlertSystem.dismiss(loadingId);
-            
+
             // Handle network or parsing error
             AlertSystem.error('Error: ' + error.message);
-            
+
             // Call callback with error
             if (callback) {
                 callback({success: false, error: error.message});
             }
         });
     },
-    
+
     // Get data from the server with improved error handling
     getData: function(endpoint, callback = null) {
         // Show loading indicator
         const loadingId = AlertSystem.info('Loading data...', 0);
-        
+
         // Send request
         fetch('/api/' + endpoint)
         .then(response => {
@@ -424,7 +424,7 @@ const ApiHandler = {
         .then(data => {
             // Hide loading indicator
             AlertSystem.dismiss(loadingId);
-            
+
             // Handle success
             if (data.success) {
                 // Call callback if provided
@@ -435,7 +435,7 @@ const ApiHandler = {
                 // Handle error
                 const errorMessage = data.error || 'Unknown error occurred';
                 AlertSystem.error(errorMessage);
-                
+
                 // Call callback with error
                 if (callback) {
                     callback(data);
@@ -445,10 +445,10 @@ const ApiHandler = {
         .catch(error => {
             // Hide loading indicator
             AlertSystem.dismiss(loadingId);
-            
+
             // Handle network or parsing error
             AlertSystem.error('Error: ' + error.message);
-            
+
             // Call callback with error
             if (callback) {
                 callback({success: false, error: error.message});
@@ -461,7 +461,7 @@ const ApiHandler = {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize contextual help
     ContextualHelp.init();
-    
+
     // Add styles for alerts if not already in CSS
     if (!document.getElementById('alert-system-styles')) {
         const style = document.createElement('style');
@@ -474,7 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 z-index: 9999;
                 max-width: 350px;
             }
-            
+
             .alert {
                 margin-bottom: 10px;
                 padding: 15px;
@@ -484,20 +484,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 transform: translateX(50px);
                 transition: opacity 0.3s, transform 0.3s;
             }
-            
+
             .alert.show {
                 opacity: 1;
                 transform: translateX(0);
             }
-            
+
             .alert-icon {
                 margin-right: 10px;
             }
-            
+
             .alert-message {
                 flex: 1;
             }
-            
+
             .btn-close {
                 background: none;
                 border: none;
@@ -506,19 +506,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 cursor: pointer;
                 opacity: 0.7;
             }
-            
+
             .btn-close:hover {
                 opacity: 1;
             }
-            
+
             .is-invalid {
                 border-color: var(--accent-red) !important;
             }
-            
+
             .is-valid {
                 border-color: var(--accent-green) !important;
             }
-            
+
             .invalid-feedback {
                 color: var(--accent-red);
                 font-size: 0.875rem;
@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.head.appendChild(style);
     }
-    
+
     // Create alerts container if it doesn't exist
     if (!document.getElementById('alertsContainer')) {
         const alertsContainer = document.createElement('div');

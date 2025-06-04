@@ -2,19 +2,21 @@
 Test module for INA3221 sensor using adafruit-circuitpython-ina3221 library.
 Tests power monitoring functionality across three channels.
 """
-from mower.hardware.ina3221 import INA3221Sensor
+
 import sys
 import unittest
 from unittest.mock import MagicMock, patch
+
+from mower.hardware.ina3221 import INA3221Sensor
 
 # Mock hardware dependencies before importing our module
 board_mock = MagicMock()
 busio_mock = MagicMock()
 adafruit_ina3221_mock = MagicMock()
 
-sys.modules['board'] = board_mock
-sys.modules['busio'] = busio_mock
-sys.modules['adafruit_ina3221'] = adafruit_ina3221_mock
+sys.modules["board"] = board_mock
+sys.modules["busio"] = busio_mock
+sys.modules["adafruit_ina3221"] = adafruit_ina3221_mock
 
 
 class TestINA3221Sensor(unittest.TestCase):
@@ -25,8 +27,8 @@ class TestINA3221Sensor(unittest.TestCase):
         self.i2c_mock = MagicMock()
         self.sensor_mock = MagicMock()
 
-    @patch('mower.hardware.ina3221.adafruit_ina3221.INA3221')
-    @patch('mower.hardware.ina3221.busio.I2C')
+    @patch("mower.hardware.ina3221.adafruit_ina3221.INA3221")
+    @patch("mower.hardware.ina3221.busio.I2C")
     def test_init_ina3221_success(self, mock_i2c, mock_ina3221):
         """Test successful initialization of INA3221 sensor."""
         mock_i2c.return_value = self.i2c_mock
@@ -38,8 +40,8 @@ class TestINA3221Sensor(unittest.TestCase):
         mock_i2c.assert_called_once()
         mock_ina3221.assert_called_once_with(self.i2c_mock)
 
-    @patch('mower.hardware.ina3221.adafruit_ina3221.INA3221')
-    @patch('mower.hardware.ina3221.busio.I2C')
+    @patch("mower.hardware.ina3221.adafruit_ina3221.INA3221")
+    @patch("mower.hardware.ina3221.busio.I2C")
     def test_init_ina3221_failure(self, mock_i2c, mock_ina3221):
         """Test INA3221 initialization failure handling."""
         mock_i2c.side_effect = OSError("I2C bus error")
@@ -81,16 +83,14 @@ class TestINA3221Sensor(unittest.TestCase):
 
     def test_read_ina3221_io_error(self):
         """Test handling of I/O errors during sensor reading."""
-        self.sensor_mock.__getitem__.side_effect = OSError(
-            "I2C communication error")
+        self.sensor_mock.__getitem__.side_effect = OSError("I2C communication error")
 
         data = INA3221Sensor.read_ina3221(self.sensor_mock, 1)
         self.assertEqual(data, {})
 
     def test_read_ina3221_attribute_error(self):
         """Test handling of attribute errors during sensor reading."""
-        self.sensor_mock.__getitem__.side_effect = AttributeError(
-            "Invalid attribute")
+        self.sensor_mock.__getitem__.side_effect = AttributeError("Invalid attribute")
 
         data = INA3221Sensor.read_ina3221(self.sensor_mock, 1)
         self.assertEqual(data, {})

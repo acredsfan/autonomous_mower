@@ -31,12 +31,7 @@ class BladeController:
         # Set up GPIO pins
         # BLADE_ENABLE_PIN is a PWM pin for speed control, initialized to 0%
         # duty cycle.
-        self._gpio.setup_pin(
-            BLADE_ENABLE_PIN,
-            "pwm",
-            initial_value=0.0,
-            frequency=1000,
-            active_high=True)
+        self._gpio.setup_pin(BLADE_ENABLE_PIN, "pwm", initial_value=0.0, frequency=1000, active_high=True)
         self._gpio.setup_pin(BLADE_DIRECTION_PIN, "out", initial_value=False)
 
         logging.info("Blade controller initialized")
@@ -52,8 +47,7 @@ class BladeController:
         # Physical enabling (PWM > 0) is handled by set_speed.
         if not self._enabled:
             self._enabled = True
-            logging.info(
-                "Blade motor logically enabled. Use set_speed to start rotation.")
+            logging.info("Blade motor logically enabled. Use set_speed to start rotation.")
         return True
 
     def disable(self) -> bool:
@@ -68,8 +62,7 @@ class BladeController:
             self.set_speed(0.0)
             if self._enabled:
                 self._enabled = False
-                logging.info(
-                    "Blade motor logically disabled and speed set to 0%.")
+                logging.info("Blade motor logically disabled and speed set to 0%.")
             return True
         except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error disabling blade motor: {e}")
@@ -112,13 +105,11 @@ class BladeController:
         """
         try:
             if not 0.0 <= speed <= 1.0:
-                logging.error(
-                    "Invalid speed value: %s. Must be between 0.0 and 1.0.", speed)
+                logging.error("Invalid speed value: %s. Must be between 0.0 and 1.0.", speed)
                 return False
 
             if not self._enabled and speed > 0.0:
-                logging.warning(
-                    "Blade motor is not enabled. Call enable() first to set speed > 0.")
+                logging.warning("Blade motor is not enabled. Call enable() first to set speed > 0.")
                 # Optionally, we could auto-enable here, but explicit control is safer.
                 # self.enable()
                 # However, we will allow setting speed to 0 even if not
@@ -132,11 +123,9 @@ class BladeController:
                 self._gpio.set_pin_duty_cycle(BLADE_ENABLE_PIN, speed)
                 logging.info("Blade motor speed set to %.1f%%", speed * 100)
                 if speed == 0.0 and self._enabled:
-                    logging.info(
-                        "Blade motor speed set to 0%, but still logically enabled.")
+                    logging.info("Blade motor speed set to 0%, but still logically enabled.")
                 elif speed == 0.0 and not self._enabled:
-                    logging.info(
-                        "Blade motor speed set to 0% and is logically disabled.")
+                    logging.info("Blade motor speed set to 0% and is logically disabled.")
             return True
         except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting blade motor speed: {e}")

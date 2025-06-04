@@ -7,13 +7,9 @@ implementing consistent state management patterns throughout the codebase.
 """
 
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from mower.state_management import (
-    MowerState,
-    StateManager,
-    StateTransitionError,
-)
+from mower.state_management import MowerState, StateManager, StateTransitionError
 
 
 def basic_state_management_example():
@@ -71,29 +67,17 @@ def state_callbacks_example():
         # Stop the blade motor
         print("Stopping blade motor...")
 
-    def on_transition_to_error(
-        from_state: MowerState, to_state: MowerState, context: Dict[str, Any]
-    ):
+    def on_transition_to_error(from_state: MowerState, to_state: MowerState, context: Dict[str, Any]):
         print(f"Transitioning from {from_state.name} to {to_state.name}")
-        print(
-            f"Error condition: {context.get('error_message', 'Unknown error')}"
-        )
+        print(f"Error condition: {context.get('error_message', 'Unknown error')}")
 
     # Register callbacks
-    state_manager.register_state_entry_callback(
-        MowerState.MOWING, on_enter_mowing
-    )
-    state_manager.register_state_exit_callback(
-        MowerState.MOWING, on_exit_mowing
-    )
-    state_manager.register_transition_callback(
-        MowerState.MOWING, MowerState.ERROR, on_transition_to_error
-    )
+    state_manager.register_state_entry_callback(MowerState.MOWING, on_enter_mowing)
+    state_manager.register_state_exit_callback(MowerState.MOWING, on_exit_mowing)
+    state_manager.register_transition_callback(MowerState.MOWING, MowerState.ERROR, on_transition_to_error)
 
     # Transition to MOWING state
-    state_manager.transition_to(
-        MowerState.MOWING, context={"reason": "User requested mowing"}
-    )
+    state_manager.transition_to(MowerState.MOWING, context={"reason": "User requested mowing"})
 
     # Simulate an error
     state_manager.transition_to(
@@ -152,9 +136,7 @@ def emergency_stop_example():
         print(f"Reason: {context.get('reason', 'Unknown')}")
 
     # Register callback
-    state_manager.register_state_entry_callback(
-        MowerState.EMERGENCY_STOP, on_emergency_stop
-    )
+    state_manager.register_state_entry_callback(MowerState.EMERGENCY_STOP, on_emergency_stop)
 
     # Simulate emergency stop button press
     state_manager.transition_to(
@@ -173,9 +155,7 @@ def emergency_stop_example():
     try:
         # Can only transition to IDLE from EMERGENCY_STOP
         state_manager.transition_to(MowerState.IDLE)
-        print(
-            f"Resumed operation in state: {state_manager.current_state.name}"
-        )
+        print(f"Resumed operation in state: {state_manager.current_state.name}")
     except StateTransitionError as e:
         print(f"Could not resume: {e}")
 
@@ -208,9 +188,7 @@ def state_history_example():
 
     print("State transition history:")
     for timestamp, from_state, to_state in history:
-        print(
-            f"  {time.ctime(timestamp)}: {from_state.name} -> {to_state.name}"
-        )
+        print(f"  {time.ctime(timestamp)}: {from_state.name} -> {to_state.name}")
 
 
 if __name__ == "__main__":

@@ -37,11 +37,11 @@ fleet_manager.start_fleet_operation()
 
 import json
 import os
+import threading
 import uuid
 from datetime import datetime
 from enum import Enum, auto
-from typing import Dict, List, Optional, Any
-import threading
+from typing import Any, Dict, List, Optional
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -113,24 +113,16 @@ class MowerInfo:
             "status": self.status.name if self.status else None,
             "battery_level": self.battery_level,
             "position": self.position,
-            "last_seen": (
-                self.last_seen.isoformat() if self.last_seen else None
-            ),
+            "last_seen": (self.last_seen.isoformat() if self.last_seen else None),
             "current_zone": self.current_zone,
             "error_message": self.error_message,
             "total_runtime": self.total_runtime,
             "total_distance": self.total_distance,
             "total_area": self.total_area,
             "current_operation_start": (
-                self.current_operation_start.isoformat()
-                if self.current_operation_start
-                else None
+                self.current_operation_start.isoformat() if self.current_operation_start else None
             ),
-            "next_maintenance": (
-                self.next_maintenance.isoformat()
-                if self.next_maintenance
-                else None
-            ),
+            "next_maintenance": (self.next_maintenance.isoformat() if self.next_maintenance else None),
             "maintenance_items": self.maintenance_items,
         }
 
@@ -148,9 +140,7 @@ class MowerInfo:
         if data.get("status"):
             mower.status = MowerStatus[data["status"]]
         mower.battery_level = data.get("battery_level", 0.0)
-        mower.position = data.get(
-            "position", {"latitude": 0.0, "longitude": 0.0}
-        )
+        mower.position = data.get("position", {"latitude": 0.0, "longitude": 0.0})
         if data.get("last_seen"):
             mower.last_seen = datetime.fromisoformat(data["last_seen"])
         mower.current_zone = data.get("current_zone")
@@ -161,15 +151,11 @@ class MowerInfo:
         mower.total_distance = data.get("total_distance", 0.0)
         mower.total_area = data.get("total_area", 0.0)
         if data.get("current_operation_start"):
-            mower.current_operation_start = datetime.fromisoformat(
-                data["current_operation_start"]
-            )
+            mower.current_operation_start = datetime.fromisoformat(data["current_operation_start"])
 
         # Restore maintenance information
         if data.get("next_maintenance"):
-            mower.next_maintenance = datetime.fromisoformat(
-                data["next_maintenance"]
-            )
+            mower.next_maintenance = datetime.fromisoformat(data["next_maintenance"])
         mower.maintenance_items = data.get("maintenance_items", [])
 
         return mower
@@ -216,9 +202,7 @@ class Zone:
             "boundaries": self.boundaries,
             "area": self.area,
             "priority": self.priority,
-            "last_mowed": (
-                self.last_mowed.isoformat() if self.last_mowed else None
-            ),
+            "last_mowed": (self.last_mowed.isoformat() if self.last_mowed else None),
             "assigned_mower": self.assigned_mower,
             "mowing_frequency_days": self.mowing_frequency_days,
             "mowing_schedule": self.mowing_schedule,
@@ -261,9 +245,7 @@ class FleetManager:
             data_file: Path to the data file for storing fleet data.
                 If None, a default path will be used.
         """
-        self.data_file = data_file or os.path.expanduser(
-            "~/.mower/fleet.json"
-        )
+        self.data_file = data_file or os.path.expanduser("~/.mower/fleet.json")
         self.mowers: Dict[str, MowerInfo] = {}
         self.zones: Dict[str, Zone] = {}
         self.last_save_time = 0
@@ -445,9 +427,7 @@ class FleetManager:
                                     doesn't exist.
         """
         if mower_id not in self.mowers:
-            logger.warning(
-                f"Mower '{mower_id}' not found"
-            )
+            logger.warning(f"Mower '{mower_id}' not found")
             return None
 
         mower = self.mowers[mower_id]
@@ -461,24 +441,16 @@ class FleetManager:
             "status": mower.status.name,
             "battery_level": mower.battery_level,
             "position": mower.position,
-            "last_seen": (
-                mower.last_seen.isoformat() if mower.last_seen else None
-            ),
+            "last_seen": (mower.last_seen.isoformat() if mower.last_seen else None),
             "current_zone": mower.current_zone,
             "error_message": mower.error_message,
             "total_runtime": mower.total_runtime,
             "total_distance": mower.total_distance,
             "total_area": mower.total_area,
             "current_operation_start": (
-                mower.current_operation_start.isoformat()
-                if mower.current_operation_start
-                else None
+                mower.current_operation_start.isoformat() if mower.current_operation_start else None
             ),
-            "next_maintenance": (
-                mower.next_maintenance.isoformat()
-                if mower.next_maintenance
-                else None
-            ),
+            "next_maintenance": (mower.next_maintenance.isoformat() if mower.next_maintenance else None),
             "maintenance_items": mower.maintenance_items,
         }
 
@@ -504,9 +476,7 @@ class FleetManager:
                                     doesn't exist.
         """
         if zone_id not in self.zones:
-            logger.warning(
-                f"Zone '{zone_id}' not found"
-            )
+            logger.warning(f"Zone '{zone_id}' not found")
             return None
 
         zone = self.zones[zone_id]
@@ -516,9 +486,7 @@ class FleetManager:
             "boundaries": zone.boundaries,
             "area": zone.area,
             "priority": zone.priority,
-            "last_mowed": (
-                zone.last_mowed.isoformat() if zone.last_mowed else None
-            ),
+            "last_mowed": (zone.last_mowed.isoformat() if zone.last_mowed else None),
             "assigned_mower": zone.assigned_mower,
             "mowing_frequency_days": zone.mowing_frequency_days,
             "mowing_schedule": zone.mowing_schedule,
@@ -536,9 +504,7 @@ class FleetManager:
             zones[zone_id] = self.get_zone_info(zone_id)
         return zones
 
-    def start_mower(
-        self, mower_id: str, zone_id: Optional[str] = None
-    ) -> bool:
+    def start_mower(self, mower_id: str, zone_id: Optional[str] = None) -> bool:
         """
         Start a mower.        Args:
             mower_id: Unique identifier for the mower.
@@ -613,19 +579,13 @@ class FleetManager:
             if mower.status == MowerStatus.MOWING:
                 # Update runtime and other stats
                 if mower.current_operation_start:
-                    runtime = (
-                        datetime.now() - mower.current_operation_start
-                    ).total_seconds() / 3600  # hours
+                    runtime = (datetime.now() - mower.current_operation_start).total_seconds() / 3600  # hours
                     mower.total_runtime += runtime
 
                     # Estimate distance and area based on runtime
                     # In a real implementation, this would come from the mower
-                    mower.total_distance += (
-                        runtime * 0.5
-                    )  # km (assuming 0.5 km/h)
-                    mower.total_area += (
-                        runtime * 100
-                    )  # m² (assuming 100 m²/h)
+                    mower.total_distance += runtime * 0.5  # km (assuming 0.5 km/h)
+                    mower.total_area += runtime * 100  # m² (assuming 100 m²/h)
 
                 # Update zone information
                 if mower.current_zone and mower.current_zone in self.zones:
@@ -689,41 +649,25 @@ class FleetManager:
                 if mower.status == MowerStatus.MOWING:
                     # Decrease battery level by 1% per 10 minutes of operation
                     if mower.current_operation_start:
-                        hours_running = (
-                            datetime.now() - mower.current_operation_start
-                        ).total_seconds() / 3600
+                        hours_running = (datetime.now() - mower.current_operation_start).total_seconds() / 3600
                         battery_decrease = hours_running * 6  # 6% per hour
-                        mower.battery_level = max(
-                            0, mower.battery_level - battery_decrease
-                        )
+                        mower.battery_level = max(0, mower.battery_level - battery_decrease)
 
                 # Simulate battery charging when idle or charging
                 elif mower.status in (MowerStatus.IDLE, MowerStatus.CHARGING):
                     # Increase battery level by 10% per hour
                     if mower.last_seen:
-                        hours_since_last = (
-                            datetime.now() - mower.last_seen
-                        ).total_seconds() / 3600
-                        battery_increase = (
-                            hours_since_last * 10
-                        )  # 10% per hour
-                        mower.battery_level = min(
-                            100, mower.battery_level + battery_increase
-                        )
+                        hours_since_last = (datetime.now() - mower.last_seen).total_seconds() / 3600
+                        battery_increase = hours_since_last * 10  # 10% per hour
+                        mower.battery_level = min(100, mower.battery_level + battery_increase)
         except Exception as e:
             logger.error(f"Error updating mower status: {e}")
 
     def save(self) -> None:
         """Save fleet data to file."""
         data = {
-            "mowers": {
-                mower_id: mower.to_dict()
-                for mower_id, mower in self.mowers.items()
-            },
-            "zones": {
-                zone_id: zone.to_dict()
-                for zone_id, zone in self.zones.items()
-            },
+            "mowers": {mower_id: mower.to_dict() for mower_id, mower in self.mowers.items()},
+            "zones": {zone_id: zone.to_dict() for zone_id, zone in self.zones.items()},
         }
 
         try:

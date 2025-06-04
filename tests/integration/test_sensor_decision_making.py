@@ -1,23 +1,14 @@
 """
 Test module for test_sensor_decision_making.py.
 """
-import pytest
+
 from unittest.mock import MagicMock
 
-from mower.hardware.sensor_interface import (
-    EnhancedSensorInterface,
-    # SensorStatus, # Unused
-)
-from mower.obstacle_detection.avoidance_algorithm import (
-    AvoidanceAlgorithm,
-    # AvoidanceState, # Unused
-)
-from mower.navigation.path_planner import (
-    PathPlanner,
-    PatternConfig,
-    PatternType,
-    LearningConfig,
-)
+import pytest
+
+from mower.hardware.sensor_interface import EnhancedSensorInterface  # SensorStatus, # Unused
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm  # AvoidanceState, # Unused
 
 
 class TestSensorDecisionMaking:
@@ -89,9 +80,7 @@ class TestSensorDecisionMaking:
             "motor_controller": motor_controller,
         }
 
-    def test_obstacle_detection_from_sensor_data(
-        self, setup_sensor_decision_components
-    ):
+    def test_obstacle_detection_from_sensor_data(self, setup_sensor_decision_components):
         """Test that obstacles are detected correctly from sensor data."""
         sensor_interface = setup_sensor_decision_components["sensor_interface"]
         avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
@@ -123,9 +112,7 @@ class TestSensorDecisionMaking:
         assert avoidance_algorithm.obstacle_left is False
         assert avoidance_algorithm.obstacle_right is False
 
-    def test_safety_checks_from_sensor_data(
-        self, setup_sensor_decision_components
-    ):
+    def test_safety_checks_from_sensor_data(self, setup_sensor_decision_components):
         """Test that safety checks are performed correctly based on sensor data."""
         sensor_interface = setup_sensor_decision_components["sensor_interface"]
 
@@ -149,9 +136,7 @@ class TestSensorDecisionMaking:
         assert sensor_interface._data["battery_voltage"] < 11.0
         sensor_interface._data["battery_voltage"] = original_battery_voltage
 
-    def test_decision_making_based_on_sensor_data(
-        self, setup_sensor_decision_components
-    ):
+    def test_decision_making_based_on_sensor_data(self, setup_sensor_decision_components):
         """Test that decisions are made correctly based on sensor data."""
         sensor_interface = setup_sensor_decision_components["sensor_interface"]
         avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
@@ -178,9 +163,7 @@ class TestSensorDecisionMaking:
         assert heading_calls >= 1
         assert rotate_calls >= 1
 
-    def test_sensor_data_integration_with_navigation(
-        self, setup_sensor_decision_components
-    ):
+    def test_sensor_data_integration_with_navigation(self, setup_sensor_decision_components):
         """Test that sensor data is integrated correctly with navigation."""
         sensor_interface = setup_sensor_decision_components["sensor_interface"]
         avoidance_algorithm = setup_sensor_decision_components["avoidance_algorithm"]
@@ -214,17 +197,12 @@ class TestSensorDecisionMaking:
                     sensor_interface._data["left_distance"] = 20.0
 
                 avoidance_algorithm._update_sensor_obstacle_status()
-                obstacle_detected, obstacle_data = (
-                    avoidance_algorithm._detect_obstacle()
-                )
+                obstacle_detected, obstacle_data = avoidance_algorithm._detect_obstacle()
                 assert obstacle_detected is True
                 assert obstacle_data is not None
 
                 avoidance_algorithm._start_avoidance()
                 assert motor_controller.get_current_heading.called
-                assert (
-                    motor_controller.rotate_to_heading.called
-                    or motor_controller.move_distance.called
-                )
+                assert motor_controller.rotate_to_heading.called or motor_controller.move_distance.called
                 sensor_interface._data["left_distance"] = 100.0
                 sensor_interface._data["right_distance"] = 100.0

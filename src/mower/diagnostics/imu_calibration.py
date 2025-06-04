@@ -24,17 +24,16 @@ Or use the IMUCalibration class programmatically:
     calibrator.start_calibration()
 """
 
-import os
-import time
 import json
+import os
 import threading
-
+import time
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 from mower.config_management.constants import CONFIG_DIR
-from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
 logging = LoggerConfigInfo.get_logger(__name__)
@@ -105,9 +104,7 @@ class IMUCalibration:
             "current_step": self.current_step,
             "status": self.current_status,
             "progress": self.progress,
-            "calibrated": (
-                self.imu.get_calibration_status() > 2 if self.imu else False
-            ),
+            "calibrated": (self.imu.get_calibration_status() > 2 if self.imu else False),
         }
 
     def load_calibration(self) -> bool:
@@ -127,9 +124,7 @@ class IMUCalibration:
 
         try:
             if not self.calibration_file.exists():
-                logging.info(
-                    "No calibration file found, using factory defaults"
-                )
+                logging.info("No calibration file found, using factory defaults")
                 return False
 
             # Load calibration data from file
@@ -139,9 +134,7 @@ class IMUCalibration:
             # Apply calibration data to IMU
             if "calibration_matrix" in self.calibration_data:
                 logging.info("Applying saved calibration data to IMU")
-                calibration_matrix = self.calibration_data[
-                    "calibration_matrix"
-                ]
+                calibration_matrix = self.calibration_data["calibration_matrix"]
 
                 # Apply calibration to the sensor
                 success = self.imu.apply_calibration(calibration_matrix)
@@ -152,9 +145,7 @@ class IMUCalibration:
                     logging.warning("Failed to apply calibration data")
                     return False
             else:
-                logging.warning(
-                    "Calibration file exists but doesn't contain valid data"
-                )
+                logging.warning("Calibration file exists but doesn't contain valid data")
                 return False
 
         except Exception as e:
@@ -200,9 +191,7 @@ class IMUCalibration:
             logging.error(f"Error saving IMU calibration data: {e}")
             return False
 
-    def start_calibration(
-        self, step_callback=None, completion_callback=None
-    ) -> bool:
+    def start_calibration(self, step_callback=None, completion_callback=None) -> bool:
         """
         Start the IMU calibration process.
 
@@ -246,9 +235,7 @@ class IMUCalibration:
                 self.step_callback(self.get_status())
 
             # Start calibration thread
-            self.calibration_thread = threading.Thread(
-                target=self._calibration_process, daemon=True
-            )
+            self.calibration_thread = threading.Thread(target=self._calibration_process, daemon=True)
             self.calibration_thread.start()
 
             logging.info("IMU calibration started")
@@ -332,9 +319,7 @@ class IMUCalibration:
             time.sleep(2)  # Allow time to reset
 
             # Step 1: System calibration
-            self._update_status(
-                "System", "Place the mower on a level surface", 20
-            )
+            self._update_status("System", "Place the mower on a level surface", 20)
             self._wait_for_step_completion(10)
 
             if not self.calibration_in_progress:
@@ -352,9 +337,7 @@ class IMUCalibration:
                 return  # Cancelled
 
             if not gyro_success:
-                self._update_status(
-                    "Failed", "Gyroscope calibration failed", 0
-                )
+                self._update_status("Failed", "Gyroscope calibration failed", 0)
                 message = "Gyroscope calibration failed"
                 success = False
                 return
@@ -371,26 +354,20 @@ class IMUCalibration:
                 return  # Cancelled
 
             if not accel_success:
-                self._update_status(
-                    "Failed", "Accelerometer calibration failed", 0
-                )
+                self._update_status("Failed", "Accelerometer calibration failed", 0)
                 message = "Accelerometer calibration failed"
                 success = False
                 return
 
             # Step 4: Magnetometer calibration
-            self._update_status(
-                "Magnetometer", "Move the mower in a figure-8 pattern", 70
-            )
+            self._update_status("Magnetometer", "Move the mower in a figure-8 pattern", 70)
             mag_success = self._calibrate_magnetometer()
 
             if not self.calibration_in_progress:
                 return  # Cancelled
 
             if not mag_success:
-                self._update_status(
-                    "Failed", "Magnetometer calibration failed", 0
-                )
+                self._update_status("Failed", "Magnetometer calibration failed", 0)
                 message = "Magnetometer calibration failed"
                 success = False
                 return
@@ -400,17 +377,13 @@ class IMUCalibration:
             save_success = self.save_calibration()
 
             if not save_success:
-                self._update_status(
-                    "Failed", "Failed to save calibration data", 0
-                )
+                self._update_status("Failed", "Failed to save calibration data", 0)
                 message = "Failed to save calibration data"
                 success = False
                 return
 
             # Calibration complete
-            self._update_status(
-                "Complete", "Calibration completed successfully", 100
-            )
+            self._update_status("Complete", "Calibration completed successfully", 100)
             success = True
             message = "Calibration completed successfully"
 
@@ -455,9 +428,7 @@ class IMUCalibration:
 
             # Check calibration status
             gyro_status = self.imu.get_gyro_calibration_status()
-            progress = min(
-                100, int((time.time() - start_time) / timeout * 100)
-            )
+            progress = min(100, int((time.time() - start_time) / timeout * 100))
 
             self._update_status(
                 "Gyroscope",
@@ -523,9 +494,7 @@ class IMUCalibration:
         start_time = time.time()
         timeout = 60  # seconds
 
-        self._update_status(
-            "Magnetometer", "Move the mower in a figure-8 pattern", 70
-        )
+        self._update_status("Magnetometer", "Move the mower in a figure-8 pattern", 70)
 
         # Monitor magnetometer calibration
         while time.time() - start_time < timeout:
@@ -534,9 +503,7 @@ class IMUCalibration:
 
             # Check calibration status
             mag_status = self.imu.get_mag_calibration_status()
-            progress = min(
-                100, int((time.time() - start_time) / timeout * 100)
-            )
+            progress = min(100, int((time.time() - start_time) / timeout * 100))
 
             self._update_status(
                 "Magnetometer",
@@ -587,9 +554,7 @@ def main():
 
     # Define simple terminal callback
     def status_callback(status):
-        print(
-            f"\n{status['current_step']}: {status['status']} ({status['progress']}%)"
-        )
+        print(f"\n{status['current_step']}: {status['status']} ({status['progress']}%)")
 
     def completion_callback(success, message):
         if success:

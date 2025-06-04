@@ -6,7 +6,7 @@ Error codes provide a structured way to identify and categorize errors.
 """
 
 from enum import Enum, auto
-from typing import Dict, Any
+from typing import Any, Dict
 
 
 class ErrorCategory(Enum):
@@ -127,9 +127,7 @@ class ErrorCode(Enum):
         elif 7000 <= code_value < 8000:
             return ErrorCategory.USER
         else:
-            return (
-                ErrorCategory.SOFTWARE
-            )  # Default to SOFTWARE for unknown codes
+            return ErrorCategory.SOFTWARE  # Default to SOFTWARE for unknown codes
 
     @property
     def is_critical(self) -> bool:
@@ -208,7 +206,5 @@ def get_error_details(error_code: ErrorCode) -> Dict[str, Any]:
         "category": error_code.category.name,
         "is_critical": error_code.is_critical,
         "requires_human_intervention": error_code.requires_human_intervention,
-        "exception_class": CATEGORY_TO_EXCEPTION.get(
-            error_code.category, "MowerError"
-        ),
+        "exception_class": CATEGORY_TO_EXCEPTION.get(error_code.category, "MowerError"),
     }

@@ -11,20 +11,19 @@ Features:
 Author: Autonomous Mower Team
 """
 
-import os
-import logging
 import hashlib
-import requests
+import logging
+import os
 import shutil
 import time
 
 # from pathlib import Path
 from typing import Optional
 
+import requests
+
 logger = logging.getLogger("model_downloader")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def get_free_space_bytes(directory: str) -> int:
@@ -49,10 +48,7 @@ def verify_checksum(file_path: str, expected_sha256: str) -> bool:
             logger.info(f"Checksum verified for {file_path}")
             return True
         else:
-            logger.error(
-                "Checksum mismatch for %s: expected %s, got %s",
-                file_path, expected_sha256, file_hash
-            )
+            logger.error("Checksum mismatch for %s: expected %s, got %s", file_path, expected_sha256, file_hash)
             return False
     except Exception as e:
         logger.error(f"Failed to verify checksum for {file_path}: {e}")
@@ -67,9 +63,7 @@ def url_reachable(url: str, timeout: int = 10) -> bool:
             logger.info(f"URL reachable: {url}")
             return True
         else:
-            logger.error(
-                f"URL not reachable (status {response.status_code}): {url}"
-            )
+            logger.error(f"URL not reachable (status {response.status_code}): {url}")
             return False
     except Exception as e:
         logger.error(f"URL not reachable: {url} ({e})")
@@ -114,11 +108,10 @@ def download_file(
             return False
         if free_space < min_free_space_bytes:
             logger.error(
-                "Dry-run failed: Not enough disk space in %s "
-                "(required: %d, available: %d)",
+                "Dry-run failed: Not enough disk space in %s " "(required: %d, available: %d)",
                 dest_dir,
                 min_free_space_bytes,
-                free_space
+                free_space,
             )
             return False
         logger.info("Dry-run passed: URL reachable and sufficient disk space.")
@@ -142,14 +135,14 @@ def download_file(
                     "Low disk space after download in %s (required: %d, available: %d)",
                     dest_dir,
                     min_free_space_bytes,
-                    free_space)
+                    free_space,
+                )
                 return False
 
             # Checksum verification
             if expected_sha256:
                 if not verify_checksum(dest_path, expected_sha256):
-                    logger.error(
-                        "Checksum verification failed. Retrying download...")
+                    logger.error("Checksum verification failed. Retrying download...")
                     os.remove(dest_path)
                     raise ValueError("Checksum mismatch")
             return True

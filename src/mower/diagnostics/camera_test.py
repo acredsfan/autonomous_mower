@@ -13,17 +13,17 @@ The module will capture and display images from the camera and allow testing
 of different camera settings and resolutions.
 """
 
-import time
-import sys
 import argparse
-from typing import Optional, Tuple
-import threading
 import http.server
 import socketserver
+import sys
+import threading
+import time
 from pathlib import Path
+from typing import Optional, Tuple
 
-from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
+from mower.utilities.logger_config import LoggerConfigInfo
 
 try:
     import cv2
@@ -37,9 +37,7 @@ except ImportError:
 logging = LoggerConfigInfo.get_logger(__name__)
 
 
-def capture_test_image(
-    resource_manager: ResourceManager, save_path: Optional[str] = None
-) -> Optional[np.ndarray]:
+def capture_test_image(resource_manager: ResourceManager, save_path: Optional[str] = None) -> Optional[np.ndarray]:
     """
     Capture a test image from the camera.
 
@@ -76,9 +74,7 @@ def capture_test_image(
         return None
 
 
-def display_image(
-    image: np.ndarray, window_name: str = "Camera Test"
-) -> None:
+def display_image(image: np.ndarray, window_name: str = "Camera Test") -> None:
     """
     Display an image in a window.
 
@@ -294,9 +290,7 @@ def main():
         --stream: Start a test stream server
         --settings: Test different camera settings
     """
-    parser = argparse.ArgumentParser(
-        description="Camera testing and configuration"
-    )
+    parser = argparse.ArgumentParser(description="Camera testing and configuration")
     parser.add_argument(
         "--capture",
         action="store_true",
@@ -307,12 +301,8 @@ def main():
         type=str,
         help="Save the captured image to the specified path",
     )
-    parser.add_argument(
-        "--stream", action="store_true", help="Start a test stream server"
-    )
-    parser.add_argument(
-        "--port", type=int, default=8090, help="Port for the stream server"
-    )
+    parser.add_argument("--stream", action="store_true", help="Start a test stream server")
+    parser.add_argument("--port", type=int, default=8090, help="Port for the stream server")
     parser.add_argument(
         "--duration",
         type=int,
@@ -339,9 +329,7 @@ def main():
             display_image(image)
 
     if args.stream:
-        start_stream_test(
-            resource_manager, port=args.port, duration=args.duration
-        )
+        start_stream_test(resource_manager, port=args.port, duration=args.duration)
 
     if args.settings:
         test_camera_settings(resource_manager)

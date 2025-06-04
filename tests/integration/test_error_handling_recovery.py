@@ -1,10 +1,14 @@
 """
 Test module for test_error_handling_recovery.py.
 """
-import pytest
+
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from mower.mower import Mower  # Assuming Mower and MowerMode are importable
 from mower.state_management.states import MowerMode  # Assuming MowerMode path
+
 # If EnhancedSensorInterface is used directly, it should be imported
 # from mower.hardware.sensor_interface import EnhancedSensorInterface
 
@@ -37,6 +41,7 @@ def setup_error_recovery_components():
         "resource_manager": resource_manager,
     }
 
+
 # This seems like a test of the Mower's state transitions and interactions
 # It was originally part of the fixture, refactoring to a separate test.
 
@@ -67,6 +72,7 @@ def test_mower_emergency_stop_and_recovery(setup_error_recovery_components):
     def mower_start_side_effect():
         mower.mode = MowerMode.MOWING
         blade_controller.start_blade()
+
     mower.start.side_effect = mower_start_side_effect
     mower.start()
 
@@ -79,6 +85,7 @@ def test_mower_emergency_stop_and_recovery(setup_error_recovery_components):
         mower.mode = MowerMode.EMERGENCY_STOP
         blade_controller.stop_blade()
         motor_driver.stop()
+
     mower.emergency_stop.side_effect = mower_emergency_stop_side_effect
     mower.emergency_stop()
 
@@ -90,6 +97,7 @@ def test_mower_emergency_stop_and_recovery(setup_error_recovery_components):
     # Reset the mower to IDLE state
     def mower_stop_side_effect():
         mower.mode = MowerMode.IDLE
+
     mower.stop.side_effect = mower_stop_side_effect
     mower.stop()
 
@@ -104,8 +112,7 @@ def test_mower_emergency_stop_and_recovery(setup_error_recovery_components):
     assert blade_controller.start_blade.call_count == 2
 
 
-def test_low_battery_detection_and_sensor_recovery(
-        setup_error_recovery_components):
+def test_low_battery_detection_and_sensor_recovery(setup_error_recovery_components):
     # This test focuses on EnhancedSensorInterface logic,
     # so we might not need the full mower mock from the fixture,
     # but we'll use the sensor_interface mock from it.
@@ -127,8 +134,7 @@ def test_low_battery_detection_and_sensor_recovery(
         # Configure the mock sensor interface instance
         mock_sensor_interface_instance.is_safe_to_operate.return_value = True
         # _sensor_status would be an attribute of the instance
-        bno085_mock_status = MagicMock(
-            working=True, error_count=0, last_error=None)
+        bno085_mock_status = MagicMock(working=True, error_count=0, last_error=None)
         mock_sensor_interface_instance._sensor_status = {
             "bme280": MagicMock(working=True, error_count=0, last_error=None),
             "bno085": bno085_mock_status,
@@ -158,8 +164,7 @@ def test_low_battery_detection_and_sensor_recovery(
         sensor_interface_to_test._attempt_sensor_recovery("bno085")
 
         # Verify that the recovery method was called on the instance
-        mock_sensor_interface_instance._init_sensor_with_retry.assert_called_once_with(
-            "bno085")
+        mock_sensor_interface_instance._init_sensor_with_retry.assert_called_once_with("bno085")
 
         # Simulate successful recovery
         bno085_mock_status.working = True
@@ -198,8 +203,7 @@ def test_obstacle_avoidance_failure_recovery(setup_error_recovery_components):
         # Simplified: assume mower status directly reflects nav status error
         if "error" in nav_status:
             return {"mode": mower.mode, "error": nav_status["error"]}
-        return {"mode": mower.mode, "position": nav_status.get(
-            "position"), "heading": nav_status.get("heading")}
+        return {"mode": mower.mode, "position": nav_status.get("position"), "heading": nav_status.get("heading")}
 
     mower.get_status.side_effect = mower_get_status_side_effect
 

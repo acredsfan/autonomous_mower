@@ -2,13 +2,13 @@
 Test module for test_config_component_initialization.py.
 """
 
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import patch, MagicMock
+
 from mower.mower import Mower
-from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, LearningConfig, PatternType
-)
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
+
 # Assuming get_config is a helper or should be imported, e.g.,
 # from a config manager. For now, we'll assume it's available in the
 # scope or defined elsewhere. If it's part of config_manager,
@@ -35,16 +35,14 @@ def setup_config_environment(tmpdir):
         # Adjusted to List[float] to match assertion expectations
         "path_planning.start_point": [0.0, 0.0],
         # Adjusted to List[List[float]] to match assertion expectations
-        "path_planning.boundary_points": [
-            [0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]
-        ],
+        "path_planning.boundary_points": [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]],
         "path_planning.learning.learning_rate": 0.1,  # float
         "path_planning.learning.discount_factor": 0.9,  # float
         "path_planning.learning.exploration_rate": 0.2,  # float
         "path_planning.learning.memory_size": 1000,  # int
         "path_planning.learning.batch_size": 32,  # int
         "path_planning.learning.update_frequency": 100,  # int
-        "path_planning.learning.model_path": "model.h5"  # str
+        "path_planning.learning.model_path": "model.h5",  # str
     }
 
     def mock_get_side_effect(key, default=None):
@@ -68,36 +66,18 @@ def setup_config_environment(tmpdir):
             spacing=get_config_for_patch("path_planning.spacing", 0.3),
             angle=get_config_for_patch("path_planning.angle", 0.0),
             overlap=get_config_for_patch("path_planning.overlap", 0.1),
-            start_point=get_config_for_patch(
-                "path_planning.start_point", (0.0, 0.0)
-            ),
-            boundary_points=get_config_for_patch(
-                "path_planning.boundary_points", []
-            ),
+            start_point=get_config_for_patch("path_planning.start_point", (0.0, 0.0)),
+            boundary_points=get_config_for_patch("path_planning.boundary_points", []),
         )
 
         learning_config = LearningConfig(
-            learning_rate=get_config_for_patch(
-                "path_planning.learning.learning_rate", 0.01
-            ),
-            discount_factor=get_config_for_patch(
-                "path_planning.learning.discount_factor", 0.99
-            ),
-            exploration_rate=get_config_for_patch(
-                "path_planning.learning.exploration_rate", 0.1
-            ),
-            memory_size=get_config_for_patch(
-                "path_planning.learning.memory_size", 2000
-            ),
-            batch_size=get_config_for_patch(
-                "path_planning.learning.batch_size", 64
-            ),
-            update_frequency=get_config_for_patch(
-                "path_planning.learning.update_frequency", 200
-            ),
-            model_path=get_config_for_patch(
-                "path_planning.learning.model_path", "default_model.h5"
-            ),
+            learning_rate=get_config_for_patch("path_planning.learning.learning_rate", 0.01),
+            discount_factor=get_config_for_patch("path_planning.learning.discount_factor", 0.99),
+            exploration_rate=get_config_for_patch("path_planning.learning.exploration_rate", 0.1),
+            memory_size=get_config_for_patch("path_planning.learning.memory_size", 2000),
+            batch_size=get_config_for_patch("path_planning.learning.batch_size", 64),
+            update_frequency=get_config_for_patch("path_planning.learning.update_frequency", 200),
+            model_path=get_config_for_patch("path_planning.learning.model_path", "default_model.h5"),
         )
         path_planner = PathPlanner(pattern_config, learning_config)
 
@@ -105,12 +85,11 @@ def setup_config_environment(tmpdir):
         "config_manager": config_manager,
         "config_dir": config_dir,
         "path_planner": path_planner,
-        "get_config_mock_setup": get_config_for_patch
+        "get_config_mock_setup": get_config_for_patch,
     }
 
 
-def test_path_planner_initialization_from_config(
-        setup_config_environment_fixture_result):
+def test_path_planner_initialization_from_config(setup_config_environment_fixture_result):
     path_planner = setup_config_environment_fixture_result["path_planner"]
     config_dir = setup_config_environment_fixture_result["config_dir"]
 
@@ -121,9 +100,7 @@ def test_path_planner_initialization_from_config(
     assert path_planner.pattern_config.overlap == 0.2
     # Ensure assertion matches the (potentially list-based) type from mock
     assert path_planner.pattern_config.start_point == [0.0, 0.0]
-    assert path_planner.pattern_config.boundary_points == [
-        [0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]
-    ]
+    assert path_planner.pattern_config.boundary_points == [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]
 
     # Assertions for learning_config should match mock_config_values
     assert path_planner.learning_config.learning_rate == 0.1
@@ -139,7 +116,7 @@ def test_path_planner_initialization_from_config(
 
 def test_resource_manager_initialization_from_config(
     # Renamed to reflect it's the fixture's result
-    setup_config_environment_fixture_result
+    setup_config_environment_fixture_result,
 ):
     # config_manager from fixture is not directly used here,
     # but its mock behavior is implicitly tested via Mower's interaction
@@ -152,9 +129,7 @@ def test_resource_manager_initialization_from_config(
         MockResourceManager.return_value = mock_resource_manager
 
         # Mock the load_config method to return test configuration
-        mock_resource_manager._load_config.return_value = {
-            "location": [0.0, 0.0]
-        }
+        mock_resource_manager._load_config.return_value = {"location": [0.0, 0.0]}
 
         # Create a Mower instance
         mower = Mower()
@@ -164,14 +139,11 @@ def test_resource_manager_initialization_from_config(
 
         # Verify that the home location was loaded from configuration
         assert mower.home_location == [0.0, 0.0]
-        mock_resource_manager._load_config.assert_called_with(
-            "home_location.json"
-        )
+        mock_resource_manager._load_config.assert_called_with("home_location.json")
 
 
 # Renamed
-def test_config_changes_affect_components(
-        setup_config_environment_fixture_result):
+def test_config_changes_affect_components(setup_config_environment_fixture_result):
     # config_dir from fixture is not directly used here.
 
     # Create a Mower instance with mocked ResourceManager
@@ -181,26 +153,20 @@ def test_config_changes_affect_components(
         MockResourceManager.return_value = mock_resource_manager
 
         # Configure the mock to return test configuration
-        mock_resource_manager._load_config.side_effect = (
-            lambda filename: {
-                "home_location.json": {"location": [1.0, 1.0]},
-                "boundary.json": {
-                    "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]]
-                },
-                "no_go_zones.json": {
-                    "zones": [[[2, 2], [4, 2], [4, 4], [2, 4]]]
-                },
-                "schedule.json": {
-                    "schedule": [
-                        {
-                            "day": "Monday",
-                            "start": "09:00",  # Corrected spacing
-                            "end": "12:00",   # Corrected spacing
-                        }
-                    ]
-                },
-            }.get(filename)
-        )
+        mock_resource_manager._load_config.side_effect = lambda filename: {
+            "home_location.json": {"location": [1.0, 1.0]},
+            "boundary.json": {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]]},
+            "no_go_zones.json": {"zones": [[[2, 2], [4, 2], [4, 4], [2, 4]]]},
+            "schedule.json": {
+                "schedule": [
+                    {
+                        "day": "Monday",
+                        "start": "09:00",  # Corrected spacing
+                        "end": "12:00",  # Corrected spacing
+                    }
+                ]
+            },
+        }.get(filename)
 
         # Create a Mower instance
         mower = Mower()
@@ -215,9 +181,7 @@ def test_config_changes_affect_components(
         )
 
         # Verify that the configuration files were saved
-        mock_resource_manager._save_config.assert_any_call(
-            "home_location.json", {"location": [1.0, 1.0]}
-        )
+        mock_resource_manager._save_config.assert_any_call("home_location.json", {"location": [1.0, 1.0]})
         mock_resource_manager._save_config.assert_any_call(
             "boundary.json",
             {"boundary": [[0, 0], [10, 0], [10, 10], [0, 10]]},
@@ -228,10 +192,5 @@ def test_config_changes_affect_components(
         )
         mock_resource_manager._save_config.assert_any_call(
             "schedule.json",
-            {
-                "schedule": [
-                    {"day": "Monday", "start": "09:00",
-                        "end": "12:00"}  # Corrected spacing
-                ]
-            },
+            {"schedule": [{"day": "Monday", "start": "09:00", "end": "12:00"}]},  # Corrected spacing
         )

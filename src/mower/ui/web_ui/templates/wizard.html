@@ -8,27 +8,27 @@
         max-width: 800px;
         margin: 0 auto;
     }
-    
+
     .wizard-step {
         display: none;
     }
-    
+
     .wizard-step.active {
         display: block;
     }
-    
+
     .wizard-nav {
         display: flex;
         justify-content: space-between;
         margin-top: 2rem;
     }
-    
+
     .wizard-progress {
         display: flex;
         justify-content: center;
         margin-bottom: 2rem;
     }
-    
+
     .step-indicator {
         width: 12px;
         height: 12px;
@@ -37,27 +37,27 @@
         margin: 0 5px;
         cursor: pointer;
     }
-    
+
     .step-indicator.active {
         background-color: var(--grass-medium);
         transform: scale(1.2);
     }
-    
+
     .step-indicator.completed {
         background-color: var(--accent-green);
     }
-    
+
     .wizard-title {
         text-align: center;
         margin-bottom: 1.5rem;
     }
-    
+
     .wizard-subtitle {
         text-align: center;
         margin-bottom: 2rem;
         color: var(--dirt-medium);
     }
-    
+
     .wizard-card {
         background-color: var(--white);
         border-radius: var(--border-radius);
@@ -65,7 +65,7 @@
         padding: 2rem;
         margin-bottom: 1.5rem;
     }
-    
+
     .option-card {
         border: 2px solid transparent;
         border-radius: var(--border-radius);
@@ -74,43 +74,43 @@
         cursor: pointer;
         transition: all 0.2s ease;
     }
-    
+
     .option-card:hover {
         border-color: var(--grass-light);
         background-color: var(--grass-pale);
     }
-    
+
     .option-card.selected {
         border-color: var(--grass-medium);
         background-color: var(--grass-pale);
     }
-    
+
     .option-card-title {
         font-weight: 500;
         margin-bottom: 0.5rem;
     }
-    
+
     .option-card-description {
         color: var(--dirt-medium);
         font-size: 0.9rem;
     }
-    
+
     .form-group {
         margin-bottom: 1.5rem;
     }
-    
+
     .form-label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 500;
     }
-    
+
     .help-text {
         color: var(--dirt-medium);
         font-size: 0.85rem;
         margin-top: 0.25rem;
     }
-    
+
     .map-container {
         height: 300px;
         border-radius: var(--border-radius);
@@ -137,12 +137,12 @@
         <div class="step-indicator" data-step="4"></div>
         <div class="step-indicator" data-step="5"></div>
     </div>
-    
+
     <!-- Step 1: Welcome -->
     <div class="wizard-step active" id="step1">
         <h2 class="wizard-title">Welcome to Your Autonomous Mower</h2>
         <p class="wizard-subtitle">Let's get you set up in just a few simple steps</p>
-        
+
         <div class="wizard-card">
             <p>This wizard will guide you through the initial setup of your autonomous mower. We'll help you:</p>
             <ul>
@@ -154,27 +154,27 @@
             </ul>
             <p>The process should take about 5-10 minutes. You can always change these settings later from the Settings page.</p>
         </div>
-        
+
         <div class="option-card selected" onclick="selectOption(this)">
             <div class="option-card-title">Standard Setup (Recommended)</div>
             <div class="option-card-description">Guided setup with recommended settings for most users.</div>
         </div>
-        
+
         <div class="option-card" onclick="selectOption(this)">
             <div class="option-card-title">Advanced Setup</div>
             <div class="option-card-description">More detailed configuration options for experienced users.</div>
         </div>
     </div>
-    
+
     <!-- Step 2: Mowing Area -->
     <div class="wizard-step" id="step2">
         <h2 class="wizard-title">Define Your Mowing Area</h2>
         <p class="wizard-subtitle">Draw the boundary of the area you want to mow</p>
-        
+
         <div class="wizard-card">
             <div id="map" class="map-container"></div>
             <p class="help-text">Use the drawing tools to define your mowing area. Click points to create a polygon.</p>
-            
+
             <div class="form-group">
                 <label class="form-label">Home Location</label>
                 <p>Set the home/charging location for your mower by clicking the "Set Home" button and then clicking on the map.</p>
@@ -182,7 +182,7 @@
                     <i class="fas fa-home"></i> Set Home Location
                 </button>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">No-Go Zones (Optional)</label>
                 <p>Define areas within your yard that the mower should avoid (flower beds, ponds, etc.)</p>
@@ -192,12 +192,12 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Step 3: Mowing Schedule -->
     <div class="wizard-step" id="step3">
         <h2 class="wizard-title">Set Your Mowing Schedule</h2>
         <p class="wizard-subtitle">When would you like your lawn to be mowed?</p>
-        
+
         <div class="wizard-card">
             <div class="form-group">
                 <label class="form-label">Mowing Days</label>
@@ -210,7 +210,7 @@
                     {% endfor %}
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Mowing Time</label>
                 <div class="time-range">
@@ -225,7 +225,7 @@
                 </div>
                 <p class="help-text">Choose times when noise won't disturb neighbors and when the grass is dry.</p>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Mowing Frequency</label>
                 <select id="wizFrequency" class="form-select">
@@ -237,12 +237,12 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Step 4: Mowing Pattern -->
     <div class="wizard-step" id="step4">
         <h2 class="wizard-title">Choose Mowing Pattern</h2>
         <p class="wizard-subtitle">Select how you want your lawn to be mowed</p>
-        
+
         <div class="wizard-card">
             <div class="pattern-selector">
                 <div class="option-card selected" onclick="selectPattern(this, 'PARALLEL')">
@@ -250,20 +250,20 @@
                     <div class="option-card-title">Parallel Lines</div>
                     <div class="option-card-description">Efficient for most lawns</div>
                 </div>
-                
+
                 <div class="option-card" onclick="selectPattern(this, 'SPIRAL')">
                     <div class="pattern-icon"><i class="fas fa-circle-notch"></i></div>
                     <div class="option-card-title">Spiral</div>
                     <div class="option-card-description">Good for circular areas</div>
                 </div>
-                
+
                 <div class="option-card" onclick="selectPattern(this, 'ZIGZAG')">
                     <div class="pattern-icon"><i class="fas fa-wave-square"></i></div>
                     <div class="option-card-title">Zigzag</div>
                     <div class="option-card-description">Varied pattern</div>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="wizCutHeight" class="form-label">Cutting Height</label>
                 <div class="range-with-value">
@@ -272,7 +272,7 @@
                 </div>
                 <p class="help-text">Recommended: 30-40mm for most grass types. Never cut more than 1/3 of grass height at once.</p>
             </div>
-            
+
             <div class="form-group">
                 <label for="wizOverlap" class="form-label">Path Overlap</label>
                 <div class="range-with-value">
@@ -283,12 +283,12 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Step 5: System Settings -->
     <div class="wizard-step" id="step5">
         <h2 class="wizard-title">System Settings</h2>
         <p class="wizard-subtitle">Final configuration for your mower</p>
-        
+
         <div class="wizard-card">
             <div class="form-group">
                 <label class="form-label">Safety Features</label>
@@ -305,7 +305,7 @@
                     <label class="form-check-label" for="wizChildLock">Child Lock</label>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label class="form-label">Notifications</label>
                 <div class="form-check mb-2">
@@ -321,21 +321,21 @@
                     <label class="form-check-label" for="wizNotifyErrors">Notify on errors or obstacles</label>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="wizName" class="form-label">Mower Name (Optional)</label>
                 <input type="text" id="wizName" class="form-control" placeholder="e.g., MowBot, GrassChopper">
                 <p class="help-text">Give your mower a name to easily identify it in notifications and the app.</p>
             </div>
         </div>
-        
+
         <div class="wizard-card">
             <h3>Setup Complete!</h3>
             <p>Your autonomous mower is now configured and ready to use. You can always adjust these settings later from the Settings page.</p>
             <p>Click "Finish" to save your configuration and go to the dashboard.</p>
         </div>
     </div>
-    
+
     <!-- Navigation buttons -->
     <div class="wizard-nav">
         <button id="prev-btn" class="btn btn-secondary" onclick="prevStep()" disabled>
@@ -357,22 +357,22 @@
     let drawControl;
     let homeMarker;
     let selectedPattern = 'PARALLEL';
-    
+
     // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         initWizard();
         updateNavButtons();
-        
+
         // Initialize range inputs
         document.getElementById('wizCutHeight').addEventListener('input', function() {
             document.getElementById('wizCutHeightValue').textContent = this.value + 'mm';
         });
-        
+
         document.getElementById('wizOverlap').addEventListener('input', function() {
             document.getElementById('wizOverlapValue').textContent = this.value + '%';
         });
     });
-    
+
     // Initialize the wizard
     function initWizard() {
         // Set up step indicators
@@ -384,7 +384,7 @@
                 }
             });
         });
-        
+
         // Initialize map when step 2 becomes active
         const observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -393,29 +393,29 @@
                 }
             });
         });
-        
+
         document.querySelectorAll('.wizard-step').forEach(step => {
             observer.observe(step, { attributes: true, attributeFilter: ['class'] });
         });
     }
-    
+
     // Initialize the map
     function initMap() {
         if (map) return; // Only initialize once
-        
+
         // Initialize the map
         map = L.map('map').setView([0, 0], 18); // Default view, will be updated with GPS
-        
+
         // Add the OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 22,
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
-        
+
         // Initialize the FeatureGroup to store editable layers
         drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
-        
+
         // Initialize the draw control and pass it the FeatureGroup
         drawControl = new L.Control.Draw({
             draw: {
@@ -440,7 +440,7 @@
             }
         });
         map.addControl(drawControl);
-        
+
         // Get current position from GPS and center map
         sendCommand('get_position', {}, function(response) {
             if (response.success && response.data.latitude && response.data.longitude) {
@@ -449,22 +449,22 @@
                 showAlert('Unable to get current position. Using default view.', 'warning');
             }
         });
-        
+
         // Handle map events
         map.on(L.Draw.Event.CREATED, function(event) {
             const layer = event.layer;
             drawnItems.addLayer(layer);
         });
-        
+
         // Set home location button
         document.getElementById('set-home-btn').addEventListener('click', function() {
             showAlert('Click on the map to set home location', 'info');
-            
+
             const setHomeHandler = function(e) {
                 if (homeMarker) {
                     map.removeLayer(homeMarker);
                 }
-                
+
                 homeMarker = L.marker(e.latlng, {
                     icon: L.divIcon({
                         className: 'home-marker',
@@ -473,14 +473,14 @@
                         iconAnchor: [15, 15]
                     })
                 }).addTo(map);
-                
+
                 showAlert('Home location set!', 'success');
                 map.off('click', setHomeHandler);
             };
-            
+
             map.on('click', setHomeHandler);
         });
-        
+
         // Add no-go zone button
         document.getElementById('add-nogo-btn').addEventListener('click', function() {
             showAlert('Draw a polygon for the no-go zone', 'info');
@@ -493,33 +493,33 @@
             }).enable();
         });
     }
-    
+
     // Go to a specific step
     function goToStep(step) {
         // Hide all steps
         document.querySelectorAll('.wizard-step').forEach(el => {
             el.classList.remove('active');
         });
-        
+
         // Show the target step
         document.getElementById('step' + step).classList.add('active');
-        
+
         // Update step indicators
         document.querySelectorAll('.step-indicator').forEach(indicator => {
             const indicatorStep = parseInt(indicator.dataset.step);
             indicator.classList.remove('active', 'completed');
-            
+
             if (indicatorStep === step) {
                 indicator.classList.add('active');
             } else if (indicatorStep < step) {
                 indicator.classList.add('completed');
             }
         });
-        
+
         currentStep = step;
         updateNavButtons();
     }
-    
+
     // Go to next step
     function nextStep() {
         if (currentStep < totalSteps) {
@@ -529,21 +529,21 @@
             saveWizardSettings();
         }
     }
-    
+
     // Go to previous step
     function prevStep() {
         if (currentStep > 1) {
             goToStep(currentStep - 1);
         }
     }
-    
+
     // Update navigation buttons
     function updateNavButtons() {
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
-        
+
         prevBtn.disabled = currentStep === 1;
-        
+
         if (currentStep === totalSteps) {
             nextBtn.innerHTML = '<i class="fas fa-check"></i> Finish';
             nextBtn.classList.remove('btn-primary');
@@ -554,7 +554,7 @@
             nextBtn.classList.add('btn-primary');
         }
     }
-    
+
     // Select an option card
     function selectOption(element) {
         // Deselect all options in the same group
@@ -562,24 +562,24 @@
         parent.querySelectorAll('.option-card').forEach(card => {
             card.classList.remove('selected');
         });
-        
+
         // Select the clicked option
         element.classList.add('selected');
     }
-    
+
     // Select a pattern
     function selectPattern(element, pattern) {
         selectOption(element);
         selectedPattern = pattern;
     }
-    
+
     // Save all wizard settings
     function saveWizardSettings() {
         // Collect all settings from the wizard
         const settings = {
             // Area settings (from map)
             area: getAreaSettings(),
-            
+
             // Schedule settings
             schedule: {
                 days: Array.from(document.querySelectorAll('input[name="wizMowDays"]:checked')).map(cb => cb.value),
@@ -587,14 +587,14 @@
                 endTime: document.getElementById('wizEndTime').value,
                 frequency: document.getElementById('wizFrequency').value
             },
-            
+
             // Mowing settings
             mowing: {
                 pattern: selectedPattern,
                 cutHeight: parseInt(document.getElementById('wizCutHeight').value),
                 overlap: parseInt(document.getElementById('wizOverlap').value) / 100
             },
-            
+
             // System settings
             system: {
                 name: document.getElementById('wizName').value,
@@ -608,7 +608,7 @@
                 }
             }
         };
-        
+
         // Save settings to server
         sendCommand('save_wizard_settings', { settings: settings }, function(response) {
             if (response.success) {
@@ -621,7 +621,7 @@
             }
         });
     }
-    
+
     // Get area settings from the map
     function getAreaSettings() {
         const area = {
@@ -629,7 +629,7 @@
             home: null,
             noGoZones: []
         };
-        
+
         // Get boundary from drawn items
         drawnItems.eachLayer(layer => {
             if (layer instanceof L.Polygon) {
@@ -648,7 +648,7 @@
                 }
             }
         });
-        
+
         // Get home location
         if (homeMarker) {
             area.home = {
@@ -656,7 +656,7 @@
                 lng: homeMarker.getLatLng().lng
             };
         }
-        
+
         return area;
     }
 </script>
@@ -669,7 +669,7 @@
         gap: 8px;
         margin-bottom: 1rem;
     }
-    
+
     .day-checkbox {
         display: flex;
         align-items: center;
@@ -677,36 +677,36 @@
         padding: 6px 10px;
         border-radius: var(--border-radius);
     }
-    
+
     .day-checkbox input[type="checkbox"] {
         margin-right: 5px;
     }
-    
+
     .time-range {
         display: flex;
         gap: 15px;
     }
-    
+
     .time-input {
         flex: 1;
     }
-    
+
     .range-with-value {
         display: flex;
         align-items: center;
     }
-    
+
     .range-with-value input {
         flex-grow: 1;
         margin-right: 10px;
     }
-    
+
     .range-with-value span {
         min-width: 3rem;
         text-align: right;
         font-weight: bold;
     }
-    
+
     .form-range {
         -webkit-appearance: none;
         appearance: none;
@@ -715,7 +715,7 @@
         border-radius: 5px;
         outline: none;
     }
-    
+
     .form-range::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
@@ -725,7 +725,7 @@
         background: var(--grass-medium);
         cursor: pointer;
     }
-    
+
     .form-range::-moz-range-thumb {
         width: 20px;
         height: 20px;
@@ -733,31 +733,31 @@
         background: var(--grass-medium);
         cursor: pointer;
     }
-    
+
     .pattern-selector {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin-bottom: 1.5rem;
     }
-    
+
     .pattern-icon {
         font-size: 24px;
         margin-bottom: 5px;
         color: var(--grass-medium);
     }
-    
+
     /* Responsive adjustments */
     @media (max-width: 768px) {
         .wizard-card {
             padding: 1.5rem;
         }
-        
+
         .time-range {
             flex-direction: column;
             gap: 10px;
         }
-        
+
         .pattern-selector {
             flex-direction: column;
         }

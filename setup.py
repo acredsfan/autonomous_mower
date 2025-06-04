@@ -5,7 +5,8 @@ This script defines the package metadata, dependencies, and entry points for
 command-line scripts. It uses setuptools to allow for pip installation and
 dependency management.
 """
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 setup(
     name="autonomous_mower",

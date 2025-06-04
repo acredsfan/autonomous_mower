@@ -20,19 +20,20 @@ Key features:
 
 import math
 import os
-import time
-import threading
 import platform
 import random
-from typing import Dict, Any, Tuple
+import threading
+import time
 from enum import Enum
+from typing import Any, Dict, Tuple
 
 # Only import hardware-specific modules on Linux platforms
 if platform.system() == "Linux":
     try:
         import adafruit_bno08x
-        from adafruit_bno08x.uart import BNO08X_UART
         import serial
+        from adafruit_bno08x.uart import BNO08X_UART
+
         HARDWARE_AVAILABLE = True
     except ImportError:
         HARDWARE_AVAILABLE = False
@@ -47,9 +48,10 @@ else:
     serial = None
 
 from dotenv import load_dotenv
-from mower.utilities.logger_config import LoggerConfigInfo
+
 from mower.hardware.serial_port import SerialPort
 from mower.interfaces.sensors import IMUSensorInterface
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # BNO085 Constants
 CHANNEL_COMMAND = 0x00
@@ -148,30 +150,24 @@ class BNO085Sensor(IMUSensorInterface):
         self.tilt_threshold = float(os.getenv("TILT_THRESHOLD_DEG", "45.0"))
         self.last_impact_time = 0
         self.impact_cooldown = 1.0  # seconds between impact detections
-        self.safety_callbacks = []        # Only try hardware initialization on Linux platforms
+        self.safety_callbacks = []  # Only try hardware initialization on Linux platforms
         if platform.system() == "Linux" and HARDWARE_AVAILABLE:
             try:
-                logger.debug(
-                    f"Attempting to initialize IMU on port {IMU_SERIAL_PORT} "
-                    f"at {IMU_BAUDRATE} baud."
-                )
+                logger.debug(f"Attempting to initialize IMU on port {IMU_SERIAL_PORT} " f"at {IMU_BAUDRATE} baud.")
                 # Attempt to create and start the serial port
                 self.serial_port_wrapper = SerialPort(
                     port=IMU_SERIAL_PORT,
                     baudrate=IMU_BAUDRATE,
                     timeout=0.1,  # Recommended for BNO08x stability
-                    receiver_buffer_size=RECEIVER_BUFFER_SIZE
+                    receiver_buffer_size=RECEIVER_BUFFER_SIZE,
                 )
                 self.serial_port_wrapper.start()  # This might raise SerialException
 
                 # If start() was successful, serial_port_wrapper.ser should be
                 # an open port
-                if not (
-                        self.serial_port_wrapper.ser and
-                        self.serial_port_wrapper.ser.is_open):
+                if not (self.serial_port_wrapper.ser and self.serial_port_wrapper.ser.is_open):
                     logger.error(
-                        f"SerialPort.start() completed but port {IMU_SERIAL_PORT} "
-                        f"is not open. IMU unavailable."
+                        f"SerialPort.start() completed but port {IMU_SERIAL_PORT} " f"is not open. IMU unavailable."
                     )
                     # This condition implies serial_port_wrapper.start() didn't throw an
                     # error but failed silently, which shouldn't happen based on
@@ -179,27 +175,21 @@ class BNO085Sensor(IMUSensorInterface):
                     # However, as a safeguard, explicitly raise to be caught by the
                     # broader handler.
                     if serial:
-                        raise serial.SerialException(
-                            f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+                        raise serial.SerialException(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
                     else:
-                        raise Exception(
-                            f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+                        raise Exception(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
 
-                logger.info(
-                    f"Serial port {IMU_SERIAL_PORT} opened successfully for IMU.")
+                logger.info(f"Serial port {IMU_SERIAL_PORT} opened successfully for IMU.")
 
                 # Now, initialize BNO08X_UART with the raw pyserial object
                 if BNO08X_UART:
-                    self.sensor = BNO08X_UART(
-                        self.serial_port_wrapper.ser,
-                        debug=False)  # Pass the .ser attribute
+                    self.sensor = BNO08X_UART(self.serial_port_wrapper.ser, debug=False)  # Pass the .ser attribute
                 else:
                     raise Exception("BNO08X_UART not available")
 
                 logger.debug("Enabling BNO_REPORT_ROTATION_VECTOR for IMU.")
-                if adafruit_bno08x and hasattr(adafruit_bno08x, 'BNO_REPORT_ROTATION_VECTOR'):
-                    self.sensor.enable_feature(
-                        adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
+                if adafruit_bno08x and hasattr(adafruit_bno08x, "BNO_REPORT_ROTATION_VECTOR"):
+                    self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
                 # Optionally, enable other reports if needed:
                 # logger.debug("Enabling BNO_REPORT_ACCELEROMETER.")
                 # self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
@@ -207,21 +197,15 @@ class BNO085Sensor(IMUSensorInterface):
                 # self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
 
                 self.is_hardware_available = True
-                logger.info(
-                    "BNO085 IMU sensor initialized successfully using BNO08X_UART."
-                )
+                logger.info("BNO085 IMU sensor initialized successfully using BNO08X_UART.")
 
             except Exception as e:
                 error_type = type(e).__name__
                 if serial and isinstance(e, serial.SerialException):
-                    logger.error(
-                        f"SerialException during IMU initialization on "
-                        f"port {IMU_SERIAL_PORT}: {e}"
-                    )
+                    logger.error(f"SerialException during IMU initialization on " f"port {IMU_SERIAL_PORT}: {e}")
                 elif isinstance(e, ImportError):
                     logger.error(
-                        f"ImportError: {e}. Ensure adafruit_bno08x and pyserial "
-                        f"are installed. IMU unavailable."
+                        f"ImportError: {e}. Ensure adafruit_bno08x and pyserial " f"are installed. IMU unavailable."
                     )
                 elif isinstance(e, AttributeError):
                     logger.error(
@@ -230,9 +214,7 @@ class BNO085Sensor(IMUSensorInterface):
                         f"BNO08X_UART."
                     )
                 else:  # Catch any other unexpected errors
-                    logger.error(
-                        f"Unexpected {error_type} initializing BNO085 IMU sensor: {e}",
-                        exc_info=True)
+                    logger.error(f"Unexpected {error_type} initializing BNO085 IMU sensor: {e}", exc_info=True)
 
                 self.is_hardware_available = False  # Mark IMU as unavailable
                 self.sensor = None  # Ensure sensor object is None
@@ -240,24 +222,16 @@ class BNO085Sensor(IMUSensorInterface):
                 # If serial_port_wrapper was instantiated before the error,
                 # attempt to close it
                 if self.serial_port_wrapper:
-                    logger.debug(
-                        "Cleaning up serial port due to IMU initialization failure."
-                    )
+                    logger.debug("Cleaning up serial port due to IMU initialization failure.")
                     self.serial_port_wrapper.stop()
                     self.serial_port_wrapper = None
                     # Clear the reference to the wrapper
 
         else:  # Non-Linux platform or hardware not available
             if platform.system() != "Linux":
-                logger.info(
-                    "Running on non-Linux platform. "
-                    "IMU sensor will return simulated values."
-                )
+                logger.info("Running on non-Linux platform. " "IMU sensor will return simulated values.")
             else:
-                logger.warning(
-                    "Hardware modules not available. "
-                    "IMU sensor will return simulated values."
-                )
+                logger.warning("Hardware modules not available. " "IMU sensor will return simulated values.")
 
         self._initialized = True
 
@@ -286,14 +260,11 @@ class BNO085Sensor(IMUSensorInterface):
                 if quaternion is None or len(quaternion) < 4:
                     logger.warning("Invalid quaternion data from sensor")
                     return self.last_heading
-                    
+
                 heading = math.degrees(
                     math.atan2(
-                        2 * quaternion[1] * quaternion[2]
-                        - 2 * quaternion[0] * quaternion[3],
-                        2 * quaternion[0] * quaternion[0]
-                        + 2 * quaternion[1] * quaternion[1]
-                        - 1,
+                        2 * quaternion[1] * quaternion[2] - 2 * quaternion[0] * quaternion[3],
+                        2 * quaternion[0] * quaternion[0] + 2 * quaternion[1] * quaternion[1] - 1,
                     )
                 )
 
@@ -303,13 +274,11 @@ class BNO085Sensor(IMUSensorInterface):
                     self.last_heading = heading
                 return heading
             except Exception as e:
-                logger.warning(
-                    f"Error reading IMU heading, using last value: {e}")
+                logger.warning(f"Error reading IMU heading, using last value: {e}")
                 return self.last_heading
-        else:            # Return simulated values with small changes
+        else:  # Return simulated values with small changes
             with self.lock:
-                self.last_heading = (
-                    self.last_heading + random.uniform(-2, 2)) % 360
+                self.last_heading = (self.last_heading + random.uniform(-2, 2)) % 360
                 return self.last_heading
 
     def get_roll(self) -> float:
@@ -325,31 +294,25 @@ class BNO085Sensor(IMUSensorInterface):
                 if quaternion is None or len(quaternion) < 4:
                     logger.warning("Invalid quaternion data from sensor")
                     return self.last_roll
-                    
+
                 roll = math.degrees(
                     math.atan2(
-                        2 * quaternion[0] * quaternion[1]
-                        + 2 * quaternion[2] * quaternion[3],
-                        1
-                        - 2 * quaternion[1] * quaternion[1]
-                        - 2 * quaternion[2] * quaternion[2],
+                        2 * quaternion[0] * quaternion[1] + 2 * quaternion[2] * quaternion[3],
+                        1 - 2 * quaternion[1] * quaternion[1] - 2 * quaternion[2] * quaternion[2],
                     )
                 )
-                
+
                 with self.lock:
                     self.last_roll = roll
                 return roll
             except Exception as e:
-                logger.warning(
-                    f"Error reading IMU roll, using last value: {e}")
+                logger.warning(f"Error reading IMU roll, using last value: {e}")
                 return self.last_roll
         else:
             # Return simulated values with small changes
             with self.lock:
                 # Keep roll within reasonable range
-                self.last_roll = max(
-                    -30, min(30, self.last_roll + random.uniform(-0.5, 0.5))
-                )
+                self.last_roll = max(-30, min(30, self.last_roll + random.uniform(-0.5, 0.5)))
                 return self.last_roll
 
     def get_pitch(self) -> float:
@@ -364,10 +327,7 @@ class BNO085Sensor(IMUSensorInterface):
                 quaternion = self.sensor.quaternion
                 if quaternion and len(quaternion) >= 4:
                     pitch = math.degrees(
-                        math.asin(
-                            2 * quaternion[0] * quaternion[2]
-                            - 2 * quaternion[3] * quaternion[1]
-                        )
+                        math.asin(2 * quaternion[0] * quaternion[2] - 2 * quaternion[3] * quaternion[1])
                     )
 
                     with self.lock:
@@ -377,16 +337,13 @@ class BNO085Sensor(IMUSensorInterface):
                     logger.warning("Invalid quaternion data from IMU")
                     return self.last_pitch
             except Exception as e:
-                logger.warning(
-                    f"Error reading IMU pitch, using last value: {e}")
+                logger.warning(f"Error reading IMU pitch, using last value: {e}")
                 return self.last_pitch
         else:
             # Return simulated values with small changes
             with self.lock:
                 # Keep pitch within reasonable range
-                self.last_pitch = max(
-                    -30, min(30, self.last_pitch + random.uniform(-0.5, 0.5))
-                )
+                self.last_pitch = max(-30, min(30, self.last_pitch + random.uniform(-0.5, 0.5)))
                 return self.last_pitch
 
     def get_calibration(self) -> Dict[str, int]:
@@ -458,11 +415,7 @@ class BNO085Sensor(IMUSensorInterface):
             "acceleration": {
                 "x": random.uniform(-2, 2) if not self.is_hardware_available else 0,
                 "y": random.uniform(-2, 2) if not self.is_hardware_available else 0,
-                "z": (
-                    9.8 + random.uniform(-0.2, 0.2)
-                    if not self.is_hardware_available
-                    else 9.8
-                ),  # Gravity
+                "z": (9.8 + random.uniform(-0.2, 0.2) if not self.is_hardware_available else 9.8),  # Gravity
             },
             "gyroscope": {
                 "x": random.uniform(-0.1, 0.1) if not self.is_hardware_available else 0,
@@ -489,11 +442,7 @@ class BNO085Sensor(IMUSensorInterface):
                 return (accel_x, accel_y, accel_z)
             else:
                 # Return simulated acceleration values
-                return (
-                    random.uniform(-0.1, 0.1),
-                    random.uniform(-0.1, 0.1),
-                    9.8 + random.uniform(-0.1, 0.1)
-                )
+                return (random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), 9.8 + random.uniform(-0.1, 0.1))
         except Exception as e:
             logger.warning(f"Error reading IMU acceleration: {e}")
             return (0.0, 0.0, 9.8)
@@ -512,11 +461,7 @@ class BNO085Sensor(IMUSensorInterface):
                 return (gyro_x, gyro_y, gyro_z)
             else:
                 # Return simulated gyroscope values
-                return (
-                    random.uniform(-0.1, 0.1),
-                    random.uniform(-0.1, 0.1),
-                    random.uniform(-0.1, 0.1)
-                )
+                return (random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1))
         except Exception as e:
             logger.warning(f"Error reading IMU gyroscope: {e}")
             return (0.0, 0.0, 0.0)
@@ -531,18 +476,14 @@ class BNO085Sensor(IMUSensorInterface):
         try:
             if self.is_hardware_available and self.sensor:
                 # Get magnetometer data from the BNO085 sensor if available
-                if hasattr(self.sensor, 'magnetic'):
+                if hasattr(self.sensor, "magnetic"):
                     mag_x, mag_y, mag_z = self.sensor.magnetic or (0.0, 0.0, 0.0)
                     return (mag_x, mag_y, mag_z)
                 else:
                     # Calculate magnetometer values based on heading
                     heading_rad = math.radians(self.get_heading())
                     mag_strength = 50.0  # Typical strength in μT
-                    return (
-                        mag_strength * math.cos(heading_rad),
-                        mag_strength * math.sin(heading_rad),
-                        0.0
-                    )
+                    return (mag_strength * math.cos(heading_rad), mag_strength * math.sin(heading_rad), 0.0)
             else:
                 # Return simulated magnetometer values based on simulated heading
                 heading_rad = math.radians(self.get_heading())
@@ -550,7 +491,7 @@ class BNO085Sensor(IMUSensorInterface):
                 return (
                     mag_strength * math.cos(heading_rad) + random.uniform(-2, 2),
                     mag_strength * math.sin(heading_rad) + random.uniform(-2, 2),
-                    random.uniform(-2, 2)
+                    random.uniform(-2, 2),
                 )
         except Exception as e:
             logger.warning(f"Error reading IMU magnetometer: {e}")
@@ -622,7 +563,7 @@ class BNO085Sensor(IMUSensorInterface):
             "last_roll": self.last_roll,
             "last_pitch": self.last_pitch,
             "calibration": self.get_calibration(),
-            "safety_status": self.get_safety_status()
+            "safety_status": self.get_safety_status(),
         }
 
     def cleanup(self) -> None:
@@ -740,13 +681,9 @@ if __name__ == "__main__":
             calib = imu.get_calibration()
             safety = imu.get_safety_status()
 
-            print(
-                f"Heading: {heading:.1f}°, Roll: "
-                f"{roll:.1f}°, Pitch: {pitch:.1f}°")
+            print(f"Heading: {heading:.1f}°, Roll: " f"{roll:.1f}°, Pitch: {pitch:.1f}°")
             print(f"Calibration: {calib}")
-            print(
-                f"Safety status: "
-                f"{'WARNING' if safety['tilt_warning'] else 'OK'}")
+            print(f"Safety status: " f"{'WARNING' if safety['tilt_warning'] else 'OK'}")
             print("--------------------")
             time.sleep(1)
     except KeyboardInterrupt:

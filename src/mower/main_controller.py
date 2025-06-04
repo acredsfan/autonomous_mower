@@ -33,46 +33,43 @@ Configuration:
 import json
 import os
 import platform
-import threading
-import time
 import signal  # Added for signal handling
 import sys  # Added for sys.exit
+import threading
+import time
 from enum import Enum
 from typing import Any, Optional
+
 from dotenv import load_dotenv
 
 # ADDED: Import initialize_config_manager and CONFIG_DIR from constants
 from mower.config_management import initialize_config_manager
+from mower.config_management.config_manager import get_config
+
 # Use an alias for clarity and to avoid conflict if CONFIG_DIR was defined
 # locally
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
+from mower.hardware.blade_controller import BladeController
+from mower.hardware.camera_instance import get_camera_instance
+from mower.hardware.gpio_manager import GPIOManager
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.sensor_interface import get_sensor_interface
+from mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT, SerialPort
+from mower.hardware.tof import VL53L0XSensors
+from mower.navigation.localization import Localization
+from mower.navigation.navigation import NavigationController
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
+from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 
 # Always safe to import simulation modules and config
 # mower.config_management.config_manager.get_config is used later,
 # will benefit from early init
 from mower.simulation import enable_simulation
-from mower.utilities.logger_config import LoggerConfigInfo
-from mower.config_management.config_manager import get_config
-from mower.navigation.path_planner import (
-    PathPlanner,
-    PatternConfig,
-    PatternType,
-    LearningConfig,
-)
-from mower.navigation.navigation import NavigationController
-from mower.navigation.localization import Localization
-from mower.obstacle_detection.obstacle_detector import ObstacleDetector
-from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from mower.ui.web_ui.web_interface import WebInterface
-from mower.hardware.serial_port import SerialPort, GPS_PORT, GPS_BAUDRATE
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.tof import VL53L0XSensors
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.gpio_manager import GPIOManager
-from mower.hardware.blade_controller import BladeController
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.sensor_interface import get_sensor_interface
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Load environment variables from .env file
 load_dotenv()
@@ -88,11 +85,7 @@ if not MAIN_CONFIG_FILE.exists():
     default_main_config = {
         "mower": {"name": "DefaultMowerName", "log_level": "INFO"},
         "hardware": {"use_simulation": False},
-        "safety": {
-            "use_physical_emergency_stop": True,
-            "emergency_stop_pin": 7,
-            "watchdog_timeout": 15
-        }
+        "safety": {"use_physical_emergency_stop": True, "emergency_stop_pin": 7, "watchdog_timeout": 15},
         # Add other essential default sections and keys as needed
     }
     with open(MAIN_CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -105,9 +98,7 @@ if not MAIN_CONFIG_FILE.exists():
 # This loads .env by default (if EnvironmentConfigurationSource finds it)
 # and then main_config.json.
 # Priority: main_config.json > .env > programmatic defaults.
-initialize_config_manager(
-    config_file=str(MAIN_CONFIG_FILE)
-)
+initialize_config_manager(config_file=str(MAIN_CONFIG_FILE))
 
 # Initialize logging (now uses config from initialize_config_manager)
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -118,15 +109,9 @@ use_simulation_env = os.environ.get("USE_SIMULATION", "").lower()
 use_simulation_config = get_config("hardware.use_simulation", False)
 
 # CORRECTED: Multi-line if condition syntax
-if (
-    platform.system() == "Windows" or
-    use_simulation_env in ("true", "1", "yes") or
-    use_simulation_config
-):
+if platform.system() == "Windows" or use_simulation_env in ("true", "1", "yes") or use_simulation_config:
     enable_simulation()
-    logger.info(
-        "Simulation mode enabled (Windows, USE_SIMULATION env, or config)"
-    )
+    logger.info("Simulation mode enabled (Windows, USE_SIMULATION env, or config)")
 
 # REMOVED/COMMENTED OUT: Local BASE_DIR and CONFIG_DIR definition,
 # will use APP_CONFIG_DIR from constants
@@ -207,8 +192,7 @@ class ResourceManager:
 
         try:
             self._resources["tof"] = VL53L0XSensors()
-            logger.info(
-                "VL53L0X time-of-flight sensors initialized successfully")
+            logger.info("VL53L0X time-of-flight sensors initialized successfully")
         except Exception as e:
             logger.warning(f"Error initializing VL53L0X sensors: {e}")
             self._resources["tof"] = None
@@ -227,9 +211,7 @@ class ResourceManager:
 
         try:
             self._resources["blade"] = BladeController()
-            logger.info(
-                "Blade controller initialized successfully."
-            )
+            logger.info("Blade controller initialized successfully.")
         except Exception as e:
             logger.warning(f"Error initializing blade controller: {e}")
             self._resources["blade"] = None
@@ -251,13 +233,8 @@ class ResourceManager:
         try:
             # Default for Pi; ensure GPS_PORT is defined in constants or .env
             gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyS0"
-            self._resources["gps_serial"] = SerialPort(
-                gps_port_val, GPS_BAUDRATE
-            )
-            logger.info(
-                f"GPS serial port initialized on {gps_port_val} "
-                f"at {GPS_BAUDRATE} baud"
-            )
+            self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
+            logger.info(f"GPS serial port initialized on {gps_port_val} " f"at {GPS_BAUDRATE} baud")
         except Exception as e:
             logger.warning(f"Error initializing GPS serial port: {e}")
             self._resources["gps_serial"] = None
@@ -280,9 +257,7 @@ class ResourceManager:
                     logger.error(f"Error _initializing {name}: {e}")
                     self._resources[name] = None
 
-        logger.info(
-            "Hardware components initialized with fallbacks for any "
-            "failures")
+        logger.info("Hardware components initialized with fallbacks for any " "failures")
 
     def _initialize_software(self):
         """Initialize all software components."""
@@ -316,16 +291,11 @@ class ResourceManager:
                 batch_size=32,
                 update_frequency=100,
                 # UPDATED to use APP_CONFIG_DIR
-                model_path=str(
-                    APP_CONFIG_DIR /
-                    "models" /
-                    "pattern_planner.json"),
+                model_path=str(APP_CONFIG_DIR / "models" / "pattern_planner.json"),
             )
 
             try:
-                self._resources["path_planner"] = PathPlanner(
-                    pattern_config, learning_config, self
-                )
+                self._resources["path_planner"] = PathPlanner(pattern_config, learning_config, self)
                 logger.info("Path planner initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize path planner: {e}")
@@ -356,11 +326,8 @@ class ResourceManager:
                 # sensor_interface is already fetched or None
                 sensor_if = self._resources.get("sensor_interface")
                 if localization and motor_driver and sensor_if:
-                    self._resources["navigation"] = NavigationController(
-                        localization, motor_driver, sensor_if
-                    )
-                    logger.info(
-                        "Navigation controller initialized successfully")
+                    self._resources["navigation"] = NavigationController(localization, motor_driver, sensor_if)
+                    logger.info("Navigation controller initialized successfully")
                 else:
                     missing_items = []
                     if not localization:
@@ -369,20 +336,15 @@ class ResourceManager:
                         missing_items.append("motor_driver")
                     if not sensor_if:
                         missing_items.append("sensor_interface")
-                    logger.error(
-                        "Cannot initialize navigation controller - "
-                        f"missing dependencies: {missing_items}"
-                    )
+                    logger.error("Cannot initialize navigation controller - " f"missing dependencies: {missing_items}")
                     self._resources["navigation"] = None
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize navigation controller: {e}")
+                logger.error(f"Failed to initialize navigation controller: {e}")
                 self._resources["navigation"] = None
 
             # Initialize the avoidance algorithm
             try:
-                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
-                    self)
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(self)
                 logger.info("Avoidance algorithm initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize avoidance algorithm: {e}")
@@ -396,9 +358,7 @@ class ResourceManager:
                 logger.warning(f"Failed to initialize web interface: {e}")
                 self._resources["web_interface"] = None
 
-            logger.info(
-                "Software components initialized with fallbacks for any "
-                "failures")
+            logger.info("Software components initialized with fallbacks for any " "failures")
         except Exception as e:
             logger.error(f"Critical error in software initialization: {e}")
             # Don't re-raise here to allow partial initialization
@@ -414,10 +374,7 @@ class ResourceManager:
             # APP_CONFIG_DIR existence is ensured before config manager init.
             # self.user_polygon_path already uses APP_CONFIG_DIR from __init__
             if not self.user_polygon_path.exists():
-                logger.warning(
-                    f"User polygon file not found at "
-                    f"{self.user_polygon_path}. Creating default."
-                )
+                logger.warning(f"User polygon file not found at " f"{self.user_polygon_path}. Creating default.")
                 with open(self.user_polygon_path, "w", encoding="utf-8") as f:
                     json.dump(
                         {
@@ -431,8 +388,7 @@ class ResourceManager:
             self._initialize_software()
 
             self._initialized = True
-            logger.info(
-                "All resources initialized with fallbacks for any failures")
+            logger.info("All resources initialized with fallbacks for any failures")
         except Exception as e:
             logger.error(f"Failed to initialize resources: {e}", exc_info=True)
             self._initialized = False  # Ensure this is set on failure
@@ -446,9 +402,7 @@ class ResourceManager:
             self.initialize()
             return self._initialized  # Return the actual status
         except Exception as e:
-            logger.error(
-                f"ResourceManager init_all_resources failed: {e}",
-                exc_info=True)
+            logger.error(f"ResourceManager init_all_resources failed: {e}", exc_info=True)
             self._initialized = False  # Ensure this is set on failure
             return False
 
@@ -467,15 +421,12 @@ class ResourceManager:
                 else:
                     logger.info("Watchdog thread stopped.")
             else:
-                logger.warning(
-                    "Watchdog thread exists but _watchdog_stop_event is missing."
-                )
+                logger.warning("Watchdog thread exists but _watchdog_stop_event is missing.")
         elif self._watchdog_thread:  # Check if it exists even if not alive
             logger.info("Watchdog thread was found but not alive.")
 
         # Cleanup other resources
-        for name, res in reversed(
-                list(self._resources.items())):  # Iterate in reverse
+        for name, res in reversed(list(self._resources.items())):  # Iterate in reverse
             if res is None:
                 continue
             logger.debug(f"Cleaning up resource: {name}")
@@ -491,9 +442,7 @@ class ResourceManager:
                     res.stop()
                 # Add other common cleanup methods if necessary
             except Exception as e:
-                logger.error(
-                    f"Error cleaning up resource '{name}': {e}",
-                    exc_info=True)
+                logger.error(f"Error cleaning up resource '{name}': {e}", exc_info=True)
 
         self._resources.clear()
         self._initialized = False  # Mark as not initialized after cleanup
@@ -511,10 +460,7 @@ class ResourceManager:
         """
         with self._lock:
             if not self._initialized:
-                logger.warning(
-                    f"Attempted to get resource '{name}' "
-                    "but resources not initialized."
-                )
+                logger.warning(f"Attempted to get resource '{name}' " "but resources not initialized.")
                 return None
             return self._resources.get(name)
 
@@ -544,15 +490,13 @@ class ResourceManager:
         """Get the sensor interface instance."""
         si = self.get_resource("sensor_interface")
         if si is None and self._initialized:  # Try to init on demand if not present
-            logger.info(
-                "Sensor interface not found, attempting on-demand initialization.")
+            logger.info("Sensor interface not found, attempting on-demand initialization.")
             try:
                 self._resources["sensor_interface"] = get_sensor_interface()
                 logger.info("Sensor interface initialized on demand.")
                 return self._resources["sensor_interface"]
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize sensor interface on demand: {e}")
+                logger.error(f"Failed to initialize sensor interface on demand: {e}")
                 return None
         return si
 
@@ -560,15 +504,11 @@ class ResourceManager:
         """Get the GPS serial port instance."""
         gps = self.get_resource("gps_serial")
         if gps is None and self._initialized:  # Try to init on demand
-            logger.info(
-                "GPS serial port not found, attempting on-demand initialization.")
+            logger.info("GPS serial port not found, attempting on-demand initialization.")
             try:
                 gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyS0"
-                self._resources["gps_serial"] = SerialPort(
-                    gps_port_val, GPS_BAUDRATE)
-                logger.info(
-                    f"GPS serial port initialized on demand on {gps_port_val}"
-                )
+                self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
+                logger.info(f"GPS serial port initialized on demand on {gps_port_val}")
                 return self._resources["gps_serial"]
             except Exception as e:
                 logger.error(f"Failed to initialize GPS serial on demand: {e}")
@@ -583,8 +523,7 @@ class ResourceManager:
                 web_if.start()  # Assumed to be non-blocking
                 logger.info("Web interface started via ResourceManager.")
             except Exception as e:
-                logger.error(
-                    f"Failed to start web interface via ResourceManager: {e}")
+                logger.error(f"Failed to start web interface via ResourceManager: {e}")
         else:
             logger.warning("Web interface not available to start.")
 
@@ -602,8 +541,11 @@ class ResourceManager:
                 with open(self.user_polygon_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 home_location = data.get("home", default_home)
-                if (isinstance(home_location, list) and len(home_location) == 2 and all(
-                        isinstance(coord, (int, float)) for coord in home_location)):
+                if (
+                    isinstance(home_location, list)
+                    and len(home_location) == 2
+                    and all(isinstance(coord, (int, float)) for coord in home_location)
+                ):
                     return home_location
                 else:
                     logger.warning(
@@ -614,8 +556,7 @@ class ResourceManager:
                     return default_home
             else:
                 logger.warning(
-                    f"User polygon file not found: {self.user_polygon_path}. "
-                    f"Using default home: {default_home}"
+                    f"User polygon file not found: {self.user_polygon_path}. " f"Using default home: {default_home}"
                 )
                 return default_home
         except Exception as e:
@@ -634,8 +575,11 @@ class ResourceManager:
             path_planner = self.get_path_planner()
             # MODIFIED: Access boundary_points directly from
             # path_planner.pattern_config
-            if path_planner and hasattr(path_planner, 'pattern_config') and \
-               hasattr(path_planner.pattern_config, 'boundary_points'):
+            if (
+                path_planner
+                and hasattr(path_planner, "pattern_config")
+                and hasattr(path_planner.pattern_config, "boundary_points")
+            ):
                 boundary = path_planner.pattern_config.boundary_points
                 if boundary:
                     return boundary
@@ -648,14 +592,10 @@ class ResourceManager:
                 # Add validation for boundary points format if necessary
                 return boundary
             else:
-                logger.warning(
-                    f"User polygon file not found: {self.user_polygon_path}. "
-                    "Returning empty boundary."
-                )
+                logger.warning(f"User polygon file not found: {self.user_polygon_path}. " "Returning empty boundary.")
                 return default_boundary
         except Exception as e:
-            logger.error(
-                f"Error reading boundary points: {e}. Returning empty boundary.")
+            logger.error(f"Error reading boundary points: {e}. Returning empty boundary.")
             return default_boundary
 
     def get_safety_status(self):
@@ -678,24 +618,19 @@ class ResourceManager:
             try:
                 return sensor_interface.get_safety_status()
             except Exception as e:
-                logger.error(
-                    f"Error getting safety status from interface: {e}")
-                default_status["status_message"] = (
-                    "Error retrieving status from sensor interface."
-                )
+                logger.error(f"Error getting safety status from interface: {e}")
+                default_status["status_message"] = "Error retrieving status from sensor interface."
                 default_status["system_error"] = True
                 return default_status
         else:
             # Log a warning if the sensor interface is unavailable, but not too
             # frequently
             current_time = time.time()
-            if not self._safety_status_vars["warning_logged"] or \
-               (current_time - self._safety_status_vars["last_warning_time"] >
-                    self._safety_status_vars["warning_interval"]):
-                logger.warning(
-                    "Sensor interface unavailable for safety status. "
-                    "Returning default safe status."
-                )
+            if not self._safety_status_vars["warning_logged"] or (
+                current_time - self._safety_status_vars["last_warning_time"]
+                > self._safety_status_vars["warning_interval"]
+            ):
+                logger.warning("Sensor interface unavailable for safety status. " "Returning default safe status.")
                 self._safety_status_vars["warning_logged"] = True
                 self._safety_status_vars["last_warning_time"] = current_time
             return default_status
@@ -706,7 +641,7 @@ class ResourceManager:
         return {
             "state": self.current_state.value,
             "initialized": self._initialized,
-            "resources_available": list(self._resources.keys())
+            "resources_available": list(self._resources.keys()),
         }
 
     def get_battery_status(self):
@@ -741,8 +676,7 @@ class ResourceManager:
                     "status": "Data acquired",
                 }
             except Exception as e:
-                logger.warning(
-                    f"Could not retrieve battery info from INA3221: {e}")
+                logger.warning(f"Could not retrieve battery info from INA3221: {e}")
         return {
             "voltage": None,
             "current": None,
@@ -758,8 +692,7 @@ class ResourceManager:
             dict: GPS latitude, longitude, altitude, satellites, fix_quality or None.
         """
         gps_device = self.get_gps()  # Uses the on-demand init if needed
-        if gps_device and hasattr(
-                gps_device, "read_line"):  # MODIFIED: Check for read_line
+        if gps_device and hasattr(gps_device, "read_line"):  # MODIFIED: Check for read_line
             try:
                 # GPS parsing depends heavily on SerialPort and GPS module
                 # capabilities.
@@ -772,7 +705,7 @@ class ResourceManager:
                     logger.debug(f"Raw GPS data: {raw_data}")
                     if "$GPGGA" in raw_data:  # Example check for GGA sentence
                         # Basic parsing attempt (highly simplified)
-                        parts = raw_data.split(',')
+                        parts = raw_data.split(",")
                         lat, lon = None, None
                         if len(parts) > 5 and parts[2] and parts[4]:
                             try:
@@ -784,32 +717,23 @@ class ResourceManager:
                                 lon_min = lon_raw % 100
                                 lat = lat_deg + (lat_min / 60)
                                 lon = lon_deg + (lon_min / 60)
-                                if parts[3] == 'S':
+                                if parts[3] == "S":
                                     lat = -lat
-                                if parts[5] == 'W':
+                                if parts[5] == "W":
                                     lon = -lon
                                 return {
                                     "status": "Fix acquired (parsed GPGGA)",
                                     "latitude": lat,
                                     "longitude": lon,
-                                    "raw": raw_data
+                                    "raw": raw_data,
                                 }
                             except ValueError:
-                                logger.warning(
-                                    f"Could not parse lat/lon from GPGGA: {raw_data}")
-                        return {
-                            "status": "Fix acquired (raw GPGGA)",
-                            "raw": raw_data}
-                return {
-                    "status": "No GPS data or fix",
-                    "latitude": None,
-                    "longitude": None}
+                                logger.warning(f"Could not parse lat/lon from GPGGA: {raw_data}")
+                        return {"status": "Fix acquired (raw GPGGA)", "raw": raw_data}
+                return {"status": "No GPS data or fix", "latitude": None, "longitude": None}
             except Exception as e:
                 logger.warning(f"Error reading from GPS: {e}")
-        return {
-            "status": "GPS unavailable",
-            "latitude": None,
-            "longitude": None}
+        return {"status": "GPS unavailable", "latitude": None, "longitude": None}
 
     def get_sensor_data(self):
         """
@@ -834,22 +758,10 @@ class ResourceManager:
                         "heading": heading,
                         "roll": roll,
                         "pitch": pitch,
-                        "acceleration": (
-                            imu.get_acceleration()
-                            if hasattr(imu, "get_acceleration") else [0, 0, 0]
-                        ),
-                        "gyroscope": (
-                            imu.get_gyroscope()
-                            if hasattr(imu, "get_gyroscope") else [0, 0, 0]
-                        ),
-                        "quaternion": (
-                            imu.get_quaternion()
-                            if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]
-                        ),
-                        "temperature": (
-                            imu.get_temperature()
-                            if hasattr(imu, "get_temperature") else 0.0
-                        ),
+                        "acceleration": (imu.get_acceleration() if hasattr(imu, "get_acceleration") else [0, 0, 0]),
+                        "gyroscope": (imu.get_gyroscope() if hasattr(imu, "get_gyroscope") else [0, 0, 0]),
+                        "quaternion": (imu.get_quaternion() if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]),
+                        "temperature": (imu.get_temperature() if hasattr(imu, "get_temperature") else 0.0),
                     }
                 except Exception as e:
                     logger.warning(f"Failed to get IMU data: {e}")
@@ -857,7 +769,7 @@ class ResourceManager:
 
             # Time-of-Flight (ToF) Data
             tof_sensors = self.get_resource("tof")
-            if tof_sensors and hasattr(tof_sensors, 'get_distances'):
+            if tof_sensors and hasattr(tof_sensors, "get_distances"):
                 try:
                     # Use get_distances()
                     sensor_data["tof"] = tof_sensors.get_distances()
@@ -865,9 +777,7 @@ class ResourceManager:
                     logger.warning(f"Failed to get ToF data: {e}")
                     sensor_data["tof"] = {"error": str(e)}
             elif tof_sensors:
-                logger.warning(
-                    "ToF sensors object present but 'get_distances' method missing."
-                )
+                logger.warning("ToF sensors object present but 'get_distances' method missing.")
                 sensor_data["tof"] = {"error": "get_distances method missing"}
 
             # Power Monitor (INA3221) Data
@@ -905,11 +815,8 @@ class ResourceManager:
                     logger.warning(f"Failed to get blade status: {e}")
                     sensor_data["blade_status"] = {"error": str(e)}
             elif blade_controller:
-                logger.warning(
-                    "Blade controller object present but 'get_state' method missing."
-                )
-                sensor_data["blade_status"] = {
-                    "status": "get_state method missing"}
+                logger.warning("Blade controller object present but 'get_state' method missing.")
+                sensor_data["blade_status"] = {"status": "get_state method missing"}
 
             # Motor Driver Status (Example)
             motor_driver = self.get_resource("motor_driver")
@@ -920,31 +827,23 @@ class ResourceManager:
                     logger.warning(f"Failed to get motor driver status: {e}")
                     sensor_data["motor_driver_status"] = {"error": str(e)}
             elif motor_driver:
-                sensor_data["motor_driver_status"] = {
-                    "status": "get_status method missing"}
+                sensor_data["motor_driver_status"] = {"status": "get_status method missing"}
 
             # Camera Status
             camera = self.get_resource("camera")
             # Use is_operational()
             if camera and hasattr(camera, "is_operational"):
                 try:
-                    sensor_data["camera_status"] = {
-                        "operational": camera.is_operational()
-                    }
+                    sensor_data["camera_status"] = {"operational": camera.is_operational()}
                 except Exception as e:
                     logger.warning(f"Failed to get camera status: {e}")
                     sensor_data["camera_status"] = {"error": str(e)}
             elif camera:
-                logger.warning(
-                    "Camera object present but 'is_operational' method missing."
-                )
-                sensor_data["camera_status"] = {
-                    "status": "is_operational method missing"}
+                logger.warning("Camera object present but 'is_operational' method missing.")
+                sensor_data["camera_status"] = {"status": "is_operational method missing"}
 
         except Exception as e:
-            logger.error(
-                f"General error collecting sensor data: {e}",
-                exc_info=True)
+            logger.error(f"General error collecting sensor data: {e}", exc_info=True)
             sensor_data["collection_error"] = str(e)
 
         return sensor_data
@@ -953,16 +852,13 @@ class ResourceManager:
         """Get the avoidance algorithm instance."""
         aa = self.get_resource("avoidance_algorithm")
         if aa is None and self._initialized:
-            logger.info(
-                "Avoidance algorithm not found, attempting on-demand initialization.")
+            logger.info("Avoidance algorithm not found, attempting on-demand initialization.")
             try:
-                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(
-                    self)
+                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(self)
                 logger.info("Avoidance algorithm initialized on demand.")
                 return self._resources["avoidance_algorithm"]
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize avoidance algorithm on demand: {e}")
+                logger.error(f"Failed to initialize avoidance algorithm on demand: {e}")
                 return None
         return aa
 
@@ -993,15 +889,14 @@ class ResourceManager:
             target=self._watchdog_loop,
             args=(self._watchdog_stop_event,),
             daemon=True,  # Daemon threads exit when the main program exits
-            name="SystemWatchdogThread"
+            name="SystemWatchdogThread",
         )
         self._watchdog_thread.start()
         logger.info("System watchdog thread started.")
 
     def start(self):
         """Start the main controller operations (placeholder)."""
-        logger.info(
-            "Main controller 'start' method called (currently a placeholder).")
+        logger.info("Main controller 'start' method called (currently a placeholder).")
         # This is where you would typically start the main operational logic,
         # perhaps by starting a state machine or main control loop in a thread.
         # For now, it does nothing beyond logging.
@@ -1027,8 +922,7 @@ class ResourceManager:
         nav_controller = self.get_navigation()
         if nav_controller and hasattr(nav_controller, "enable_manual_control"):
             try:
-                nav_controller.enable_manual_control(
-                    True)  # MODIFIED: Pass True
+                nav_controller.enable_manual_control(True)  # MODIFIED: Pass True
                 # Consider a dedicated MANUAL_CONTROL state
                 self.current_state = SystemState.IDLE
                 logger.info("Manual control enabled.")
@@ -1037,9 +931,7 @@ class ResourceManager:
                 logger.error(f"Failed to enable manual control: {e}")
                 return False
         else:
-            logger.warning(
-                "Nav controller unavailable or no manual control support."
-            )
+            logger.warning("Nav controller unavailable or no manual control support.")
             return False
 
     def stop_all_operations(self) -> bool:
@@ -1056,8 +948,7 @@ class ResourceManager:
                 motor_driver.stop_motors()
                 logger.info("Motors stopped.")
             elif motor_driver:
-                logger.warning(
-                    "Motor driver present but 'stop_motors' method missing.")
+                logger.warning("Motor driver present but 'stop_motors' method missing.")
             else:
                 logger.warning("Motor driver not available to stop motors.")
                 success = False
@@ -1068,11 +959,9 @@ class ResourceManager:
                 blade_controller.stop_blade()
                 logger.info("Blades stopped.")
             elif blade_controller:
-                logger.warning(
-                    "Blade controller present but 'stop_blade' method missing.")
+                logger.warning("Blade controller present but 'stop_blade' method missing.")
             else:
-                logger.warning(
-                    "Blade controller not available to stop blades.")
+                logger.warning("Blade controller not available to stop blades.")
                 success = False
 
             self.current_state = SystemState.IDLE  # Or EMERGENCY_STOP if appropriate
@@ -1094,8 +983,7 @@ class ResourceManager:
     def get_gps_coordinates(self):
         """Get GPS coordinates, simple wrapper around get_gps_location."""
         gps_info = self.get_gps_location()
-        if gps_info and gps_info.get(
-                "latitude") is not None and gps_info.get("longitude") is not None:
+        if gps_info and gps_info.get("latitude") is not None and gps_info.get("longitude") is not None:
             return {"lat": gps_info["latitude"], "lng": gps_info["longitude"]}
         return None
 
@@ -1112,16 +1000,13 @@ class ResourceManager:
         """
         try:
             # Normalize location format
-            if isinstance(
-                    location,
-                    dict) and "lat" in location and "lng" in location:
+            if isinstance(location, dict) and "lat" in location and "lng" in location:
                 normalized_location = [location["lat"], location["lng"]]
             elif isinstance(location, (list, tuple)) and len(location) == 2:
                 # Ensure it's a list for JSON
                 normalized_location = list(location)
             else:
-                logger.error(
-                    f"Invalid location format for set_home_location: {location}")
+                logger.error(f"Invalid location format for set_home_location: {location}")
                 return False
 
             # Load existing data or create new if file doesn't exist
@@ -1132,18 +1017,14 @@ class ResourceManager:
                         data = json.load(f)
                 except json.JSONDecodeError:
                     logger.warning(
-                        f"Error decoding JSON from {self.user_polygon_path}. "
-                        "Will overwrite with new data."
+                        f"Error decoding JSON from {self.user_polygon_path}. " "Will overwrite with new data."
                     )
                 except Exception as e:
                     logger.warning(
-                        f"Error reading config file {self.user_polygon_path}, "
-                        f"will create/overwrite: {e}"
+                        f"Error reading config file {self.user_polygon_path}, " f"will create/overwrite: {e}"
                     )
             else:
-                logger.info(
-                    f"Config file "
-                    f"{self.user_polygon_path} not found. Creating new.")
+                logger.info(f"Config file " f"{self.user_polygon_path} not found. Creating new.")
 
             # Update home location
             data["home"] = normalized_location
@@ -1152,15 +1033,10 @@ class ResourceManager:
             try:
                 with open(self.user_polygon_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=4)  # Add indent for readability
-                logger.info(
-                    f"Home location saved to {self.user_polygon_path}"
-                    f": {normalized_location}"
-                )
+                logger.info(f"Home location saved to {self.user_polygon_path}" f": {normalized_location}")
                 return True
             except Exception as e:
-                logger.error(
-                    f"Failed to save home location to "
-                    f"{self.user_polygon_path}: {e}")
+                logger.error(f"Failed to save home location to " f"{self.user_polygon_path}: {e}")
                 return False
         except Exception as e:
             logger.error(f"Error setting home location: {e}", exc_info=True)
@@ -1190,10 +1066,7 @@ def main():
     exit_code = 0
 
     def signal_handler(signum, frame):
-        logger.info(
-            f"Signal {signal.Signals(signum).name} received. "
-            "Initiating graceful shutdown..."
-        )
+        logger.info(f"Signal {signal.Signals(signum).name} received. " "Initiating graceful shutdown...")
         shutdown_flag.set()
 
     # Register signal handlers
@@ -1203,9 +1076,7 @@ def main():
     try:
         resource_manager = ResourceManager()
         if not resource_manager.init_all_resources():
-            logger.error(
-                "Failed to initialize critical resources. Exiting application."
-            )
+            logger.error("Failed to initialize critical resources. Exiting application.")
             exit_code = 1
             # No need to call sys.exit here; finally block handles cleanup.
             # Setting shutdown_flag ensures the loop (if it were to run)
@@ -1216,9 +1087,7 @@ def main():
             resource_manager._start_watchdog()  # Start watchdog after successful init
             resource_manager.start_web_interface()  # Start web UI
 
-            logger.info(
-                "Main controller running. Waiting for shutdown signal."
-            )
+            logger.info("Main controller running. Waiting for shutdown signal.")
             while not shutdown_flag.is_set():
                 # Main operational logic would go here or be managed by
                 # other threads started by ResourceManager or a dedicated
@@ -1226,8 +1095,7 @@ def main():
                 # This loop keeps the main thread alive for signals.
                 time.sleep(0.5)  # Check flag periodically
 
-            logger.info(
-                "Shutdown signal received or init failed, exiting main loop.")
+            logger.info("Shutdown signal received or init failed, exiting main loop.")
 
     except SystemExit as e:
         # This might be raised if sys.exit() is called directly somewhere
@@ -1242,10 +1110,8 @@ def main():
         if resource_manager:
             resource_manager.cleanup_all_resources()
         else:
-            logger.info(
-                "ResourceManager was not instantiated, no cleanup needed from it.")
-        logger.info(
-            f"Shutdown sequence complete. Exiting with code {exit_code}.")
+            logger.info("ResourceManager was not instantiated, no cleanup needed from it.")
+        logger.info(f"Shutdown sequence complete. Exiting with code {exit_code}.")
         # Ensure the process terminates with the correct code,
         # especially when run directly as a script.
         if __name__ == "__main__":

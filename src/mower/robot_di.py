@@ -8,18 +8,9 @@ maintainability.
 
 from typing import Optional
 
-from mower.hardware.adapters.blade_controller_adapter import (
-    BladeControllerAdapter,
-)
-from mower.interfaces.hardware import (
-    BladeControllerInterface,
-    MotorDriverInterface,
-)
-from mower.interfaces.navigation import (
-    GpsInterface,
-    LocalizationInterface,
-    PathPlannerInterface,
-)
+from mower.hardware.adapters.blade_controller_adapter import BladeControllerAdapter
+from mower.interfaces.hardware import BladeControllerInterface, MotorDriverInterface
+from mower.interfaces.navigation import GpsInterface, LocalizationInterface, PathPlannerInterface
 from mower.interfaces.obstacle_detection import AvoidanceAlgorithmInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -117,12 +108,12 @@ def create_robot(
         Robot: A fully initialized Robot instance
     """
     from mower.mower import (
-        get_blade_controller,
-        get_robohat_driver,
-        get_localization,
         get_avoidance_algorithm,
+        get_blade_controller,
         get_gps_nmea_positions,
+        get_localization,
         get_path_planner,
+        get_robohat_driver,
     )
 
     # Use provided dependencies or create default ones

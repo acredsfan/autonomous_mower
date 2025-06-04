@@ -85,7 +85,7 @@ list_completed_steps() {
 prompt_skip_completed() {
     local step_name="$1"
     local description="$2"
-    
+
     if is_step_completed "$step_name"; then
         local completion_time=$(get_checkpoint_status "$step_name")        print_info "$description appears to be already completed (completed: $completion_time)"
         prompt_user "Skip this step?" "Y" "Y/n"
@@ -103,21 +103,21 @@ prompt_skip_completed() {
 # Function to auto-detect completed installations
 auto_detect_completed_steps() {
     print_info "Auto-detecting completed installation steps..."
-    
 
-    
+
+
     # Check system packages
     if command_exists i2c-detect && command_exists gpsd && ! is_step_completed "system_packages"; then
         mark_step_completed "system_packages"
         print_info "✓ Detected installed system packages"
     fi
-    
+
     # Check PYTHONPATH setup
     if grep -q "PYTHONPATH.*src" "$HOME/.bashrc" 2>/dev/null && ! is_step_completed "pythonpath_setup"; then
         mark_step_completed "pythonpath_setup"
         print_info "✓ Detected PYTHONPATH configuration"
     fi
-    
+
     # Check YOLOv8 models
     if [ -f "models/yolov8n.pt" ] || [ -f "models/detect.tflite" ]; then
         if ! is_step_completed "yolov8_setup"; then
@@ -125,7 +125,7 @@ auto_detect_completed_steps() {
             print_info "✓ Detected YOLOv8 models"
         fi
     fi
-    
+
     # Check Coral TPU
     if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && command_exists python3 && python3 -c "import pycoral" 2>/dev/null; then
         if ! is_step_completed "coral_tpu_setup"; then
@@ -133,7 +133,7 @@ auto_detect_completed_steps() {
             print_info "✓ Detected Coral TPU installation"
         fi
     fi
-    
+
     # Check watchdog
     if systemctl is-enabled --quiet watchdog 2>/dev/null && [ -f "/etc/watchdog.conf" ]; then
         if ! is_step_completed "hardware_watchdog"; then
@@ -141,7 +141,7 @@ auto_detect_completed_steps() {
             print_info "✓ Detected hardware watchdog setup"
         fi
     fi
-    
+
     # Check systemd service
     if systemctl is-enabled --quiet autonomous-mower 2>/dev/null; then
         if ! is_step_completed "systemd_service"; then
@@ -190,13 +190,13 @@ prompt_user() {
     local prompt_text="$1"
     local default_answer="${2:-y}"  # Default to 'y' if not specified
     local options="${3:-y/n}"       # Default options format
-    
+
     if [ "$NON_INTERACTIVE" = true ]; then
         echo -e "${YELLOW}${prompt_text} (${options}) [NON-INTERACTIVE: defaulting to '${default_answer}']${NC}"
         REPLY="$default_answer"
         return 0
     fi
-    
+
     read -p "${prompt_text} (${options}) " -n 1 -r; echo
     return 0
 }
@@ -205,13 +205,13 @@ prompt_user() {
 prompt_selection() {
     local prompt_text="$1"
     local default_choice="${2:-1}"  # Default choice if not specified
-    
+
     if [ "$NON_INTERACTIVE" = true ]; then
         echo -e "${YELLOW}${prompt_text} [NON-INTERACTIVE: defaulting to '${default_choice}']${NC}"
         choice="$default_choice"
         return 0
     fi
-    
+
     read -p "${prompt_text} " choice
     return 0
 }
@@ -219,12 +219,12 @@ prompt_selection() {
 # Function to prompt for continuation (Enter to continue)
 prompt_continue() {
     local prompt_text="${1:-Press Enter to continue...}"
-    
+
     if [ "$NON_INTERACTIVE" = true ]; then
         echo -e "${YELLOW}${prompt_text} [NON-INTERACTIVE: continuing automatically]${NC}"
         return 0
     fi
-    
+
     read -p "${prompt_text}" -r
     return 0
 }
@@ -236,7 +236,7 @@ get_config_txt_target() {
         echo ""
         return
     fi
-    
+
     local CONFIG_TXT_NEW="/boot/firmware/config.txt"
     local CONFIG_TXT_OLD="/boot/config.txt"
     if [ -f "$CONFIG_TXT_NEW" ]; then
@@ -255,7 +255,7 @@ enable_required_interfaces() {
         print_info "Hardware interfaces (I2C, UART) are Pi-specific and will be skipped for testing environments."
         return 0
     fi
-    
+
     print_info "Checking and attempting to enable required hardware interfaces (I2C, Primary UART)..."
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
     local CHANGES_MADE_CONFIG=false
@@ -325,7 +325,7 @@ enable_required_interfaces() {
 
 # Function to validate Raspberry Pi hardware
 validate_hardware() {
-    local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target) 
+    local CONFIG_TXT_TARGET_FOR_MSG=$(get_config_txt_target)
 
     if [ "$IS_PI" = false ]; then
         print_warning "Non-Raspberry Pi system detected. Skipping Pi-specific hardware validation."
@@ -407,7 +407,7 @@ setup_additional_uart() {
         print_info "Additional UART configuration is Pi-specific and will be skipped for testing environments."
         return 0
     fi
-    
+
     print_info "Setting up additional UART (UART2)..."
     local DTOVERLAY_ENTRY="dtoverlay=uart2"
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
@@ -428,7 +428,7 @@ setup_additional_uart() {
         check_command "Backing up $CONFIG_TXT_TARGET" || return 1
 
         print_info "Adding '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET..."
-        echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null 
+        echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
         echo "${DTOVERLAY_ENTRY}" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
         check_command "Adding '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET" || {
             print_warning "Failed to add '${DTOVERLAY_ENTRY}' to $CONFIG_TXT_TARGET. You may need to add it manually."
@@ -442,10 +442,10 @@ setup_additional_uart() {
 # Function to setup watchdog
 setup_watchdog() {
     print_info "Setting up hardware watchdog..."
-    
+
     # Run diagnostics first
     diagnose_watchdog_hardware
-    
+
     # Check if we're on a Raspberry Pi first using global IS_PI variable
     if [ "$IS_PI" = true ]; then
         print_info "Detected Raspberry Pi hardware."
@@ -453,7 +453,7 @@ setup_watchdog() {
         print_warning "Non-Raspberry Pi system detected. Hardware watchdog may not be available."
         print_info "Installing watchdog package for compatibility, but hardware features will be limited."
     fi
-    
+
     # Install watchdog package
     if ! command -v watchdog >/dev/null 2>&1; then
         print_info "Installing watchdog package..."
@@ -472,7 +472,7 @@ setup_watchdog() {
         print_info "Loading Raspberry Pi watchdog module..."
         if sudo modprobe bcm2835_wdt 2>/dev/null; then
             print_info "bcm2835_wdt module loaded successfully."
-            
+
             # Add to /etc/modules for persistence
             if ! grep -q "^bcm2835_wdt" /etc/modules; then
                 echo "bcm2835_wdt" | sudo tee -a /etc/modules > /dev/null
@@ -486,26 +486,26 @@ setup_watchdog() {
         print_warning "Hardware watchdog device /dev/watchdog not found."
         if [ "$IS_PI" = true ]; then
             print_warning "This may indicate a problem with the Raspberry Pi watchdog setup."
-            
+
             # Check and fix boot configuration
             local CONFIG_TXT_TARGET=$(get_config_txt_target)
             if [ -n "$CONFIG_TXT_TARGET" ]; then
                 print_info "Checking boot configuration for watchdog settings..."
-                
+
                 if ! grep -q "dtparam=watchdog=on" "$CONFIG_TXT_TARGET" 2>/dev/null; then
                     print_info "Watchdog not enabled in boot config. Adding dtparam=watchdog=on..."
-                    
+
                     # Backup config.txt
                     sudo cp "$CONFIG_TXT_TARGET" "${CONFIG_TXT_TARGET}.bak_watchdog_$(date +%Y%m%d_%H%M%S)"
-                    
+
                     # Add watchdog parameter
                     echo "" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
                     echo "# Enable hardware watchdog" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
                     echo "dtparam=watchdog=on" | sudo tee -a "$CONFIG_TXT_TARGET" > /dev/null
-                    
+
                     print_success "Added dtparam=watchdog=on to $CONFIG_TXT_TARGET"
                     POST_INSTALL_MESSAGES+="[IMPORTANT] Watchdog enabled in boot config. A REBOOT is required for hardware watchdog to become available.\\n"
-                    
+
                     print_warning "Skipping watchdog service setup until after reboot."
                     print_info "After rebooting, you can run the installation again or manually start watchdog with: sudo systemctl start watchdog"
                     return 0
@@ -516,7 +516,7 @@ setup_watchdog() {
             else
                 print_warning "Could not locate boot configuration file to enable watchdog."
             fi
-            
+
             print_info "You can manually enable the watchdog by adding 'dtparam=watchdog=on' to /boot/config.txt and rebooting."
         else
             print_warning "Hardware watchdog not available on this system. This is normal for non-Raspberry Pi systems."
@@ -526,7 +526,7 @@ setup_watchdog() {
     fi
 
     print_info "Hardware watchdog device found at /dev/watchdog."
-    
+
     # Backup original watchdog.conf if it exists and no backup exists
     if [ -f /etc/watchdog.conf ] && [ ! -f /etc/watchdog.conf.backup ]; then
         if sudo cp /etc/watchdog.conf /etc/watchdog.conf.backup; then
@@ -535,10 +535,10 @@ setup_watchdog() {
             print_warning "Failed to backup /etc/watchdog.conf"
         fi
     fi
-    
+
     # Configure watchdog.conf
     print_info "Configuring watchdog settings..."
-    
+
     # Set watchdog device
     if sudo grep -q "^#watchdog-device" /etc/watchdog.conf 2>/dev/null; then
         sudo sed -i 's|^#watchdog-device\s*=\s*/dev/watchdog|watchdog-device = /dev/watchdog|' /etc/watchdog.conf
@@ -547,7 +547,7 @@ setup_watchdog() {
         echo "watchdog-device = /dev/watchdog" | sudo tee -a /etc/watchdog.conf > /dev/null
         print_info "Added watchdog-device to /etc/watchdog.conf."
     fi
-    
+
     # Set max load threshold
     if sudo grep -q "^#max-load-1" /etc/watchdog.conf 2>/dev/null; then
         sudo sed -i 's|^#max-load-1\s*=\s*24|max-load-1 = 24|' /etc/watchdog.conf
@@ -565,13 +565,13 @@ setup_watchdog() {
         sudo sed -i 's|^watchdog-timeout\s*=.*|watchdog-timeout = 15|' /etc/watchdog.conf
         print_info "Set watchdog-timeout to 15 seconds in /etc/watchdog.conf."
     fi
-    
+
     # Test watchdog configuration
     print_info "Testing watchdog configuration..."
     local config_test_output
     config_test_output=$(sudo watchdog -t 1 -c /etc/watchdog.conf 2>&1)
     local config_test_result=$?
-    
+
     if [ $config_test_result -eq 0 ]; then
         print_info "Watchdog configuration test passed."
     else
@@ -585,38 +585,38 @@ setup_watchdog() {
         sudo systemctl stop watchdog 2>/dev/null || true
         sleep 2
     fi
-    
+
     # Disable first to clear any stale state
     if sudo systemctl is-enabled --quiet watchdog 2>/dev/null; then
         print_info "Disabling watchdog service to clear any stale state..."
         sudo systemctl disable watchdog 2>/dev/null || true
         sleep 1
     fi
-    
+
     # Reload systemd daemon to ensure clean state
     print_info "Reloading systemd daemon..."
     sudo systemctl daemon-reload
-    
+
     # Enable watchdog service with better error handling
     print_info "Enabling watchdog service..."
     local enable_output
     local enable_attempts=0
     local max_enable_attempts=3
-    
+
     while [ $enable_attempts -lt $max_enable_attempts ]; do
         enable_attempts=$((enable_attempts + 1))
         print_info "Enable attempt $enable_attempts of $max_enable_attempts..."
-        
+
         enable_output=$(sudo systemctl enable watchdog 2>&1)
         local enable_result=$?
-        
+
         if [ $enable_result -eq 0 ]; then
             print_info "Watchdog service enabled successfully."
             break
         else
             print_warning "Enable attempt $enable_attempts failed (exit code: $enable_result)"
             print_warning "Enable output: $enable_output"
-            
+
             if [ $enable_attempts -lt $max_enable_attempts ]; then
                 print_info "Retrying in 2 seconds..."
                 sleep 2
@@ -625,11 +625,11 @@ setup_watchdog() {
             else
                 print_error "Failed to enable watchdog service after $max_enable_attempts attempts"
                 print_error "Final enable output: $enable_output"
-                
+
                 # Check if it's a SysV init issue
                 if echo "$enable_output" | grep -q "systemd-sysv-install"; then
                     print_warning "Detected SysV init conflict. Attempting alternative approach..."
-                    
+
                     # Try manual symlink approach
                     if sudo ln -sf /lib/systemd/system/watchdog.service /etc/systemd/system/multi-user.target.wants/watchdog.service 2>/dev/null; then
                         print_info "Created manual service symlink."
@@ -638,7 +638,7 @@ setup_watchdog() {
                         break
                     fi
                 fi
-                
+
                 return 1
             fi
         fi
@@ -648,11 +648,11 @@ setup_watchdog() {
     local start_output
     local start_attempts=0
     local max_start_attempts=3
-    
+
     while [ $start_attempts -lt $max_start_attempts ]; do
         start_attempts=$((start_attempts + 1))
         print_info "Start attempt $start_attempts of $max_start_attempts..."
-        
+
         # Ensure device is ready
         if [ -e /dev/watchdog ]; then
             print_info "Watchdog device /dev/watchdog is available."
@@ -660,10 +660,10 @@ setup_watchdog() {
             print_warning "Watchdog device not available, waiting..."
             sleep 2
         fi
-        
+
         start_output=$(sudo systemctl start watchdog 2>&1)
         local start_result=$?
-        
+
         if [ $start_result -eq 0 ]; then
             print_success "Watchdog service started successfully."
             # Verify service is actually running after successful start
@@ -671,7 +671,7 @@ setup_watchdog() {
                 sleep 3
                 if sudo systemctl is-active --quiet watchdog; then
                     print_success "Watchdog service is running and active."
-                    
+
                     # Show brief status
                     local status_brief
                     status_brief=$(sudo systemctl status watchdog --no-pager -l | head -10)
@@ -679,11 +679,11 @@ setup_watchdog() {
                 else
                     print_warning "Watchdog service was started but is not currently active."
                     print_info "Checking service status for more details..."
-                    
+
                     local full_status
                     full_status=$(sudo systemctl status watchdog --no-pager -l || true)
                     print_warning "Full service status:\n$full_status"
-                    
+
                     local recent_logs
                     recent_logs=$(sudo journalctl -u watchdog --no-pager -l --since "5 minutes ago" || true)
                     print_warning "Recent service logs:\n$recent_logs"
@@ -693,17 +693,17 @@ setup_watchdog() {
         else
             print_warning "Start attempt $start_attempts failed (exit code: $start_result)"
             print_warning "Start output: $start_output"
-            
+
             # Handle specific "Job canceled" issue
             if echo "$start_output" | grep -q -i "canceled\|cancelled"; then
                 print_warning "Detected job cancellation. This is often due to timing issues."
                 print_info "Attempting to resolve by resetting service state..."
-                
+
                 # Reset the service state
                 sudo systemctl reset-failed watchdog 2>/dev/null || true
                 sudo systemctl daemon-reload
                 sleep 2
-                
+
                 if [ $start_attempts -lt $max_start_attempts ]; then
                     print_info "Retrying start in 3 seconds..."
                     sleep 3
@@ -716,20 +716,20 @@ setup_watchdog() {
                     break
                 fi
             fi
-            
+
             if [ $start_attempts -lt $max_start_attempts ]; then
                 print_info "Retrying in 2 seconds..."
                 sleep 2
             else
                 print_error "Failed to start watchdog service after $max_start_attempts attempts"
                 print_error "Final start output: $start_output"
-                
+
                 # Get detailed information about why it failed
                 print_info "Checking service status for error details..."
                 local detailed_status
                 detailed_status=$(sudo systemctl status watchdog --no-pager -l || true)
                 print_error "Detailed service status:\n$detailed_status"
-                
+
                 # Check recent logs
                 print_info "Checking recent service logs..."
                 local error_logs
@@ -741,19 +741,19 @@ setup_watchdog() {
                     print_warning "This is common on systems without proper watchdog hardware support."
                     print_info "You can manually check hardware support with: ls -la /dev/watchdog*"
                 fi
-                
+
                 # Offer graceful degradation
                 print_warning "Watchdog service failed to start. The system will continue without hardware watchdog protection."
                 print_info "You can manually start the watchdog later with: sudo systemctl start watchdog"
                 POST_INSTALL_MESSAGES+="[WARNING] Hardware watchdog service failed to start. System will run without watchdog protection. Check logs with 'sudo journalctl -u watchdog' for details.\\n"
-                
+
                 # Don't return 1 here to allow installation to continue
                 print_info "Continuing installation without watchdog service..."
                 return 0
             fi
         fi
     done
-    
+
     print_success "Hardware watchdog setup completed successfully."
     print_info "Watchdog will monitor system health and reboot if the system becomes unresponsive."
 }
@@ -761,7 +761,7 @@ setup_watchdog() {
 # Function to diagnose watchdog hardware support
 diagnose_watchdog_hardware() {
     print_info "Diagnosing watchdog hardware support..."
-    
+
     # Check for Raspberry Pi detection using global IS_PI variable
     if [ "$IS_PI" = true ]; then
         print_info "✓ Raspberry Pi detected"
@@ -769,7 +769,7 @@ diagnose_watchdog_hardware() {
         print_warning "⚠ Non-Raspberry Pi system detected. Hardware watchdog features will be limited."
         return 0
     fi
-    
+
     # Check for watchdog device
     if [ -e /dev/watchdog ]; then
         print_info "✓ Hardware watchdog device found: /dev/watchdog"
@@ -777,21 +777,21 @@ diagnose_watchdog_hardware() {
     else
         print_warning "⚠ No watchdog device found at /dev/watchdog"
     fi
-    
+
     # Check for watchdog module
     if lsmod | grep -q bcm2835_wdt; then
         print_info "✓ bcm2835_wdt module is loaded"
     else
         print_warning "⚠ bcm2835_wdt module is not loaded"
     fi
-    
+
     # Check /etc/modules
     if grep -q "^bcm2835_wdt" /etc/modules 2>/dev/null; then
         print_info "✓ bcm2835_wdt is in /etc/modules"
     else
         print_warning "⚠ bcm2835_wdt not found in /etc/modules"
     fi
-    
+
     # Check boot config
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
     if [ -n "$CONFIG_TXT_TARGET" ]; then
@@ -1017,17 +1017,17 @@ install_python_dependencies() {
 
 setup_mower_service() {
     print_info "Setting up autonomous mower system service..."
-    
+
     local PROJECT_ROOT_DIR
-    PROJECT_ROOT_DIR=$(pwd) 
+    PROJECT_ROOT_DIR=$(pwd)
     local SERVICE_TEMPLATE_FILE="scripts/autonomous-mower.service.template"
-    local SERVICE_FILE_NAME="autonomous-mower.service" 
-    local GENERATED_SERVICE_FILE="/tmp/$SERVICE_FILE_NAME" 
-    
+    local SERVICE_FILE_NAME="autonomous-mower.service"
+    local GENERATED_SERVICE_FILE="/tmp/$SERVICE_FILE_NAME"
+
     # Get current user for service configuration
     local CURRENT_USER
     CURRENT_USER=$(whoami)
-    
+
 
     # Use system-wide mower executable (installed by pip3 install -e .)
     local MOWER_EXECUTABLE_PATH="$(command -v mower)"
@@ -1123,7 +1123,7 @@ show_available_features() {
 # Function to install specific feature by number
 install_specific_feature() {
     local feature_num="$1"
-    
+
     case "$feature_num" in
         1)
             print_info "Installing Hardware Interfaces..."
@@ -1151,7 +1151,7 @@ install_specific_feature() {
                 "wget" "curl" "gnupg"
                 "gdal-bin" "libgdal-dev" "python3-gdal"
             )
-            
+
             # Pi-specific packages
             local pi_packages=(
                 "i2c-tools"
@@ -1159,12 +1159,12 @@ install_specific_feature() {
                 "python3-libgpiod"
                 "python3-picamera2"
             )
-            
+
             # Install base packages
             print_info "Installing base system packages..."
             sudo apt-get install -y "${base_packages[@]}"
             check_command "Installing base system packages" || return 1
-            
+
             # Install Pi-specific packages only on Raspberry Pi
             if [ "$IS_PI" = true ]; then
                 print_info "Installing Raspberry Pi specific packages..."
@@ -1173,7 +1173,7 @@ install_specific_feature() {
             else
                 print_info "Skipping Pi-specific packages on non-Pi system."
             fi
-            
+
             print_success "Essential system dependencies installed."
             mark_step_completed "system_packages"
             ;;
@@ -1181,14 +1181,14 @@ install_specific_feature() {
             print_info "Installing PYTHONPATH Configuration..."
             PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd)
             BASHRC_FILE="$HOME/.bashrc"
-            
+
             # Use appropriate shell config file for current user
             if [ "$IS_PI" = false ]; then
                 print_info "Non-Pi system detected. Setting up PYTHONPATH for current user: $USER"
             else
                 print_info "Setting up permanent PYTHONPATH in $BASHRC_FILE to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
             fi
-            
+
             if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" "$BASHRC_FILE" 2>/dev/null; then
                 echo "" >> "$BASHRC_FILE"
                 echo "# Autonomous Mower Python Path" >> "$BASHRC_FILE"
@@ -1206,13 +1206,13 @@ install_specific_feature() {
             ;;
         7)
             print_info "Installing YOLOv8 Models..."
-            setup_yolov8 
+            setup_yolov8
             mark_step_completed "yolov8_setup"
             ;;
         8)
             print_info "Installing Coral TPU Support..."
             CORAL_INSTALLED_OK=false
-            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
                 prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"
@@ -1248,17 +1248,17 @@ install_specific_feature() {
             ;;
         9)
             print_info "Installing Hardware Watchdog..."
-            setup_watchdog 
+            setup_watchdog
             mark_step_completed "hardware_watchdog"
             ;;
         10)
             print_info "Installing Emergency Stop Button..."
-            setup_emergency_stop 
+            setup_emergency_stop
             mark_step_completed "emergency_stop"
             ;;
         11)
             print_info "Installing Systemd Service..."
-            setup_mower_service 
+            setup_mower_service
             mark_step_completed "systemd_service"
             ;;
         *)
@@ -1275,14 +1275,14 @@ show_installation_menu() {
     print_info "         Autonomous Mower Installation Script"
     echo "==============================================================================="
     echo ""
-    
+
     # Show current status if checkpoints exist
     if [ -f "$CHECKPOINT_FILE" ]; then
         print_info "Current Installation Status:"
         list_completed_steps
         echo ""
     fi
-    
+
     echo "Installation Modes:"
     echo ""
     echo "  1. Fresh Installation (install everything from scratch)"
@@ -1299,7 +1299,7 @@ handle_specific_feature_menu() {
         show_available_features
         echo ""
         prompt_selection "Enter feature number to install (1-11), 'a' for all remaining, or 'q' to return to main menu:" "a"
-        
+
         case "$choice" in
             [1-9])
                 install_specific_feature "$choice"
@@ -1357,7 +1357,7 @@ run_full_installation() {
     if ! prompt_skip_completed "hardware_interfaces" "Hardware interfaces configuration"; then
         enable_required_interfaces
         validate_hardware
-        mark_step_completed "hardware_interfaces"    
+        mark_step_completed "hardware_interfaces"
     fi
     prompt_user "Do you want to attempt to set up an additional UART (UART2 on primary GPIOs)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1382,7 +1382,7 @@ run_full_installation() {
             "wget" "curl" "gnupg"
             "gdal-bin" "libgdal-dev" "python3-gdal"
         )
-        
+
         # Pi-specific packages
         local pi_packages=(
             "i2c-tools"
@@ -1390,12 +1390,12 @@ run_full_installation() {
             "python3-libgpiod"
             "python3-picamera2"
         )
-        
+
         # Install base packages
         print_info "Installing base system packages..."
         sudo apt-get install -y "${base_packages[@]}"
         check_command "Installing base system packages" || exit 1
-        
+
         # Install Pi-specific packages only on Raspberry Pi
         if [ "$IS_PI" = true ]; then
             print_info "Installing Raspberry Pi specific packages..."
@@ -1405,7 +1405,7 @@ run_full_installation() {
             print_info "Skipping Pi-specific packages (i2c-tools, gpsd, python3-libgpiod, python3-picamera2) on non-Pi system."
             POST_INSTALL_MESSAGES+="[INFO] Pi-specific hardware packages were skipped on non-Pi system.\\n"
         fi
-        
+
         print_success "Essential system dependencies installed."
         mark_step_completed "system_packages"
     fi
@@ -1414,14 +1414,14 @@ run_full_installation() {
     if ! prompt_skip_completed "pythonpath_setup" "PYTHONPATH configuration"; then
         PROJECT_ROOT_DIR_FOR_PYTHONPATH=$(pwd)
         BASHRC_FILE="$HOME/.bashrc"
-        
+
         # Use appropriate shell config file for current user
         if [ "$IS_PI" = false ]; then
             print_info "Non-Pi system detected. Setting up PYTHONPATH for current user: $USER"
         else
             print_info "Setting up permanent PYTHONPATH in $BASHRC_FILE to include ${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src..."
         fi
-        
+
         if ! grep -q "PYTHONPATH.*${PROJECT_ROOT_DIR_FOR_PYTHONPATH}/src" "$BASHRC_FILE" 2>/dev/null; then
             echo "" >> "$BASHRC_FILE"
             echo "# Autonomous Mower Python Path" >> "$BASHRC_FILE"
@@ -1433,13 +1433,13 @@ run_full_installation() {
         fi
         mark_step_completed "pythonpath_setup"
     fi
-    
+
     install_python_dependencies
 
     prompt_user "Do you want to install/configure YOLOv8 models?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "yolov8_setup" "YOLOv8 models installation"; then
-            setup_yolov8 
+            setup_yolov8
             mark_step_completed "yolov8_setup"
         fi
     else
@@ -1452,7 +1452,7 @@ run_full_installation() {
         if ! prompt_skip_completed "coral_tpu_setup" "Coral TPU support installation"; then
             print_info "Installing Coral TPU support..."
             CORAL_INSTALLED_OK=false
-            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then 
+            if ! lsusb | grep -q -E "1a6e:089a|18d1:9302"; then
                 print_warning "Coral TPU not detected via lsusb. Ensure it's connected."
                 POST_INSTALL_MESSAGES+="[WARNING] Coral TPU not detected. If you have one, ensure it's connected.\\n"
                 prompt_user "Continue Coral TPU software installation anyway?" "n" "y/n"
@@ -1477,7 +1477,7 @@ run_full_installation() {
                 print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
                 sudo apt-get install -y libedgetpu1-std
                 check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-                
+
                 print_info "Installing PyCoral library (python3-pycoral via apt)..."
                 sudo apt-get install -y python3-pycoral
                 check_command "Installing python3-pycoral" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install python3-pycoral via apt.\n"
@@ -1491,7 +1491,7 @@ run_full_installation() {
     prompt_user "Do you want to setup the hardware watchdog?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "hardware_watchdog" "Hardware watchdog setup"; then
-            setup_watchdog 
+            setup_watchdog
             mark_step_completed "hardware_watchdog"
         fi
     else
@@ -1501,12 +1501,12 @@ run_full_installation() {
     prompt_user "Do you want to setup a physical emergency stop button (GPIO7)?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "emergency_stop" "Emergency stop button setup"; then
-            setup_emergency_stop 
+            setup_emergency_stop
             mark_step_completed "emergency_stop"
         fi
     else
         if ! prompt_skip_completed "emergency_stop_skip" "Emergency stop button disable"; then
-            skip_physical_emergency_stop 
+            skip_physical_emergency_stop
             mark_step_completed "emergency_stop_skip"
         fi
     fi
@@ -1514,7 +1514,7 @@ run_full_installation() {
     prompt_user "Do you want to install and enable the systemd service for automatic startup?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         if ! prompt_skip_completed "systemd_service" "Systemd service installation"; then
-            setup_mower_service 
+            setup_mower_service
             mark_step_completed "systemd_service"
         fi
     else
@@ -1522,14 +1522,14 @@ run_full_installation() {
         POST_INSTALL_MESSAGES+="[INFO] Systemd service not installed. Configure manually if needed.\\n"
     fi
     print_success "Full installation completed successfully."
-    
+
     # Add host-specific completion messages
     if [ "$IS_PI" = false ]; then
         POST_INSTALL_MESSAGES+="[INFO] Installation completed on non-Raspberry Pi system. Pi-specific hardware features were skipped.\\n"
         POST_INSTALL_MESSAGES+="[IMPORTANT] The autonomous mower application requires actual Raspberry Pi hardware to function fully.\\n"
         POST_INSTALL_MESSAGES+="[INFO] For development/testing purposes, you can run: python -m src.mower.main_controller --dry-run\\n"
     fi
-    
+
     POST_INSTALL_MESSAGES+="[SUCCESS] Full installation completed successfully.\\n"
 }
 
@@ -1558,9 +1558,9 @@ fi
 # Main installation menu loop
 while true; do
     show_installation_menu
-    
+
     prompt_selection "Please select an installation mode (1-5):" "1"
-    
+
     case "$choice" in
         1)
             print_info "Starting fresh installation..."
@@ -1589,18 +1589,18 @@ while true; do
             echo ""
             if [ -f "$CHECKPOINT_FILE" ]; then
                 list_completed_steps
-                
+
                 # Show uncompleted features
                 echo ""
                 print_info "Features not yet installed:"
         local all_features=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
                 local uncompleted=()
-                
+
                 for feature in "${all_features[@]}"; do
                     if ! is_step_completed "$feature"; then                        uncompleted+=("$feature")
                     fi
                 done
-                
+
                 if [ ${#uncompleted[@]} -eq 0 ]; then
                     print_success "All features appear to be installed!"
                 else
@@ -1636,25 +1636,25 @@ show_installation_summary() {
     echo ""
     print_info "Installation Summary:"
     echo ""
-    
+
     if [ -f "$CHECKPOINT_FILE" ]; then
         local total_steps=0
         local completed_steps=0
-        
+
         # Count total possible steps
         local all_steps=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
         total_steps=${#all_steps[@]}
-        
+
         # Count completed steps
         for step in "${all_steps[@]}"; do
             if is_step_completed "$step"; then
                 ((completed_steps++))
             fi
         done
-        
+
         echo -e "  ${GREEN}Completed steps: $completed_steps/$total_steps${NC}"
         echo ""
-        
+
         # Show completed steps
         print_info "Completed installation steps:"
         while IFS='=' read -r step timestamp; do

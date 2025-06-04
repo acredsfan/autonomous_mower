@@ -1,15 +1,12 @@
 # Suppress matplotlib Axes3D warning globally
 import logging
-from pathlib import Path
 import sys
 import warnings
+from pathlib import Path
 
 warnings.filterwarnings(
     "ignore",
-    message=(
-        "Unable to import Axes3D. This may be due to multiple versions of "
-        "Matplotlib"
-    ),
+    message=("Unable to import Axes3D. This may be due to multiple versions of " "Matplotlib"),
     category=UserWarning,
 )
 
@@ -77,8 +74,9 @@ REQUIRED_LABELS = Path("models/coco_labels.txt")
 
 if not REQUIRED_MODEL.exists() or not REQUIRED_LABELS.exists():
     logging.error("\nYOLOv8 TFLite model or label map not found.")
-    logging.error("Please follow the instructions in this script to export "
-                  "the model on a supported PC and copy it to your Pi.")
+    logging.error(
+        "Please follow the instructions in this script to export " "the model on a supported PC and copy it to your Pi."
+    )
     sys.exit(1)
 
 logging.info("YOLOv8 TFLite model and label map found. Setup complete.")

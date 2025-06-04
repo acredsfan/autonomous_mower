@@ -6,7 +6,8 @@ autonomous mower project, such as localization, path planning, and GPS.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 
@@ -136,9 +137,7 @@ class PathPlannerInterface(ABC):
         pass
 
     @abstractmethod
-    def update_obstacle_map(
-        self, obstacles: List[Tuple[float, float]]
-    ) -> None:
+    def update_obstacle_map(self, obstacles: List[Tuple[float, float]]) -> None:
         """
         Update the obstacle map with new obstacle positions.
 
@@ -157,9 +156,7 @@ class PathPlannerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_path(
-        self, start: Tuple[float, float], goal: Tuple[float, float]
-    ) -> List[Dict[str, float]]:
+    def get_path(self, start: Tuple[float, float], goal: Tuple[float, float]) -> List[Dict[str, float]]:
         """
         Get a path from start to goal.
 

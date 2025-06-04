@@ -12,13 +12,14 @@ The module will run the blade motor through a series of speed tests and
 allow for calibration of the PWM values if needed.
 """
 
-import time
 import argparse
+import time
 from typing import Tuple
+
 from dotenv import set_key
 
-from mower.utilities.logger_config import LoggerConfigInfo
 from mower.main_controller import ResourceManager
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
 logging = LoggerConfigInfo.get_logger(__name__)
@@ -214,12 +215,8 @@ def main():
         --calibrate: Run the PWM calibration
     """
     parser = argparse.ArgumentParser(description="Blade motor testing and calibration")
-    parser.add_argument(
-        "--test", action="store_true", help="Test blade at different speeds"
-    )
-    parser.add_argument(
-        "--calibrate", action="store_true", help="Calibrate blade PWM values"
-    )
+    parser.add_argument("--test", action="store_true", help="Test blade at different speeds")
+    parser.add_argument("--calibrate", action="store_true", help="Calibrate blade PWM values")
     parser.add_argument(
         "--steps",
         type=int,

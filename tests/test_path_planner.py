@@ -1,10 +1,10 @@
 """
 Test module for test_path_planner.py.
 """
+
 import unittest
-from mower.navigation.path_planner import (
-    PathPlanner, PatternConfig, PatternType
-)
+
+from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
 
 
 class TestPathPlanner(unittest.TestCase):
@@ -21,13 +21,8 @@ class TestPathPlanner(unittest.TestCase):
 
     def test_initialization(self):
         """Test initialization of PathPlanner with pattern configuration."""
-        self.assertEqual(
-            self.path_planner.pattern_config.pattern_type,
-            PatternType.PARALLEL
-        )
-        self.assertEqual(
-            self.path_planner.pattern_config.spacing, 0.5
-        )
+        self.assertEqual(self.path_planner.pattern_config.pattern_type, PatternType.PARALLEL)
+        self.assertEqual(self.path_planner.pattern_config.spacing, 0.5)
 
 
 if __name__ == "__main__":

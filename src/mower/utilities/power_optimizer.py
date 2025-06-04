@@ -4,13 +4,14 @@ Power optimization module for autonomous mower.
 This module provides tools for optimizing power consumption
 to extend battery life in resource-constrained environments.
 """
+
+import functools  # Added for power_aware decorator
 import os
+import subprocess  # Added for _set_cpu_governor
 import threading
 import time
-import subprocess  # Added for _set_cpu_governor
-import functools  # Added for power_aware decorator
-from typing import Dict, Any, List, Optional, Callable, Set  # Removed Tuple
 from enum import Enum, auto
+from typing import Any, Callable, Dict, List, Optional, Set  # Removed Tuple
 
 try:
     import psutil  # For CPU and battery info
@@ -128,26 +129,18 @@ class PowerOptimizer:
 
     def start_monitoring(self):
         """Start power usage monitoring."""
-        if (
-            self.monitoring_thread is not None
-            and self.monitoring_thread.is_alive()
-        ):
+        if self.monitoring_thread is not None and self.monitoring_thread.is_alive():
             logger.warning("Monitoring thread is already running")
             return
 
         self.stop_monitoring_event.clear()
-        self.monitoring_thread = threading.Thread(
-            target=self._monitoring_loop, daemon=True
-        )
+        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
         self.monitoring_thread.start()
         logger.info("Power monitoring started")
 
     def stop_monitoring(self):  # Corrected method name from attachment
         """Stop power usage monitoring."""
-        if (
-            self.monitoring_thread is None
-            or not self.monitoring_thread.is_alive()
-        ):
+        if self.monitoring_thread is None or not self.monitoring_thread.is_alive():
             logger.warning("Monitoring thread is not running or already stopped")
             return
 
@@ -172,9 +165,7 @@ class PowerOptimizer:
                 if psutil:
                     cpu_usage = psutil.cpu_percent(interval=None)  # Non-blocking
                     self.stats["cpu_usage"].append(cpu_usage)
-                    logger.debug(
-                        f"Monitoring: Batt={battery_level}%, Mode={self.power_mode.name}, CPU={cpu_usage}%"
-                    )
+                    logger.debug(f"Monitoring: Batt={battery_level}%, Mode={self.power_mode.name}, CPU={cpu_usage}%")
                 else:
                     logger.debug(
                         f"Monitoring: Batt={battery_level}%, Mode={self.power_mode.name}, "
@@ -256,10 +247,7 @@ class PowerOptimizer:
 
         try:
             # Find all CPU frequency directories
-            cpu_dirs = [
-                d for d in os.listdir("/sys/devices/system/cpu")
-                if d.startswith("cpu") and d[3:].isdigit()
-            ]
+            cpu_dirs = [d for d in os.listdir("/sys/devices/system/cpu") if d.startswith("cpu") and d[3:].isdigit()]
             if not cpu_dirs:
                 logger.warning("Could not find CPU directories for setting governor.")
                 return
@@ -301,9 +289,7 @@ class PowerOptimizer:
         except Exception as e:
             logger.error(f"General error setting CPU governor: {e}", exc_info=True)
 
-    def _apply_component_settings(
-        self, component_name: str, settings: Dict[str, Any]
-    ):
+    def _apply_component_settings(self, component_name: str, settings: Dict[str, Any]):
         """
         Apply power settings to a component.
 
@@ -319,24 +305,15 @@ class PowerOptimizer:
         try:
             logger.debug(f"Applying settings to component '{component_name}': {settings}")
             # Apply settings based on component type and available methods
-            if (
-                hasattr(component, "set_poll_interval")
-                and "sensor_poll_interval" in settings
-            ):
+            if hasattr(component, "set_poll_interval") and "sensor_poll_interval" in settings:
                 component.set_poll_interval(settings["sensor_poll_interval"])
                 logger.info(f"Set poll interval for {component_name} to {settings['sensor_poll_interval']}")
 
-            if (
-                hasattr(component, "set_resolution")
-                and "camera_resolution" in settings
-            ):
+            if hasattr(component, "set_resolution") and "camera_resolution" in settings:
                 component.set_resolution(settings["camera_resolution"])
                 logger.info(f"Set camera resolution for {component_name} to {settings['camera_resolution']}")
 
-            if (
-                hasattr(component, "set_update_interval")
-                and "gps_update_interval" in settings
-            ):
+            if hasattr(component, "set_update_interval") and "gps_update_interval" in settings:
                 component.set_update_interval(settings["gps_update_interval"])
                 logger.info(f"Set GPS update interval for {component_name} to {settings['gps_update_interval']}")
 
@@ -404,7 +381,7 @@ class PowerOptimizer:
                         logger.debug(f"Battery level from sysfs ({path}): {capacity}%")
                         return capacity
                 except ValueError:
-                    logger.warning(f"Could not parse battery capacity from {path}: \'{capacity_str}\'")
+                    logger.warning(f"Could not parse battery capacity from {path}: '{capacity_str}'")
                 except Exception as e:
                     logger.warning(f"Could not read battery level from sysfs ({path}): {e}")
 
@@ -546,6 +523,7 @@ def power_aware(optimizer_instance: PowerOptimizer):  # Pass optimizer instance
     Decorator factory for making functions power-aware.
     It provides the current power_mode to the wrapped function.
     """
+
     def decorator(func: Callable):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -558,7 +536,9 @@ def power_aware(optimizer_instance: PowerOptimizer):  # Pass optimizer instance
                 return func(*args, **kwargs_updated)
             # Otherwise, call normally - the function might access the optimizer directly
             return func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -582,9 +562,7 @@ def get_power_optimizer(enable_monitoring: bool = True, **kwargs) -> PowerOptimi
     if _power_optimizer_instance is None:
         with _optimizer_lock:
             if _power_optimizer_instance is None:  # Double-check locking
-                _power_optimizer_instance = PowerOptimizer(
-                    enable_monitoring=enable_monitoring, **kwargs
-                )
+                _power_optimizer_instance = PowerOptimizer(enable_monitoring=enable_monitoring, **kwargs)
     return _power_optimizer_instance
 
 
@@ -666,15 +644,11 @@ if __name__ == "__main__":
             logger.info(f"MockSensor {self.name} initialized.")
 
         def set_poll_interval(self, interval: float):
-            logger.info(
-                f"MockSensor {self.name}: Poll interval set to {interval}s (was {self.poll_interval}s)"
-            )
+            logger.info(f"MockSensor {self.name}: Poll interval set to {interval}s (was {self.poll_interval}s)")
             self.poll_interval = interval
 
         def set_resolution(self, resolution: str):
-            logger.info(
-                f"MockSensor {self.name}: Resolution set to {resolution} (was {self.resolution})"
-            )
+            logger.info(f"MockSensor {self.name}: Resolution set to {resolution} (was {self.resolution})")
             self.resolution = resolution
 
         def perform_critical_action(self, *args, **kwargs):
@@ -713,9 +687,7 @@ if __name__ == "__main__":
     mock_camera.read_data = power_aware(optimizer_main)(
         functools.partial(mock_camera.read_data, mock_camera)  # Pass instance for self
     )
-    mock_gps.read_data = power_aware(optimizer_main)(
-        functools.partial(mock_gps.read_data, mock_gps)
-    )
+    mock_gps.read_data = power_aware(optimizer_main)(functools.partial(mock_gps.read_data, mock_gps))
     mock_lidar.read_data = power_aware(optimizer_main)(  # Decorate Lidar's method
         functools.partial(mock_lidar.read_data, mock_lidar)
     )
@@ -732,6 +704,7 @@ if __name__ == "__main__":
             level = level_provider_func()
             logger.info(f"[SIMULATED] get_battery_level returning: {level}%")
             return level
+
         return mock_get_battery_level
 
     # Use a mutable list to change the battery level from outside the mock function
@@ -778,7 +751,8 @@ if __name__ == "__main__":
     optimizer_main.cleanup()
     logger.info(f"Optimized components after cleanup: {optimizer_main.optimized_components}")
     monitoring_status_main = (
-        "Alive" if optimizer_main.monitoring_thread and optimizer_main.monitoring_thread.is_alive()
+        "Alive"
+        if optimizer_main.monitoring_thread and optimizer_main.monitoring_thread.is_alive()
         else "Not running/None"
     )
     logger.info(f"Is monitoring thread alive after cleanup? {monitoring_status_main}")
@@ -790,7 +764,8 @@ if __name__ == "__main__":
     # Should be the same if singleton is robust
     logger.info(f"Original optimizer instance ID: {id(optimizer_main)}")
     monitoring_status_new = (
-        "Alive" if optimizer_new.monitoring_thread and optimizer_new.monitoring_thread.is_alive()
+        "Alive"
+        if optimizer_new.monitoring_thread and optimizer_new.monitoring_thread.is_alive()
         else "Not running/None"
     )
     logger.info(f"Is new optimizer monitoring? {monitoring_status_new}")

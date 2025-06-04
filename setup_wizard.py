@@ -6,25 +6,24 @@ It guides users through configuring all necessary settings, collecting tokens an
 credentials, and setting up the environment based on their specific needs.
 """
 
-import os
-import sys
-import json
-import shutil
-import textwrap
 import getpass
-import traceback
+import json
+import os
 import re
+import shutil
 import subprocess
+import sys
+import textwrap
+import traceback
 from pathlib import Path
-from typing import Dict, List, Optional, Callable
+from typing import Callable, Dict, List, Optional
 
 # Try to import dotenv, install if not available
 try:
     from dotenv import set_key
 except ImportError:
     print("Installing python-dotenv...")
-    os.system(
-        f"{sys.executable} -m pip install python-dotenv --break-system-packages")
+    os.system(f"{sys.executable} -m pip install python-dotenv --break-system-packages")
     from dotenv import set_key
 
 # Constants
@@ -69,9 +68,10 @@ def install_dependencies() -> bool:
     for package in packages:
         try:
             result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", package,
-                 "--break-system-packages"],
-                capture_output=True, text=True,)
+                [sys.executable, "-m", "pip", "install", package, "--break-system-packages"],
+                capture_output=True,
+                text=True,
+            )
 
             if result.returncode == 0:
                 print_success(f"Successfully installed {package}")
@@ -95,10 +95,7 @@ def run_enhanced_permission_checks() -> bool:
 
     try:
         # Import after dependencies are installed
-        from src.mower.utilities.permission_check import (
-            check_directory_permissions,
-            check_group_membership,
-        )
+        from src.mower.utilities.permission_check import check_directory_permissions, check_group_membership
 
         # Check directory permissions
         dir_errors = check_directory_permissions()
@@ -117,8 +114,7 @@ def run_enhanced_permission_checks() -> bool:
                         print_success(f"Created directory: {dir_path}")
                         fixed_dirs.append(dir_path)
                     except Exception as e:
-                        print_error(
-                            f"Failed to create directory {dir_path}: {e}")
+                        print_error(f"Failed to create directory {dir_path}: {e}")
 
             elif "access denied" in error:
                 # Extract directory path and fix permissions
@@ -130,27 +126,21 @@ def run_enhanced_permission_checks() -> bool:
                             cmd = f"sudo chmod a+r '{dir_path}'"
                             result = os.system(cmd)
                             if result == 0:
-                                print_success(
-                                    f"Fixed read permissions for: {dir_path}")
+                                print_success(f"Fixed read permissions for: {dir_path}")
                                 fixed_dirs.append(dir_path)
                             else:
-                                print_error(
-                                    f"Failed to fix read permissions for: {dir_path}")
+                                print_error(f"Failed to fix read permissions for: {dir_path}")
 
                         if "Write access denied" in error:
                             cmd = f"sudo chmod a+rw '{dir_path}'"
                             result = os.system(cmd)
                             if result == 0:
-                                print_success(
-                                    f"Fixed write permissions for: {dir_path}"
-                                )
+                                print_success(f"Fixed write permissions for: {dir_path}")
                                 fixed_dirs.append(dir_path)
                             else:
-                                print_error(
-                                    f"Failed to fix write permissions for: {dir_path}")
+                                print_error(f"Failed to fix write permissions for: {dir_path}")
                     except Exception as e:
-                        print_error(
-                            f"Error fixing permissions for {dir_path}: {e}")
+                        print_error(f"Error fixing permissions for {dir_path}: {e}")
 
         # Re-check directory permissions after fixes
         remaining_dir_errors = check_directory_permissions()
@@ -163,11 +153,8 @@ def run_enhanced_permission_checks() -> bool:
             print_warning("Group membership issues found:")
             for error in group_errors:
                 print_warning(f"  {error}")
-            print_info(
-                "Group membership changes require a logout/login to take effect."
-            )
-            print_info(
-                "You can continue setup, but hardware access may be limited.")
+            print_info("Group membership changes require a logout/login to take effect.")
+            print_info("You can continue setup, but hardware access may be limited.")
 
         all_remaining_errors = remaining_dir_errors + group_errors
 
@@ -178,9 +165,13 @@ def run_enhanced_permission_checks() -> bool:
 
             # Ask if user wants to continue
             continue_anyway = prompt_bool(
-                "Continue setup despite permission issues?", default=True, help_text=(
+                "Continue setup despite permission issues?",
+                default=True,
+                help_text=(
                     "You can continue setup and fix these issues later. "
-                    "Some features may not work until permissions are resolved."), )
+                    "Some features may not work until permissions are resolved."
+                ),
+            )
             return continue_anyway
         else:
             print_success("All permission checks passed!")
@@ -266,9 +257,7 @@ def ensure_env_file() -> None:
                 if result.returncode == 0:
                     print_success(f"Set proper permissions for {ENV_FILE}")
                 else:
-                    print_warning(
-                        f"Could not set permissions: "
-                        f"{result.stderr}")
+                    print_warning(f"Could not set permissions: " f"{result.stderr}")
             except Exception as e:
                 print_warning(f"Permission setting failed: {e}")
     elif not os.access(ENV_FILE, os.W_OK):
@@ -353,9 +342,7 @@ def update_env_var(key: str, value: str) -> None:
         except Exception as e:
             print_error(f"Failed to create {ENV_FILE}: {e}")
             print_info("Please manually create the .env file:")
-            print_info(
-                "sudo touch .env && sudo chmod 664 .env && sudo chown $USER:$USER .env"
-            )
+            print_info("sudo touch .env && sudo chmod 664 .env && sudo chown $USER:$USER .env")
             sys.exit(1)  # Check if file is writable before attempting to write
     elif not os.access(ENV_FILE, os.W_OK):
         warning_msg = f"{ENV_FILE} is not writable, fixing permissions..."
@@ -406,9 +393,7 @@ def get_env_var(key: str, default: str = "") -> str:
     return os.environ.get(key, default)
 
 
-def prompt_choice(
-    prompt: str, choices: List[str], default: Optional[int] = None
-) -> str:
+def prompt_choice(prompt: str, choices: List[str], default: Optional[int] = None) -> str:
     """Prompt user to select from a list of choices."""
     print(f"\n{prompt}")
     for idx, choice in enumerate(choices, 1):
@@ -417,10 +402,7 @@ def prompt_choice(
 
     while True:
         try:
-            sel = input(
-                f"Enter choice [1-{len(choices)}]"
-                + (f" (default: {default}): " if default else ": ")
-            )
+            sel = input(f"Enter choice [1-{len(choices)}]" + (f" (default: {default}): " if default else ": "))
             if not sel and default is not None:
                 return choices[default - 1]
             if sel.isdigit() and 1 <= int(sel) <= len(choices):
@@ -465,13 +447,9 @@ def prompt_value(
     while True:
         try:
             if secret:
-                val = getpass.getpass(
-                    f"{prompt} " +
-                    (" (default: [hidden]): " if default else ": "))
+                val = getpass.getpass(f"{prompt} " + (" (default: [hidden]): " if default else ": "))
             else:
-                val = input(
-                    f"{prompt} " +
-                    (f" (default: {default}): "if default else ": "))
+                val = input(f"{prompt} " + (f" (default: {default}): " if default else ": "))
 
             if not val and default is not None:
                 val = default
@@ -504,10 +482,7 @@ def prompt_bool(
 
     while True:
         try:
-            val = input(
-                f"{prompt} (y/n)"
-                + (f" (default: {default_str}): " if default_str else ": ")
-            )
+            val = input(f"{prompt} (y/n)" + (f" (default: {default_str}): " if default_str else ": "))
 
             if not val and default is not None:
                 return default
@@ -574,8 +549,7 @@ def validate_lat_lng(value: str, field_name: str) -> bool:
             return False
         return True
     except ValueError:
-        print_error(
-            f"{field_name} must be in format: lat,lng (e.g. 39.1,-84.5)")
+        print_error(f"{field_name} must be in format: lat,lng (e.g. 39.1,-84.5)")
         return False
 
 
@@ -670,9 +644,7 @@ def setup_hardware_detection() -> Dict[str, bool]:
     except Exception:
         print_warning("Failed to check for RoboHAT MM1")
 
-    print(
-        "\nHardware detection complete. You can manually override these settings later."
-    )
+    print("\nHardware detection complete. You can manually override these settings later.")
     input("Press Enter to continue...")
 
     return hardware
@@ -687,10 +659,7 @@ def setup_basic_configuration() -> None:
         "Mower name",
         default=get_env_var("MOWER_NAME", "AutonoMow"),
         required=True,
-        help_text=(
-            "A unique name for your mower. "
-            "This will be used in logs and the web interface."
-        ),
+        help_text=("A unique name for your mower. " "This will be used in logs and the web interface."),
     )
     update_env_var("MOWER_NAME", mower_name)
 
@@ -714,8 +683,7 @@ def setup_basic_configuration() -> None:
         "Use simulation mode?",
         default=False,
         help_text=(
-            "Simulation mode allows testing without physical hardware. "
-            "Recommended for initial setup and testing."
+            "Simulation mode allows testing without physical hardware. " "Recommended for initial setup and testing."
         ),
     )
     update_env_var("USE_SIMULATION", str(use_simulation))
@@ -740,9 +708,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     print_subheader("Camera Configuration")
     use_camera = prompt_bool(
         "Use camera for obstacle detection?",
-        default=detected_hardware.get(
-            "camera",
-            False),
+        default=detected_hardware.get("camera", False),
         help_text="The camera is used for visual obstacle detection and navigation.",
     )
 
@@ -784,9 +750,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     use_gps = prompt_bool(
         "Use GPS for navigation?",
         default=detected_hardware.get("gps", False),
-        help_text=(
-            "GPS provides absolute positioning for navigation and boundary mapping."
-        ),
+        help_text=("GPS provides absolute positioning for navigation and boundary mapping."),
     )
 
     if use_gps:
@@ -809,24 +773,19 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
             "Use RTK correction for high-precision GPS?",
             default=False,
             help_text=(
-                "RTK correction provides centimeter-level accuracy but requires "
-                "an NTRIP server subscription."),
+                "RTK correction provides centimeter-level accuracy but requires " "an NTRIP server subscription."
+            ),
         )
 
         if use_rtk:
-            print_info(
-                "To use RTK correction, you'll need NTRIP server credentials.")
-            ntrip_user = prompt_value(
-                "NTRIP username", default=get_env_var("NTRIP_USER", "")
-            )
+            print_info("To use RTK correction, you'll need NTRIP server credentials.")
+            ntrip_user = prompt_value("NTRIP username", default=get_env_var("NTRIP_USER", ""))
             ntrip_pass = prompt_value(
                 "NTRIP password",
                 default=get_env_var("NTRIP_PASS", ""),
                 secret=True,
             )
-            ntrip_url = prompt_value(
-                "NTRIP server URL", default=get_env_var("NTRIP_URL", "")
-            )
+            ntrip_url = prompt_value("NTRIP server URL", default=get_env_var("NTRIP_URL", ""))
             ntrip_mount = prompt_value(
                 "NTRIP mountpoint",
                 default=get_env_var("NTRIP_MOUNTPOINT", ""),
@@ -858,9 +817,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
     use_robohat = prompt_bool(
         "Use RoboHAT MM1 motor controller?",
         default=detected_hardware.get("robohat", False),
-        help_text=(
-            "The RoboHAT MM1 is the recommended motor controller for this project."
-        ),
+        help_text=("The RoboHAT MM1 is the recommended motor controller for this project."),
     )
 
     if use_robohat:
@@ -876,9 +833,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
             "port": mm1_port,
         }
     else:
-        print_warning(
-            "No motor controller selected. The mower will not be able to move."
-        )
+        print_warning("No motor controller selected. The mower will not be able to move.")
         setup_state["hardware_config"]["motor_controller"] = {"type": "none"}
 
     # Coral TPU configuration
@@ -887,10 +842,7 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
         use_coral = prompt_bool(
             "Use Google Coral TPU for accelerated obstacle detection?",
             default=True,
-            help_text=(
-                "The Coral TPU provides hardware acceleration for "
-                "machine learning models."
-            ),
+            help_text=("The Coral TPU provides hardware acceleration for " "machine learning models."),
         )
 
         if use_coral:
@@ -911,35 +863,20 @@ def setup_mapping_and_navigation() -> None:
     print_header("Mapping and Navigation")
 
     # Check if GPS is enabled in setup state
-    gps_enabled = (
-        setup_state.get(
-            "hardware_config",
-            {}).get(
-            "gps",
-            {}).get(
-                "enabled",
-            False))
+    gps_enabled = setup_state.get("hardware_config", {}).get("gps", {}).get("enabled", False)
 
     if not gps_enabled:
-        print_warning(
-            "GPS is not enabled. Some mapping features will be limited.")
+        print_warning("GPS is not enabled. Some mapping features will be limited.")
 
     # Home location
     print_subheader("Home Location")
-    print_info(
-        "The home location is where the mower will return when it's finished "
-        "or needs to charge."
-    )
+    print_info("The home location is where the mower will return when it's finished " "or needs to charge.")
 
     if gps_enabled:
-        print_help(
-            "You can specify the home location as GPS coordinates (latitude,longitude)."
-        )
+        print_help("You can specify the home location as GPS coordinates (latitude,longitude).")
         home_coords = prompt_value(
             "Home location coordinates (latitude,longitude)",
-            default=(
-                f"{get_env_var('HOME_LAT', '0.0')},{get_env_var('HOME_LON', '0.0')}"
-            ),
+            default=(f"{get_env_var('HOME_LAT', '0.0')},{get_env_var('HOME_LON', '0.0')}"),
             validator=validate_lat_lng,
             field_name="Home location",
         )
@@ -957,10 +894,7 @@ def setup_mapping_and_navigation() -> None:
             "lon": lon,
         }
     else:
-        print_info(
-            "Since GPS is disabled, the home location will be set relative to "
-            "the starting position."
-        )
+        print_info("Since GPS is disabled, the home location will be set relative to " "the starting position.")
         setup_state["user_choices"]["home_location"] = {"relative": True}
 
     # Google Maps integration for web UI
@@ -968,19 +902,14 @@ def setup_mapping_and_navigation() -> None:
     use_google_maps = prompt_bool(
         "Use Google Maps in the web interface?",
         default=True,
-        help_text=(
-            "Google Maps provides a visual interface for setting boundaries "
-            "and monitoring the mower."
-        ),
+        help_text=("Google Maps provides a visual interface for setting boundaries " "and monitoring the mower."),
     )
 
     if use_google_maps:
-        print_info(
-            "To use Google Maps, you'll need an API key from the Google Cloud Console."
-        )
+        print_info("To use Google Maps, you'll need an API key from the Google Cloud Console.")
         print_help(
-            "You can get an API key at: "
-            "https://developers.google.com/maps/documentation/javascript/get-api-key")
+            "You can get an API key at: " "https://developers.google.com/maps/documentation/javascript/get-api-key"
+        )
 
         gmaps_key = prompt_value(
             "Google Maps API Key",
@@ -1008,8 +937,7 @@ def setup_mapping_and_navigation() -> None:
         default=get_env_var("PATH_PLANNING_SPACING", "0.3"),
         validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
         help_text=(
-            "The distance between parallel paths. Smaller values provide more thorough "
-            "coverage but take longer."
+            "The distance between parallel paths. Smaller values provide more thorough " "coverage but take longer."
         ),
     )
 
@@ -1033,17 +961,14 @@ def setup_safety_features() -> None:
 
     # Emergency stop
     print_subheader("Emergency Stop")
-    print_info(
-        "The emergency stop button is a critical safety feature that immediately "
-        "stops the mower.")
+    print_info("The emergency stop button is a critical safety feature that immediately " "stops the mower.")
 
     e_stop_pin = prompt_value(
         "Emergency stop GPIO pin",
         default=get_env_var("EMERGENCY_STOP_PIN", "7"),
         validator=lambda v, f: validate_int(v, f, 1, 40),
         help_text=(
-            "The GPIO pin where the emergency stop button is connected. "
-            "The button should be normally closed (NC)."
+            "The GPIO pin where the emergency stop button is connected. " "The button should be normally closed (NC)."
         ),
     )
 
@@ -1053,22 +978,17 @@ def setup_safety_features() -> None:
     print_subheader("Obstacle Detection")
 
     # Check if camera is enabled in setup state
-    camera_enabled = (
-        setup_state.get(
-            "hardware_config",
-            {}).get(
-            "camera",
-            {}).get(
-                "enabled",
-            False))
+    camera_enabled = setup_state.get("hardware_config", {}).get("camera", {}).get("enabled", False)
 
     if camera_enabled:
         min_conf = prompt_value(
-            "Minimum confidence threshold for obstacle detection", default=get_env_var(
-                "MIN_CONF_THRESHOLD", "0.5"), validator=lambda v, f: validate_float(
-                v, f, 0.1, 1.0), help_text=(
-                "Lower values detect more objects but may have false positives. "
-                "Higher values are more selective."), )
+            "Minimum confidence threshold for obstacle detection",
+            default=get_env_var("MIN_CONF_THRESHOLD", "0.5"),
+            validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
+            help_text=(
+                "Lower values detect more objects but may have false positives. " "Higher values are more selective."
+            ),
+        )
 
         update_env_var("MIN_CONF_THRESHOLD", min_conf)
 
@@ -1077,24 +997,17 @@ def setup_safety_features() -> None:
             "confidence_threshold": float(min_conf),
         }
     else:
-        print_warning(
-            "Camera is not enabled. Visual obstacle detection will not be available."
-        )
+        print_warning("Camera is not enabled. Visual obstacle detection will not be available.")
         setup_state["user_choices"]["obstacle_detection"] = {"enabled": False}
 
     # Safety zones
     print_subheader("Safety Zones")
-    print_info(
-        "Safety zones define areas where the mower should not operate "
-        "or should use extra caution."
-    )
+    print_info("Safety zones define areas where the mower should not operate " "or should use extra caution.")
 
     use_safety_zones = prompt_bool(
         "Configure safety zones?",
         default=True,
-        help_text=(
-            "Safety zones include no-mow zones, children play areas, and pet zones."
-        ),
+        help_text=("Safety zones include no-mow zones, children play areas, and pet zones."),
     )
 
     if use_safety_zones:
@@ -1107,8 +1020,7 @@ def setup_safety_features() -> None:
 
         update_env_var("SAFE_ZONE_BUFFER", safe_buffer)
 
-        print_info(
-            "Safety zones can be configured in the web interface after setup.")
+        print_info("Safety zones can be configured in the web interface after setup.")
         setup_state["feature_flags"]["safety_zones"] = True
     else:
         setup_state["feature_flags"]["safety_zones"] = False
@@ -1120,20 +1032,14 @@ def setup_safety_features() -> None:
         "Battery low threshold (%)",
         default=get_env_var("BATTERY_LOW_THRESHOLD", "20"),
         validator=lambda v, f: validate_int(v, f, 5, 50),
-        help_text=(
-            "When battery level falls below this percentage, the mower will return "
-            "to the charging station."
-        ),
+        help_text=("When battery level falls below this percentage, the mower will return " "to the charging station."),
     )
 
     batt_critical = prompt_value(
         "Battery critical threshold (%)",
         default=get_env_var("BATTERY_CRITICAL_THRESHOLD", "10"),
         validator=lambda v, f: validate_int(v, f, 1, int(batt_low) - 1),
-        help_text=(
-            "When battery level falls below this percentage, the mower will enter "
-            "emergency shutdown."
-        ),
+        help_text=("When battery level falls below this percentage, the mower will enter " "emergency shutdown."),
     )
 
     update_env_var("BATTERY_LOW_THRESHOLD", batt_low)
@@ -1171,9 +1077,7 @@ def setup_safety_features() -> None:
     use_rain = prompt_bool(
         "Enable rain sensor?",
         default=True,
-        help_text=(
-            "The rain sensor prevents the mower from operating in wet conditions."
-        ),
+        help_text=("The rain sensor prevents the mower from operating in wet conditions."),
     )
 
     update_env_var("RAIN_SENSOR_ENABLED", str(use_rain))
@@ -1194,9 +1098,7 @@ def setup_web_interface() -> None:
     enable_web = prompt_bool(
         "Enable web interface?",
         default=True,
-        help_text=(
-            "The web interface allows remote control and monitoring of the mower."
-        ),
+        help_text=("The web interface allows remote control and monitoring of the mower."),
     )
 
     if enable_web:
@@ -1213,16 +1115,11 @@ def setup_web_interface() -> None:
         enable_ssl = prompt_bool(
             "Enable SSL/HTTPS?",
             default=True,
-            help_text=(
-                "SSL/HTTPS encrypts communication between your browser and the mower."
-            ),
+            help_text=("SSL/HTTPS encrypts communication between your browser and the mower."),
         )
 
         if enable_ssl:
-            print_info(
-                "You'll need SSL certificates for HTTPS. "
-                "You can use Let's Encrypt to get free certificates."
-            )
+            print_info("You'll need SSL certificates for HTTPS. " "You can use Let's Encrypt to get free certificates.")
 
             ssl_cert = prompt_value(
                 "SSL certificate path",
@@ -1249,10 +1146,7 @@ def setup_web_interface() -> None:
         auth_required = prompt_bool(
             "Require authentication?",
             default=True,
-            help_text=(
-                "Authentication requires users to log in before accessing "
-                "the web interface."
-            ),
+            help_text=("Authentication requires users to log in before accessing " "the web interface."),
         )
 
         if auth_required:
@@ -1292,10 +1186,7 @@ def setup_web_interface() -> None:
                 "Allowed IPs (comma-separated)",
                 default=get_env_var("ALLOWED_IPS", "127.0.0.1,192.168.1.0/24"),
                 required=True,
-                help_text=(
-                    "List of IP addresses or CIDR ranges that can access "
-                    "the web interface."
-                ),
+                help_text=("List of IP addresses or CIDR ranges that can access " "the web interface."),
             )
 
             update_env_var("ALLOWED_IPS", allowed_ips)
@@ -1322,9 +1213,7 @@ def setup_remote_access() -> None:
     """Configure remote access options."""
     print_header("Remote Access Configuration")
 
-    print_info(
-        "Remote access allows you to control and monitor your mower from anywhere."
-    )
+    print_info("Remote access allows you to control and monitor your mower from anywhere.")
 
     use_remote = prompt_bool(
         "Set up remote access?",
@@ -1347,21 +1236,13 @@ def setup_remote_access() -> None:
         )
 
         if remote_method == "Dynamic DNS (DDNS)":
-            print_info(
-                "DDNS allows you to access your mower using a domain name "
-                "even if your IP address changes."
-            )
-            print_help(
-                "You'll need an account with a DDNS provider like Duck DNS, "
-                "No-IP, or DynDNS."
-            )
+            print_info("DDNS allows you to access your mower using a domain name " "even if your IP address changes.")
+            print_help("You'll need an account with a DDNS provider like Duck DNS, " "No-IP, or DynDNS.")
 
             ddns_provider = prompt_value(
                 "DDNS provider",
                 default=get_env_var("DDNS_PROVIDER", "duckdns"),
-                help_text=(
-                    "The name of your DDNS provider (e.g., duckdns, noip, dyndns)."
-                ),
+                help_text=("The name of your DDNS provider (e.g., duckdns, noip, dyndns)."),
             )
 
             ddns_domain = prompt_value(
@@ -1376,10 +1257,7 @@ def setup_remote_access() -> None:
                 default=get_env_var("DDNS_TOKEN", ""),
                 required=True,
                 secret=True,
-                help_text=(
-                    "The token or key provided by your DDNS provider "
-                    "for authentication."
-                ),
+                help_text=("The token or key provided by your DDNS provider " "for authentication."),
             )
 
             update_env_var("DDNS_PROVIDER", ddns_provider)
@@ -1391,9 +1269,7 @@ def setup_remote_access() -> None:
             setup_state["user_choices"]["ddns_domain"] = ddns_domain
 
         elif remote_method == "Cloudflare Tunnel":
-            print_info(
-                "Cloudflare Tunnel provides secure remote access without opening "
-                "ports on your router.")
+            print_info("Cloudflare Tunnel provides secure remote access without opening " "ports on your router.")
             print_help("You'll need a Cloudflare account and domain name.")
 
             cf_token = prompt_value(
@@ -1427,10 +1303,7 @@ def setup_remote_access() -> None:
             setup_state["user_choices"]["cf_domain"] = cf_domain
 
         elif remote_method == "NGROK":
-            print_info(
-                "NGROK provides temporary URLs for remote access without "
-                "configuring your router."
-            )
+            print_info("NGROK provides temporary URLs for remote access without " "configuring your router.")
             print_help("You'll need an NGROK account and authtoken.")
 
             ngrok_token = prompt_value(
@@ -1446,12 +1319,8 @@ def setup_remote_access() -> None:
 
             setup_state["feature_flags"]["remote_access"] = "ngrok"
         else:
-            print_info(
-                "You've chosen to set up remote access manually or not at all.")
-            print_info(
-                "To access your mower remotely, you'll need to configure "
-                "port forwarding on your router."
-            )
+            print_info("You've chosen to set up remote access manually or not at all.")
+            print_info("To access your mower remotely, you'll need to configure " "port forwarding on your router.")
 
             setup_state["feature_flags"]["remote_access"] = "manual"
     else:
@@ -1472,15 +1341,12 @@ def setup_scheduling() -> None:
     use_schedule = prompt_bool(
         "Set up automated mowing schedule?",
         default=True,
-        help_text=(
-            "Automated scheduling allows the mower to operate on a regular schedule."
-        ),
+        help_text=("Automated scheduling allows the mower to operate on a regular schedule."),
     )
 
     if use_schedule:
         print_info("You can set up multiple mowing sessions per week.")
-        print_help(
-            "For each day, you can specify start and end times for mowing.")
+        print_help("For each day, you can specify start and end times for mowing.")
 
         # Create a basic schedule template
         schedule = {}
@@ -1501,20 +1367,14 @@ def setup_scheduling() -> None:
                 start_time = prompt_value(
                     f"{day} start time (HH:MM)",
                     default="10:00",
-                    validator=lambda v, f: bool(
-                        v.count(":") == 1
-                        and all(part.isdigit() for part in v.split(":"))
-                    ),
+                    validator=lambda v, f: bool(v.count(":") == 1 and all(part.isdigit() for part in v.split(":"))),
                     field_name="Start time",
                 )
 
                 end_time = prompt_value(
                     f"{day} end time (HH:MM)",
                     default="16:00",
-                    validator=lambda v, f: bool(
-                        v.count(":") == 1
-                        and all(part.isdigit() for part in v.split(":"))
-                    ),
+                    validator=lambda v, f: bool(v.count(":") == 1 and all(part.isdigit() for part in v.split(":"))),
                     field_name="End time",
                 )
 
@@ -1546,16 +1406,15 @@ def setup_scheduling() -> None:
     use_weather = prompt_bool(
         "Enable weather-aware scheduling?",
         default=True,
-        help_text=(
-            "Weather-aware scheduling prevents mowing during rain or extreme weather."
-        ),
+        help_text=("Weather-aware scheduling prevents mowing during rain or extreme weather."),
     )
 
     if use_weather:
         print_info("You'll need a Google Weather API key for weather data.")
         print_help(
             "You can get an API key from the Google Cloud Console. "
-            "Enable the 'Weather API' (under Google Maps Platform) for your project.")
+            "Enable the 'Weather API' (under Google Maps Platform) for your project."
+        )
 
         weather_api_key = prompt_value(
             "Google Weather API Key",
@@ -1592,7 +1451,8 @@ def setup_service_installation() -> None:
         default=True,
         help_text=(
             "This will install the autonomous-mower.service file and enable it "
-            "to start automatically on boot. Recommended for production use."),
+            "to start automatically on boot. Recommended for production use."
+        ),
     )
 
     if install_service:
@@ -1603,8 +1463,7 @@ def setup_service_installation() -> None:
 
             if platform.system() != "Linux":
                 print_warning(
-                    "Service installation is only supported on Linux systems. "
-                    "Skipping service installation."
+                    "Service installation is only supported on Linux systems. " "Skipping service installation."
                 )
                 setup_state["feature_flags"]["service_installed"] = False
                 return
@@ -1651,9 +1510,7 @@ def setup_service_installation() -> None:
             )
 
             if result.returncode != 0:
-                print_error(
-                    f"Failed to set service file permissions: "
-                    f"{result.stderr}")
+                print_error(f"Failed to set service file permissions: " f"{result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
@@ -1667,9 +1524,7 @@ def setup_service_installation() -> None:
             )
 
             if result.returncode != 0:
-                print_error(
-                    f"Failed to reload systemd daemon: "
-                    f"{result.stderr}")
+                print_error(f"Failed to reload systemd daemon: " f"{result.stderr}")
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
@@ -1687,8 +1542,7 @@ def setup_service_installation() -> None:
                 setup_state["feature_flags"]["service_installed"] = False
                 return
 
-            print_success(
-                "Autonomous mower service has been installed and enabled!")
+            print_success("Autonomous mower service has been installed and enabled!")
             print_info("The service will start automatically on system boot.")
             print_info("You can manually control the service with:")
             print_info("  sudo systemctl start autonomous-mower")
@@ -1722,18 +1576,17 @@ def setup_service_installation() -> None:
 
                     # Check service status
                     result = subprocess.run(
-                        ["sudo", "systemctl", "is-active",
-                         "autonomous-mower.service"],
-                        capture_output=True, text=True, check=False,)
+                        ["sudo", "systemctl", "is-active", "autonomous-mower.service"],
+                        capture_output=True,
+                        text=True,
+                        check=False,
+                    )
 
                     if result.stdout.strip() == "active":
                         print_info("Service is running and active.")
                     else:
-                        print_warning(
-                            "Service may not be running properly. "
-                            "Check logs with:")
-                        print_warning(
-                            "  sudo journalctl -u autonomous-mower -f")
+                        print_warning("Service may not be running properly. " "Check logs with:")
+                        print_warning("  sudo journalctl -u autonomous-mower -f")
                 else:
                     print_error(f"Failed to start service: {result.stderr}")
                     print_info("You can try starting it manually later with:")
@@ -1741,9 +1594,7 @@ def setup_service_installation() -> None:
 
         except Exception as e:
             print_error(f"An error occurred during service installation: {e}")
-            print_warning(
-                "Service installation failed. You can install it manually later."
-            )
+            print_warning("Service installation failed. You can install it manually later.")
             setup_state["feature_flags"]["service_installed"] = False
 
     else:
@@ -1801,9 +1652,7 @@ def setup_final_verification() -> None:
     gps_enabled = hardware_config.get("gps", {}).get("enabled", False)
     print(f"  GPS: {'Enabled' if gps_enabled else 'Disabled'}")
 
-    motor_type = hardware_config.get(
-        "motor_controller", {}).get(
-        "type", "none")
+    motor_type = hardware_config.get("motor_controller", {}).get("type", "none")
     print(f"  Motor Controller: {motor_type}")
 
     coral_enabled = hardware_config.get("coral_tpu", {}).get("enabled", False)

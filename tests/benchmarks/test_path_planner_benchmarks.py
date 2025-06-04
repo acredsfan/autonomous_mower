@@ -1,14 +1,11 @@
 """
 Test module for test_path_planner_benchmarks.py.
 """
-import pytest
+
 import numpy as np
-from mower.navigation.path_planner import (
-    PathPlanner,
-    PatternConfig,
-    PatternType,
-    LearningConfig,
-)
+import pytest
+
+from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
 
 
 @pytest.fixture
@@ -30,17 +27,12 @@ def learning_config_fixture():  # Renamed to avoid conflict
 
 
 @pytest.fixture
-def path_planner(
-    pattern_config_fixture, learning_config_fixture
-):  # Use renamed fixtures
+def path_planner(pattern_config_fixture, learning_config_fixture):  # Use renamed fixtures
     return PathPlanner(pattern_config_fixture, learning_config_fixture)
 
 
 # Added pattern_config_fixture
-def test_generate_path_benchmark(
-        benchmark,
-        path_planner,
-        pattern_config_fixture):
+def test_generate_path_benchmark(benchmark, path_planner, pattern_config_fixture):
     # Set the pattern type (assuming you want to test different types)
     # This line was problematic as pattern_type was undefined.
     # For a benchmark, you might iterate over types or test a specific one.
@@ -108,9 +100,7 @@ def test_calculate_smoothness_benchmark(benchmark, path_planner):
 def test_store_experience_benchmark(benchmark, path_planner):
     # Add some experiences to the memory
     for i in range(100):
-        path_planner._store_experience(
-            f"state_{i}", PatternType.PARALLEL, 0.5
-        )
+        path_planner._store_experience(f"state_{i}", PatternType.PARALLEL, 0.5)
 
     # Use pytest - benchmark to measure performance
     benchmark(path_planner._update_model)

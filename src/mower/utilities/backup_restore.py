@@ -119,9 +119,7 @@ class BackupRestore:
         os.makedirs(backup_path, exist_ok=True)
         return backup_path
 
-    def _create_tarball(
-        self, source_dir: str, target_file: str, compress: bool = True
-    ) -> bool:
+    def _create_tarball(self, source_dir: str, target_file: str, compress: bool = True) -> bool:
         """
         Create a tarball of a directory.
 
@@ -212,9 +210,7 @@ class BackupRestore:
         for backup in backups_to_remove:
             self.delete_backup(backup["id"])
 
-    def create_backup(
-        self, components: List[str] = None, description: str = None
-    ) -> Tuple[bool, str]:
+    def create_backup(self, components: List[str] = None, description: str = None) -> Tuple[bool, str]:
         """
         Create a backup of the specified components.
 
@@ -237,10 +233,7 @@ class BackupRestore:
             if component not in valid_components:
                 return (
                     False,
-                    (
-                        f"Invalid component: {component}. "
-                        f"Valid components: {valid_components}"
-                    ),
+                    (f"Invalid component: {component}. " f"Valid components: {valid_components}"),
                 )
 
         # Generate backup ID and create directory
@@ -291,15 +284,10 @@ class BackupRestore:
 
         return (
             True,
-            (
-                f"Backup {backup_id} created successfully with components: "
-                f"{successful_components}"
-            ),
+            (f"Backup {backup_id} created successfully with components: " f"{successful_components}"),
         )
 
-    def restore_backup(
-        self, backup_id: str, components: List[str] = None
-    ) -> Tuple[bool, str]:
+    def restore_backup(self, backup_id: str, components: List[str] = None) -> Tuple[bool, str]:
         """
         Restore from a backup.
 
@@ -334,9 +322,7 @@ class BackupRestore:
             # Validate components
             for component in components:
                 if component not in backup_info["components"]:
-                    error_msg = (
-                        f"Component {component}  not found in backup {backup_id} "
-                    )
+                    error_msg = f"Component {component}  not found in backup {backup_id} "
                     return (False, error_msg)
 
         # Stop services before restoring
@@ -382,10 +368,7 @@ class BackupRestore:
             )
         except subprocess.CalledProcessError as e:
             logger.error(f"Error starting service: {e.stderr}")
-            error_msg = (
-                f"Restore partially successful, but failed to start service: "
-                f"{e.stderr}"
-            )
+            error_msg = f"Restore partially successful, but failed to start service: " f"{e.stderr}"
             return (False, error_msg)
 
         if not successful_components:
@@ -393,10 +376,7 @@ class BackupRestore:
 
         return (
             True,
-            (
-                f"Restore from backup {backup_id} completed successfully "
-                f"with components: {successful_components}"
-            ),
+            (f"Restore from backup {backup_id} completed successfully " f"with components: {successful_components}"),
         )
 
     def list_backups(self) -> List[Dict[str, Any]]:
@@ -461,9 +441,7 @@ class BackupRestore:
 
         return True, f"Backup {backup_id} deleted successfully"
 
-    def create_scheduled_backup(
-        self, components: List[str] = None, description: str = None
-    ) -> Tuple[bool, str]:
+    def create_scheduled_backup(self, components: List[str] = None, description: str = None) -> Tuple[bool, str]:
         """
         Create a scheduled backup using cron.
 
@@ -551,9 +529,7 @@ def main():
     Returns:
         System exit code: 0 on success, non-zero on error
     """
-    parser = argparse.ArgumentParser(
-        description="Backup and restore utility for the autonomous mower"
-    )
+    parser = argparse.ArgumentParser(description="Backup and restore utility for the autonomous mower")
 
     # Create a mutually exclusive group for the main actions
     action_group = parser.add_mutually_exclusive_group(required=True)
@@ -644,9 +620,7 @@ def main():
 
             print(f"Found {len(backups)} backups:")
             for backup in backups:
-                created_at = datetime.fromisoformat(backup["created_at"]).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                created_at = datetime.fromisoformat(backup["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
                 print(f"ID: {backup['id']}")
                 print(f"  Created: {created_at}")
                 print(f"  Components: {', '.join(backup['components'])}")
@@ -660,9 +634,7 @@ def main():
                 print(f"Backup {args.info} not found")
                 return 1
 
-            created_at = datetime.fromisoformat(backup_info["created_at"]).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            created_at = datetime.fromisoformat(backup_info["created_at"]).strftime("%Y-%m-%d %H:%M:%S")
             print(f"Backup ID: {backup_info['id']}")
             print(f"Created: {created_at}")
             print(f"Components: {', '.join(backup_info['components'])}")

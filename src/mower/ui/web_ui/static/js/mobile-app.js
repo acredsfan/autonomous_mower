@@ -1,6 +1,6 @@
 /**
  * Autonomous Mower Web Interface - Mobile App Support
- * 
+ *
  * Provides functionality for Progressive Web App (PWA) features
  * and mobile-specific optimizations for the autonomous mower control interface.
  */
@@ -28,7 +28,7 @@ function initializeMobileApp() {
     // Add mobile-specific class to body for CSS targeting
     if (isMobileDevice()) {
         document.body.classList.add('mobile-device');
-        
+
         // Add viewport meta tag if not present
         if (!document.querySelector('meta[name="viewport"]')) {
             const viewportMeta = document.createElement('meta');
@@ -36,24 +36,24 @@ function initializeMobileApp() {
             viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
             document.head.appendChild(viewportMeta);
         }
-        
+
         // Add mobile app banner if not already present
         if (!document.getElementById('mobile-app-banner') && mobileAppConfig.enablePWA) {
             createAppInstallBanner();
         }
     }
-    
+
     // Add manifest link if not present
     if (mobileAppConfig.enablePWA && !document.querySelector('link[rel="manifest"]')) {
         const manifestLink = document.createElement('link');
         manifestLink.rel = 'manifest';
         manifestLink.href = '/static/manifest.json';
         document.head.appendChild(manifestLink);
-        
+
         // Create manifest.json if it doesn't exist
         createManifestFile();
     }
-    
+
     // Register service worker for PWA if supported
     if (mobileAppConfig.enablePWA && 'serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/js/service-worker.js')
@@ -71,12 +71,12 @@ function initializeMobileApp() {
  */
 function setupMobileEventListeners() {
     if (!isMobileDevice()) return;
-    
+
     // Enable touch gestures if configured
     if (mobileAppConfig.enableTouchGestures) {
         setupTouchGestures();
     }
-    
+
     // Add vibration feedback to buttons
     if (mobileAppConfig.enableVibration && 'vibrate' in navigator) {
         document.querySelectorAll('button, .btn').forEach(button => {
@@ -85,15 +85,15 @@ function setupMobileEventListeners() {
             });
         });
     }
-    
+
     // Handle orientation changes
     window.addEventListener('orientationchange', handleOrientationChange);
-    
+
     // Handle fullscreen mode
     if (mobileAppConfig.enableFullscreen) {
         setupFullscreenMode();
     }
-    
+
     // Prevent zooming on double tap
     document.addEventListener('dblclick', function(e) {
         e.preventDefault();
@@ -108,26 +108,26 @@ function setupTouchGestures() {
     let touchStartY = 0;
     let touchEndX = 0;
     let touchEndY = 0;
-    
+
     // Track touch start position
     document.addEventListener('touchstart', function(e) {
         touchStartX = e.changedTouches[0].screenX;
         touchStartY = e.changedTouches[0].screenY;
     }, false);
-    
+
     // Track touch end position and determine gesture
     document.addEventListener('touchend', function(e) {
         touchEndX = e.changedTouches[0].screenX;
         touchEndY = e.changedTouches[0].screenY;
         handleGesture();
     }, false);
-    
+
     // Handle the gesture
     function handleGesture() {
         const deltaX = touchEndX - touchStartX;
         const deltaY = touchEndY - touchStartY;
         const minSwipeDistance = 50;
-        
+
         // Determine if it's a horizontal or vertical swipe
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // Horizontal swipe
@@ -154,23 +154,23 @@ function setupTouchGestures() {
             }
         }
     }
-    
+
     // Add pull-to-refresh functionality
     let refreshStartY = 0;
     let refreshing = false;
-    
+
     document.addEventListener('touchstart', function(e) {
         refreshStartY = e.touches[0].clientY;
     });
-    
+
     document.addEventListener('touchmove', function(e) {
         const y = e.touches[0].clientY;
         const pullDistance = y - refreshStartY;
-        
+
         // Only activate pull-to-refresh at the top of the page
         if (window.scrollY === 0 && pullDistance > 70 && !refreshing) {
             refreshing = true;
-            
+
             // Show refresh indicator
             const refreshIndicator = document.createElement('div');
             refreshIndicator.id = 'refresh-indicator';
@@ -187,12 +187,12 @@ function setupTouchGestures() {
                 z-index: 9999;
             `;
             document.body.appendChild(refreshIndicator);
-            
+
             // Refresh data
             if (typeof socket !== 'undefined') {
                 socket.emit('request_data', { type: 'all' });
             }
-            
+
             // Remove indicator after 1 second
             setTimeout(() => {
                 if (refreshIndicator.parentNode) {
@@ -210,7 +210,7 @@ function setupTouchGestures() {
 function handleOrientationChange() {
     // Update UI based on orientation
     const orientation = window.orientation;
-    
+
     if (orientation === 90 || orientation === -90) {
         // Landscape mode
         document.body.classList.add('landscape');
@@ -220,7 +220,7 @@ function handleOrientationChange() {
         document.body.classList.add('portrait');
         document.body.classList.remove('landscape');
     }
-    
+
     // Adjust UI elements based on orientation
     adjustUIForOrientation();
 }
@@ -230,7 +230,7 @@ function handleOrientationChange() {
  */
 function adjustUIForOrientation() {
     const isLandscape = document.body.classList.contains('landscape');
-    
+
     // Adjust control panel layout
     const controlPanel = document.querySelector('.control-panel');
     if (controlPanel) {
@@ -240,7 +240,7 @@ function adjustUIForOrientation() {
             controlPanel.classList.remove('landscape-layout');
         }
     }
-    
+
     // Adjust map size
     const mapContainer = document.querySelector('.map-container');
     if (mapContainer) {
@@ -270,7 +270,7 @@ function setupFullscreenMode() {
             cursor: pointer;
             padding: 0.5rem;
         `;
-        
+
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         header.querySelector('.header-content').appendChild(fullscreenBtn);
     }
@@ -296,17 +296,17 @@ function toggleFullscreen() {
  */
 function setupInstallPrompt() {
     let deferredPrompt;
-    
+
     window.addEventListener('beforeinstallprompt', (e) => {
         // Prevent Chrome 67 and earlier from automatically showing the prompt
         e.preventDefault();
         // Stash the event so it can be triggered later
         deferredPrompt = e;
-        
+
         // Show the install button
         showInstallButton(deferredPrompt);
     });
-    
+
     // Handle app installed event
     window.addEventListener('appinstalled', () => {
         // Hide the install button
@@ -314,10 +314,10 @@ function setupInstallPrompt() {
         if (installButton) {
             installButton.style.display = 'none';
         }
-        
+
         // Log the installation
         console.log('PWA was installed');
-        
+
         // Show a notification
         if (typeof showNotification === 'function') {
             showNotification('App Installed', 'The Autonomous Mower app has been installed successfully!', 'success');
@@ -327,7 +327,7 @@ function setupInstallPrompt() {
 
 /**
  * Show the PWA install button
- * 
+ *
  * @param {Event} deferredPrompt - The beforeinstallprompt event
  */
 function showInstallButton(deferredPrompt) {
@@ -346,7 +346,7 @@ function showInstallButton(deferredPrompt) {
             border-radius: 30px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         `;
-        
+
         installButton.addEventListener('click', async () => {
             // Show the install prompt
             deferredPrompt.prompt();
@@ -354,11 +354,11 @@ function showInstallButton(deferredPrompt) {
             const { outcome } = await deferredPrompt.userChoice;
             // We've used the prompt, and can't use it again, so clear it
             deferredPrompt = null;
-            
+
             // Hide the button regardless of outcome
             installButton.style.display = 'none';
         });
-        
+
         document.body.appendChild(installButton);
     }
 }
@@ -384,7 +384,7 @@ function createAppInstallBanner() {
             </div>
             <button class="banner-close">&times;</button>
         `;
-        
+
         // Add styles
         const style = document.createElement('style');
         style.textContent = `
@@ -401,32 +401,32 @@ function createAppInstallBanner() {
                 justify-content: space-between;
                 align-items: center;
             }
-            
+
             .banner-content {
                 display: flex;
                 align-items: center;
             }
-            
+
             .banner-icon {
                 font-size: 24px;
                 margin-right: 12px;
                 color: var(--grass-medium);
             }
-            
+
             .banner-text {
                 display: flex;
                 flex-direction: column;
             }
-            
+
             .banner-text strong {
                 font-size: 16px;
             }
-            
+
             .banner-text span {
                 font-size: 14px;
                 color: #666;
             }
-            
+
             .banner-close {
                 background: none;
                 border: none;
@@ -435,17 +435,17 @@ function createAppInstallBanner() {
                 cursor: pointer;
             }
         `;
-        
+
         document.head.appendChild(style);
         document.body.appendChild(banner);
-        
+
         // Add close button functionality
         banner.querySelector('.banner-close').addEventListener('click', () => {
             banner.style.display = 'none';
             // Remember that the user closed the banner
             localStorage.setItem('app_banner_closed', 'true');
         });
-        
+
         // Don't show if user has closed it before
         if (localStorage.getItem('app_banner_closed') === 'true') {
             banner.style.display = 'none';
@@ -484,17 +484,17 @@ function createManifestFile() {
 
 /**
  * Check if the current device is a mobile device
- * 
+ *
  * @returns {boolean} True if the device is mobile
  */
 function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
            (window.innerWidth <= 768);
 }
 
 /**
  * Check if the current device is an iOS device
- * 
+ *
  * @returns {boolean} True if the device is iOS
  */
 function isIOSDevice() {
@@ -503,18 +503,18 @@ function isIOSDevice() {
 
 /**
  * Check if the app is running in standalone mode (installed PWA)
- * 
+ *
  * @returns {boolean} True if in standalone mode
  */
 function isInStandaloneMode() {
-    return (window.matchMedia('(display-mode: standalone)').matches) || 
-           (window.navigator.standalone) || 
+    return (window.matchMedia('(display-mode: standalone)').matches) ||
+           (window.navigator.standalone) ||
            document.referrer.includes('android-app://');
 }
 
 /**
  * Update mobile app settings
- * 
+ *
  * @param {Object} settings - New mobile app settings
  */
 function updateMobileAppSettings(settings) {

@@ -24,15 +24,10 @@ def main():
 
     config = load_config(config_path)
     if config is None:
-        print(
-            (
-                f"Validation failed: Configuration file '{config_path}'"
-                f" is invalid or missing required fields.")
-            )
+        print((f"Validation failed: Configuration file '{config_path}'" f" is invalid or missing required fields."))
         sys.exit(1)
 
-    print(
-        f"Validation successful: '{config_path}' is a valid mower configuration.")
+    print(f"Validation successful: '{config_path}' is a valid mower configuration.")
 
 
 if __name__ == "__main__":

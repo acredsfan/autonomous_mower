@@ -48,10 +48,7 @@ def compile_translations():
                     except subprocess.CalledProcessError as e:
                         print(f"Error compiling {po_file}: {e}")
                     except FileNotFoundError:
-                        print(
-                            "pybabel command not found. "
-                            "Make sure Flask-Babel is installed."
-                        )
+                        print("pybabel command not found. " "Make sure Flask-Babel is installed.")
                 else:
                     print(f"No messages.po file found in {lc_messages_dir}")
             else:

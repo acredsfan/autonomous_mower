@@ -1,8 +1,9 @@
 """
 Utility functions for benchmark tests.
 """
+
 from pathlib import Path
-from typing import List, Tuple, Dict, Any, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 def get_test_data_dir() -> Path:
@@ -17,9 +18,7 @@ def get_test_data_dir() -> Path:
     return Path(__file__).parent.parent / "test_data"
 
 
-def generate_random_boundary(
-    num_points: int = 5, radius: float = 10.0
-) -> List[Tuple[float, float]]:
+def generate_random_boundary(num_points: int = 5, radius: float = 10.0) -> List[Tuple[float, float]]:
     """
     Generate a random boundary for testing.
 
@@ -55,8 +54,7 @@ def generate_random_obstacles(
     pass
 
 
-def time_execution(func: Callable, *args: Any, **
-                   kwargs: Any) -> Tuple[Any, float]:
+def time_execution(func: Callable, *args: Any, **kwargs: Any) -> Tuple[Any, float]:
     """
     Time the execution of a function.
 
@@ -71,9 +69,7 @@ def time_execution(func: Callable, *args: Any, **
     pass
 
 
-def log_benchmark_results(
-    name: str, times: List[float], results: Optional[List[Any]] = None
-) -> Dict[str, float]:
+def log_benchmark_results(name: str, times: List[float], results: Optional[List[Any]] = None) -> Dict[str, float]:
     """
     Log benchmark results.
 

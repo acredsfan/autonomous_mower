@@ -4,18 +4,16 @@ Unit tests for network_diagnostics utility.
 These tests mock network requests to verify connectivity and endpoint checks.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from mower.utilities import network_diagnostics
 
 
 @pytest.fixture
 def endpoints():
-    return [
-        "https://example.com/resource1",
-        "https://example.com/resource2"
-    ]
+    return ["https://example.com/resource1", "https://example.com/resource2"]
 
 
 @patch("requests.get")
@@ -44,6 +42,7 @@ def test_check_required_endpoints_some_fail(mock_head, endpoints):
         mock_resp = MagicMock()
         mock_resp.status_code = 200 if "resource1" in url else 404
         return mock_resp
+
     mock_head.side_effect = side_effect
     with patch.object(network_diagnostics, "REQUIRED_ENDPOINTS", endpoints):
         assert network_diagnostics.check_required_endpoints() is False

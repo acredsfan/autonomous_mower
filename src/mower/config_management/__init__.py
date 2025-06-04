@@ -25,28 +25,28 @@ Usage:
 from mower.config_management.config_interface import ConfigurationInterface
 from mower.config_management.config_manager import (
     ConfigurationManager,
+    get_config,
     get_config_manager,
     initialize_config_manager,
-    get_config,
     set_config,
 )
 from mower.config_management.config_source import (
     ConfigurationSource,
+    DictConfigurationSource,
     EnvironmentConfigurationSource,
     FileConfigurationSource,
-    DictConfigurationSource,
 )
 from mower.config_management.constants import (
     BASE_DIR,
     CONFIG_DIR,
-    USER_POLYGON_PATH,
+    DEFAULT_CONFIG,
+    DEFAULT_CONFIG_FILE,
+    DEFAULT_ENV_FILE,
+    ENV_PREFIX,
     HOME_LOCATION_PATH,
     MOWING_SCHEDULE_PATH,
     PATTERN_PLANNER_PATH,
-    DEFAULT_CONFIG,
-    ENV_PREFIX,
-    DEFAULT_CONFIG_FILE,
-    DEFAULT_ENV_FILE,
+    USER_POLYGON_PATH,
 )
 
 # Initialize the configuration manager with default values

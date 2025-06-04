@@ -2,11 +2,12 @@
 
 import threading
 from typing import TYPE_CHECKING, Optional
+
 from flask import Flask
 from flask_socketio import SocketIO
 
-from mower.utilities import LoggerConfigInfo
 from mower.ui.web_ui.app import create_app
+from mower.utilities import LoggerConfigInfo
 
 if TYPE_CHECKING:
     from mower.mower import Mower
@@ -46,9 +47,7 @@ class WebInterface:
             self.app, self.socketio = create_app(self.mower)
 
             # Start the web server in a separate thread
-            self._thread = threading.Thread(
-                target=self._run_server, daemon=True
-            )
+            self._thread = threading.Thread(target=self._run_server, daemon=True)
             self._thread.start()
 
             self._is_running = True

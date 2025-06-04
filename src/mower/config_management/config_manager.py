@@ -1,4 +1,5 @@
 import json
+
 """
 Configuration manager for the autonomous mower.
 
@@ -51,9 +52,7 @@ class ConfigurationManager(ConfigurationInterface):
         # Add default values source
         self.add_source(DictConfigurationSource(self._defaults))
 
-    def add_source(
-        self, source: ConfigurationSource, priority: int = -1
-    ) -> None:
+    def add_source(self, source: ConfigurationSource, priority: int = -1) -> None:
         """
         Add a configuration source.
 
@@ -206,7 +205,7 @@ class ConfigurationManager(ConfigurationInterface):
                 for key, value in values.items():
                     if key.startswith(f"{section}."):
                         # Remove the section prefix
-                        section_key = key[len(section) + 1:]
+                        section_key = key[len(section) + 1 :]
                         section_values[section_key] = value
                     elif isinstance(value, dict) and section in value:
                         # Handle nested dictionaries
@@ -285,16 +284,13 @@ class ConfigurationManager(ConfigurationInterface):
             self._sources = [
                 source
                 for source in self._sources
-                if isinstance(source, DictConfigurationSource)
-                and source.values == self._defaults
+                if isinstance(source, DictConfigurationSource) and source.values == self._defaults
             ]
 
             # Add default sources
             self._add_default_sources()
 
-    def get_int(
-        self, key: str, default: Optional[int] = None
-    ) -> Optional[int]:
+    def get_int(self, key: str, default: Optional[int] = None) -> Optional[int]:
         """
         Get a configuration value as an integer.
 
@@ -315,9 +311,7 @@ class ConfigurationManager(ConfigurationInterface):
         except (ValueError, TypeError):
             return default
 
-    def get_float(
-        self, key: str, default: Optional[float] = None
-    ) -> Optional[float]:
+    def get_float(self, key: str, default: Optional[float] = None) -> Optional[float]:
         """
         Get a configuration value as a float.
 
@@ -338,9 +332,7 @@ class ConfigurationManager(ConfigurationInterface):
         except (ValueError, TypeError):
             return default
 
-    def get_bool(
-        self, key: str, default: Optional[bool] = None
-    ) -> Optional[bool]:
+    def get_bool(self, key: str, default: Optional[bool] = None) -> Optional[bool]:
         """
         Get a configuration value as a boolean.
 
@@ -368,9 +360,7 @@ class ConfigurationManager(ConfigurationInterface):
 
         return default
 
-    def get_str(
-        self, key: str, default: Optional[str] = None
-    ) -> Optional[str]:
+    def get_str(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """
         Get a configuration value as a string.
 
@@ -391,9 +381,7 @@ class ConfigurationManager(ConfigurationInterface):
         except (ValueError, TypeError):
             return default
 
-    def get_list(
-        self, key: str, default: Optional[List[Any]] = None
-    ) -> Optional[List[Any]]:
+    def get_list(self, key: str, default: Optional[List[Any]] = None) -> Optional[List[Any]]:
         """
         Get a configuration value as a list.
 
@@ -423,9 +411,7 @@ class ConfigurationManager(ConfigurationInterface):
 
         return default
 
-    def get_dict(
-        self, key: str, default: Optional[Dict[str, Any]] = None
-    ) -> Optional[Dict[str, Any]]:
+    def get_dict(self, key: str, default: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
         Get a configuration value as a dictionary.
 

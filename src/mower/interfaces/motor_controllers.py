@@ -7,8 +7,8 @@ support for different motor controllers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class MotorType(Enum):

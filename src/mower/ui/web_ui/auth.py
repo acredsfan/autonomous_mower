@@ -9,20 +9,11 @@ import hashlib
 import os
 from typing import Callable, Optional, TypeVar, cast
 
-from flask import (
-    Flask,
-    Response,
-    current_app,
-    flash,
-    redirect,
-    request,
-    session,
-    url_for,
-)
+from flask import Flask, Response, current_app, flash, redirect, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from mower.utilities.audit_log import AuditEventType, get_audit_logger
 from mower.utilities.logger_config import LoggerConfigInfo
-from mower.utilities.audit_log import get_audit_logger, AuditEventType
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -52,9 +43,7 @@ def init_auth(app: Flask, config: dict) -> None:
         def check_auth() -> Optional[Response]:
             """Check if the user is authenticated before processing requests."""
             # Skip authentication for login page and static files
-            if request.endpoint == "login" or request.path.startswith(
-                "/static/"
-            ):
+            if request.endpoint == "login" or request.path.startswith("/static/"):
                 return None
 
             if not session.get("authenticated"):
@@ -80,9 +69,7 @@ def init_auth(app: Flask, config: dict) -> None:
                     ip_address = request.remote_addr
 
                     # Log successful login
-                    logger.info(
-                        f"User '{username}' logged in successfully from {ip_address}"
-                    )
+                    logger.info(f"User '{username}' logged in successfully from {ip_address}")
 
                     # Audit log for successful login
                     audit_logger.log_login(username, ip_address, success=True)
@@ -97,14 +84,10 @@ def init_auth(app: Flask, config: dict) -> None:
                     ip_address = request.remote_addr
 
                     # Log failed login attempt
-                    logger.warning(
-                        f"Failed login attempt for user '{username}' from {ip_address}"
-                    )
+                    logger.warning(f"Failed login attempt for user '{username}' from {ip_address}")
 
                     # Audit log for failed login
-                    audit_logger.log_login(
-                        username, ip_address, success=False
-                    )
+                    audit_logger.log_login(username, ip_address, success=False)
 
             return current_app.send_static_file("login.html")
 
@@ -150,9 +133,7 @@ def authenticate(username: str, password: str, config: dict) -> bool:
 
     # If no password is set, authentication fails
     if not expected_password:
-        logger.warning(
-            "Authentication failed: No password set in configuration"
-        )
+        logger.warning("Authentication failed: No password set in configuration")
         return False
 
     # Check if username and password match

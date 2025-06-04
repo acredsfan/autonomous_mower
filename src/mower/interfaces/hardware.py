@@ -7,8 +7,8 @@ and sensors.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 class BladeControllerInterface(ABC):
@@ -281,9 +281,7 @@ class GPIOInterface(ABC):
     """
 
     @abstractmethod
-    def setup_pin(
-        self, pin: int, mode: str, initial: Optional[int] = None
-    ) -> None:
+    def setup_pin(self, pin: int, mode: str, initial: Optional[int] = None) -> None:
         """
         Set up a GPIO pin.
 

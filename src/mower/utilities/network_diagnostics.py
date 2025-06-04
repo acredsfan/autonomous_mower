@@ -9,11 +9,13 @@ Author: Autonomous Mower Team
 """
 
 import logging
+
 import requests
 
 # Use the project logger if available, else fallback
 try:
     from mower.utilities.logger_config import LoggerConfigInfo
+
     logger = LoggerConfigInfo.get_logger(__name__)
 except ImportError:
     logging.basicConfig(level=logging.INFO)
@@ -22,12 +24,9 @@ except ImportError:
 REQUIRED_ENDPOINTS = [
     # Coral model URLs
     # Coral model URLs
-    "https://github.com/google-coral/test_data/raw/master/"
-    "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
-    "https://github.com/google-coral/test_data/raw/master/"
-    "ssd_mobilenet_v2_coco_quant_postprocess.tflite",
-    "https://raw.githubusercontent.com/google-coral/test_data/master/"
-    "coco_labels.txt",
+    "https://github.com/google-coral/test_data/raw/master/" "ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite",
+    "https://github.com/google-coral/test_data/raw/master/" "ssd_mobilenet_v2_coco_quant_postprocess.tflite",
+    "https://raw.githubusercontent.com/google-coral/test_data/master/" "coco_labels.txt",
     # Update server (replace with actual repo URL if different)
     "https://github.com/yourusername/autonomous_mower.git",
     # Add more endpoints as needed (e.g., YOLOv8, DuckDNS, etc.)
@@ -49,8 +48,7 @@ def check_internet_connectivity(timeout: int = 5) -> bool:
             logger.info("Internet connectivity: OK")
             return True
         else:
-            logger.error(
-                f"Internet connectivity check failed (status {response.status_code})")
+            logger.error(f"Internet connectivity check failed (status {response.status_code})")
             return False
     except Exception as e:
         logger.error(f"Internet connectivity check failed: {e}")
@@ -72,17 +70,13 @@ def check_required_endpoints(timeout: int = 10) -> bool:
             if url.endswith(".git"):
                 # Try to access the repo page
                 repo_url = url.replace(".git", "")
-                response = requests.head(
-                    repo_url, timeout=timeout, allow_redirects=True)
+                response = requests.head(repo_url, timeout=timeout, allow_redirects=True)
             else:
-                response = requests.head(
-                    url, timeout=timeout, allow_redirects=True)
+                response = requests.head(url, timeout=timeout, allow_redirects=True)
             if response.status_code == 200:
                 logger.info(f"Endpoint reachable: {url}")
             else:
-                logger.error(
-                    f"Endpoint not reachable (status {response.status_code}): {url}"
-                )
+                logger.error(f"Endpoint not reachable (status {response.status_code}): {url}")
                 all_ok = False
         except Exception as e:
             logger.error(f"Endpoint not reachable: {url} ({e})")
@@ -104,15 +98,13 @@ def run_preflight_check() -> bool:
         logger.info("Network pre-flight check PASSED.")
         return True
     else:
-        logger.error(
-            "Network pre-flight check FAILED. "
-            "Please resolve network issues before proceeding."
-        )
+        logger.error("Network pre-flight check FAILED. " "Please resolve network issues before proceeding.")
         return False
 
 
 if __name__ == "__main__":
     # Allow running as a standalone script
     import sys
+
     result = run_preflight_check()
     sys.exit(0 if result else 1)

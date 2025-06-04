@@ -95,9 +95,7 @@ class AutoUpdater:
             os.chdir(self.repo_path)
 
             # Fetch the latest changes
-            logger.info(
-                f"Fetching latest changes from {self.repo_url}, branch {self.branch}"
-            )
+            logger.info(f"Fetching latest changes from {self.repo_url}, branch {self.branch}")
             subprocess.run(
                 ["git", "fetch", "origin", self.branch],
                 check=True,
@@ -191,11 +189,7 @@ class AutoUpdater:
             # Backup the repository (excluding .git directory)
             logger.info(f"Creating backup of repository to {backup_path}")
             for item in os.listdir(self.repo_path):
-                if (
-                    item != ".git"
-                    and item != "venv"
-                    and item != "__pycache__"
-                ):
+                if item != ".git" and item != "venv" and item != "__pycache__":
                     src = os.path.join(self.repo_path, item)
                     dst = os.path.join(backup_path, item)
                     if os.path.isdir(src):
@@ -260,8 +254,7 @@ class AutoUpdater:
             for config_file in config_files:
                 backup_file = os.path.join(
                     CONFIG_BACKUP_DIR,
-                    os.path.basename(config_file)
-                    + f".{self.backup_timestamp}",
+                    os.path.basename(config_file) + f".{self.backup_timestamp}",
                 )
                 if os.path.exists(backup_file):
                     shutil.copy2(backup_file, config_file)
@@ -350,9 +343,7 @@ class AutoUpdater:
                     return False
                 return True
             else:
-                logger.info(
-                    "Service was not running before update, not starting"
-                )
+                logger.info("Service was not running before update, not starting")
                 return True
         except subprocess.CalledProcessError as e:
             logger.error(f"Error starting services: {e.stderr}")
@@ -452,18 +443,17 @@ class AutoUpdater:
                     check=True,
                     capture_output=True,
                     text=True,
-                )                # Start services
+                )  # Start services
                 if not self.start_services():
-                    logger.error(
-                        "Failed to start services after update, rolling back"
-                    )
+                    logger.error("Failed to start services after update, rolling back")
                     self.restore_from_backup()
                     self.start_services()  # Try to start services from backup
                     self.update_in_progress = False
                     os.remove(UPDATE_LOCK_FILE)
                     return (
-                        False, "Failed to start services after update, rolled back to "
-                        "previous version", )
+                        False,
+                        "Failed to start services after update, rolled back to " "previous version",
+                    )
 
                 # Update successful
                 logger.info("Update completed successfully")
@@ -480,8 +470,7 @@ class AutoUpdater:
                 os.remove(UPDATE_LOCK_FILE)
                 return (
                     False,
-                    f"Error applying updates: {e.stderr}. Rolled"
-                    f" back to previous version.",
+                    f"Error applying updates: {e.stderr}. Rolled" f" back to previous version.",
                 )
             except Exception as e:
                 logger.error(f"Error applying updates: {str(e)}")
@@ -493,8 +482,7 @@ class AutoUpdater:
                 os.remove(UPDATE_LOCK_FILE)
                 return (
                     False,
-                    f"Error applying updates: {str(e)}. Rolled back"
-                    f" to previous version.",
+                    f"Error applying updates: {str(e)}. Rolled back" f" to previous version.",
                 )
         except Exception as e:
             logger.error(f"Error in update process: {str(e)}")
@@ -521,9 +509,7 @@ def main():
     Returns:
         System exit code: 0 on success, non-zero on error
     """
-    parser = argparse.ArgumentParser(
-        description="Automatic updater for the autonomous mower"
-    )
+    parser = argparse.ArgumentParser(description="Automatic updater for the autonomous mower")
     parser.add_argument(
         "--repo-url",
         type=str,

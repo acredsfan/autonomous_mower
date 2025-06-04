@@ -5,9 +5,9 @@ This module provides a centralized configuration for logging across the
 autonomous mower application.
 """
 
-import os
 import logging
 import logging.handlers
+import os
 
 
 class LoggerConfigInfo:
@@ -35,9 +35,7 @@ class LoggerConfigInfo:
                 root_logger.removeHandler(handler)
 
             # Create formatters
-            detailed_formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            detailed_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
             # Set up console handler first
             console_handler = logging.StreamHandler()
@@ -53,10 +51,7 @@ class LoggerConfigInfo:
                 file_handler.setFormatter(detailed_formatter)
                 root_logger.addHandler(file_handler)
             else:
-                root_logger.warning(
-                    f"Log directory {cls._log_dir} does not exist. "
-                    "Logging to console only."
-                )
+                root_logger.warning(f"Log directory {cls._log_dir} does not exist. " "Logging to console only.")
 
             cls._initialized = True
             root_logger.info("Logging system initialized successfully")
@@ -92,6 +87,7 @@ class LoggerConfigInfo:
         # Remove log files older than the specified number of days
         import os
         import time
+
         log_dir = "logs"
         now = time.time()
         cutoff = now - (days * 86400)
@@ -104,5 +100,4 @@ class LoggerConfigInfo:
                         try:
                             os.remove(file_path)
                         except Exception as e:
-                            print(
-                                f"Failed to remove old log file {file_path}: {e}")
+                            print(f"Failed to remove old log file {file_path}: {e}")

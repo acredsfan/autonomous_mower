@@ -3,6 +3,7 @@ Test module for test_web_ui_socketio.py.
 """
 
 import pytest
+
 # Placeholder for import s that will be needed
 # import socketio
 # from unittest.mock import MagicMock, patch

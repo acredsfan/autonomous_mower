@@ -6,7 +6,7 @@ the BladeControllerInterface and wraps the BladeController class, mapping
 the interface methods to the methods expected by the business logic.
 """
 
-from typing import Dict, Any
+from typing import Any, Dict
 
 from mower.hardware.blade_controller import BladeController
 from mower.interfaces.hardware import BladeControllerInterface

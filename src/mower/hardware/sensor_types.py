@@ -1,7 +1,7 @@
 # src/mower/hardware/sensor_types.py
 from dataclasses import dataclass, field
-from typing import Any, Optional
 from datetime import datetime  # Using datetime for timestamp as it's common
+from typing import Any, Optional
 
 
 @dataclass

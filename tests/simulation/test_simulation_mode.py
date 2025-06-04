@@ -2,20 +2,18 @@
 Test module for test_simulation_mode.py.
 """
 
-from mower.config_management import get_config, set_config
-from mower.robot_di import Robot as RobotDI
-from mower.main_controller import MainController
-from mower.simulation.world_model import (
-    get_world_instance,
-    Vector2D,
-    reset_world,
-)
-from mower.simulation import enable_simulation, is_simulation_enabled
+import logging
 import os
 import time
-import pytest
-import logging
 from pathlib import Path
+
+import pytest
+
+from mower.config_management import get_config, set_config
+from mower.main_controller import MainController
+from mower.robot_di import Robot as RobotDI
+from mower.simulation import enable_simulation, is_simulation_enabled
+from mower.simulation.world_model import Vector2D, get_world_instance, reset_world
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,8 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
-
-
 def simulation_environment():
     """Set up a simulation environment for testing."""
     # Enable simulation mode
@@ -44,15 +40,9 @@ def simulation_environment():
     world.set_robot_position(Vector2D(10.0, 10.0), 0.0)
 
     # Add some obstacles
-    world.add_obstacle(
-        Vector2D(15.0, 10.0), 1.0, obstacle_type = "rock"
-    )  # Rock at(15, 10)
-    world.add_obstacle(
-        Vector2D(10.0, 15.0), 0.5, obstacle_type = "small_rock"
-    )  # Small rock at(10, 15)
-    world.add_obstacle(
-        Vector2D(5.0, 5.0), 2.0, obstacle_type = "tree"
-    )  # Tree at(5, 5)
+    world.add_obstacle(Vector2D(15.0, 10.0), 1.0, obstacle_type="rock")  # Rock at(15, 10)
+    world.add_obstacle(Vector2D(10.0, 15.0), 0.5, obstacle_type="small_rock")  # Small rock at(10, 15)
+    world.add_obstacle(Vector2D(5.0, 5.0), 2.0, obstacle_type="tree")  # Tree at(5, 5)
 
     # Configure the mower for simulation
     set_config("use_simulation", True)
@@ -70,25 +60,19 @@ def test_obstacle_detection(simulation_environment):
 
     # Get the robot's current position and heading
     robot_state = world.get_robot_state()
-    position = Vector2D( * robot_state["position"])
+    position = Vector2D(*robot_state["position"])
     heading = robot_state["heading"]
 
     logger.info(f"Robot starting at position {position}, heading {heading}")
 
     # Check for obstacles in front of the robot
     direction = Vector2D(1.0, 0.0)  # East
-    distance, obstacle = world.get_distance_to_nearest_obstacle(
-        position, direction, max_range=10.0
-    )
+    distance, obstacle = world.get_distance_to_nearest_obstacle(position, direction, max_range=10.0)
 
     # We should detect the rock at(15, 10)
     assert obstacle is not None, "Should detect an obstacle"
-    assert (
-        obstacle.obstacle_type== "rock"
-    ), f"Should detect a rock, got {obstacle.obstacle_type}"
-    assert (
-        4.0 < distance < 6.0
-    ), f"Distance should be about 5m, got {distance}m"
+    assert obstacle.obstacle_type == "rock", f"Should detect a rock, got {obstacle.obstacle_type}"
+    assert 4.0 < distance < 6.0, f"Distance should be about 5m, got {distance}m"
 
     logger.info(f"Detected {obstacle.obstacle_type} at distance {distance}m")
 
@@ -99,7 +83,7 @@ def test_robot_movement(simulation_environment):
 
     # Get initial position
     initial_state = world.get_robot_state()
-    initial_position = Vector2D( * initial_state["position"])
+    initial_position = Vector2D(*initial_state["position"])
 
     logger.info(f"Robot starting at position {initial_position}")
 
@@ -113,20 +97,15 @@ def test_robot_movement(simulation_environment):
 
     # Get new position
     new_state = world.get_robot_state()
-    new_position = Vector2D( * new_state["position"])
+    new_position = Vector2D(*new_state["position"])
 
     # Calculate distance moved
     distance_moved = initial_position.distance_to(new_position)
 
-    logger.info(
-        f"Robot moved to position {new_position}, "
-        f"distance moved: {distance_moved}m"
-    )
+    logger.info(f"Robot moved to position {new_position}, " f"distance moved: {distance_moved}m")
 
     # We should have moved for ward
-    assert (
-        distance_moved > 0.5
-    ), f"Robot should have moved, only moved {distance_moved}m"
+    assert distance_moved > 0.5, f"Robot should have moved, only moved {distance_moved}m"
 
     # Stop the robot
     world.set_robot_motor_speeds(0.0, 0.0)
@@ -142,7 +121,7 @@ def test_collision_handling(simulation_environment):
 
     # Get initial position
     initial_state = world.get_robot_state()
-    initial_position = Vector2D( * initial_state["position"])
+    initial_position = Vector2D(*initial_state["position"])
 
     logger.info(f"Robot starting at position {initial_position}")
 
@@ -156,7 +135,7 @@ def test_collision_handling(simulation_environment):
 
     # Get new position
     new_state = world.get_robot_state()
-    new_position = Vector2D( * new_state["position"])
+    new_position = Vector2D(*new_state["position"])
 
     logger.info(f"Robot moved to position {new_position}")
 
@@ -165,9 +144,7 @@ def test_collision_handling(simulation_environment):
     distance_to_obstacle = new_position.distance_to(obstacle_position)
 
     # We should not have penetrated the obstacle(radius 1.0)
-    assert (
-        distance_to_obstacle >= 1.0
-    ), f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
+    assert distance_to_obstacle >= 1.0, f"Robot should not penetrate obstacle, distance: {distance_to_obstacle}m"
 
     # Stop the robot
     world.set_robot_motor_speeds(0.0, 0.0)
@@ -207,7 +184,7 @@ if __name__ == "__main__":
     world.add_obstacle(Vector2D(5.0, 5.0), 2.0, obstacle_type="tree")
 
     # Run the tests
-    try :
+    try:
         test_obstacle_detection(world)
         test_robot_movement(world)
         test_collision_handling(world)
@@ -215,6 +192,6 @@ if __name__ == "__main__":
         logger.info("All tests passed ! ")
     except AssertionError as e:
         logger.error(f"Test failed: {e}")
-    finally :
+    finally:
         # Clean up
         reset_world()

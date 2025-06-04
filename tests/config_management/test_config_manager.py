@@ -1,16 +1,13 @@
 """
 Test module for test_config_manager.py.
 """
-import pytest
+
 from pathlib import Path
+
+import pytest
+
 # Assuming these are the correct imports, adjust if necessary
-from mower.config_management import (
-    get_config,
-    set_config,
-    initialize_config_manager,
-    get_config_manager,
-    ConfigManager,
-)
+from mower.config_management import ConfigManager, get_config, get_config_manager, initialize_config_manager, set_config
 
 
 class TestConfigManager:
@@ -28,12 +25,11 @@ class TestConfigManager:
                     "int_value": 42,
                     "float_value": 3.14,
                     "bool_value": True,
-                    "list_value": [
-                        1,
-                        2,
-                        3],
-                    "dict_value": {
-                        "key": "value"}}})
+                    "list_value": [1, 2, 3],
+                    "dict_value": {"key": "value"},
+                }
+            },
+        )
         return get_config_manager()
 
     def test_initialization(self, config_manager: ConfigManager):
@@ -61,9 +57,7 @@ class TestConfigManager:
         assert config_manager.get_float("test.float_value_str", 0.0) == 3.14
         assert config_manager.get_bool("test.bool_value_str", False) is True
         assert config_manager.get_list("test.list_value_str", []) == [1, 2, 3]
-        assert config_manager.get_dict("test.dict_value_str", {}) == {
-            "key": "value_str"
-        }
+        assert config_manager.get_dict("test.dict_value_str", {}) == {"key": "value_str"}
 
         # Test type conversion with invalid values
         set_config("test.invalid_int", "not_an_int")
@@ -105,8 +99,7 @@ class TestConfigManager:
 
         # Load configuration from file
         # Re-initialize or use a new manager to truly test loading from file
-        new_manager = ConfigManager(
-            config_dir=str(Path(config_manager.config_dir)))
+        new_manager = ConfigManager(config_dir=str(Path(config_manager.config_dir)))
         # Assuming get_all() or similar loads and returns all
         loaded_config = new_manager.get_all()
 

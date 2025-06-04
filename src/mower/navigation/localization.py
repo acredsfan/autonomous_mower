@@ -2,29 +2,20 @@ import math
 import os
 import sys
 import time
-from typing import Tuple, Dict
 from dataclasses import dataclass
+from typing import Dict, Tuple
 
 import numpy as np
 from shapely.geometry import Point, Polygon
 
+from mower.constants import max_lat, max_lng, min_lat, min_lng, polygon_coordinates
 from mower.navigation.gps import GpsLatestPosition, GpsNmeaPositions
 from mower.utilities.logger_config import LoggerConfigInfo
-from mower.constants import (
-    max_lat,
-    max_lng,
-    min_lat,
-    min_lng,
-    polygon_coordinates,
-)
-
 
 LoggerConfig.configure_logging()
 logging = LoggerConfigInfo.get_logger(__name__)
 
-sys.path.append(
-    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @dataclass
@@ -59,9 +50,7 @@ class Localization:
 
         # Initialize GPS components
         self.position_reader = GpsNmeaPositions(debug=False)
-        self.latest_position = GpsLatestPosition(
-            self.position_reader, debug=False
-        )
+        self.latest_position = GpsLatestPosition(self.position_reader, debug=False)
 
         # Initialize position tracking
         self.position = Position(
@@ -96,9 +85,7 @@ class Localization:
     def get_sensor_interface(self):
         """Get or initialize the enhanced sensor interface."""
         if self.sensor_interface is None:
-            from mower.hardware.sensor_interface import (
-                EnhancedSensorInterface,
-            )
+            from mower.hardware.sensor_interface import EnhancedSensorInterface
 
             self.sensor_interface = EnhancedSensorInterface()
         return self.sensor_interface
@@ -127,9 +114,7 @@ class Localization:
             logging.error(f"Position estimation error: {str(e)}")
             return (self.position.latitude, self.position.longitude)
 
-    def _process_sensor_data(
-        self, gps_data: Dict, sensor_data: Dict
-    ) -> Tuple[float, float]:
+    def _process_sensor_data(self, gps_data: Dict, sensor_data: Dict) -> Tuple[float, float]:
         """
         Process GPS and sensor data for position estimation.
 
@@ -159,9 +144,7 @@ class Localization:
 
         # Update Kalman filter
         kalman_gain = self._calculate_kalman_gain()
-        self.kalman_state = self._update_kalman_state(
-            predicted_pos, kalman_gain, gps_lat, gps_lon
-        )
+        self.kalman_state = self._update_kalman_state(predicted_pos, kalman_gain, gps_lat, gps_lon)
 
         # Update position data
         self._update_position_data(imu_heading)
@@ -224,9 +207,7 @@ class Localization:
 
     def _calculate_kalman_gain(self) -> float:
         """Calculate Kalman gain for position updating."""
-        return self.kalman_covariance / (
-            self.kalman_covariance + self.measurement_noise
-        )
+        return self.kalman_covariance / (self.kalman_covariance + self.measurement_noise)
 
     def _update_kalman_state(
         self,
@@ -248,9 +229,7 @@ class Localization:
             np.ndarray: Updated Kalman state
         """
         measurement = np.array([gps_lat, gps_lon])
-        self.kalman_covariance = (
-            1 - kalman_gain
-        ) * self.kalman_covariance + self.process_noise
+        self.kalman_covariance = (1 - kalman_gain) * self.kalman_covariance + self.process_noise
         return predicted_pos + kalman_gain * (measurement - predicted_pos)
 
     def _update_position_data(self, heading: float):
@@ -264,9 +243,7 @@ class Localization:
         self.position.longitude = float(self.kalman_state[1])
         self.position.heading = heading
         self.position.last_update = time.time()
-        self.position.accuracy = float(
-            np.sqrt(self.kalman_covariance.diagonal().mean())
-        )
+        self.position.accuracy = float(np.sqrt(self.kalman_covariance.diagonal().mean()))
 
     def _update_position_from_kalman(self):
         """Update position object from Kalman state."""
@@ -341,12 +318,8 @@ class Localization:
         try:
             # First check simple rectangular bounds
             in_rectangle = (
-                self.boundaries["min_lat"]
-                <= lat
-                <= self.boundaries["max_lat"]
-                and self.boundaries["min_lng"]
-                <= lon
-                <= self.boundaries["max_lng"]
+                self.boundaries["min_lat"] <= lat <= self.boundaries["max_lat"]
+                and self.boundaries["min_lng"] <= lon <= self.boundaries["max_lng"]
             )
 
             if not in_rectangle:

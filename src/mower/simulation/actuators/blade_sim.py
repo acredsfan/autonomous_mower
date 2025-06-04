@@ -6,7 +6,7 @@ with the virtual world model to provide realistic blade control behavior without
 requiring physical hardware.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from mower.simulation.hardware_sim import SimulatedActuator
 from mower.simulation.world_model import get_world_instance
@@ -65,9 +65,7 @@ class SimulatedBladeController(SimulatedActuator):
 
         # If the key is enabled or speed, update the robot's blade state
         if key in ["enabled", "speed"]:
-            self.world.set_robot_blade_state(
-                self.state["enabled"], self.state["speed"]
-            )
+            self.world.set_robot_blade_state(self.state["enabled"], self.state["speed"])
 
     # BladeController interface methods
 
@@ -202,9 +200,7 @@ class SimulatedBladeControllerAdapter:
     the interface of the BladeControllerAdapter class used in the real system.
     """
 
-    def __init__(
-        self, blade_controller: Optional[SimulatedBladeController] = None
-    ):
+    def __init__(self, blade_controller: Optional[SimulatedBladeController] = None):
         """
         Initialize the simulated blade controller adapter.
 

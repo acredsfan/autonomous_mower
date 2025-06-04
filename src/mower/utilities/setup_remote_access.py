@@ -4,12 +4,12 @@ This module provides functionality to configure various remote access methods
 for the mower's web interface.
 """
 
-import os
-import sys
 import logging
+import os
 import subprocess
-from typing import Dict, Any
+import sys
 from pathlib import Path
+from typing import Any, Dict
 
 # Configure logging
 logging.basicConfig(
@@ -32,18 +32,18 @@ class RemoteAccessSetup:
         self.access_type = config.get("REMOTE_ACCESS_TYPE", "port_forward")
         self.web_port = config.get("WEB_UI_PORT", 8080)
 
-# Pre-flight network diagnostics
+        # Pre-flight network diagnostics
         try:
             from mower.utilities.network_diagnostics import run_preflight_check
+
             if not run_preflight_check():
                 logger.error(
-                    "Network diagnostics failed. "
-                    "Please resolve network issues before configuring remote access.")
+                    "Network diagnostics failed. " "Please resolve network issues before configuring remote access."
+                )
                 return False
         except ImportError as e:
             logger.warning(
-                "Could not import network diagnostics. "
-                "Skipping pre-flight network check. Error: %s", str(e)
+                "Could not import network diagnostics. " "Skipping pre-flight network check. Error: %s", str(e)
             )
 
     def setup(self) -> bool:
@@ -61,9 +61,7 @@ class RemoteAccessSetup:
         }
 
         if self.access_type not in setup_methods:
-            logger.error(
-                f"Unsupported remote access type: {self.access_type}"
-            )
+            logger.error(f"Unsupported remote access type: {self.access_type}")
             return False
 
         try:
@@ -79,10 +77,7 @@ class RemoteAccessSetup:
             bool: True if setup was successful
         """
         logger.info("Setting up port forwarding...")
-        logger.info(
-            f"Please configure your router to forward port {self.web_port} "
-            "to your mower's IP address"
-        )
+        logger.info(f"Please configure your router to forward port {self.web_port} " "to your mower's IP address")
         return True
 
     def _setup_ddns(self) -> bool:
@@ -167,9 +162,7 @@ curl "https://www.duckdns.org/update?domains={domain}&token={token}&ip="
         """
         token = self.config.get("CLOUDFLARE_TOKEN")
         zone_id = self.config.get("CLOUDFLARE_ZONE_ID")
-        tunnel_name = self.config.get(
-            "CLOUDFLARE_TUNNEL_NAME", "mower-tunnel"
-        )
+        tunnel_name = self.config.get("CLOUDFLARE_TUNNEL_NAME", "mower-tunnel")
 
         if not all([token, zone_id]):
             logger.error("Missing required Cloudflare configuration")

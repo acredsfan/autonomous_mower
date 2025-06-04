@@ -7,16 +7,11 @@ event-based communication in your components.
 """
 
 import time
-from typing import Dict, Any
+from typing import Any, Dict
 
-from mower.events.event import Event, EventType, EventPriority
+from mower.events.event import Event, EventPriority, EventType
 from mower.events.event_bus import EventBus, get_event_bus
-from mower.events.handlers import (
-    EventHandler,
-    handle_event,
-    subscribe,
-    publish,
-)
+from mower.events.handlers import EventHandler, handle_event, publish, subscribe
 
 
 # Example 1: Basic event publishing and subscribing

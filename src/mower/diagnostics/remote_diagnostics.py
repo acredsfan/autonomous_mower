@@ -23,6 +23,7 @@ Example usage:
 """
 
 import argparse
+
 # import json
 import os
 import platform
@@ -32,19 +33,18 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import psutil
-from flask import Flask, jsonify, request, Response
+from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
-# from werkzeug.security import check_password_hash
 
 # Import hardware test suite
-from mower.diagnostics.hardware_test import (
-    HardwareTestSuite,
-    initialize_resource_manager,
-)
+from mower.diagnostics.hardware_test import HardwareTestSuite, initialize_resource_manager
 from mower.utilities.logger_config import LoggerConfigInfo
+
+# from werkzeug.security import check_password_hash
+
 
 # Configure logging
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -94,9 +94,7 @@ class RemoteDiagnostics:
             cpu_info = {
                 "usage_percent": psutil.cpu_percent(interval=1),
                 "temperature": self._get_cpu_temperature(),
-                "frequency": (
-                    psutil.cpu_freq().current if psutil.cpu_freq() else None
-                ),
+                "frequency": (psutil.cpu_freq().current if psutil.cpu_freq() else None),
             }
 
             # Get memory information
@@ -188,9 +186,7 @@ class RemoteDiagnostics:
             except (AttributeError, KeyError, IndexError):
                 return None
 
-    def run_hardware_tests(
-        self, test_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def run_hardware_tests(self, test_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Run hardware tests.
 
@@ -280,9 +276,7 @@ class RemoteDiagnostics:
                             "name": file_path.name,
                             "path": str(file_path),
                             "size": stats.st_size,
-                            "modified": datetime.fromtimestamp(
-                                stats.st_mtime
-                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(stats.st_mtime).isoformat(),
                         }
                     )
 
@@ -293,9 +287,7 @@ class RemoteDiagnostics:
             logger.error(f"Error getting log files: {e}")
             return []
 
-    def get_log_content(
-        self, log_file: str, lines: int = 100
-    ) -> Tuple[bool, Union[str, bytes]]:
+    def get_log_content(self, log_file: str, lines: int = 100) -> Tuple[bool, Union[str, bytes]]:
         """
         Get content of a log file.
 
@@ -354,11 +346,7 @@ class RemoteDiagnostics:
             ):
                 try:
                     # Check if this is a mower-related process
-                    if any(
-                        "mower" in cmd.lower()
-                        for cmd in proc.info["cmdline"]
-                        if cmd
-                    ):
+                    if any("mower" in cmd.lower() for cmd in proc.info["cmdline"] if cmd):
                         proc_info = {
                             "pid": proc.info["pid"],
                             "name": proc.info["name"],
@@ -366,8 +354,7 @@ class RemoteDiagnostics:
                             "cmdline": " ".join(proc.info["cmdline"]),
                             "cpu_percent": proc.info["cpu_percent"],
                             "memory_percent": proc.info["memory_percent"],
-                            "running_time": time.time()
-                            - proc.info["create_time"],
+                            "running_time": time.time() - proc.info["create_time"],
                         }
                         mower_processes.append(proc_info)
                 except (
@@ -480,18 +467,14 @@ def main():
     global remote_diagnostics
 
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Run remote diagnostics server for the autonomous mower"
-    )
+    parser = argparse.ArgumentParser(description="Run remote diagnostics server for the autonomous mower")
     parser.add_argument(
         "--port",
         type=int,
         default=DEFAULT_PORT,
         help=f"Port to listen on (default: {DEFAULT_PORT})",
     )
-    parser.add_argument(
-        "--debug", action="store_true", help="Enable debug mode"
-    )
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument(
         "--host",
         type=str,

@@ -7,8 +7,8 @@ optimization and power monitoring.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class PowerMode(Enum):
@@ -236,9 +236,7 @@ class ChargingStationInterface(ABC):
         pass
 
     @abstractmethod
-    def set_charging_station_location(
-        self, latitude: float, longitude: float
-    ) -> bool:
+    def set_charging_station_location(self, latitude: float, longitude: float) -> bool:
         """
         Set the location of the charging station.
 

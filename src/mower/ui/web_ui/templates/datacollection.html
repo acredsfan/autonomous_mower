@@ -43,7 +43,7 @@
 {% block content %}
 <div class="container-fluid">
     <h1 class="mt-3 mb-4">AI Training Data Collection</h1>
-    
+
     <div class="row">
         <!-- Status and Controls -->
         <div class="col-md-8">
@@ -69,12 +69,12 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Collection Controls -->
             <div class="card collection-controls mb-4">
                 <div class="card-body">
                     <h5 class="card-title">Collection Controls</h5>
-                    
+
                     <form id="sessionForm" class="mb-4">
                         <div class="row align-items-end mb-3">
                             <div class="col-md-6">
@@ -93,9 +93,9 @@
                             </div>
                         </div>
                     </form>
-                    
+
                     <hr>
-                    
+
                     <h6>Collection Settings</h6>
                     <form id="settingsForm">
                         <div class="row mb-3">
@@ -123,7 +123,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Session History -->
         <div class="col-md-4">
             <div class="card">
@@ -139,7 +139,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Progress section (only shown when collecting) -->
     <div class="row mt-4" id="progressSection" {% if status.status != 'running' %}style="display:none;"{% endif %}>
         <div class="col-12">
@@ -165,11 +165,11 @@
         if ({% if status.status == 'running' %}true{% else %}false{% endif %}) {
             startStatusUpdates();
         }
-        
+
         // Start collection
         $('#startBtn').click(function() {
             const sessionName = $('#sessionName').val();
-            
+
             $.ajax({
                 url: '/datacollection/start',
                 type: 'POST',
@@ -190,7 +190,7 @@
                 }
             });
         });
-        
+
         // Stop collection
         $('#stopBtn').click(function() {
             $.ajax({
@@ -210,11 +210,11 @@
                 }
             });
         });
-        
+
         // Change pattern
         $('#patternSelect').change(function() {
             const pattern = $(this).val();
-            
+
             $.ajax({
                 url: '/datacollection/pattern',
                 type: 'POST',
@@ -233,11 +233,11 @@
                 }
             });
         });
-        
+
         // Set interval
         $('#setIntervalBtn').click(function() {
             const interval = $('#intervalInput').val();
-            
+
             $.ajax({
                 url: '/datacollection/interval',
                 type: 'POST',
@@ -256,7 +256,7 @@
                 }
             });
         });
-        
+
         // Helper functions
         function updateUIForRunningState() {
             $('#startBtn').prop('disabled', true);
@@ -264,31 +264,31 @@
             $('.status-card').removeClass('status-idle').addClass('status-running');
             $('#progressSection').show();
         }
-        
+
         function updateUIForIdleState() {
             $('#startBtn').prop('disabled', false);
             $('#stopBtn').prop('disabled', true);
             $('.status-card').removeClass('status-running').addClass('status-idle');
             $('#progressSection').hide();
         }
-        
+
         function startStatusUpdates() {
             // Clear any existing interval
             if (statusInterval) {
                 clearInterval(statusInterval);
             }
-            
+
             // Update every 2 seconds
             statusInterval = setInterval(updateStatus, 2000);
         }
-        
+
         function stopStatusUpdates() {
             if (statusInterval) {
                 clearInterval(statusInterval);
                 statusInterval = null;
             }
         }
-        
+
         function updateStatus() {
             $.ajax({
                 url: '/datacollection/status',
@@ -305,7 +305,7 @@
                                 <strong>Pattern:</strong> ${data.pattern}
                             </div>
                         `);
-                        
+
                         // Update progress bar
                         $('#progressCount').text(data.images_collected);
                         const progressPercent = (data.images_collected / 100) * 100; // Assuming target is 100
@@ -315,7 +315,7 @@
                         // If collection has stopped, update UI
                         updateUIForIdleState();
                         stopStatusUpdates();
-                        
+
                         $('#statusInfo').html(`
                             <div class="alert alert-secondary">
                                 <strong>Status:</strong> Not collecting<br>
@@ -329,7 +329,7 @@
                 }
             });
         }
-        
+
         function showToast(title, message, type = 'success') {
             // This assumes you have a toast display mechanism already
             // If not, you could use Bootstrap toasts or another notification system

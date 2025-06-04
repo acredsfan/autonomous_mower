@@ -22,8 +22,8 @@ import requests  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image
 
-from mower.obstacle_detection.sort import Sort  # Import SORT
 from mower.hardware.camera_instance import get_camera_instance
+from mower.obstacle_detection.sort import Sort  # Import SORT
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -32,22 +32,16 @@ logger = LoggerConfigInfo.get_logger(__name__)
 # Load environment variables
 load_dotenv()
 PATH_TO_OBJECT_DETECTION_MODEL = os.getenv(
-    "OBSTACLE_MODEL_PATH",
-    "/home/pi/mower/obstacle_detection/models/detect.tflite")
+    "OBSTACLE_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/detect.tflite"
+)
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
 # Update label map path to the correct location
-LABEL_MAP_PATH = os.getenv(
-    "LABEL_MAP_PATH", "/home/pi/mower/obstacle_detection/models/labelmap.txt"
-)
+LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH", "/home/pi/mower/obstacle_detection/models/labelmap.txt")
 MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
-USE_REMOTE_DETECTION = os.getenv(
-    "USE_REMOTE_DETECTION",
-    "False").lower() == "true"
+USE_REMOTE_DETECTION = os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
 
 # YOLOv8 specific environment variables
-YOLOV8_MODEL_PATH = os.getenv(
-    "YOLOV8_MODEL_PATH",
-    "/home/pi/mower/obstacle_detection/models/yolov8n.tflite")
+YOLOV8_MODEL_PATH = os.getenv("YOLOV8_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/yolov8n.tflite")
 USE_YOLOV8 = os.getenv("USE_YOLOV8", "True").lower() == "true"
 
 # Load labels if available
@@ -120,7 +114,8 @@ class ObstacleDetector:
         logger.info(
             "ObstacleDetector initialized with %s interpreter%s",
             self.interpreter_type,
-            ", YOLOv8 enabled" if self.yolov8_detector else "")
+            ", YOLOv8 enabled" if self.yolov8_detector else "",
+        )
 
     def _initialize_interpreter(self):
         """Initialize the TensorFlow Lite interpreter."""
@@ -137,8 +132,7 @@ class ObstacleDetector:
             with open(model_path, "rb") as f:
                 magic = f.read(4)
             if magic != b"TFL3":
-                logger.error(
-                    "Model at %s is not a valid TFLite file.", model_path)
+                logger.error("Model at %s is not a valid TFLite file.", model_path)
                 logger.error("Header: %s.", magic)
                 logger.error("Standard TFLite interpreter will be disabled.")
                 self.interpreter = None
@@ -172,9 +166,7 @@ class ObstacleDetector:
 
             # Check if model exists
             if not os.path.exists(YOLOV8_MODEL_PATH):
-                logger.warning(
-                    "YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH
-                )
+                logger.warning("YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH)
                 return
 
             # Initialize detector
@@ -213,14 +205,8 @@ class ObstacleDetector:
                 if remote_objects:
                     detected_objects.extend(remote_objects)
                     return detected_objects
-            except (
-                ConnectionError,
-                requests.RequestException,
-                IOError,
-                ValueError
-            ) as e:
-                logger.warning(
-                    "Remote detection failed, falling back to local: %s", e)
+            except (ConnectionError, requests.RequestException, IOError, ValueError) as e:
+                logger.warning("Remote detection failed, falling back to local: %s", e)
                 self.use_remote_detection = False
 
         # YOLOv8-based detection (preferred if available)
@@ -233,13 +219,12 @@ class ObstacleDetector:
                     # Apply tracking
                     if len(yolo_objects) > 0:
                         # Extract bounding boxes and confidences for tracker
-                        detections_np = np.array([
+                        detections_np = np.array(
                             [
-                                d["box"][0], d["box"][1], d["box"][2],
-                                d["box"][3], d["confidence"]
+                                [d["box"][0], d["box"][1], d["box"][2], d["box"][3], d["confidence"]]
+                                for d in yolo_objects
                             ]
-                            for d in yolo_objects
-                        ])
+                        )
 
                         # Update tracker and get tracked objects
                         tracked_objects = self.tracker.update(detections_np)
@@ -283,21 +268,18 @@ class ObstacleDetector:
 
             # Normalize pixel values
             if self.floating_model:
-                input_data = (
-                    np.float32(input_data) - self.input_mean) / self.input_std
+                input_data = (np.float32(input_data) - self.input_mean) / self.input_std
             else:
                 input_data = np.uint8(input_data)
 
             # Run inference
-            self.interpreter.set_tensor(
-                self.input_details[0]["index"], input_data)
+            self.interpreter.set_tensor(self.input_details[0]["index"], input_data)
             start_time = time.time()
             self.interpreter.invoke()
             inference_time = time.time() - start_time
 
             # Get prediction results
-            output_data = self.interpreter.get_tensor(
-                self.output_details[0]["index"])[0]
+            output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
 
             # Process results
             detected_objects = []
@@ -322,10 +304,7 @@ class ObstacleDetector:
                     )
 
             # Log performance
-            logger.debug(
-                "ML inference: %.2fs (%.1f FPS)",
-                inference_time, 1 / inference_time
-            )
+            logger.debug("ML inference: %.2fs (%.1f FPS)", inference_time, 1 / inference_time)
 
             return detected_objects
 
@@ -337,8 +316,7 @@ class ObstacleDetector:
         """Perform basic obstacle detection using OpenCV."""
         try:
             # Check if frame is valid
-            if frame is None or not isinstance(
-                    frame, np.ndarray) or frame.size == 0:
+            if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
                 logger.warning("Invalid frame provided to OpenCV detector")
                 return []
 
@@ -352,9 +330,7 @@ class ObstacleDetector:
             edges = cv2.Canny(blurred, 50, 150)
 
             # Find contours
-            contours, _ = cv2.findContours(
-                edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-            )
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
             # Filter contours by size
             detected_objects = []
@@ -453,9 +429,7 @@ class ObstacleDetector:
             edges = cv2.Canny(blurred, 50, 150)
 
             # Find contours from edges
-            contours, _ = cv2.findContours(
-                edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-            )
+            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
             drops = []
 
@@ -490,14 +464,11 @@ class ObstacleDetector:
         """Draw detection results on frame."""
         try:
             # Use YOLOv8 detector's draw function for YOLOv8 detections
-            yolo_detections = [
-                d for d in detections if d.get("type") == "yolov8"]
+            yolo_detections = [d for d in detections if d.get("type") == "yolov8"]
             if self.yolov8_detector and yolo_detections:
-                frame = self.yolov8_detector.draw_detections(
-                    frame, yolo_detections)
+                frame = self.yolov8_detector.draw_detections(frame, yolo_detections)
                 # Filter out YOLOv8 detections since they're already drawn
-                detections = [
-                    d for d in detections if d.get("type") != "yolov8"]
+                detections = [d for d in detections if d.get("type") != "yolov8"]
 
             # Continue with normal drawing for other detection types
             frame_with_detections = frame.copy()
@@ -592,9 +563,7 @@ class ObstacleDetector:
 
     def start_processing(self):
         """Start continuous frame processing in background thread."""
-        self.processing_thread = threading.Thread(
-            target=self._processing_loop, daemon=True
-        )
+        self.processing_thread = threading.Thread(target=self._processing_loop, daemon=True)
         self.processing_thread.start()
 
     def _processing_loop(self):

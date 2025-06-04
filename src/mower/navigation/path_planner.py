@@ -102,10 +102,7 @@ class PathPlanner:
         """Generate mowing path based on pattern type."""
         try:
             # If learning is enabled, use it to select pattern
-            if (
-                self.learning_config
-                and np.random.random() < self.learning_config.exploration_rate
-            ):
+            if self.learning_config and np.random.random() < self.learning_config.exploration_rate:
                 self.pattern_config.pattern_type = np.random.choice(list(PatternType))
             elif self.learning_config:
                 state = self._get_current_state()
@@ -159,9 +156,7 @@ class PathPlanner:
 
             generator = pattern_generators.get(self.pattern_config.pattern_type)
             if not generator:
-                logger.error(
-                    "Unknown pattern type: %s", self.pattern_config.pattern_type
-                )
+                logger.error("Unknown pattern type: %s", self.pattern_config.pattern_type)
                 return []
 
             return generator()
@@ -180,9 +175,7 @@ class PathPlanner:
         """Returns the current boundary points from the pattern_config."""
         if self.pattern_config:
             return self.pattern_config.boundary_points
-        logger.warning(
-            "PathPlanner: PatternConfig not available, cannot get boundary points."
-        )
+        logger.warning("PathPlanner: PatternConfig not available, cannot get boundary points.")
         return []
 
     def _generate_parallel_path(self) -> List[Tuple[float, float]]:
@@ -211,9 +204,7 @@ class PathPlanner:
                 line_end = line_start + width * direction
 
                 # Find intersection points with boundary
-                intersections = self._find_boundary_intersections(
-                    line_start, line_end, boundary
-                )
+                intersections = self._find_boundary_intersections(line_start, line_end, boundary)
                 if intersections:
                     path.extend(intersections)
 
@@ -304,9 +295,7 @@ class PathPlanner:
                     line_start = line_end + width * direction
 
                 # Find intersection points with boundary
-                intersections = self._find_boundary_intersections(
-                    line_start, line_end, boundary
-                )
+                intersections = self._find_boundary_intersections(line_start, line_end, boundary)
 
                 if intersections:
                     path.extend(intersections)
@@ -489,9 +478,7 @@ class PathPlanner:
             logger.error("Error finding boundary intersections - value error: %s", e)
             return []
         except (TypeError, IndexError) as e:
-            logger.error(
-                "Error finding boundary intersections - type/index error: %s", e
-            )
+            logger.error("Error finding boundary intersections - type/index error: %s", e)
             return []
         except (RuntimeError, AttributeError) as e:
             logger.error("Error finding boundary intersections - runtime error: %s", e)
@@ -536,9 +523,7 @@ class PathPlanner:
             logger.error("Error calculating line intersection - value error: %s", e)
             return None
         except (TypeError, IndexError) as e:
-            logger.error(
-                "Error calculating line intersection - type/index error: %s", e
-            )
+            logger.error("Error calculating line intersection - type/index error: %s", e)
             return None
         except (ZeroDivisionError, RuntimeError) as e:
             logger.error("Error calculating line intersection - runtime error: %s", e)
@@ -554,9 +539,7 @@ class PathPlanner:
         for i in range(n):
             if ((polygon[i, 1] > y) != (polygon[j, 1] > y)) and (
                 x
-                < (polygon[j, 0] - polygon[i, 0])
-                * (y - polygon[i, 1])
-                / (polygon[j, 1] - polygon[i, 1])
+                < (polygon[j, 0] - polygon[i, 0]) * (y - polygon[i, 1]) / (polygon[j, 1] - polygon[i, 1])
                 + polygon[i, 0]
             ):
                 inside = not inside
@@ -572,9 +555,7 @@ class PathPlanner:
         """Get current state representation for learning."""
         try:
             # Convert boundary points to string representation
-            boundary_str = "_".join(
-                f"{x:.2f},{y:.2f}" for x, y in self.pattern_config.boundary_points
-            )
+            boundary_str = "_".join(f"{x:.2f},{y:.2f}" for x, y in self.pattern_config.boundary_points)
 
             # Include other relevant state information
             state = (
@@ -611,10 +592,7 @@ class PathPlanner:
             return -100.0  # Penalize empty paths heavily
 
         # Base reward for path length (encourage efficiency)
-        total_distance = sum(
-            np.linalg.norm(np.array(path[i + 1]) - np.array(path[i]))
-            for i in range(len(path) - 1)
-        )
+        total_distance = sum(np.linalg.norm(np.array(path[i + 1]) - np.array(path[i])) for i in range(len(path) - 1))
         # Efficiency (add epsilon to avoid division by zero)
         reward = 0.4 * (1.0 / (total_distance + 1e-6))
 
@@ -626,9 +604,7 @@ class PathPlanner:
         max_slope_penalty = 0.0
         if elevation_data and len(elevation_data) == len(path):
             for i in range(len(path) - 1):
-                distance_segment = np.linalg.norm(
-                    np.array(path[i + 1]) - np.array(path[i])
-                )
+                distance_segment = np.linalg.norm(np.array(path[i + 1]) - np.array(path[i]))
                 # Avoid division by zero for very short segments
                 if distance_segment > 1e-6:
                     elevation_diff = abs(elevation_data[i + 1] - elevation_data[i])
@@ -643,10 +619,7 @@ class PathPlanner:
                         max_slope_penalty += (abs(slope) - 0.20) * 0.1
             reward -= 0.3 * (elevation_penalty + max_slope_penalty)
             if elevation_penalty > 0 or max_slope_penalty > 0:
-                logger.debug(
-                    f"Elevation penalty: {elevation_penalty}, "
-                    f"Max slope penalty: {max_slope_penalty}"
-                )
+                logger.debug(f"Elevation penalty: {elevation_penalty}, " f"Max slope penalty: {max_slope_penalty}")
 
         return max(0.0, min(1.0, reward))
 
@@ -824,10 +797,7 @@ class PathPlanner:
 
             # Convert serialized Q-table back to original format
             self.q_table = {
-                state: {
-                    PatternType[pattern_name]: value
-                    for pattern_name, value in actions.items()
-                }
+                state: {PatternType[pattern_name]: value for pattern_name, value in actions.items()}
                 for state, actions in model_data["q_table"].items()
             }
 
@@ -841,9 +811,7 @@ class PathPlanner:
         """Get model output shapes for prediction."""
         return [(1, 10)]  # Example output shape
 
-    def generate_pattern(
-        self, pattern_type_str: str, settings: dict
-    ) -> List[Tuple[float, float]]:
+    def generate_pattern(self, pattern_type_str: str, settings: dict) -> List[Tuple[float, float]]:
         """
         Generate a mowing pattern based on the given pattern type and settings.
 
@@ -905,21 +873,14 @@ class PathPlanner:
         """
         try:
             # Validate boundary points format
-            if not all(
-                isinstance(point, (tuple, list)) and len(point) == 2
-                for point in boundary_points
-            ):
+            if not all(isinstance(point, (tuple, list)) and len(point) == 2 for point in boundary_points):
                 logger.error("Invalid boundary points format")
                 return False
 
             # Update boundary points in pattern config
-            self.pattern_config.boundary_points = [
-                (float(lat), float(lon)) for lat, lon in boundary_points
-            ]
+            self.pattern_config.boundary_points = [(float(lat), float(lon)) for lat, lon in boundary_points]
 
-            logger.info(
-                f"Boundary points updated: {self.pattern_config.boundary_points}"
-            )
+            logger.info(f"Boundary points updated: {self.pattern_config.boundary_points}")
         except Exception as e:
             logger.error(f"Error setting boundary points: {e}")
             return False

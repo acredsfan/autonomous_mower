@@ -3,7 +3,7 @@
 # ============================================================================
 # Dual Wi-Fi Setup Script for Autonomous Mower - NetworkManager Compatible
 # ============================================================================
-# 
+#
 # This script sets up dual Wi-Fi interfaces (wlan0 and wlan1) with automatic
 # failover capability. It supports both NetworkManager (modern Pi OS) and
 # dhcpcd (legacy Pi OS) network management systems.
@@ -72,7 +72,7 @@ command_exists() {
 
 detect_network_manager() {
     log_info "Detecting network manager..."
-    
+
     if systemctl is-active --quiet NetworkManager 2>/dev/null; then
         NETWORK_MANAGER="networkmanager"
         log_info "✓ NetworkManager detected and active"
@@ -90,7 +90,7 @@ detect_network_manager() {
         log_error "This script requires either NetworkManager or dhcpcd for network management"
         exit 1
     fi
-    
+
     log_info "Using network manager: $NETWORK_MANAGER"
 }
 
@@ -101,25 +101,25 @@ detect_network_manager() {
 load_env_config() {
     local env_files=(".env" ".env.local" ".env.example")
     local loaded=false
-    
+
     log_info "Loading environment configuration..."
-    
+
     for env_file in "${env_files[@]}"; do
         if [[ -f "$env_file" ]]; then
             log_info "Found environment file: $env_file"
             ENV_FILE_PATH="$env_file"
-            
+
             # Load and count valid Wi-Fi variables
             local wifi_var_count=0
             while IFS='=' read -r key value; do
                 # Skip comments and empty lines
                 [[ $key =~ ^[[:space:]]*# ]] && continue
                 [[ -z "$key" ]] && continue
-                
+
                 # Remove leading/trailing whitespace and quotes
                 key=$(echo "$key" | xargs)
                 value=$(echo "$value" | xargs | sed 's/^["'\'']\|["'\'']$//g')
-                
+
                 # Load dual Wi-Fi specific variables
                 case "$key" in
                     DUAL_WIFI_SSID_MAIN) DEFAULT_SSID_MAIN="$value"; ((wifi_var_count++)) ;;
@@ -131,7 +131,7 @@ load_env_config() {
                     DUAL_WIFI_GATEWAY_FALLBACK) DEFAULT_GATEWAY_FALLBACK="$value"; ((wifi_var_count++)) ;;
                 esac
             done < "$env_file"
-            
+
             if [[ $wifi_var_count -gt 0 ]]; then
                 CONFIG_SOURCE="$env_file ($wifi_var_count variables loaded)"
                 loaded=true
@@ -143,7 +143,7 @@ load_env_config() {
             fi
         fi
     done
-    
+
     if [[ "$loaded" != true ]]; then
         CONFIG_SOURCE="built-in defaults (no .env file found)"
         log_warn "⚠ No .env file with dual Wi-Fi configuration found, using defaults"
@@ -215,18 +215,18 @@ display_config_summary() {
 
 validate_env_config() {
     local warnings=0
-    
+
     # Check for default/placeholder values that likely need configuration
     if [[ "$DEFAULT_SSID_MAIN" == "YourMainWiFi" || "$DEFAULT_SSID_MAIN" == "your_main_wifi" ]]; then
         log_warn "⚠ Main Wi-Fi SSID appears to be a placeholder value"
         ((warnings++))
     fi
-    
+
     if [[ "$DEFAULT_SSID_FALLBACK" == "YourFallbackWiFi" || "$DEFAULT_SSID_FALLBACK" == "your_fallback_wifi" ]]; then
         log_warn "⚠ Fallback Wi-Fi SSID appears to be a placeholder value"
         ((warnings++))
     fi
-    
+
     if [[ $ENV_LOAD_FAILURES -gt 0 && $warnings -gt 0 ]]; then
         echo ""
         echo "💡 TIP: Create a .env file with your Wi-Fi settings:"
@@ -242,12 +242,12 @@ validate_env_config() {
 
 check_system_requirements() {
     log_info "Checking system requirements..."
-    
+
     # Check if running with sudo
     if [[ $EUID -eq 0 ]]; then
         log_warn "Running as root. This script should be run with sudo, not as root user."
     fi
-    
+
     # Check required commands based on network manager
     if [[ "$NETWORK_MANAGER" == "networkmanager" ]]; then
         if ! command_exists nmcli; then
@@ -260,18 +260,18 @@ check_system_requirements() {
             exit 1
         fi
     fi
-    
+
     # Check Wi-Fi interfaces
     if ! ip link show wlan0 &>/dev/null; then
         log_error "❌ wlan0 interface not found. Please ensure Wi-Fi hardware is connected."
         exit 1
     fi
-    
+
     if ! ip link show wlan1 &>/dev/null; then
         log_warn "⚠ wlan1 interface not found. Dual Wi-Fi setup requires two Wi-Fi interfaces."
         log_warn "This setup will work with single interface fallback, but dual interface features will be limited."
     fi
-    
+
     log_info "✓ System requirements validated"
 }
 
@@ -283,10 +283,10 @@ configure_wifi_settings() {
     echo "Starting Dual Wi-Fi Setup for Network Manager: $NETWORK_MANAGER"
     echo "You will be prompted for configuration values. Press Enter to accept the default."
     echo ""
-    
+
     validate_env_config
     display_config_summary
-    
+
     # Main Wi-Fi SSID
     while true; do
         read -p "Enter the SSID for your main Wi-Fi network [default: ${DEFAULT_SSID_MAIN}]: " SSID_MAIN
@@ -297,12 +297,12 @@ configure_wifi_settings() {
             echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
         fi
     done
-    
+
     # Main Wi-Fi Password
     read -s -p "Enter the password for your main Wi-Fi network (input hidden) [default: ${DEFAULT_PASS_MAIN}]: " PASS_MAIN
     echo
     PASS_MAIN=${PASS_MAIN:-$DEFAULT_PASS_MAIN}
-    
+
     # Fallback Wi-Fi SSID
     while true; do
         read -p "Enter the SSID for your fallback Wi-Fi network [default: ${DEFAULT_SSID_FALLBACK}]: " SSID_FALLBACK
@@ -313,12 +313,12 @@ configure_wifi_settings() {
             echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
         fi
     done
-    
+
     # Fallback Wi-Fi Password
     read -s -p "Enter the password for your fallback Wi-Fi network (input hidden) [default: ${DEFAULT_PASS_FALLBACK}]: " PASS_FALLBACK
     echo
     PASS_FALLBACK=${PASS_FALLBACK:-$DEFAULT_PASS_FALLBACK}
-    
+
     # Country Code
     while true; do
         read -p "Enter your two-letter ISO country code (e.g., US, GB) [default: ${DEFAULT_COUNTRY}]: " COUNTRY
@@ -330,7 +330,7 @@ configure_wifi_settings() {
             echo "⚠ Error: Country code must be exactly 2 uppercase letters (e.g., US, GB). Please try again."
         fi
     done
-    
+
     # Main Gateway IP
     while true; do
         read -p "Enter the gateway IP for your main Wi-Fi (wlan1) [default: ${DEFAULT_GATEWAY_MAIN}]: " GATEWAY_MAIN
@@ -341,7 +341,7 @@ configure_wifi_settings() {
             echo "⚠ Error: Please enter a valid IP address (e.g., 192.168.1.1). Please try again."
         fi
     done
-    
+
     # Fallback Gateway IP
     while true; do
         read -p "Enter the gateway IP for your fallback Wi-Fi (wlan0) [default: ${DEFAULT_GATEWAY_FALLBACK}]: " GATEWAY_FALLBACK
@@ -387,13 +387,13 @@ backup_existing_config() {
     log_info "Creating backup of existing configuration..."
     local backup_dir="/tmp/wifi_backup_$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$backup_dir"
-    
+
     if [[ "$NETWORK_MANAGER" == "dhcpcd" ]]; then
         if [[ -f /etc/wpa_supplicant/wpa_supplicant.conf ]]; then
             sudo cp /etc/wpa_supplicant/wpa_supplicant.conf "$backup_dir/"
             log_info "✓ Backed up wpa_supplicant.conf to $backup_dir"
         fi
-        
+
         if [[ -f /etc/dhcpcd.conf ]]; then
             sudo cp /etc/dhcpcd.conf "$backup_dir/"
             log_info "✓ Backed up dhcpcd.conf to $backup_dir"
@@ -405,7 +405,7 @@ backup_existing_config() {
             log_info "✓ Backed up NetworkManager connections to $backup_dir"
         fi
     fi
-    
+
     log_info "ℹ Backup location: $backup_dir"
 }
 
@@ -415,11 +415,11 @@ backup_existing_config() {
 
 configure_networkmanager() {
     log_info "Configuring dual Wi-Fi with NetworkManager..."
-    
+
     # Remove existing mower connections if they exist
     nmcli connection delete "mower-main" 2>/dev/null || true
     nmcli connection delete "mower-fallback" 2>/dev/null || true
-    
+
     # Create main Wi-Fi connection (higher priority)
     log_info "Creating main Wi-Fi connection (wlan1)..."
     nmcli connection add type wifi con-name "mower-main" \
@@ -427,7 +427,7 @@ configure_networkmanager() {
         wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
         connection.autoconnect yes connection.autoconnect-priority 10 \
         ipv4.method auto ipv6.method ignore
-    
+
     # Create fallback Wi-Fi connection (lower priority)
     log_info "Creating fallback Wi-Fi connection (wlan0)..."
     nmcli connection add type wifi con-name "mower-fallback" \
@@ -435,12 +435,12 @@ configure_networkmanager() {
         wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
         connection.autoconnect yes connection.autoconnect-priority 5 \
         ipv4.method auto ipv6.method ignore
-    
+
     # Set country code in NetworkManager
     if [[ -f /etc/NetworkManager/conf.d/wifi-country.conf ]]; then
         sudo rm /etc/NetworkManager/conf.d/wifi-country.conf
     fi
-    
+
     sudo mkdir -p /etc/NetworkManager/conf.d
     sudo tee /etc/NetworkManager/conf.d/wifi-country.conf > /dev/null <<EOF
 [device]
@@ -458,16 +458,16 @@ wifi.powersave=2
 [wifi]
 country=$COUNTRY
 EOF
-    
+
     # Restart NetworkManager to apply changes
     log_info "Restarting NetworkManager..."
     sudo systemctl restart NetworkManager
     sleep 5
-    
+
     # Attempt to connect to the main network
     log_info "Attempting to connect to main Wi-Fi..."
     nmcli connection up "mower-main" || log_warn "Failed to connect to main Wi-Fi initially"
-    
+
     log_info "✓ NetworkManager configuration complete"
 }
 
@@ -477,7 +477,7 @@ EOF
 
 configure_dhcpcd() {
     log_info "Configuring dual Wi-Fi with dhcpcd (legacy mode)..."
-    
+
     # Create wpa_supplicant configuration
     log_info "Creating wpa_supplicant.conf..."
     sudo tee /etc/wpa_supplicant/wpa_supplicant.conf > /dev/null <<EOF
@@ -497,18 +497,18 @@ network={
     priority=1
 }
 EOF
-    
+
     # Clean up dhcpcd.conf
     log_info "Updating dhcpcd.conf..."
     sudo sed -i '/denyinterfaces wlan0/d' /etc/dhcpcd.conf 2>/dev/null || true
     sudo sed -i '/denyinterfaces wlan1/d' /etc/dhcpcd.conf 2>/dev/null || true
-    
+
     # Restart services
     log_info "Restarting networking services..."
     sudo systemctl restart dhcpcd || log_warn "Failed to restart dhcpcd"
     sudo wpa_cli -i wlan0 reconfigure &>/dev/null || log_warn "wlan0 reconfigure failed"
     sudo wpa_cli -i wlan1 reconfigure &>/dev/null || log_warn "wlan1 reconfigure failed"
-    
+
     log_info "✓ dhcpcd configuration complete"
 }
 
@@ -518,7 +518,7 @@ EOF
 
 create_watchdog_script() {
     log_info "Creating NetworkManager-aware Wi-Fi watchdog script..."
-    
+
     sudo tee /usr/local/bin/wifi_watchdog_nm.py > /dev/null <<EOF
 #!/usr/bin/env python3
 """
@@ -572,7 +572,7 @@ def detect_network_manager() -> str:
             return 'networkmanager'
     except Exception:
         pass
-    
+
     try:
         result = subprocess.run(['systemctl', 'is-active', 'dhcpcd'],
                               capture_output=True, text=True)
@@ -580,18 +580,18 @@ def detect_network_manager() -> str:
             return 'dhcpcd'
     except Exception:
         pass
-    
+
     return 'unknown'
 
 
 def ping_host(host: str, interface: Optional[str] = None) -> bool:
     """
     Test connectivity by pinging a host.
-    
+
     Args:
         host (str): Host to ping
         interface (str, optional): Interface to use for ping
-        
+
     Returns:
         bool: True if ping successful, False otherwise
     """
@@ -599,7 +599,7 @@ def ping_host(host: str, interface: Optional[str] = None) -> bool:
         cmd = ['ping', '-c', '1', '-W', '3', host]
         if interface:
             cmd.extend(['-I', interface])
-        
+
         result = subprocess.run(cmd, capture_output=True)
         return result.returncode == 0
     except Exception as e:
@@ -614,7 +614,7 @@ def get_active_connection(interface: str) -> Optional[str]:
             'nmcli', '-t', '-f', 'DEVICE,CONNECTION',
             'device', 'status'
         ], capture_output=True, text=True)
-        
+
         for line in result.stdout.strip().split('\n'):
             if line.startswith(f"{interface}:"):
                 connection = line.split(':')[1]
@@ -628,10 +628,10 @@ def get_active_connection(interface: str) -> Optional[str]:
 def switch_networkmanager_connection(primary: bool) -> bool:
     """
     Switch between primary and secondary connections using NetworkManager.
-    
+
     Args:
         primary (bool): True to switch to primary, False for secondary
-        
+
     Returns:
         bool: True if switch successful, False otherwise
     """
@@ -648,20 +648,20 @@ def switch_networkmanager_connection(primary: bool) -> bool:
             # Disconnect primary first
             subprocess.run(['nmcli', 'connection', 'down', PRIMARY_CONNECTION],
                          capture_output=True)
-        
+
         # Connect to target
         result = subprocess.run([
             'nmcli', 'connection', 'up', target_connection,
             'ifname', target_interface
         ], capture_output=True, text=True)
-        
+
         if result.returncode == 0:
             logger.info(f"Switched to {'primary' if primary else 'secondary'} connection ({target_connection})")
             return True
         else:
             logger.error(f"Failed to switch to {target_connection}: {result.stderr}")
             return False
-            
+
     except Exception as e:
         logger.error(f"Error switching NetworkManager connection: {e}")
         return False
@@ -670,41 +670,41 @@ def switch_networkmanager_connection(primary: bool) -> bool:
 def set_manual_route(primary: bool) -> bool:
     """
     Set routes manually for dhcpcd systems.
-    
+
     Args:
         primary (bool): True to use primary interface, False for secondary
-        
+
     Returns:
         bool: True if route set successfully, False otherwise
     """
     try:
         # Remove existing default routes
-        subprocess.run(['ip', 'route', 'del', 'default'], 
+        subprocess.run(['ip', 'route', 'del', 'default'],
                       stderr=subprocess.DEVNULL)
-        
+
         if primary:
             subprocess.run([
-                'ip', 'route', 'add', 'default', 'via', PRIMARY_GATEWAY, 
+                'ip', 'route', 'add', 'default', 'via', PRIMARY_GATEWAY,
                 'dev', PRIMARY_IFACE, 'metric', '100'
             ])
             subprocess.run([
-                'ip', 'route', 'add', 'default', 'via', SECONDARY_GATEWAY, 
+                'ip', 'route', 'add', 'default', 'via', SECONDARY_GATEWAY,
                 'dev', SECONDARY_IFACE, 'metric', '200'
             ])
             logger.info(f"Set manual route to primary interface ({PRIMARY_IFACE})")
         else:
             subprocess.run([
-                'ip', 'route', 'add', 'default', 'via', SECONDARY_GATEWAY, 
+                'ip', 'route', 'add', 'default', 'via', SECONDARY_GATEWAY,
                 'dev', SECONDARY_IFACE, 'metric', '100'
             ])
             subprocess.run([
-                'ip', 'route', 'add', 'default', 'via', PRIMARY_GATEWAY, 
+                'ip', 'route', 'add', 'default', 'via', PRIMARY_GATEWAY,
                 'dev', PRIMARY_IFACE, 'metric', '200'
             ])
             logger.info(f"Set manual route to secondary interface ({SECONDARY_IFACE})")
-        
+
         return True
-            
+
     except Exception as e:
         logger.error(f"Error setting manual route: {e}")
         return False
@@ -716,31 +716,31 @@ def main():
     logger.info(f"Wi-Fi Watchdog started with {network_manager} network manager")
     logger.info(f"Primary: {PRIMARY_IFACE} ({PRIMARY_GATEWAY})")
     logger.info(f"Secondary: {SECONDARY_IFACE} ({SECONDARY_GATEWAY})")
-    
+
     fail_count = 0
     primary_active = True
-    
+
     while True:
         try:
             # Test connectivity
             connectivity_ok = ping_host(PING_HOST)
-            
+
             if connectivity_ok:
                 # Reset fail count on successful ping
                 if fail_count > 0:
                     logger.info("Connectivity restored")
                     fail_count = 0
-                
+
                 # If we're on secondary and connectivity is good, try to switch back to primary
                 if not primary_active and network_manager == 'networkmanager':
                     logger.info("Attempting to switch back to primary connection")
                     if switch_networkmanager_connection(primary=True):
                         primary_active = True
-                    
+
             else:
                 fail_count += 1
                 logger.warning(f"Connectivity check failed ({fail_count}/{FAIL_THRESHOLD})")
-                
+
                 if fail_count >= FAIL_THRESHOLD:
                     if primary_active:
                         logger.error("Primary connection failed, switching to fallback")
@@ -748,15 +748,15 @@ def main():
                             success = switch_networkmanager_connection(primary=False)
                         else:
                             success = set_manual_route(primary=False)
-                        
+
                         if success:
                             primary_active = False
                         fail_count = 0  # Reset counter after switch attempt
                     else:
                         logger.error("Both connections appear to be failing")
-                        
+
             time.sleep(PING_INTERVAL)
-            
+
         except KeyboardInterrupt:
             logger.info("Wi-Fi Watchdog stopped by user")
             break
@@ -779,7 +779,7 @@ EOF
 
 create_systemd_service() {
     log_info "Setting up watchdog systemd service..."
-    
+
     sudo tee /etc/systemd/system/wifi-watchdog.service > /dev/null <<EOF
 [Unit]
 Description=NetworkManager-Aware Wi-Fi Failover Watchdog for Autonomous Mower
@@ -809,7 +809,7 @@ EOF
     # Reload systemd and enable the service
     sudo systemctl daemon-reload
     sudo systemctl enable wifi-watchdog.service
-    
+
     log_info "✓ Watchdog service created and enabled"
     log_info "To start the service: sudo systemctl start wifi-watchdog"
     log_info "To check status: sudo systemctl status wifi-watchdog"
@@ -821,7 +821,7 @@ EOF
 
 main_configuration() {
     backup_existing_config
-    
+
     if [[ "$NETWORK_MANAGER" == "networkmanager" ]]; then
         configure_networkmanager
     elif [[ "$NETWORK_MANAGER" == "dhcpcd" ]]; then
@@ -830,7 +830,7 @@ main_configuration() {
         log_error "❌ Unsupported network manager: $NETWORK_MANAGER"
         exit 1
     fi
-    
+
     create_watchdog_script
     create_systemd_service
 }
@@ -841,16 +841,16 @@ main_configuration() {
 
 test_connectivity() {
     log_info "Testing connectivity..."
-    
+
     sleep 10  # Allow time for connections to establish
-    
+
     if ping -c 3 8.8.8.8 >/dev/null 2>&1; then
         log_info "✓ Internet connectivity test passed"
     else
         log_warn "⚠ Internet connectivity test failed"
         log_warn "This may be temporary. Check your network settings."
     fi
-    
+
     if [[ "$NETWORK_MANAGER" == "networkmanager" ]]; then
         log_info "NetworkManager connection status:"
         nmcli connection show --active
@@ -899,23 +899,23 @@ main() {
     echo "        NetworkManager-Compatible Dual Wi-Fi Setup for Autonomous Mower"
     echo "============================================================================"
     echo ""
-    
+
     # Load environment and detect network manager
     load_env_config
     detect_network_manager
     check_system_requirements
-    
+
     # Interactive configuration
     configure_wifi_settings
     confirm_configuration
-    
+
     # Execute configuration
     main_configuration
-    
+
     # Test and display results
     test_connectivity
     display_completion_summary
-    
+
     log_info "Dual Wi-Fi setup completed successfully!"
 }
 

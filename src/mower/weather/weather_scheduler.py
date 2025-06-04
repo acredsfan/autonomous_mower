@@ -6,12 +6,12 @@ operation scheduling, allowing the mower to adjust its mowing schedule
 based on weather forecasts and current conditions.
 """
 
-import time
-import threading
-from typing import Dict, Any, Optional, List, Tuple, Callable
-from datetime import datetime, timedelta
 import logging
+import threading
+import time
+from datetime import datetime, timedelta
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from mower.interfaces.weather import WeatherServiceInterface
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -74,9 +74,7 @@ class WeatherAwareScheduler:
         self._stop_event = threading.Event()
         self._update_thread = None
 
-    def set_schedule(
-        self, schedule: Dict[int, List[Tuple[int, int]]]
-    ) -> None:
+    def set_schedule(self, schedule: Dict[int, List[Tuple[int, int]]]) -> None:
         """
         Set the mowing schedule.
 
@@ -128,9 +126,7 @@ class WeatherAwareScheduler:
             return
 
         self._stop_event.clear()
-        self._update_thread = threading.Thread(
-            target=self._update_forecasts, daemon=True
-        )
+        self._update_thread = threading.Thread(target=self._update_forecasts, daemon=True)
         self._update_thread.start()
         logger.info("Started weather forecast update thread")
 
@@ -140,9 +136,7 @@ class WeatherAwareScheduler:
         if self._update_thread is not None:
             self._update_thread.join(timeout=5.0)
             if self._update_thread.is_alive():
-                logger.warning(
-                    "Weather update thread did not terminate within timeout"
-                )
+                logger.warning("Weather update thread did not terminate within timeout")
         logger.info("Stopped weather forecast update thread")
 
     def _update_forecasts(self) -> None:
@@ -171,17 +165,13 @@ class WeatherAwareScheduler:
                     if date:
                         self._forecast_cache[date] = day_forecast
                         # Set expiry time to 6 hours from now
-                        self._forecast_cache_expiry[date] = (
-                            datetime.now() + timedelta(hours=6)
-                        )
+                        self._forecast_cache_expiry[date] = datetime.now() + timedelta(hours=6)
 
             logger.info("Updated weather forecasts successfully")
         except Exception as e:
             logger.error(f"Failed to fetch weather forecasts: {e}")
 
-    def _get_forecast_for_time(
-        self, target_time: datetime
-    ) -> Optional[Dict[str, Any]]:
+    def _get_forecast_for_time(self, target_time: datetime) -> Optional[Dict[str, Any]]:
         """
         Get the forecast for a specific time.
 
@@ -194,9 +184,7 @@ class WeatherAwareScheduler:
         with self._lock:
             # Clean up expired cache entries
             now = datetime.now()
-            expired_keys = [
-                k for k, v in self._forecast_cache_expiry.items() if v < now
-            ]
+            expired_keys = [k for k, v in self._forecast_cache_expiry.items() if v < now]
             for key in expired_keys:
                 self._forecast_cache.pop(key, None)
                 self._forecast_cache_expiry.pop(key, None)
@@ -220,9 +208,7 @@ class WeatherAwareScheduler:
 
             return None
 
-    def get_mowing_recommendation(
-        self, time: Optional[datetime] = None
-    ) -> Tuple[MowingRecommendation, str]:
+    def get_mowing_recommendation(self, time: Optional[datetime] = None) -> Tuple[MowingRecommendation, str]:
         """
         Get a mowing recommendation for a specific time.
 
@@ -241,10 +227,7 @@ class WeatherAwareScheduler:
 
         with self._lock:
             scheduled_times = self._schedule.get(day_of_week, [])
-            is_scheduled = any(
-                abs(h - hour) <= 1 and abs(m - minute) <= 30
-                for h, m in scheduled_times
-            )
+            is_scheduled = any(abs(h - hour) <= 1 and abs(m - minute) <= 30 for h, m in scheduled_times)
 
             if not is_scheduled:
                 return (
@@ -254,19 +237,21 @@ class WeatherAwareScheduler:
 
         # Check current weather conditions using the new detailed method
         try:
-            with self._lock: # Access thresholds within lock
+            with self._lock:  # Access thresholds within lock
                 thresholds = self._weather_thresholds.copy()
 
             weather_data = self._weather_service.get_detailed_weather_for_scheduler()
 
             if not weather_data or weather_data.get("error"):
-                logger.warning(f"Could not retrieve valid weather data for recommendation: {weather_data.get('error', 'Unknown error') if weather_data else 'No data'}")
+                logger.warning(
+                    f"Could not retrieve valid weather data for recommendation: {weather_data.get('error', 'Unknown error') if weather_data else 'No data'}"
+                )
                 return MowingRecommendation.POOR, "Weather data unavailable"
 
             current_temp_celsius = weather_data.get("current_temperature")
             is_currently_raining = weather_data.get("is_currently_raining")
             precipitation_probability_next_hours = weather_data.get("hourly_precipitation_probability", [])
-            
+
             # Rule 1: Currently raining
             if is_currently_raining:
                 logger.info(f"Mowing decision for {time}: Postponed - Currently raining. Details: {weather_data}")
@@ -275,14 +260,15 @@ class WeatherAwareScheduler:
             # Rule 2: High chance of rain soon (checking first forecast interval, e.g., next 1-3 hours)
             # The threshold for "max_rain_probability" is expected to be in percentage (e.g., 50.0 for 50%)
             # The precipitation_probability_next_hours from service is already in percentage.
-            if precipitation_probability_next_hours and \
-               precipitation_probability_next_hours[0] > thresholds.get("max_rain_probability", 50.0):
+            if precipitation_probability_next_hours and precipitation_probability_next_hours[0] > thresholds.get(
+                "max_rain_probability", 50.0
+            ):
                 reason_msg = f"High chance of rain soon ({precipitation_probability_next_hours[0]}%)"
                 logger.info(f"Mowing decision for {time}: Postponed - {reason_msg}. Details: {weather_data}")
                 return MowingRecommendation.POOR, reason_msg
-            
+
             # Rule 3: Temperature too low (using Celsius)
-            min_temp_celsius_threshold = 5.0 # Define this threshold directly or get from a new Celsius config
+            min_temp_celsius_threshold = 5.0  # Define this threshold directly or get from a new Celsius config
             # The existing self._weather_thresholds["min_temperature"] is in Fahrenheit.
             # For simplicity in this fix, using a hardcoded Celsius threshold.
             # TODO: Consider making thresholds unit-aware or consistently Celsius.
@@ -290,7 +276,7 @@ class WeatherAwareScheduler:
                 reason_msg = f"Temperature too low ({current_temp_celsius}°C)"
                 logger.info(f"Mowing decision for {time}: Postponed - {reason_msg}. Details: {weather_data}")
                 return MowingRecommendation.POOR, reason_msg
-            
+
             # Add other checks if necessary (e.g., max temperature, wind speed)
             # Example: Wind speed check (assuming m/s from service, threshold in mph needs conversion or new m/s threshold)
             # current_wind_speed_ms = weather_data.get("current_wind_speed") # m/s
@@ -333,7 +319,7 @@ class WeatherAwareScheduler:
                 scheduled_times = self._schedule.get(day_of_week, [])
 
             for hour, minute in scheduled_times:
-                target_time_dt = datetime.combine( # Renamed to avoid conflict
+                target_time_dt = datetime.combine(  # Renamed to avoid conflict
                     target_date,
                     datetime.min.time().replace(hour=hour, minute=minute),
                 )
@@ -344,9 +330,7 @@ class WeatherAwareScheduler:
 
                 # Check if weather is suitable
                 # Pass target_time_dt to get_mowing_recommendation
-                recommendation, _ = self.get_mowing_recommendation( 
-                    target_time_dt 
-                )
+                recommendation, _ = self.get_mowing_recommendation(target_time_dt)
                 if recommendation in [
                     MowingRecommendation.OPTIMAL,
                     MowingRecommendation.GOOD,
@@ -365,7 +349,7 @@ class WeatherAwareScheduler:
                 mapping scheduled times to (recommendation, reason) tuples
         """
         now = datetime.now()
-        result_schedule = {} # Renamed to avoid conflict
+        result_schedule = {}  # Renamed to avoid conflict
 
         # Look ahead 7 days
         for days_ahead in range(7):
@@ -376,7 +360,7 @@ class WeatherAwareScheduler:
                 scheduled_times = self._schedule.get(day_of_week, [])
 
             for hour, minute in scheduled_times:
-                target_time_dt = datetime.combine( # Renamed
+                target_time_dt = datetime.combine(  # Renamed
                     target_date,
                     datetime.min.time().replace(hour=hour, minute=minute),
                 )
@@ -386,9 +370,7 @@ class WeatherAwareScheduler:
                     continue
 
                 # Get weather recommendation
-                recommendation, reason = self.get_mowing_recommendation(
-                    target_time_dt
-                )
+                recommendation, reason = self.get_mowing_recommendation(target_time_dt)
                 result_schedule[target_time_dt] = (recommendation, reason)
 
         return result_schedule

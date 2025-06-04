@@ -12,10 +12,9 @@ import traceback
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast
 
-from mower.error_handling.exceptions import MowerError, convert_exception
 from mower.error_handling.error_codes import ErrorCode
 from mower.error_handling.error_reporter import report_error
-
+from mower.error_handling.exceptions import MowerError, convert_exception
 
 # Type variables for function decorators
 F = TypeVar("F", bound=Callable[..., Any])
@@ -52,9 +51,7 @@ def handle_error(
                     error = e
                 else:
                     # Convert to MowerError
-                    error = convert_exception(
-                        e, error_code=error_code, context=context
-                    )
+                    error = convert_exception(e, error_code=error_code, context=context)
 
                 # Report the error
                 report_error(error, log_level=log_level)
@@ -98,9 +95,7 @@ def error_context(
             error = e
         else:
             # Convert to MowerError
-            error = convert_exception(
-                e, error_code=error_code, context=context
-            )
+            error = convert_exception(e, error_code=error_code, context=context)
 
         # Report the error
         report_error(error, log_level=log_level)
@@ -182,9 +177,7 @@ def safe_call(
             error = e
         else:
             # Convert to MowerError
-            error = convert_exception(
-                e, error_code=error_code, context=context
-            )
+            error = convert_exception(e, error_code=error_code, context=context)
 
         # Report the error
         report_error(error, log_level=log_level)

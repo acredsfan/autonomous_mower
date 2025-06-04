@@ -6,7 +6,7 @@ autonomous mower project, such as avoidance algorithms and obstacle detectors.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Any, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 
 class AvoidanceAlgorithmInterface(ABC):
@@ -143,9 +143,7 @@ class ObstacleMapperInterface(ABC):
         pass
 
     @abstractmethod
-    def load_obstacle_map(
-        self, filename: str = "obstacle_map.json"
-    ) -> List[Dict[str, float]]:
+    def load_obstacle_map(self, filename: str = "obstacle_map.json") -> List[Dict[str, float]]:
         """
         Load the obstacle map from a JSON file.
 

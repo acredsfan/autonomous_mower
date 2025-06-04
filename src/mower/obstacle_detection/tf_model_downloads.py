@@ -8,8 +8,9 @@ Author: Autonomous Mower Team
 import argparse
 import logging
 import os
-import tensorflow as tf
 from typing import Optional
+
+import tensorflow as tf
 
 from mower.utilities.model_downloader import download_file
 
@@ -18,9 +19,7 @@ try:
 except ImportError:
     kagglehub = None
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("tf_model_downloads")
 
 
@@ -46,8 +45,7 @@ def download_model(
     """
     if url:
         if not dest_path:
-            logger.error(
-                "Destination path must be specified for direct URL download.")
+            logger.error("Destination path must be specified for direct URL download.")
             return None
         logger.info(f"Downloading model from URL: {url}")
         ok = download_file(
@@ -68,9 +66,7 @@ def download_model(
             return None
         logger.info("Downloading the model using kagglehub...")
         try:
-            model_path = kagglehub.model_download(
-                "google/mobilenet-v2/tensorFlow2/100-224-classification"
-            )
+            model_path = kagglehub.model_download("google/mobilenet-v2/tensorFlow2/100-224-classification")
             logger.info(f"Model downloaded to {model_path}")
             return model_path
         except Exception as e:
@@ -92,14 +88,12 @@ def convert_model(saved_model_dir, tflite_model_path):
         # Set optimizations only if attribute exists and is correct type
         if hasattr(converter, "optimizations"):
             try:
-                converter.optimizations = [
-                    tf.lite.Optimize.DEFAULT]  # type: ignore
+                converter.optimizations = [tf.lite.Optimize.DEFAULT]  # type: ignore
             except Exception as e:
                 logger.warning(f"Could not set optimizations: {e}")
         tflite_model = converter.convert()
         if not isinstance(tflite_model, bytes):
-            logger.error(
-                "TFLite model conversion did not return bytes. Aborting write.")
+            logger.error("TFLite model conversion did not return bytes. Aborting write.")
             return
         with open(tflite_model_path, "wb") as f:
             f.write(tflite_model)
@@ -109,9 +103,7 @@ def convert_model(saved_model_dir, tflite_model_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Download and convert model to TFLite with robust error handling."
-    )
+    parser = argparse.ArgumentParser(description="Download and convert model to TFLite with robust error handling.")
     parser.add_argument(
         "--output_path",
         type=str,

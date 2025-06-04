@@ -1,16 +1,18 @@
 import threading
 import time
-from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 import board
 import busio
-from mower.utilities.logger_config import LoggerConfigInfo
-from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
+
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.tof import VL53L0XSensors
+from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
+from mower.utilities.logger_config import LoggerConfigInfo
 
 logging = LoggerConfigInfo.get_logger(__name__)
 
@@ -78,7 +80,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info("I2C bus initialized successfully")
         except Exception as e:
             _log_error("I2C bus initialization failed", e)
-            raise        # Initialize all sensors
+            raise  # Initialize all sensors
         self._initialize_sensors()
 
     def _initialize_sensors(self) -> None:
@@ -128,7 +130,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 if self.shutdown_lines is None:
                     logging.warning("VL53L0X shutdown lines not configured, skipping initialization")
                     return None
-                    
+
                 return VL53L0XSensors.init_vl53l0x_sensors(
                     self._i2c,
                     self.shutdown_lines.get("left"),
@@ -164,39 +166,27 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         try:
             # Get IMU instance
             imu = self._sensors["bno085"]
-            
+
             # Read acceleration data
             accel = imu.get_acceleration()
-            
+
             # Read other sensor data
             heading = imu.get_heading()
             roll = imu.get_roll()
             pitch = imu.get_pitch()
-            
+
             # Get gyroscope and magnetometer data
             gyro = imu.get_gyroscope()
             magnetometer = imu.get_magnetometer()
-            
+
             # Get calibration and safety status
             calibration = imu.get_calibration()
             safety_status = imu.get_safety_status()
-            
+
             return {
-                "acceleration": {
-                    "x": accel[0],
-                    "y": accel[1],
-                    "z": accel[2]
-                },
-                "gyroscope": {
-                    "x": gyro[0],
-                    "y": gyro[1],
-                    "z": gyro[2]
-                },
-                "magnetometer": {
-                    "x": magnetometer[0],
-                    "y": magnetometer[1],
-                    "z": magnetometer[2]
-                },
+                "acceleration": {"x": accel[0], "y": accel[1], "z": accel[2]},
+                "gyroscope": {"x": gyro[0], "y": gyro[1], "z": gyro[2]},
+                "magnetometer": {"x": magnetometer[0], "y": magnetometer[1], "z": magnetometer[2]},
                 "heading": heading,
                 "roll": roll,
                 "pitch": pitch,
@@ -213,12 +203,8 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             return {}
 
         try:
-            solar_data = INA3221Sensor.read_ina3221(
-                self._sensors["ina3221"], 1
-            )
-            battery_data = INA3221Sensor.read_ina3221(
-                self._sensors["ina3221"], 3
-            )
+            solar_data = INA3221Sensor.read_ina3221(self._sensors["ina3221"], 1)
+            battery_data = INA3221Sensor.read_ina3221(self._sensors["ina3221"], 3)
             return {
                 "solar_voltage": solar_data.get("bus_voltage"),
                 "solar_current": solar_data.get("current"),
@@ -248,14 +234,10 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
     def _start_monitoring(self):
         """Start sensor monitoring threads."""
-        self._monitoring_thread = threading.Thread(
-            target=self._monitor_sensors, daemon=True
-        )
+        self._monitoring_thread = threading.Thread(target=self._monitor_sensors, daemon=True)
         self._monitoring_thread.start()
 
-        self._update_thread = threading.Thread(
-            target=self._update_sensor_data, daemon=True
-        )
+        self._update_thread = threading.Thread(target=self._update_sensor_data, daemon=True)
         self._update_thread.start()
 
     def _monitor_sensors(self):
@@ -367,22 +349,19 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 "bno085",
                 "vl53l0x",
             ]  # Add or remove as needed
-            return all(
-                self._sensor_status[sensor].working
-                for sensor in critical_sensors
-            )
+            return all(self._sensor_status[sensor].working for sensor in critical_sensors)
 
     def _init_sensor_with_retry(self, sensor_name: str, initializer) -> None:
         """
         Initialize a sensor with retry logic.
-        
+
         Args:
             sensor_name: Name of the sensor to initialize
             initializer: Function to call for initialization
         """
         max_retries = 3
         retry_delay = 1.0
-        
+
         for attempt in range(max_retries):
             try:
                 sensor = initializer()
@@ -401,7 +380,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 logging.warning(f"Failed to initialize {sensor_name} on attempt {attempt + 1}: {e}")
                 if attempt < max_retries - 1:
                     time.sleep(retry_delay)
-        
+
         # Mark sensor as failed after all retries
         with self._locks["status"]:
             status = self._sensor_status[sensor_name]
@@ -415,8 +394,7 @@ def _check_proximity_violation(sensor_data: Dict) -> bool:
     """Check if any proximity sensor indicates an obstacle too close."""
     min_safe_distance = 30  # cm
     return any(
-        sensor_data.get(f"{direction}_distance", float("inf"))
-        < min_safe_distance
+        sensor_data.get(f"{direction}_distance", float("inf")) < min_safe_distance
         for direction in ["left", "right", "front"]
     )
 
@@ -424,10 +402,7 @@ def _check_proximity_violation(sensor_data: Dict) -> bool:
 def _check_tilt_violation(sensor_data: Dict) -> bool:
     """Check if the mower's tilt angle is unsafe."""
     max_safe_tilt = 25  # degrees
-    return (
-        abs(sensor_data.get("pitch", 0)) > max_safe_tilt
-        or abs(sensor_data.get("roll", 0)) > max_safe_tilt
-    )
+    return abs(sensor_data.get("pitch", 0)) > max_safe_tilt or abs(sensor_data.get("roll", 0)) > max_safe_tilt
 
 
 class SafetyMonitor:
@@ -439,9 +414,7 @@ class SafetyMonitor:
         self.sensor_interface = enhanced_sensor_interface
         self.safety_violations = []
         self.stop_event = threading.Event()
-        self.monitoring_thread = threading.Thread(
-            target=self._monitor_safety, daemon=True
-        )
+        self.monitoring_thread = threading.Thread(target=self._monitor_safety, daemon=True)
         self.monitoring_thread.start()
 
     def _monitor_safety(self):

@@ -73,9 +73,7 @@ class SecureStorage:
                     master_key = f.read().decode("utf-8")
             else:
                 # Generate a new key
-                master_key = base64.urlsafe_b64encode(os.urandom(32)).decode(
-                    "utf-8"
-                )
+                master_key = base64.urlsafe_b64encode(os.urandom(32)).decode("utf-8")
 
                 # Store the key in a file with restricted permissions
                 with open(key_file, "wb") as f:
@@ -84,9 +82,7 @@ class SecureStorage:
                 # Set file permissions to be readable only by the owner
                 os.chmod(key_file, 0o600)
 
-                logger.info(
-                    "Generated new master key and stored it in %s", key_file
-                )
+                logger.info("Generated new master key and stored it in %s", key_file)
 
             # Set the environment variable for future use
             os.environ[self.master_key_env_var] = master_key
@@ -189,9 +185,7 @@ class SecureStorage:
 _secure_storage_instance = None
 
 
-def get_secure_storage(
-    storage_path: Optional[Union[str, Path]] = None
-) -> SecureStorage:
+def get_secure_storage(storage_path: Optional[Union[str, Path]] = None) -> SecureStorage:
     """Get the secure storage instance.
 
     Args:
@@ -199,7 +193,7 @@ def get_secure_storage(
             the default path is used.
 
     Returns:
-        The secure storage instance.    """
+        The secure storage instance."""
     # pylint: disable=global-statement
     global _secure_storage_instance
 

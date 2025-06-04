@@ -23,24 +23,17 @@ import os
 
 from mower.utilities.model_downloader import download_file
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("download_coral_model")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Download Coral EdgeTPU/TFLite models with robust error handling."
-    )
+    parser = argparse.ArgumentParser(description="Download Coral EdgeTPU/TFLite models with robust error handling.")
     parser.add_argument(
         "--model",
         type=str,
         required=True,
-        help=(
-            "Filename for the model (e.g., detect_edgetpu.tflite, "
-            "detect.tflite, labelmap.txt)"
-        ),
+        help=("Filename for the model (e.g., detect_edgetpu.tflite, " "detect.tflite, labelmap.txt)"),
     )
     parser.add_argument(
         "--url",

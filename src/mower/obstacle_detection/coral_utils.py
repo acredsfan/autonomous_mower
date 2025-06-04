@@ -25,15 +25,13 @@ logger = LoggerConfigInfo.get_logger(__name__)
 
 # Try to import Coral libraries, with graceful fallback if not available
 try:
-    from pycoral.utils import edgetpu  # type: ignore[import]
     from pycoral.adapters import common  # type: ignore[import]
+    from pycoral.utils import edgetpu  # type: ignore[import]
 
     coral_available = True
     logger.info("Coral libraries successfully imported")
 except ImportError:
-    logger.warning(
-        "Coral libraries not available. Falling back to CPU inference only."
-    )
+    logger.warning("Coral libraries not available. Falling back to CPU inference only.")
     coral_available = False
 
     # Define dummy classes for compatibility when pycoral isn't installed

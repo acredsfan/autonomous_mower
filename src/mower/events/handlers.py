@@ -8,19 +8,9 @@ functions for publishing events.
 
 import functools
 import inspect
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    cast,
-)
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, cast
 
-from mower.events.event import Event, EventType, EventPriority
+from mower.events.event import Event, EventPriority, EventType
 from mower.events.event_bus import get_event_bus
 
 # Type variable for event handler functions
@@ -51,10 +41,7 @@ class EventHandler:
 
         # Find methods in this class that are decorated with @handle_event
         for name, method in inspect.getmembers(self, inspect.ismethod):
-            if (
-                hasattr(method, "_event_types")
-                and event_type in method._event_types
-            ):
+            if hasattr(method, "_event_types") and event_type in method._event_types:
                 event_bus.subscribe(method, event_type)
                 self._subscriptions.append((event_type, method))
 
@@ -168,9 +155,7 @@ def publish(
         source: Source of the event
         synchronous: If True, process the event synchronously
     """
-    event = Event(
-        event_type=event_type, data=data, priority=priority, source=source
-    )
+    event = Event(event_type=event_type, data=data, priority=priority, source=source)
 
     event_bus = get_event_bus()
     event_bus.publish(event, synchronous=synchronous)

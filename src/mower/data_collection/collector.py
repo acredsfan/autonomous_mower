@@ -4,19 +4,20 @@ DataCollector module for autonomous mower.
 This module handles the automated collection of images for AI model fine-tuning.
 It implements functionality for autonomous roaming and image capture with metadata.
 """
+
 import logging
 import os
 import time
 import uuid
 from datetime import datetime
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import cv2
 
-from mower.config_management import ConfigurationManager # Changed import
+from mower.config_management import ConfigurationManager  # Changed import
 from mower.hardware.camera_instance import CameraInstance
-from mower.navigation.path_planner import PathPlanner, PatternType
 from mower.hardware.sensor_types import SensorReading
+from mower.navigation.path_planner import PathPlanner, PatternType
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class DataCollector:
         self,
         camera: CameraInstance,
         path_planner: PathPlanner,
-        config_manager: ConfigurationManager, # Changed type hint
+        config_manager: ConfigurationManager,  # Changed type hint
     ):
         """Initialize the DataCollector.
 
@@ -49,8 +50,7 @@ class DataCollector:
         self.config = self._load_config()
 
         # Set up image storage directory
-        self.base_storage_path = self.config.get(
-            "storage_path", "data/collected_images")
+        self.base_storage_path = self.config.get("storage_path", "data/collected_images")
         self.current_session_path = None
 
         # Collection state
@@ -66,26 +66,19 @@ class DataCollector:
 
         logger.info("DataCollector initialized")
 
-    def _load_config(self) -> Dict[str, Any]: # Changed return type hint
+    def _load_config(self) -> Dict[str, Any]:  # Changed return type hint
         """Load data collection configuration"""
         try:
             # Changed to use .get() from ConfigurationManager instance
             dc_config = self.config_manager.get("data_collection", {})
             return {
-                "storage_path": dc_config.get(
-                    "storage_path", "data/collected_images"),
-                "image_interval": dc_config.get(
-                    "image_interval", 5),
-                "max_images": dc_config.get(
-                    "max_images", 1000),
-                "collection_pattern": dc_config.get(
-                    "collection_pattern", "PARALLEL"),
-                "image_quality": dc_config.get(
-                    "image_quality", 95),
-                "save_metadata": dc_config.get(
-                    "save_metadata", True),
-                "resolution": dc_config.get(
-                    "resolution", (640, 480)),
+                "storage_path": dc_config.get("storage_path", "data/collected_images"),
+                "image_interval": dc_config.get("image_interval", 5),
+                "max_images": dc_config.get("max_images", 1000),
+                "collection_pattern": dc_config.get("collection_pattern", "PARALLEL"),
+                "image_quality": dc_config.get("image_quality", 95),
+                "save_metadata": dc_config.get("save_metadata", True),
+                "resolution": dc_config.get("resolution", (640, 480)),
             }
         except Exception as e:
             logger.error(f"Failed to load data collection config: {e}")
@@ -123,11 +116,8 @@ class DataCollector:
         else:
             dir_name = f"{timestamp}_{self.current_session_id[:8]}"
 
-        self.current_session_path = os.path.join(
-            self.base_storage_path, dir_name)
-        os.makedirs(
-            self.current_session_path,
-            exist_ok=True)        # Reset counters
+        self.current_session_path = os.path.join(self.base_storage_path, dir_name)
+        os.makedirs(self.current_session_path, exist_ok=True)  # Reset counters
         self.images_collected = 0
         self.collection_start_time = time.time()
         self.last_image_time = 0
@@ -138,36 +128,19 @@ class DataCollector:
 
         try:
             # Generate a path with the selected pattern
-            self.path_planner.generate_pattern(
-                pattern_name,
-                {
-                    "spacing": 1.0,
-                    "angle": 0.0,
-                    "overlap": 0.1
-                }
-            )
+            self.path_planner.generate_pattern(pattern_name, {"spacing": 1.0, "angle": 0.0, "overlap": 0.1})
         except (AttributeError, ValueError) as e:
-            logger.warning(
-                f"Pattern {pattern_name} not found, using PARALLEL: {e}")
+            logger.warning(f"Pattern {pattern_name} not found, using PARALLEL: {e}")
 
             # Fall back to PARALLEL pattern
-            self.path_planner.generate_pattern(
-                "PARALLEL",
-                {
-                    "spacing": 1.0,
-                    "angle": 0.0,
-                    "overlap": 0.1
-                }
-            )
+            self.path_planner.generate_pattern("PARALLEL", {"spacing": 1.0, "angle": 0.0, "overlap": 0.1})
 
         # Create session metadata file
         self._save_session_metadata()
 
-        logger.info(
-            f"Started data collection session {self.current_session_id}"
-        )
+        logger.info(f"Started data collection session {self.current_session_id}")
         return self.current_session_id
-    
+
     def stop_collection(self) -> Dict[str, Any]:
         """
         Stop the current data collection session.
@@ -192,18 +165,16 @@ class DataCollector:
             "images_collected": self.images_collected,
             "duration_seconds": duration,
             "path": self.current_session_path,
-            "status": "completed"
+            "status": "completed",
         }
 
         # Update session metadata with completion info
         self._update_session_metadata(stats)
 
-        logger.info(
-            f"Stopped data collection session {self.current_session_id}")
+        logger.info(f"Stopped data collection session {self.current_session_id}")
         return stats
 
-    def process(
-            self, sensor_data: Optional[Dict[str, SensorReading]] = None) -> bool:
+    def process(self, sensor_data: Optional[Dict[str, SensorReading]] = None) -> bool:
         """
         Process one iteration of data collection.
         Should be called regularly from the main control loop.
@@ -228,10 +199,7 @@ class DataCollector:
 
         return False
 
-    def capture_image(
-            self,
-            sensor_data: Optional[Dict[str, SensorReading]] = None
-    ) -> Optional[str]:
+    def capture_image(self, sensor_data: Optional[Dict[str, SensorReading]] = None) -> Optional[str]:
         """
         Capture and save an image with metadata.
 
@@ -245,12 +213,10 @@ class DataCollector:
             logger.warning("Cannot capture image: collection not in progress")
             return None
 
-        try:            # Check if max images reached
+        try:  # Check if max images reached
             max_images = self.config.get("max_images", 1000)
             if self.images_collected >= max_images:
-                logger.info(
-                    f"Reached maximum number of images ({max_images}), "
-                    f"stopping collection")
+                logger.info(f"Reached maximum number of images ({max_images}), " f"stopping collection")
                 self.stop_collection()
                 return None
 
@@ -258,7 +224,7 @@ class DataCollector:
             frame = self.camera.capture_frame()
             if frame is None:
                 logger.error("Failed to capture frame from camera")
-                return None            # Generate filename
+                return None  # Generate filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             image_index = str(self.images_collected).zfill(6)
             filename = f"img_{image_index}_{timestamp}.jpg"
@@ -268,23 +234,18 @@ class DataCollector:
                 logger.error("Current session path is None, cannot save image")
                 return None
 
-            filepath = os.path.join(
-                self.current_session_path,
-                filename)            # Save image
+            filepath = os.path.join(self.current_session_path, filename)  # Save image
             try:
                 quality = self.config.get("image_quality", 95)
                 # Check if frame is bytes (JPEG) or numpy array (raw frame)
                 if isinstance(frame, bytes):
                     # If it's already JPEG bytes, write directly to file
-                    with open(filepath, 'wb') as f:
+                    with open(filepath, "wb") as f:
                         f.write(frame)
                     success = True
                 else:
                     # If it's a numpy array, use cv2.imwrite
-                    success = cv2.imwrite(
-                        filepath, frame,
-                        [int(cv2.IMWRITE_JPEG_QUALITY),
-                         quality])
+                    success = cv2.imwrite(filepath, frame, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
 
                 if not success:
                     logger.error(f"Failed to save image to {filepath}")
@@ -308,9 +269,7 @@ class DataCollector:
             logger.error(f"Error capturing image: {e}")
             return None
 
-    def _save_image_metadata(
-            self, metadata_path: str,
-            sensor_data: Optional[Dict[str, SensorReading]] = None) -> None:
+    def _save_image_metadata(self, metadata_path: str, sensor_data: Optional[Dict[str, SensorReading]] = None) -> None:
         """
         Save metadata for a captured image.
 
@@ -335,7 +294,7 @@ class DataCollector:
                     sensor_meta[sensor_name] = {
                         "value": reading.value,
                         "timestamp": reading.timestamp,
-                        "status": reading.status
+                        "status": reading.status,
                     }
             metadata["sensor_data"] = sensor_meta
 
@@ -349,7 +308,7 @@ class DataCollector:
                 pass
 
         try:
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save metadata: {e}")
@@ -362,9 +321,7 @@ class DataCollector:
             logger.error("No current session path")
             return
 
-        metadata_path = os.path.join(
-            self.current_session_path,
-            "session_info.json")
+        metadata_path = os.path.join(self.current_session_path, "session_info.json")
 
         metadata = {
             "session_id": self.current_session_id,
@@ -376,7 +333,7 @@ class DataCollector:
         }
 
         try:
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save session metadata: {e}")
@@ -394,25 +351,25 @@ class DataCollector:
             logger.error("No current session path")
             return
 
-        metadata_path = os.path.join(
-            self.current_session_path,
-            "session_info.json")
+        metadata_path = os.path.join(self.current_session_path, "session_info.json")
 
         try:
             # Read existing metadata
-            with open(metadata_path, 'r') as f:
+            with open(metadata_path, "r") as f:
                 metadata = json.load(f)
 
             # Update with completion info
-            metadata.update({
-                "end_time": datetime.now().isoformat(),
-                "images_collected": stats["images_collected"],
-                "duration_seconds": stats["duration_seconds"],
-                "status": "completed"
-            })
+            metadata.update(
+                {
+                    "end_time": datetime.now().isoformat(),
+                    "images_collected": stats["images_collected"],
+                    "duration_seconds": stats["duration_seconds"],
+                    "status": "completed",
+                }
+            )
 
             # Write updated metadata
-            with open(metadata_path, 'w') as f:
+            with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
         except Exception as e:
@@ -440,7 +397,7 @@ class DataCollector:
             "duration_seconds": duration,
             "session_path": self.current_session_path,
             "pattern": self.config.get("collection_pattern", "PARALLEL"),
-            "image_interval": self.image_interval
+            "image_interval": self.image_interval,
         }
 
     def set_image_interval(self, interval: float) -> None:
@@ -451,8 +408,7 @@ class DataCollector:
             interval: Time in seconds between captures
         """
         if interval < 0.1:
-            logger.warning(
-                f"Image interval too small ({interval}s), setting to 0.1s")
+            logger.warning(f"Image interval too small ({interval}s), setting to 0.1s")
             interval = 0.1
 
         self.image_interval = interval
@@ -473,14 +429,7 @@ class DataCollector:
             getattr(PatternType, pattern_name)  # Validate pattern name
 
             # Generate a path with the selected pattern
-            self.path_planner.generate_pattern(
-                pattern_name,
-                {
-                    "spacing": 1.0,
-                    "angle": 0.0,
-                    "overlap": 0.1
-                }
-            )
+            self.path_planner.generate_pattern(pattern_name, {"spacing": 1.0, "angle": 0.0, "overlap": 0.1})
 
             # Update configuration
             self.config["collection_pattern"] = pattern_name

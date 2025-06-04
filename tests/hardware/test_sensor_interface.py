@@ -1,8 +1,10 @@
 """
 Test module for test_sensor_interface.py.
 """
+
 import unittest
 from unittest.mock import MagicMock, patch
+
 # Assuming this is the correct location
 from mower.hardware.sensor_interface import EnhancedSensorInterface
 
@@ -16,9 +18,7 @@ class TestSensorInterface(unittest.TestCase):
         sensor_interface = EnhancedSensorInterface()
 
         # Mock the _init_sensor_with_retry method
-        sensor_interface._init_sensor_with_retry = MagicMock(
-            return_value=True
-        )
+        sensor_interface._init_sensor_with_retry = MagicMock(return_value=True)
 
         # Call start
         sensor_interface.start()
@@ -94,27 +94,19 @@ class TestSensorInterface(unittest.TestCase):
         # Create an EnhancedSensorInterface instance
         sensor_interface = EnhancedSensorInterface()
         # Mock sensor_status for the test
-        sensor_interface._sensor_status = {
-            "test_sensor": MagicMock(
-                error_count=0,
-                working=True,
-                last_error=None)}
+        sensor_interface._sensor_status = {"test_sensor": MagicMock(error_count=0, working=True, last_error=None)}
 
         # Call _handle_sensor_error
-        sensor_interface._handle_sensor_error(
-            "test_sensor", Exception("Test error")
-        )
+        sensor_interface._handle_sensor_error("test_sensor", Exception("Test error"))
 
         # Verify that the sensor status was updated
         assert sensor_interface._sensor_status["test_sensor"].working is False
         assert sensor_interface._sensor_status["test_sensor"].error_count == 1
-        assert str(
-            sensor_interface._sensor_status["test_sensor"].last_error) == "Test error"
+        assert str(sensor_interface._sensor_status["test_sensor"].last_error) == "Test error"
 
     @patch("mower.hardware.sensor_interface.get_sensor_interface")
     # Renamed for clarity
-    def test_get_sensor_interface_global_method(
-            self, mock_get_sensor_interface):
+    def test_get_sensor_interface_global_method(self, mock_get_sensor_interface):
         pass
 
     @patch("mower.hardware.sensor_interface.busio.I2C")
@@ -122,5 +114,5 @@ class TestSensorInterface(unittest.TestCase):
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -5,13 +5,14 @@ This module provides tools for optimizing resource usage (memory, CPU, power)
 in resource-constrained environments like the Raspberry Pi.
 """
 
+import functools
 import gc
 import os
-import psutil
-import time
 import threading
-import functools
-from typing import Dict, Any, List, Optional, Callable, Set
+import time
+from typing import Any, Callable, Dict, List, Optional, Set
+
+import psutil
 
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -69,32 +70,22 @@ class ResourceOptimizer:
         if self.enable_monitoring:
             self.start_monitoring()
 
-        logger.info(
-            f"Resource optimizer initialized with memory limit: {memory_limit_percent}%"
-        )
+        logger.info(f"Resource optimizer initialized with memory limit: {memory_limit_percent}%")
 
     def start_monitoring(self):
         """Start resource usage monitoring."""
-        if (
-            self.monitoring_thread is not None
-            and self.monitoring_thread.is_alive()
-        ):
+        if self.monitoring_thread is not None and self.monitoring_thread.is_alive():
             logger.warning("Monitoring thread is already running")
             return
 
         self.stop_monitoring.clear()
-        self.monitoring_thread = threading.Thread(
-            target=self._monitoring_loop, daemon=True
-        )
+        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
         self.monitoring_thread.start()
         logger.info("Resource monitoring started")
 
     def stop_monitoring(self):
         """Stop resource usage monitoring."""
-        if (
-            self.monitoring_thread is None
-            or not self.monitoring_thread.is_alive()
-        ):
+        if self.monitoring_thread is None or not self.monitoring_thread.is_alive():
             logger.warning("Monitoring thread is not running")
             return
 
@@ -116,18 +107,13 @@ class ResourceOptimizer:
 
                 # Keep only the last 100 measurements
                 if len(self.stats["memory_usage"]) > 100:
-                    self.stats["memory_usage"] = self.stats["memory_usage"][
-                        -100:
-                    ]
+                    self.stats["memory_usage"] = self.stats["memory_usage"][-100:]
                     self.stats["cpu_usage"] = self.stats["cpu_usage"][-100:]
 
                 # Check if memory usage is above limit
                 if memory_percent > self.memory_limit_percent:
                     logger.warning(
-                        (
-                            f"Memory usage ({memory_percent}%) exceeds"
-                            f" limit ({self.memory_limit_percent}%)"
-                        )
+                        (f"Memory usage ({memory_percent}%) exceeds" f" limit ({self.memory_limit_percent}%)")
                     )
                     self._reduce_memory_usage()
 
@@ -153,17 +139,13 @@ class ResourceOptimizer:
         # Check if memory usage is still above limit
         memory_percent = psutil.virtual_memory().percent
         if memory_percent > self.memory_limit_percent:
-            logger.warning(
-                f"Memory usage still high ({memory_percent}%) after reduction attempts"
-            )
+            logger.warning(f"Memory usage still high ({memory_percent}%) after reduction attempts")
 
     def _clear_object_pools(self):
         """Clear object pools to free memory."""
         pool_sizes = {
             "numpy_array_pool": len(self.numpy_array_pool),
-            "object_pools": sum(
-                len(pool) for pool in self.object_pools.values()
-            ),
+            "object_pools": sum(len(pool) for pool in self.object_pools.values()),
         }
 
         self.numpy_array_pool.clear()
@@ -194,15 +176,8 @@ class ResourceOptimizer:
             @functools.wraps(original_clear_caches)
             def memory_aware_clear_caches():
                 memory_percent = psutil.virtual_memory().percent
-                if (
-                    memory_percent > self.memory_limit_percent * 0.9
-                ):  # 90% of limit
-                    logger.info(
-                        (
-                            f"Memory usage high ({memory_percent}%),"
-                            f" clearing caches for {component_name}"
-                        )
-                    )
+                if memory_percent > self.memory_limit_percent * 0.9:  # 90% of limit
+                    logger.info((f"Memory usage high ({memory_percent}%)," f" clearing caches for {component_name}"))
                     original_clear_caches()
                 return original_clear_caches()
 
@@ -257,9 +232,7 @@ class ResourceOptimizer:
         # Add the array to the pool
         self.numpy_array_pool[key].append(array)
 
-    def register_object_pool(
-        self, pool_name: str, factory_func: Callable, max_size: int = 10
-    ):
+    def register_object_pool(self, pool_name: str, factory_func: Callable, max_size: int = 10):
         """
         Register an object pool.
 
@@ -278,9 +251,7 @@ class ResourceOptimizer:
             "max_size": max_size,
         }
 
-        logger.info(
-            f"Registered object pool {pool_name} with max size {max_size}"
-        )
+        logger.info(f"Registered object pool {pool_name} with max size {max_size}")
 
     def get_object(self, pool_name: str):
         """
@@ -341,12 +312,7 @@ class ResourceOptimizer:
         new_thresholds = (500, 5, 5)  # More frequent collections
         gc.set_threshold(*new_thresholds)
 
-        logger.info(
-            (
-                f"Optimized garbage collection thresholds: "
-                f"{old_thresholds} -> {new_thresholds}"
-            )
-        )
+        logger.info((f"Optimized garbage collection thresholds: " f"{old_thresholds} -> {new_thresholds}"))
 
     def get_resource_usage(self) -> Dict[str, Any]:
         """
@@ -393,9 +359,7 @@ class ResourceOptimizer:
 _resource_optimizer = None
 
 
-def get_resource_optimizer(
-    memory_limit_percent: float = 80.0, enable_monitoring: bool = True
-) -> ResourceOptimizer:
+def get_resource_optimizer(memory_limit_percent: float = 80.0, enable_monitoring: bool = True) -> ResourceOptimizer:
     """
     Get or create the singleton resource optimizer instance.
 
@@ -409,9 +373,7 @@ def get_resource_optimizer(
     global _resource_optimizer
 
     if _resource_optimizer is None:
-        _resource_optimizer = ResourceOptimizer(
-            memory_limit_percent, enable_monitoring
-        )
+        _resource_optimizer = ResourceOptimizer(memory_limit_percent, enable_monitoring)
 
     return _resource_optimizer
 
@@ -466,14 +428,8 @@ def optimize_all_components():
 
     # Optimize path planning
     try:
-        from mower.navigation.path_planning_optimizer import (
-            optimize_path_planner,
-        )
-        from mower.navigation.path_planner import (
-            PathPlanner,
-            PatternConfig,
-            PatternType,
-        )
+        from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
+        from mower.navigation.path_planning_optimizer import optimize_path_planner
 
         # Create a test path planner to optimize
         config = PatternConfig(
@@ -496,12 +452,8 @@ def optimize_all_components():
 
     # Optimize obstacle detection
     try:
-        from mower.obstacle_detection.image_processing_optimizer import (
-            optimize_obstacle_detector,
-        )
-        from mower.obstacle_detection.obstacle_detector import (
-            get_obstacle_detector,
-        )
+        from mower.obstacle_detection.image_processing_optimizer import optimize_obstacle_detector
+        from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
 
         # Get the obstacle detector
         detector = get_obstacle_detector()

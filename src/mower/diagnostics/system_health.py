@@ -131,9 +131,7 @@ class SystemHealth:
                     "temperature": cpu_temp,
                     "frequency_mhz": cpu_freq_current,
                     "status": (
-                        "critical"
-                        if cpu_percent > CRITICAL_CPU_THRESHOLD
-                        else "warning" if cpu_percent > 70 else "ok"
+                        "critical" if cpu_percent > CRITICAL_CPU_THRESHOLD else "warning" if cpu_percent > 70 else "ok"
                     ),
                 },
                 "memory": {
@@ -304,20 +302,11 @@ class SystemHealth:
                     issues.append(f"{component} error: {str(e)}")
 
             # Add overall status
-            if any(
-                component.get("status") == "critical"
-                for component in hardware_health.values()
-            ):
+            if any(component.get("status") == "critical" for component in hardware_health.values()):
                 hardware_health["status"] = "critical"
-            elif any(
-                component.get("status") == "error"
-                for component in hardware_health.values()
-            ):
+            elif any(component.get("status") == "error" for component in hardware_health.values()):
                 hardware_health["status"] = "error"
-            elif any(
-                component.get("status") == "warning"
-                for component in hardware_health.values()
-            ):
+            elif any(component.get("status") == "warning" for component in hardware_health.values()):
                 hardware_health["status"] = "warning"
             else:
                 hardware_health["status"] = "ok"
@@ -386,9 +375,7 @@ class SystemHealth:
 
                         with open(error_log, "r") as f:
                             for line in f:
-                                if yesterday_str in line and (
-                                    "ERROR" in line or "CRITICAL" in line
-                                ):
+                                if yesterday_str in line and ("ERROR" in line or "CRITICAL" in line):
                                     error_count += 1
                                 if "Traceback" in line or "Exception" in line:
                                     crash_count += 1
@@ -426,20 +413,11 @@ class SystemHealth:
                 issues.append(f"Error checking logs: {str(e)}")
 
             # Add overall status
-            if any(
-                component.get("status") == "critical"
-                for component in software_health.values()
-            ):
+            if any(component.get("status") == "critical" for component in software_health.values()):
                 software_health["status"] = "critical"
-            elif any(
-                component.get("status") == "error"
-                for component in software_health.values()
-            ):
+            elif any(component.get("status") == "error" for component in software_health.values()):
                 software_health["status"] = "error"
-            elif any(
-                component.get("status") == "warning"
-                for component in software_health.values()
-            ):
+            elif any(component.get("status") == "warning" for component in software_health.values()):
                 software_health["status"] = "warning"
             else:
                 software_health["status"] = "ok"
@@ -464,58 +442,36 @@ class SystemHealth:
         issues = self.health_status["issues"]  # System recommendations
         if any("Critical CPU usage" in issue for issue in issues):
             recommendations.append(
-                "Reduce CPU load by disabling non-essential services or "
-                "reducing sensor polling frequency"
+                "Reduce CPU load by disabling non-essential services or " "reducing sensor polling frequency"
             )
         if any("Critical memory usage" in issue for issue in issues):
-            recommendations.append(
-                "Free up memory by restarting the mower service or the entire system"
-            )
+            recommendations.append("Free up memory by restarting the mower service or the entire system")
         if any("Critical disk usage" in issue for issue in issues):
-            recommendations.append(
-                "Free up disk space by removing old logs or unnecessary files"
-            )
+            recommendations.append("Free up disk space by removing old logs or unnecessary files")
         if any("Critical CPU temperature" in issue for issue in issues):
-            recommendations.append(
-                "Improve cooling or reduce CPU load to lower temperature"
-            )
+            recommendations.append("Improve cooling or reduce CPU load to lower temperature")
 
         # Hardware recommendations
         if any("IMU sensor" in issue for issue in issues):
             recommendations.append("Check IMU sensor connections and configuration")
         if any("GPS not" in issue for issue in issues):
-            recommendations.append(
-                "Move to an area with better GPS reception or check GPS antenna"
-            )
+            recommendations.append("Move to an area with better GPS reception or check GPS antenna")
         if any("Low battery" in issue for issue in issues):
             recommendations.append("Charge the mower battery immediately")
         if any("Battery level low" in issue for issue in issues):
             recommendations.append("Consider charging the mower soon")
         if any("Motor controller" in issue for issue in issues):
-            recommendations.append(
-                "Check motor controller connections and configuration"
-            )
+            recommendations.append("Check motor controller connections and configuration")
         if any("Blade controller" in issue for issue in issues):
-            recommendations.append(
-                "Check blade controller connections and configuration"
-            )
+            recommendations.append("Check blade controller connections and configuration")
         if any("Camera" in issue for issue in issues):
-            recommendations.append(
-                "Check camera connections and configuration"
-            )  # Software recommendations
+            recommendations.append("Check camera connections and configuration")  # Software recommendations
         if any("Mower service not running" in issue for issue in issues):
-            recommendations.append(
-                "Start the mower service with: "
-                "sudo systemctl start autonomous-mower.service"
-            )
+            recommendations.append("Start the mower service with: " "sudo systemctl start autonomous-mower.service")
         if any("crashes in logs" in issue for issue in issues):
-            recommendations.append(
-                "Check error logs for crash details and consider updating software"
-            )
+            recommendations.append("Check error logs for crash details and consider updating software")
         if any("High number of errors" in issue for issue in issues):
-            recommendations.append(
-                "Review error logs to identify and fix recurring issues"
-            )
+            recommendations.append("Review error logs to identify and fix recurring issues")
 
         # Update health status
         self.health_status["recommendations"] = recommendations
@@ -615,9 +571,7 @@ class SystemHealth:
         except Exception as e:
             logger.error(f"Error cleaning up old health reports: {e}")
 
-    def monitor_health(
-        self, interval: int = HEALTH_CHECK_INTERVAL, callback=None
-    ) -> None:
+    def monitor_health(self, interval: int = HEALTH_CHECK_INTERVAL, callback=None) -> None:
         """
         Monitor system health continuously.
 
@@ -637,15 +591,11 @@ class SystemHealth:
 
                 # Log critical issues
                 if health_status["status"] == "critical":
-                    logger.critical(
-                        f"Critical health issues detected: {health_status['issues']}"
-                    )
+                    logger.critical(f"Critical health issues detected: {health_status['issues']}")
                 elif health_status["status"] == "error":
                     logger.error(f"Health errors detected: {health_status['issues']}")
                 elif health_status["status"] == "warning":
-                    logger.warning(
-                        f"Health warnings detected: {health_status['issues']}"
-                    )
+                    logger.warning(f"Health warnings detected: {health_status['issues']}")
                 else:
                     logger.info("System health is OK")
 
@@ -674,9 +624,7 @@ def main():
     Returns:
         System exit code: 0 on success, non-zero on error
     """
-    parser = argparse.ArgumentParser(
-        description="System health monitoring for the autonomous mower"
-    )
+    parser = argparse.ArgumentParser(description="System health monitoring for the autonomous mower")
 
     # Create a mutually exclusive group for the main actions
     action_group = parser.add_mutually_exclusive_group(required=True)
@@ -701,10 +649,7 @@ def main():
         "--interval",
         type=int,
         default=HEALTH_CHECK_INTERVAL,
-        help=(
-            f"Time between health checks in seconds (default: "
-            f"{HEALTH_CHECK_INTERVAL})"
-        ),
+        help=(f"Time between health checks in seconds (default: " f"{HEALTH_CHECK_INTERVAL})"),
     )
     parser.add_argument(
         "--output",
@@ -729,13 +674,8 @@ def main():
                 print(json.dumps(health_status, indent=2))
             else:
                 print("\n" + "=" * 80)
-                print(
-                    f"AUTONOMOUS MOWER HEALTH REPORT - "
-                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-                print(
-                    f"Overall Status: {health_status.get('status', 'unknown').upper()}"
-                )
+                print(f"AUTONOMOUS MOWER HEALTH REPORT - " f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                print(f"Overall Status: {health_status.get('status', 'unknown').upper()}")
                 print("\nIssues:")
                 for issue in health_status.get("issues", []):
                     print(f"  - {issue}")

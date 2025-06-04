@@ -40,9 +40,7 @@ class LazyLoader:
         self.instance = None
         self.loaded = False
 
-        logger.debug(
-            f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}"
-        )
+        logger.debug(f"Created lazy loader for {module_path}{f'.{class_name}' if class_name else ''}")
 
     def __call__(self, *args, **kwargs):
         """
@@ -96,9 +94,7 @@ class StartupOptimizer:
 
         logger.info("Startup optimizer initialized")
 
-    def register_lazy_loader(
-        self, name: str, module_path: str, class_name: Optional[str] = None
-    ) -> LazyLoader:
+    def register_lazy_loader(self, name: str, module_path: str, class_name: Optional[str] = None) -> LazyLoader:
         """
         Register a lazy loader for a module or component.
 
@@ -174,9 +170,7 @@ class StartupOptimizer:
         logger.info(f"Optimized initialization order: {order}")
         return order
 
-    def initialize_components(
-        self, components: Optional[List[str]] = None, parallel: bool = True
-    ) -> Dict[str, Any]:
+    def initialize_components(self, components: Optional[List[str]] = None, parallel: bool = True) -> Dict[str, Any]:
         """
         Initialize components in optimized order.
 
@@ -203,8 +197,7 @@ class StartupOptimizer:
             with ThreadPoolExecutor(max_workers=self.thread_pool_size) as executor:
                 # Submit initialization tasks
                 future_to_component = {
-                    executor.submit(self._initialize_component, component): component
-                    for component in components
+                    executor.submit(self._initialize_component, component): component for component in components
                 }
 
                 # Collect results
@@ -356,9 +349,7 @@ def optimize_startup():
         "ResourceOptimizer",
     )
 
-    optimizer.register_lazy_loader(
-        "path_planner", "mower.navigation.path_planner", "PathPlanner"
-    )
+    optimizer.register_lazy_loader("path_planner", "mower.navigation.path_planner", "PathPlanner")
 
     optimizer.register_lazy_loader(
         "obstacle_detector",
@@ -375,13 +366,9 @@ def optimize_startup():
     optimizer.register_lazy_loader("web_ui", "mower.ui.web_ui.server", "WebServer")
 
     # Register component dependencies
-    optimizer.register_component_dependency(
-        "navigation_controller", ["path_planner", "obstacle_detector"]
-    )
+    optimizer.register_component_dependency("navigation_controller", ["path_planner", "obstacle_detector"])
 
-    optimizer.register_component_dependency(
-        "web_ui", ["navigation_controller", "config_manager"]
-    )
+    optimizer.register_component_dependency("web_ui", ["navigation_controller", "config_manager"])
 
     # Optimize initialization order
     optimizer.optimize_initialization_order()
@@ -455,14 +442,8 @@ def compare_startup_times():
     def unoptimized_startup():
         from mower.config_management.config_manager import ConfigManager
         from mower.navigation.navigation import NavigationController
-        from mower.navigation.path_planner import (
-            PathPlanner,
-            PatternConfig,
-            PatternType,
-        )
-        from mower.obstacle_detection.obstacle_detector import (
-            ObstacleDetector,
-        )
+        from mower.navigation.path_planner import PathPlanner, PatternConfig, PatternType
+        from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 
         config_manager = ConfigManager()
 
@@ -478,9 +459,7 @@ def compare_startup_times():
 
         obstacle_detector = ObstacleDetector()
 
-        navigation_controller = NavigationController(
-            path_planner=path_planner, obstacle_detector=obstacle_detector
-        )
+        navigation_controller = NavigationController(path_planner=path_planner, obstacle_detector=obstacle_detector)
 
         return {
             "config_manager": config_manager,

@@ -10,8 +10,8 @@ from typing import Callable, Dict, List, Optional, Set, TypeVar, Union, cast
 
 from flask import Flask, Response, abort, request, session
 
+from mower.utilities.audit_log import AuditEventType, get_audit_logger
 from mower.utilities.logger_config import LoggerConfigInfo
-from mower.utilities.audit_log import get_audit_logger, AuditEventType
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)

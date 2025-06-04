@@ -1,9 +1,12 @@
 """
 Test module for test_avoidance_algorithm_benchmarks.py.
 """
-import pytest
+
 import time
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm, Obstacle
 
 
@@ -24,10 +27,7 @@ def mock_path_planner_fixture():  # Renamed to avoid conflict with argument
 @pytest.fixture
 # Use renamed fixture
 def avoidance_algorithm(mock_resource_manager, mock_path_planner_fixture):
-    with patch(
-        "mower.obstacle_detection.avoidance_algorithm.os.environ.get",
-        return_value="False"
-    ):
+    with patch("mower.obstacle_detection.avoidance_algorithm.os.environ.get", return_value="False"):
         algorithm = AvoidanceAlgorithm(
             resource_manager=mock_resource_manager,  # Use fixture return value
             pattern_planner=mock_path_planner_fixture,  # Use fixture return value
@@ -49,9 +49,7 @@ def test_detect_obstacle_benchmark(benchmark, avoidance_algorithm):
     }
 
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-        0.0
-    )
+    avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
 
     # Use pytest - benchmark to measure performance
@@ -72,9 +70,7 @@ def test_continue_avoidance_benchmark(benchmark, avoidance_algorithm):
     }
 
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-        0.0
-    )
+    avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
 
     # Use pytest - benchmark to measure performance
@@ -87,9 +83,7 @@ def test_continue_avoidance_benchmark(benchmark, avoidance_algorithm):
 
 def test_select_random_strategy_benchmark(benchmark, avoidance_algorithm):
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-        0.0
-    )
+    avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
 
     # Use pytest - benchmark to measure performance
@@ -101,17 +95,13 @@ def test_select_random_strategy_benchmark(benchmark, avoidance_algorithm):
 
 def test_turn_left_strategy_benchmark(benchmark, avoidance_algorithm):
     # Mock the motor controller
-    avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-        0.0
-    )
+    avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
     avoidance_algorithm.motor_controller.rotate_to_heading.return_value = None
     avoidance_algorithm.motor_controller.move_distance.return_value = None
 
     # Use pytest - benchmark to measure performance
     with patch("time.sleep"):  # Mock sleep to speed up the test
-        result = benchmark(
-            avoidance_algorithm._backup_strategy, distance=30.0
-        )
+        result = benchmark(avoidance_algorithm._backup_strategy, distance=30.0)
 
     # Verify that the strategy was executed
     assert result is True
@@ -123,9 +113,7 @@ def test_alternative_route_strategy_benchmark(benchmark, avoidance_algorithm):
         0.0,
         0.0,
     )
-    avoidance_algorithm.motor_controller.get_current_heading.return_value = (
-        0.0
-    )
+    avoidance_algorithm.motor_controller.get_current_heading.return_value = 0.0
 
     # Set up the obstacle data
     avoidance_algorithm.obstacle_data = {
@@ -148,9 +136,7 @@ def test_alternative_route_strategy_benchmark(benchmark, avoidance_algorithm):
     assert "sensor" in result
 
 
-def test_calculate_obstacle_coordinates_benchmark(
-    benchmark, avoidance_algorithm
-):
+def test_calculate_obstacle_coordinates_benchmark(benchmark, avoidance_algorithm):
     # Create test data
     obstacle_data = {
         "left_sensor": True,
@@ -161,9 +147,7 @@ def test_calculate_obstacle_coordinates_benchmark(
     }
 
     # Use pytest - benchmark to measure performance
-    result = benchmark(
-        avoidance_algorithm._determine_obstacle_parameters, obstacle_data
-    )
+    result = benchmark(avoidance_algorithm._determine_obstacle_parameters, obstacle_data)
 
     # Verify that obstacle parameters were determined
     assert result is not None
@@ -182,9 +166,7 @@ def test_process_sensor_data_benchmark(benchmark, avoidance_algorithm):
     ]
 
     # Use pytest - benchmark to measure performance
-    result = benchmark(
-        avoidance_algorithm._find_obstacle_positions, path, obstacles
-    )
+    result = benchmark(avoidance_algorithm._find_obstacle_positions, path, obstacles)
 
     # Verify that obstacle positions were found
     assert result is not None

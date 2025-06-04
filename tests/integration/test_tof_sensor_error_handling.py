@@ -3,6 +3,7 @@ Test module for test_tof_sensor_error_handling.py.
 """
 
 import pytest
+
 # Placeholder for imports that will be needed
 # from unittest.mock import MagicMock, patch
 # from mower.hardware.sensor_interface import EnhancedSensorInterface
@@ -88,8 +89,7 @@ class TestToFSensorErrorHandling:
         # 3. Assert:
         # - ObstacleDetector handles the missing/failing sensor gracefully.
         # - (e.g., reports no data for that sensor, or uses fallbacks if any).
-        pytest.skip(
-            "Test not yet implemented. Requires ToF and ObstacleDetector sim.")
+        pytest.skip("Test not yet implemented. Requires ToF and ObstacleDetector sim.")
 
     def test_tof_sensor_status_reporting(self):
         """

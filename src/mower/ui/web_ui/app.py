@@ -1,27 +1,26 @@
 """Flask web interface for the autonomous mower."""
 
-from flask import Flask, jsonify, render_template, request, Response, send_file
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
-from flask_babel import Babel
 import os
 import platform
 
-from mower.navigation.path_planner import PatternType
-from mower.utilities.logger_config import LoggerConfigInfo
-from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
-from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
+from flask import Flask, Response, jsonify, render_template, request, send_file
+from flask_babel import Babel
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit
+
 # Import data collection integration
 from mower.data_collection.integration import integrate_data_collection
+from mower.navigation.path_planner import PatternType
+from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
+from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
+from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # Check if we should use simulation mode (on Windows or via env variable)
 
-USE_SIMULATION = platform.system() == "Windows" or os.environ.get(
-    "USE_SIMULATION", ""
-).lower() in ("true", "1", "yes")
+USE_SIMULATION = platform.system() == "Windows" or os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")
 if USE_SIMULATION:
     logger.info("Running in simulation mode - using simulated sensor data")
 else:
@@ -40,12 +39,8 @@ def create_app(mower):
     app = Flask(__name__)
     CORS(app)
     socketio = SocketIO(
-        app,
-        cors_allowed_origins="*",
-        ping_timeout=20,
-        ping_interval=25,
-        logger=True,
-        engineio_logger=True)
+        app, cors_allowed_origins="*", ping_timeout=20, ping_interval=25, logger=True, engineio_logger=True
+    )
 
     # Integrate data collection functionality
     try:
@@ -106,8 +101,7 @@ def create_app(mower):
         # Use a default API key or retrieve from environment/config
         # For development purposes, we'll use a placeholder API key
         google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-        return render_template("map.html",
-                               google_maps_api_key=google_maps_api_key)
+        return render_template("map.html", google_maps_api_key=google_maps_api_key)
 
     @app.route("/diagnostics")
     def diagnostics():
@@ -160,12 +154,7 @@ def create_app(mower):
                                 continue
 
                             # If we got JPEG bytes directly, yield them
-                            yield (
-                                b"--frame\r\n"
-                                b"Content-Type: image/jpeg\r\n\r\n"
-                                + jpeg_bytes
-                                + b"\r\n"
-                            )
+                            yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
                             # Add a small delay
                             socketio.sleep(0.05)
@@ -178,12 +167,7 @@ def create_app(mower):
                                     continue
 
                                 # If we got JPEG bytes directly, yield them
-                                yield (
-                                    b"--frame\r\n"
-                                    b"Content-Type: image/jpeg\r\n\r\n"
-                                    + jpeg_bytes
-                                    + b"\r\n"
-                                )
+                                yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
                                 # Add a small delay
                                 socketio.sleep(0.05)
@@ -205,10 +189,7 @@ def create_app(mower):
                         frame_bytes = buffer.tobytes()
 
                         # Yield the frame in multipart response
-                        yield (
-                            b"--frame\r\n"
-                            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-                        )
+                        yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
 
                         # Add a small delay
                         socketio.sleep(0.05)
@@ -224,9 +205,7 @@ def create_app(mower):
         except Exception as e:
             logger.error(f"Failed to stream video: {e}")
             # Return a placeholder image instead of failing
-            placeholder_img = os.path.join(
-                app.static_folder, "images/camera-placeholder.jpg"
-            )
+            placeholder_img = os.path.join(app.static_folder, "images/camera-placeholder.jpg")
             if os.path.exists(placeholder_img):
                 return send_file(placeholder_img, mimetype="image/jpeg")
             else:
@@ -262,9 +241,7 @@ def create_app(mower):
 
             # Update pattern planner settings
             if "pattern" in mowing:
-                path_planner.pattern_config.pattern_type = PatternType[
-                    mowing["pattern"]
-                ]
+                path_planner.pattern_config.pattern_type = PatternType[mowing["pattern"]]
             if "spacing" in mowing:
                 path_planner.pattern_config.spacing = float(mowing["spacing"])
             if "angle" in mowing:
@@ -282,8 +259,7 @@ def create_app(mower):
         """Get the current mowing area configuration."""
         try:
             path_planner = mower.resource_manager.get_path_planner()
-            area_data = {
-                "boundary_points": path_planner.pattern_config.boundary_points}
+            area_data = {"boundary_points": path_planner.pattern_config.boundary_points}
             return jsonify({"success": True, "data": area_data})
         except Exception as e:
             logger.error(f"Failed to get mowing area: {e}")
@@ -475,9 +451,7 @@ def create_app(mower):
             }
 
             # Get current language from request or default to English
-            current_lang = (
-                request.accept_languages.best_match(["en", "es", "fr"]) or "en"
-            )
+            current_lang = request.accept_languages.best_match(["en", "es", "fr"]) or "en"
 
             return jsonify(
                 {
@@ -502,14 +476,11 @@ def create_app(mower):
             path_planner = mower.resource_manager.get_path_planner()
             emit("path_update", path_planner.current_path)
         except Exception as e:
-            logger.error(
-                f"Error in handle_connect: {e}") @ socketio.on("disconnect")
+            logger.error(f"Error in handle_connect: {e}") @ socketio.on("disconnect")
 
     def handle_disconnect():
         """Handle client disconnection."""
-        logger.info("Client disconnected from web interface") @ socketio.on(
-            "request_data"
-        )
+        logger.info("Client disconnected from web interface") @ socketio.on("request_data")
 
     def handle_data_request(data):
         """Handle data request from client."""
@@ -552,11 +523,10 @@ def create_app(mower):
             elif data_type == "calibration_status":
                 # Get calibration status
                 calibration_status = {
-                    "imu": "Uncalibrated"
-                    if not USE_SIMULATION else "Simulated",
-                    "blade": "Uncalibrated"
-                    if not USE_SIMULATION else "Simulated", "gps": "Not Set"
-                    if not USE_SIMULATION else "Simulated", }
+                    "imu": "Uncalibrated" if not USE_SIMULATION else "Simulated",
+                    "blade": "Uncalibrated" if not USE_SIMULATION else "Simulated",
+                    "gps": "Not Set" if not USE_SIMULATION else "Simulated",
+                }
                 emit("calibration_update", calibration_status)
             elif data_type == "all":
                 emit("status_update", mower.get_status())
@@ -594,21 +564,13 @@ def create_app(mower):
 
                     # Update pattern planner settings
                     if "pattern" in mowing:
-                        path_planner.pattern_config.pattern_type = PatternType[
-                            mowing["pattern"]
-                        ]
+                        path_planner.pattern_config.pattern_type = PatternType[mowing["pattern"]]
                     if "spacing" in mowing:
-                        path_planner.pattern_config.spacing = float(
-                            mowing
-                            ["spacing"])
+                        path_planner.pattern_config.spacing = float(mowing["spacing"])
                     if "angle" in mowing:
-                        path_planner.pattern_config.angle = float(
-                            mowing
-                            ["angle"])
+                        path_planner.pattern_config.angle = float(mowing["angle"])
                     if "overlap" in mowing:
-                        path_planner.pattern_config.overlap = float(
-                            mowing
-                            ["overlap"])
+                        path_planner.pattern_config.overlap = float(mowing["overlap"])
 
                     emit(
                         "command_response",
@@ -621,8 +583,9 @@ def create_app(mower):
                 except Exception as e:
                     logger.error(f"Failed to save settings: {e}")
                     emit(
-                        "command_response", {
-                            "command": command, "success": False, "error": str(e)}, )
+                        "command_response",
+                        {"command": command, "success": False, "error": str(e)},
+                    )
             else:
                 # Handle other commands...
                 result = mower.execute_command(command, params)
@@ -657,9 +620,7 @@ def create_app(mower):
         error_type = error_data.get("type")
         error_msg = error_data.get("message")
         logger.error(
-            "Error received from client - Type: {}, Message: {}".format(
-                error_type, error_msg
-            )
+            "Error received from client - Type: {}, Message: {}".format(error_type, error_msg)
         )  # Background task for sending updates
 
     def send_updates():
@@ -712,11 +673,7 @@ def create_app(mower):
                 },
                 "save_area": lambda params: (
                     {"success": True, "message": "Boundary saved successfully"}
-                    if (
-                        mower.resource_manager.get_path_planner().set_boundary_points(
-                            params.get("coordinates", [])
-                        )
-                    )
+                    if (mower.resource_manager.get_path_planner().set_boundary_points(params.get("coordinates", [])))
                     else {"success": False, "error": "Failed to save boundary"}
                 ),
                 "set_home": lambda params: (
@@ -744,12 +701,7 @@ def create_app(mower):
                 "get_area": lambda params: {
                     "success": True,
                     "data": {
-                        "boundary_points": (
-                            mower.resource_manager
-                            .get_path_planner()
-                            .pattern_config
-                            .boundary_points
-                        )
+                        "boundary_points": (mower.resource_manager.get_path_planner().pattern_config.boundary_points)
                     },
                 },
                 "get_home": lambda params: {
@@ -765,31 +717,10 @@ def create_app(mower):
                     "success": True,
                     "data": {
                         "mowing": {
-                            "pattern": (
-                                mower.resource_manager
-                                .get_path_planner()
-                                .pattern_config
-                                .pattern_type
-                                .name
-                            ),
-                            "spacing": (
-                                mower.resource_manager
-                                .get_path_planner()
-                                .pattern_config
-                                .spacing
-                            ),
-                            "angle": (
-                                mower.resource_manager
-                                .get_path_planner()
-                                .pattern_config
-                                .angle
-                            ),
-                            "overlap": (
-                                mower.resource_manager
-                                .get_path_planner()
-                                .pattern_config
-                                .overlap
-                            ),
+                            "pattern": (mower.resource_manager.get_path_planner().pattern_config.pattern_type.name),
+                            "spacing": (mower.resource_manager.get_path_planner().pattern_config.spacing),
+                            "angle": (mower.resource_manager.get_path_planner().pattern_config.angle),
+                            "overlap": (mower.resource_manager.get_path_planner().pattern_config.overlap),
                         }
                     },
                 },
@@ -844,10 +775,10 @@ def create_app(mower):
         """Handle KeyError, specifically for 'Session is disconnected' from engineio."""
         # The error is raised as `raise KeyError('Session is disconnected')`
         # So e.args[0] will be 'Session is disconnected'
-        if e.args and e.args[0] == 'Session is disconnected':
+        if e.args and e.args[0] == "Session is disconnected":
             sid_from_url = "N/A"
             if request and request.args:
-                sid_from_url = request.args.get('sid', "N/A")
+                sid_from_url = request.args.get("sid", "N/A")
 
             logger.warning(
                 f"EngineIO: Client attempted to use a disconnected session. "
@@ -865,10 +796,9 @@ def create_app(mower):
                 f"SID from request: "
                 f"{request.args.get('sid') if request and request.args else 'N/A'}. "
                 f"URL: {request.url if request else 'N/A'}",
-                exc_info=True
+                exc_info=True,
             )
-            return jsonify(
-                error="An unexpected KeyError occurred.", details=str(e)), 500
+            return jsonify(error="An unexpected KeyError occurred.", details=str(e)), 500
 
     return app, socketio
 

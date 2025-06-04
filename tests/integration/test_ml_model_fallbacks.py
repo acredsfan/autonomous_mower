@@ -1,7 +1,9 @@
 """
 Test module for test_ml_model_fallbacks.py.
 """
+
 import pytest
+
 # import os # Not used yet
 # from pathlib import Path # Not used yet
 # Placeholder for imports that will be needed
@@ -45,8 +47,7 @@ class TestMLModelFallbacks:
     #     # For now, imagine it's used within tests via 'with patch(...)'
     #     pass
 
-    def test_detector_initialization_with_valid_models(
-            self, obstacle_detector_config, temp_model_dir):
+    def test_detector_initialization_with_valid_models(self, obstacle_detector_config, temp_model_dir):
         """
         Test ObstacleDetector initializes successfully with valid model and label files.
         """
@@ -59,8 +60,7 @@ class TestMLModelFallbacks:
         # loaded.
         pytest.skip("Test not yet implemented. Requires ML lib mocking.")
 
-    def test_detector_initialization_with_missing_model_file(
-            self, obstacle_detector_config):
+    def test_detector_initialization_with_missing_model_file(self, obstacle_detector_config):
         """
         Test ObstacleDetector behavior when the .tflite model file is missing.
         """
@@ -73,8 +73,7 @@ class TestMLModelFallbacks:
         # - Falls back to non-ML detection or operates in degraded mode.
         pytest.skip("Test not yet implemented.")
 
-    def test_detector_initialization_with_missing_label_file(
-            self, obstacle_detector_config, temp_model_dir):
+    def test_detector_initialization_with_missing_label_file(self, obstacle_detector_config, temp_model_dir):
         """
         Test ObstacleDetector behavior when the label file is missing.
         """
@@ -85,8 +84,7 @@ class TestMLModelFallbacks:
         # 3. Assert: Similar to missing model, but specific to label file.
         pytest.skip("Test not yet implemented.")
 
-    def test_detector_initialization_with_invalid_model_file(
-            self, obstacle_detector_config, temp_model_dir):
+    def test_detector_initialization_with_invalid_model_file(self, obstacle_detector_config, temp_model_dir):
         """
         Test behavior with an invalid / corrupt .tflite model file.
         """
@@ -97,8 +95,7 @@ class TestMLModelFallbacks:
         # 3. Assert: Reports ML model failure, logs error, falls back.
         pytest.skip("Test not yet implemented. Requires ML lib mocking.")
 
-    def test_detector_fallback_behavior_when_model_fails_to_load(
-            self, obstacle_detector_config, sim_camera):
+    def test_detector_fallback_behavior_when_model_fails_to_load(self, obstacle_detector_config, sim_camera):
         """
         Test that ObstacleDetector falls back to alternative methods (
             e.g.,
@@ -117,13 +114,9 @@ class TestMLModelFallbacks:
         # 3. Assert:
         # - Detection result is based on fallback sensors, not ML.
         # - No exceptions due to ML failure during detection.
-        pytest.skip(
-            "Test not yet implemented. Requires sim_camera and "
-            "fallback logic."
-        )
+        pytest.skip("Test not yet implemented. Requires sim_camera and " "fallback logic.")
 
-    def test_detector_with_coral_accelerator_unavailable(
-            self, obstacle_detector_config, temp_model_dir):
+    def test_detector_with_coral_accelerator_unavailable(self, obstacle_detector_config, temp_model_dir):
         """
         Test behavior if Coral EdgeTPU is configured but unavailable.
         It should fall back to CPU-based TFLite inference.

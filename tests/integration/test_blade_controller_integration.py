@@ -1,13 +1,16 @@
 """
 Test module for test_blade_controller_integration.py.
 """
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from mower.hardware.blade_controller import BladeController
+
 # Assuming ResourceManager is in mower.main_controller or mower.mower based on other files
 # Adjust if this is incorrect.
 from mower.main_controller import ResourceManager
-
 
 # Integration test for blade controller
 # Test the blade controller initialization and operation
@@ -18,7 +21,7 @@ def mocked_resource_manager_with_blade_controller():
     # This fixture provides a ResourceManager with a mocked BladeController
     resource_manager = ResourceManager()
     # Mock the _initialize_hardware method to prevent actual hardware init
-    with patch.object(resource_manager, '_initialize_hardware') as mock_init_hw:
+    with patch.object(resource_manager, "_initialize_hardware") as mock_init_hw:
         # Simulate successful hardware init without doing anything
         mock_init_hw.return_value = None
         # Assign a MagicMock to the blade_controller attribute
@@ -32,14 +35,13 @@ def mocked_resource_manager_with_blade_controller():
         yield resource_manager
 
 
-def test_blade_controller_initialization_and_operation(
-        mocked_resource_manager_with_blade_controller):
+def test_blade_controller_initialization_and_operation(mocked_resource_manager_with_blade_controller):
     rm = mocked_resource_manager_with_blade_controller
 
     # Start the blade controller through ResourceManager's method if it exists
     # Or directly if the test is for the BladeController instance itself via
     # ResourceManager
-    if hasattr(rm, 'start_blades'):  # Assuming a method like start_blades exists
+    if hasattr(rm, "start_blades"):  # Assuming a method like start_blades exists
         rm.start_blades()
         rm.blade_controller.start.assert_called_once()
     else:  # Fallback to direct interaction if ResourceManager doesn't abstract it
@@ -47,7 +49,7 @@ def test_blade_controller_initialization_and_operation(
         rm.blade_controller.start.assert_called_once()
 
     # Stop the blade controller
-    if hasattr(rm, 'stop_blades'):
+    if hasattr(rm, "stop_blades"):
         rm.stop_blades()
         rm.blade_controller.stop.assert_called_once()
     else:
@@ -55,12 +57,11 @@ def test_blade_controller_initialization_and_operation(
         rm.blade_controller.stop.assert_called_once()
 
 
-def test_blade_controller_speed_setting(
-        mocked_resource_manager_with_blade_controller):
+def test_blade_controller_speed_setting(mocked_resource_manager_with_blade_controller):
     rm = mocked_resource_manager_with_blade_controller
 
     # Set blade speed
-    if hasattr(rm, 'set_blade_speed'):
+    if hasattr(rm, "set_blade_speed"):
         rm.set_blade_speed(65)
         rm.blade_controller.set_speed.assert_called_once_with(65)
     else:

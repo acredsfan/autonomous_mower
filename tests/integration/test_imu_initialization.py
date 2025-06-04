@@ -1,7 +1,9 @@
 """
 Test module for test_imu_initialization.py.
 """
+
 import pytest
+
 # Placeholder for imports that will be needed
 # from unittest.mock import MagicMock, patch
 # from mower.hardware.sensor_interface import EnhancedSensorInterface
@@ -67,10 +69,7 @@ class TestIMUInitialization:
         # 3. Assert:
         # - Retrieved data is in the expected format and range.
         # - e.g., quaternion has 4 elements, accelerometer has 3.
-        pytest.skip(
-            "Test not yet implemented. Requires IMU simulation and "
-            "data mocking."
-        )
+        pytest.skip("Test not yet implemented. Requires IMU simulation and " "data mocking.")
 
     def test_imu_initialization_failure_reported(self):
         """
@@ -90,8 +89,7 @@ class TestIMUInitialization:
         # 3. Assert:
         # - IMU reported as non-operational in SensorInterface.
         # - Appropriate error logged.
-        pytest.skip(
-            "Test not yet implemented. Requires IMU failure simulation.")
+        pytest.skip("Test not yet implemented. Requires IMU failure simulation.")
 
     def test_imu_data_retrieval_when_not_operational(self):
         """
@@ -104,5 +102,4 @@ class TestIMUInitialization:
         # 3. Assert:
         # - Returns default / None values or raises a specific exception.
         # - System remains stable.
-        pytest.skip(
-            "Test not yet implemented. Requires IMU failure simulation.")
+        pytest.skip("Test not yet implemented. Requires IMU failure simulation.")

@@ -5,14 +5,14 @@ Scans and updates all files containing library definitions with the most recent 
 Designed to run in VS Code on Windows for Raspberry Pi target deployment
 """
 
+import argparse
+import re
 import subprocess
 import sys
-import re
-from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass
 from datetime import datetime
-import argparse
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 
 @dataclass

@@ -1,10 +1,10 @@
 import math
 import time
+from dataclasses import dataclass
 from math import atan2, cos, radians, sin, sqrt
-from typing import Optional, Tuple, Dict
+from typing import Dict, Optional, Tuple
 
 import utm  # Ensure `utm` is installed in your environment
-from dataclasses import dataclass
 
 from mower.hardware.robohat import RoboHATDriver
 from mower.navigation.gps import GpsLatestPosition, GpsPosition
@@ -80,23 +80,17 @@ class NavigationController:
         if enable:
             logger.info("Manual control enabled.")
             # Stop any autonomous movement
-            if hasattr(
-                    self.robohat_driver,
-                    'stop_motors'):  # Check if stop_motors exists
+            if hasattr(self.robohat_driver, "stop_motors"):  # Check if stop_motors exists
                 self.robohat_driver.stop_motors()
-            elif hasattr(self.robohat_driver, 'stop'):  # Fallback to generic stop
+            elif hasattr(self.robohat_driver, "stop"):  # Fallback to generic stop
                 self.robohat_driver.stop()
             else:
-                logger.warning(
-                    "Motor driver does not have a stop_motors or stop method."
-                )
+                logger.warning("Motor driver does not have a stop_motors or stop method.")
             self.status.is_moving = False
         else:
             logger.info("Manual control disabled.")
 
-    def navigate_to_location(
-        self, target_location: Tuple[float, float]
-    ) -> bool:
+    def navigate_to_location(self, target_location: Tuple[float, float]) -> bool:
         """
         Navigate the robot to the specified target location.
 
@@ -144,15 +138,11 @@ class NavigationController:
         self.status.current_position = current_position
         self.last_position_update = time.time()
 
-        if self.has_reached_location(
-            current_position, self.status.target_position
-        ):
+        if self.has_reached_location(current_position, self.status.target_position):
             self.status.target_reached = True
             return True
 
-        steering, throttle = self.calculate_navigation_commands(
-            current_position, self.status.target_position
-        )
+        steering, throttle = self.calculate_navigation_commands(current_position, self.status.target_position)
 
         self.robohat_driver.run(steering, throttle)
         return True
@@ -172,9 +162,7 @@ class NavigationController:
                 return None
 
             ts, easting, northing, zone_number, zone_letter = position
-            lat, lon = utm.to_latlon(
-                easting, northing, zone_number, zone_letter
-            )
+            lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
             return (lat, lon)
 
         except Exception as e:
@@ -282,10 +270,7 @@ class NavigationController:
         delta_lat = lat2 - lat1
         delta_lon = lon2 - lon1
 
-        a = (
-            sin(delta_lat / 2) ** 2
-            + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
-        )
+        a = sin(delta_lat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
         return R * c
@@ -398,14 +383,10 @@ class NavigationController:
 def initialize_navigation():
     """Initialize navigation system components."""
     try:
-        gps_position_instance = GpsPosition(
-            serial_port="/dev/ttyACM0", debug=True
-        )
+        gps_position_instance = GpsPosition(serial_port="/dev/ttyACM0", debug=True)
         gps_position_instance.start()
 
-        gps_latest_position = GpsLatestPosition(
-            gps_position_instance=gps_position_instance
-        )
+        gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
         robohat_driver = RoboHATDriver()
 
         return gps_latest_position, robohat_driver
@@ -420,9 +401,7 @@ if __name__ == "__main__":
 
     if gps_latest_position and robohat_driver:
         sensor_interface = None  # Replace with actual sensor interface
-        controller = NavigationController(
-            gps_latest_position, robohat_driver, sensor_interface, debug=True
-        )
+        controller = NavigationController(gps_latest_position, robohat_driver, sensor_interface, debug=True)
 
         # Example target location (latitude, longitude)
         target = (39.123, -84.512)

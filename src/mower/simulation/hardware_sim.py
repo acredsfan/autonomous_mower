@@ -6,11 +6,11 @@ These classes define the common functionality and interfaces that all simulated
 hardware components should implement.
 """
 
-import time
 import logging
 import threading
+import time
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from mower.simulation import is_simulation_enabled
 
@@ -56,22 +56,16 @@ class SimulatedHardwareComponent(ABC):
         """
         with self._lock:
             if self.initialized:
-                logger.warning(
-                    f"Simulated {self.component_name} already initialized"
-                )
+                logger.warning(f"Simulated {self.component_name} already initialized")
                 return True
 
             try:
                 self._initialize_sim(*args, **kwargs)
                 self.initialized = True
-                logger.info(
-                    f"Simulated {self.component_name} initialized successfully"
-                )
+                logger.info(f"Simulated {self.component_name} initialized successfully")
                 return True
             except Exception as e:
-                logger.error(
-                    f"Error initializing simulated {self.component_name}: {e}"
-                )
+                logger.error(f"Error initializing simulated {self.component_name}: {e}")
                 return False
 
     @abstractmethod
@@ -100,25 +94,16 @@ class SimulatedHardwareComponent(ABC):
         """
         with self._lock:
             if not self.initialized:
-                logger.warning(
-                    (
-                        f"Simulated {self.component_name} not"
-                        f" initialized, nothing to clean up"
-                    )
-                )
+                logger.warning((f"Simulated {self.component_name} not" f" initialized, nothing to clean up"))
                 return True
 
             try:
                 self._cleanup_sim()
                 self.initialized = False
-                logger.info(
-                    f"Simulated {self.component_name} cleaned up successfully"
-                )
+                logger.info(f"Simulated {self.component_name} cleaned up successfully")
                 return True
             except Exception as e:
-                logger.error(
-                    f"Error cleaning up simulated {self.component_name}: {e}"
-                )
+                logger.error(f"Error cleaning up simulated {self.component_name}: {e}")
                 return False
 
     @abstractmethod
@@ -218,9 +203,7 @@ class SimulatedSensor(SimulatedHardwareComponent):
         """
         pass
 
-    def add_noise(
-        self, value: float, noise_level: Optional[float] = None
-    ) -> float:
+    def add_noise(self, value: float, noise_level: Optional[float] = None) -> float:
         """
         Add random noise to a sensor value.
 
@@ -284,9 +267,7 @@ class SimulatedActuator(SimulatedHardwareComponent):
                 self._update_actuator_state(key, value)
                 return True
             except Exception as e:
-                logger.error(
-                    f"Error setting value for simulated {self.component_name}: {e}"
-                )
+                logger.error(f"Error setting value for simulated {self.component_name}: {e}")
                 return False
 
     @abstractmethod
@@ -337,6 +318,4 @@ class SimulatedActuator(SimulatedHardwareComponent):
                 and isinstance(target_value, (int, float))
             ):
                 current_value = self.state[key]
-                self.state[key] = (
-                    current_value + (target_value - current_value) * progress
-                )
+                self.state[key] = current_value + (target_value - current_value) * progress

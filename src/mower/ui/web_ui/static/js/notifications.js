@@ -1,6 +1,6 @@
 /**
  * Autonomous Mower Web Interface - Notifications System
- * 
+ *
  * Provides enhanced real-time notifications and status updates
  * for the autonomous mower control interface.
  */
@@ -34,7 +34,7 @@ function initializeNotifications() {
         notificationCenter.id = 'notification-center';
         notificationCenter.className = 'notification-center';
         document.body.appendChild(notificationCenter);
-        
+
         // Add styles if not already in CSS
         if (!document.getElementById('notification-styles')) {
             const style = document.createElement('style');
@@ -50,7 +50,7 @@ function initializeNotifications() {
                     align-items: flex-end;
                     max-width: 350px;
                 }
-                
+
                 .notification {
                     background-color: white;
                     border-radius: 4px;
@@ -64,29 +64,29 @@ function initializeNotifications() {
                     transition: transform 0.3s ease;
                     overflow: hidden;
                 }
-                
+
                 .notification.show {
                     transform: translateX(0);
                 }
-                
+
                 .notification-icon {
                     margin-right: 12px;
                     font-size: 20px;
                 }
-                
+
                 .notification-content {
                     flex: 1;
                 }
-                
+
                 .notification-title {
                     font-weight: bold;
                     margin-bottom: 5px;
                 }
-                
+
                 .notification-message {
                     font-size: 14px;
                 }
-                
+
                 .notification-close {
                     background: none;
                     border: none;
@@ -96,7 +96,7 @@ function initializeNotifications() {
                     padding: 0;
                     margin-left: 10px;
                 }
-                
+
                 .notification-progress {
                     position: absolute;
                     bottom: 0;
@@ -105,30 +105,30 @@ function initializeNotifications() {
                     background-color: rgba(0, 0, 0, 0.1);
                     width: 100%;
                 }
-                
+
                 .notification-progress-bar {
                     height: 100%;
                     width: 100%;
                     background-color: var(--grass-medium);
                     transition: width linear;
                 }
-                
+
                 .notification-info .notification-icon {
                     color: var(--accent-blue);
                 }
-                
+
                 .notification-success .notification-icon {
                     color: var(--accent-green);
                 }
-                
+
                 .notification-warning .notification-icon {
                     color: var(--accent-yellow);
                 }
-                
+
                 .notification-danger .notification-icon {
                     color: var(--accent-red);
                 }
-                
+
                 @media (max-width: 576px) {
                     .notification-center {
                         left: 10px;
@@ -140,14 +140,14 @@ function initializeNotifications() {
             document.head.appendChild(style);
         }
     }
-    
+
     // Request permission for desktop notifications
     if (notificationConfig.enableDesktopNotifications && 'Notification' in window) {
         if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
             Notification.requestPermission();
         }
     }
-    
+
     // Create audio elements for notification sounds
     if (notificationConfig.enableSound) {
         const sounds = {
@@ -156,7 +156,7 @@ function initializeNotifications() {
             warning: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCgUFBQUFDMzMzMzM0dHR0dHR1tbW1tbW2ZmZmZmZnp6enp6eoODg4ODg5eXl5eXl6ysrKysrMHBwcHBwdXV1dXV1erq6urq6v////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAX/LAAAAAAAAAAA',
             danger: 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAASAAAeMwAUFBQUFCgUFBQUFDMzMzMzM0dHR0dHR1tbW1tbW2ZmZmZmZnp6enp6eoODg4ODg5eXl5eXl6ysrKysrMHBwcHBwdXV1dXV1erq6urq6v////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAX/LAAAAAAAAAAA'
         };
-        
+
         for (const [type, src] of Object.entries(sounds)) {
             if (!document.getElementById(`notification-sound-${type}`)) {
                 const audio = document.createElement('audio');
@@ -186,23 +186,23 @@ function setupNotificationListeners() {
             } else if (data.state === 'DOCKED') {
                 showNotification('Status Update', 'Mower has docked successfully', 'success');
             }
-            
+
             // Battery alerts
             if (data.battery && data.battery.percentage < 20 && !data.battery.charging) {
                 showNotification('Low Battery', `Battery level is ${Math.round(data.battery.percentage)}%`, 'warning');
             }
         });
-        
+
         // Safety alerts
         socket.on('safety_alert', function(data) {
             showNotification('Safety Alert', data.message, 'danger');
         });
-        
+
         // Maintenance reminders
         socket.on('maintenance_reminder', function(data) {
             showNotification('Maintenance Reminder', data.message, 'warning');
         });
-        
+
         // Weather alerts
         socket.on('weather_alert', function(data) {
             showNotification('Weather Alert', data.message, 'warning');
@@ -212,7 +212,7 @@ function setupNotificationListeners() {
 
 /**
  * Show a notification
- * 
+ *
  * @param {string} title - The notification title
  * @param {string} message - The notification message
  * @param {string} type - Notification type: 'info', 'success', 'warning', or 'danger'
@@ -224,19 +224,19 @@ function showNotification(title, message, type = 'info', duration = notification
         notificationQueue.push({ title, message, type, duration });
         return;
     }
-    
+
     activeNotifications++;
-    
+
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    
+
     // Set icon based on type
     let icon = 'info-circle';
     if (type === 'success') icon = 'check-circle';
     if (type === 'warning') icon = 'exclamation-triangle';
     if (type === 'danger') icon = 'exclamation-circle';
-    
+
     notification.innerHTML = `
         <div class="notification-icon">
             <i class="fas fa-${icon}"></i>
@@ -252,16 +252,16 @@ function showNotification(title, message, type = 'info', duration = notification
             <div class="notification-progress-bar"></div>
         </div>
     `;
-    
+
     // Add to notification center
     const notificationCenter = document.getElementById('notification-center');
     notificationCenter.appendChild(notification);
-    
+
     // Show notification with animation
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
-    
+
     // Play sound if enabled
     if (notificationConfig.enableSound) {
         const audio = document.getElementById(`notification-sound-${type}`);
@@ -270,38 +270,38 @@ function showNotification(title, message, type = 'info', duration = notification
             audio.play().catch(e => console.log('Error playing notification sound:', e));
         }
     }
-    
+
     // Show desktop notification if enabled and permission granted
-    if (notificationConfig.enableDesktopNotifications && 
-        'Notification' in window && 
+    if (notificationConfig.enableDesktopNotifications &&
+        'Notification' in window &&
         Notification.permission === 'granted') {
         const desktopNotification = new Notification('Autonomous Mower', {
             body: `${title}: ${message}`,
             icon: '/static/images/logo.png'
         });
-        
+
         // Close desktop notification after 5 seconds
         setTimeout(() => {
             desktopNotification.close();
         }, 5000);
     }
-    
+
     // Set up progress bar animation if duration > 0
     if (duration > 0) {
         const progressBar = notification.querySelector('.notification-progress-bar');
         progressBar.style.transition = `width ${duration}ms linear`;
-        
+
         // Start progress bar animation
         setTimeout(() => {
             progressBar.style.width = '0%';
         }, 10);
-        
+
         // Remove notification after duration
         setTimeout(() => {
             removeNotification(notification);
         }, duration);
     }
-    
+
     // Set up close button
     const closeButton = notification.querySelector('.notification-close');
     closeButton.addEventListener('click', function() {
@@ -311,20 +311,20 @@ function showNotification(title, message, type = 'info', duration = notification
 
 /**
  * Remove a notification and process queue
- * 
+ *
  * @param {HTMLElement} notification - The notification element to remove
  */
 function removeNotification(notification) {
     notification.classList.remove('show');
-    
+
     // Remove after animation completes
     setTimeout(() => {
         if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
         }
-        
+
         activeNotifications--;
-        
+
         // Process next notification in queue if any
         if (notificationQueue.length > 0) {
             const next = notificationQueue.shift();
@@ -335,12 +335,12 @@ function removeNotification(notification) {
 
 /**
  * Update notification settings
- * 
+ *
  * @param {Object} settings - New notification settings
  */
 function updateNotificationSettings(settings) {
     Object.assign(notificationConfig, settings);
-    
+
     // Update sound volume if changed
     if (settings.soundVolume !== undefined) {
         document.querySelectorAll('audio[id^="notification-sound-"]').forEach(audio => {

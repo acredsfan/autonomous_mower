@@ -90,11 +90,7 @@ class KalmanFilter:
         motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
 
         mean = np.dot(self._motion_mat, mean)
-        covariance = (
-            np.linalg.multi_dot((
-                self._motion_mat, covariance, self._motion_mat.T))
-            + motion_cov
-        )
+        covariance = np.linalg.multi_dot((self._motion_mat, covariance, self._motion_mat.T)) + motion_cov
         return mean, covariance
 
     def project(self, mean, covariance):
@@ -117,8 +113,7 @@ class KalmanFilter:
         innovation_cov = np.diag(np.square(std))
 
         mean = np.dot(self._update_mat, mean)
-        covariance = np.linalg.multi_dot((
-            self._update_mat, covariance, self._update_mat.T))
+        covariance = np.linalg.multi_dot((self._update_mat, covariance, self._update_mat.T))
         return mean, covariance + innovation_cov
 
     def update(self, mean, covariance, measurement):
@@ -137,14 +132,12 @@ class KalmanFilter:
 
         chol_factor = np.linalg.cholesky(projected_cov)
         kalman_gain = np.linalg.solve(
-            chol_factor, np.linalg.solve(chol_factor.T, np.dot(
-                covariance, self._update_mat.T).T)
+            chol_factor, np.linalg.solve(chol_factor.T, np.dot(covariance, self._update_mat.T).T)
         ).T
         innovation = measurement - projected_mean
 
         new_mean = mean + np.dot(innovation, kalman_gain.T)
-        new_covariance = covariance - np.linalg.multi_dot((
-            kalman_gain, projected_cov, kalman_gain.T))
+        new_covariance = covariance - np.linalg.multi_dot((kalman_gain, projected_cov, kalman_gain.T))
         return new_mean, new_covariance
 
 
@@ -247,9 +240,7 @@ class KalmanBoxTracker(object):
             # [x1, y1, x2, y2] -> [x, y, w, h]
             x, y, w, h = detection[:4]
             detection[:4] = [(x + w) / 2, (y + h) / 2, w - x, h - y]
-            self.mean, self.covariance = self.kf.update(
-                self.mean, self.covariance, detection[:4]
-            )
+            self.mean, self.covariance = self.kf.update(self.mean, self.covariance, detection[:4])
             self.hits += 1
         self.age += 1
         if self.state == 0 and self.hits >= 3:
@@ -264,8 +255,7 @@ class KalmanBoxTracker(object):
         """
         Advances the state vector and returns the predicted bounding box estimate.
         """
-        self.mean, self.covariance = self.kf.predict(
-            self.mean, self.covariance)
+        self.mean, self.covariance = self.kf.predict(self.mean, self.covariance)
         self.age += 1
         self.time_since_update += 1
         return self.mean, self.covariance

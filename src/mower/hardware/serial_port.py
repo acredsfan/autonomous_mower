@@ -75,9 +75,7 @@ class SerialPort:
                     self.ser.set_buffer_size(rx_size=self.receiver_buffer_size)
                 except Exception as e:
                     logger.warning(f"Could not set serial buffer size: {e}")
-            logger.info(
-                f"Successfully opened serial port {self.ser.name}"
-            )  # Changed to info
+            logger.info(f"Successfully opened serial port {self.ser.name}")  # Changed to info
         except serial.SerialException as e:  # Catch specific serial exception
             logger.error(f"SerialException opening port {self.port}: {e}")
             self.ser = None  # Ensure ser is None on failure
@@ -151,9 +149,7 @@ class SerialPort:
                        blank if count bytes are not available
         """
         if self.ser is None or not self.ser.is_open:
-            logger.warning(
-                f"Attempted to read from closed/uninitialized port {self.port}"
-            )
+            logger.warning(f"Attempted to read from closed/uninitialized port {self.port}")
             return (False, b"")  # Return empty bytes if port not open
 
         try:
@@ -186,9 +182,7 @@ class SerialPort:
                      blank if not read
         """
         if self.ser is None or not self.ser.is_open:
-            logger.warning(
-                f"Attempted to readline from closed/uninitialized port {self.port}"
-            )
+            logger.warning(f"Attempted to readline from closed/uninitialized port {self.port}")
             return (False, "")  # Return empty string if port not open
 
         try:
@@ -199,9 +193,7 @@ class SerialPort:
 
             # Read new data if buffer doesn't have a complete line
             if self.ser.in_waiting > 0:
-                new_data = self.ser.read(self.ser.in_waiting).decode(
-                    self.charset, errors="ignore"
-                )
+                new_data = self.ser.read(self.ser.in_waiting).decode(self.charset, errors="ignore")
                 self.data_buffer += new_data
                 if "\n" in self.data_buffer:
                     line, self.data_buffer = self.data_buffer.split("\n", 1)
@@ -293,11 +285,7 @@ class SerialLineReader:
             while line is not None:
                 lines.append((time.time(), line))
                 line = None
-                if (
-                    self.max_lines is None
-                    or self.max_lines == 0
-                    or len(lines) < self.max_lines
-                ):
+                if self.max_lines is None or self.max_lines == 0 or len(lines) < self.max_lines:
                     line = self._readline()
             return lines
         return []
@@ -364,12 +352,8 @@ if __name__ == "__main__":
         default=5,
         help="Number of samples per read cycle; 0 for unlimited.",
     )
-    parser.add_argument(
-        "-th", "--threaded", action="store_true", help="run in threaded mode."
-    )
-    parser.add_argument(
-        "-db", "--debug", action="store_true", help="Enable extra logging"
-    )
+    parser.add_argument("-th", "--threaded", action="store_true", help="run in threaded mode.")
+    parser.add_argument("-db", "--debug", action="store_true", help="Enable extra logging")
     args = parser.parse_args()
 
     if args.samples < 0:
@@ -386,12 +370,8 @@ if __name__ == "__main__":
     reader = None
 
     try:
-        serial_port = SerialPort(
-            args.serial, baudrate=args.baudrate, timeout=args.timeout
-        )
-        line_reader = SerialLineReader(
-            serial_port, max_lines=args.samples, debug=args.debug
-        )
+        serial_port = SerialPort(args.serial, baudrate=args.baudrate, timeout=args.timeout)
+        line_reader = SerialLineReader(serial_port, max_lines=args.samples, debug=args.debug)
 
         if args.threaded:
             update_thread = threading.Thread(target=line_reader.update, args=())

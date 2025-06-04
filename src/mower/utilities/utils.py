@@ -6,13 +6,13 @@ like mapping values between ranges and other general helpers.
 It also includes functions to interact with Google Maps APIs like Time Zone API.
 """
 
+import json
+import logging
 import os
 import time
-import json
-import urllib.request
 import urllib.parse
-import logging
-from typing import Optional, Dict, Any # Added Any for broader dict compatibility
+import urllib.request
+from typing import Any, Dict, Optional  # Added Any for broader dict compatibility
 
 # --- Module Level Configuration ---
 logger = logging.getLogger(__name__)
@@ -81,11 +81,10 @@ class Utils:
 
         return round(y, 2)
 
+
 # --- Google Time Zone API Function ---
 def get_timezone_for_coordinates(
-    latitude: float, 
-    longitude: float, 
-    timestamp: Optional[int] = None
+    latitude: float, longitude: float, timestamp: Optional[int] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Fetches timezone information for given coordinates and timestamp using Google Time Zone API.
@@ -96,7 +95,7 @@ def get_timezone_for_coordinates(
         timestamp: Seconds since epoch (UTC). Defaults to current time if None.
 
     Returns:
-        A dictionary containing timezone information (dstOffset, rawOffset, timeZoneId, 
+        A dictionary containing timezone information (dstOffset, rawOffset, timeZoneId,
         timeZoneName, status) or None if an error occurs.
     """
     if not GOOGLE_MAPS_API_KEY:
@@ -117,27 +116,31 @@ def get_timezone_for_coordinates(
         with urllib.request.urlopen(url, timeout=10) as response:
             response_body = response.read().decode("utf-8")
             data = json.loads(response_body)
-            
+
             # Google Time Zone API includes the status within the main JSON body.
             # We should return the whole body if status is OK, or relevant parts.
             # For errors, the body itself often contains the status and error_message.
             if data.get("status") == "OK":
-                return data 
+                return data
             else:
                 logger.error(
                     f"Time Zone API returned status: {data.get('status')}. "
                     f"Error message: {data.get('errorMessage', 'N/A')}"
                 )
                 # Return the API's error structure if available, else a custom one
-                return data if "status" in data else {"error": "API request failed", "status": data.get("status", "UNKNOWN_ERROR")}
+                return (
+                    data
+                    if "status" in data
+                    else {"error": "API request failed", "status": data.get("status", "UNKNOWN_ERROR")}
+                )
 
     except urllib.error.HTTPError as e:
         error_body = "No additional error content"
         try:
-            if e.fp: # fp is the file-like object for the response body
+            if e.fp:  # fp is the file-like object for the response body
                 error_body = e.read().decode("utf-8")
         except Exception:
-            pass # Keep default error_body
+            pass  # Keep default error_body
         logger.error(f"HTTP error from Time Zone API: {e.code} {e.reason} - {error_body}")
         return {"error": f"HTTP {e.code}: {e.reason}", "status": "NETWORK_HTTP_ERROR"}
     except urllib.error.URLError as e:
@@ -149,4 +152,6 @@ def get_timezone_for_coordinates(
     except Exception as e:
         logger.error(f"Unexpected error during Time Zone API call: {e}", exc_info=True)
         return {"error": f"Unexpected error: {str(e)}", "status": "UNEXPECTED_ERROR"}
+
+
 # --- End Google Time Zone API Function ---

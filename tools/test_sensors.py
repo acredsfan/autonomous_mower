@@ -6,13 +6,14 @@ This script tests the sensor functionality without running the full mower system
 It helps verify that sensors are working correctly and displaying data as expected.
 """
 
-import time
 import json
-import sys
 import os
 import platform
-from src.mower.hardware.tof import VL53L0XSensors
+import sys
+import time
+
 from src.mower.hardware.imu import BNO085Sensor
+from src.mower.hardware.tof import VL53L0XSensors
 
 # Add the project directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

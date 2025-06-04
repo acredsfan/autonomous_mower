@@ -4,14 +4,17 @@ Direct test script for the autonomous mower web UI.
 This script runs just the web UI with simulated hardware for testing purposes.
 """
 
-# import os
-from src.mower.ui.web_ui.app import create_app
-from src.mower.hardware.imu_fixed import BNO085Sensor  # type: ignore[import]
-from src.mower.hardware.tof_fixed import VL53L0XSensors  # type: ignore[import]
 import sys
+
 # import time
 # import json
 from pathlib import Path
+
+from src.mower.hardware.imu_fixed import BNO085Sensor  # type: ignore[import]
+from src.mower.hardware.tof_fixed import VL53L0XSensors  # type: ignore[import]
+
+# import os
+from src.mower.ui.web_ui.app import create_app
 
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent
@@ -54,15 +57,9 @@ class MockMower:
                 "calibration": "Simulated",
                 "safety_status": self.imu_sensor.get_safety_status(),
             },
-            "environment": {
-                "temperature": 22.5,
-                "humidity": 45.0,
-                "pressure": 1013.25},
+            "environment": {"temperature": 22.5, "humidity": 45.0, "pressure": 1013.25},
             "tof": self.tof_sensors.get_distances(),
-            "motors": {
-                "leftSpeed": 0.0,
-                "rightSpeed": 0.0,
-                "bladeSpeed": 0.0},
+            "motors": {"leftSpeed": 0.0, "rightSpeed": 0.0, "bladeSpeed": 0.0},
             "gps": {
                 "latitude": 37.7749,
                 "longitude": -122.4194,

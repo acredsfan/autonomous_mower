@@ -7,10 +7,11 @@ OpenWeatherMap API and local sensor data.
 
 import os
 import time
-import requests
-from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple, Any, List # Added Any, List
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple  # Added Any, List
+
+import requests
 from dotenv import load_dotenv
 
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -77,15 +78,9 @@ class WeatherService:
         conditions = self.get_current_conditions()
         reasons = []
         # Check temperature
-        if (
-            conditions.temperature
-            < self.ideal_mowing_conditions["min_temperature"]
-        ):
+        if conditions.temperature < self.ideal_mowing_conditions["min_temperature"]:
             reasons.append("too cold")
-        elif (
-            conditions.temperature
-            > self.ideal_mowing_conditions["max_temperature"]
-        ):
+        elif conditions.temperature > self.ideal_mowing_conditions["max_temperature"]:
             reasons.append("too hot")
 
         # Check humidity
@@ -93,23 +88,14 @@ class WeatherService:
             reasons.append("too humid")
 
         # Check rain probability
-        if (
-            conditions.rain_probability
-            > self.ideal_mowing_conditions["max_rain_probability"]
-        ):
+        if conditions.rain_probability > self.ideal_mowing_conditions["max_rain_probability"]:
             reasons.append("high chance of rain")
         # Check wind speed
-        if (
-            conditions.wind_speed
-            > self.ideal_mowing_conditions["max_wind_speed"]
-        ):
+        if conditions.wind_speed > self.ideal_mowing_conditions["max_wind_speed"]:
             reasons.append("too windy")
 
         # Check cloud cover
-        if (
-            conditions.cloud_cover
-            > self.ideal_mowing_conditions["max_cloud_cover"]
-        ):
+        if conditions.cloud_cover > self.ideal_mowing_conditions["max_cloud_cover"]:
             reasons.append("too cloudy")
 
         is_suitable = len(reasons) == 0
@@ -152,7 +138,7 @@ class WeatherService:
         if not self.api_key:
             logger.error("Google Weather API key is missing. Cannot update forecast.")
             self.cached_forecast = None
-            self.last_api_update = time.time() # Treat as an update attempt to prevent rapid retries
+            self.last_api_update = time.time()  # Treat as an update attempt to prevent rapid retries
             return
 
         try:
@@ -165,12 +151,12 @@ class WeatherService:
             }
             response = requests.get(url, params=params)
             response.raise_for_status()
-            self.cached_forecast = response.json() # Google API returns data in 'forecastHours'
+            self.cached_forecast = response.json()  # Google API returns data in 'forecastHours'
             self.last_api_update = time.time()
         except requests.exceptions.RequestException as e:
             logger.error(f"Error updating forecast from Google Weather API: {e}")
-            self.cached_forecast = None # Ensure cache is cleared on API error
-        except Exception as e: # Catch any other unexpected errors
+            self.cached_forecast = None  # Ensure cache is cleared on API error
+        except Exception as e:  # Catch any other unexpected errors
             logger.error(f"Unexpected error updating forecast: {e}")
             self.cached_forecast = None
 
@@ -199,16 +185,8 @@ class WeatherService:
                 return self._get_fallback_conditions()
 
             # Use sensor data if available, otherwise use API data
-            temperature = (
-                sensor_data.get("temperature", api_data.temperature)
-                if sensor_data
-                else api_data.temperature
-            )
-            humidity = (
-                sensor_data.get("humidity", api_data.humidity)
-                if sensor_data
-                else api_data.humidity
-            )
+            temperature = sensor_data.get("temperature", api_data.temperature) if sensor_data else api_data.temperature
+            humidity = sensor_data.get("humidity", api_data.humidity) if sensor_data else api_data.humidity
 
             return WeatherConditions(
                 temperature=temperature,
@@ -223,9 +201,7 @@ class WeatherService:
             logger.error(f"Error combining weather data: {e}")
             return self._get_fallback_conditions()
 
-    def _get_forecast_for_time(
-        self, timestamp: datetime
-    ) -> Optional[WeatherConditions]:
+    def _get_forecast_for_time(self, timestamp: datetime) -> Optional[WeatherConditions]:
         """Get forecast data for specific timestamp."""
         if not self.cached_forecast or not self.cached_forecast.get("forecastHours"):
             logger.warning("No forecast data available in _get_forecast_for_time.")
@@ -235,7 +211,7 @@ class WeatherService:
             closest_forecast_item = None
             min_time_diff = float("inf")
 
-            for forecast_item in self.cached_forecast.get('forecastHours', []):
+            for forecast_item in self.cached_forecast.get("forecastHours", []):
                 # Parse timestamp from 'interval.startTime'
                 # Example: "2025-02-05T23:00:00Z"
                 try:
@@ -243,48 +219,47 @@ class WeatherService:
                     if not item_start_time_str:
                         logger.warning("Missing interval.startTime in forecast item.")
                         continue
-                    
+
                     # Handle 'Z' for UTC timezone aware datetime object
-                    forecast_time = datetime.fromisoformat(item_start_time_str.replace('Z', '+00:00'))
+                    forecast_time = datetime.fromisoformat(item_start_time_str.replace("Z", "+00:00"))
                 except (ValueError, TypeError) as e:
                     logger.error(f"Error parsing forecast item timestamp: {item_start_time_str}. Error: {e}")
                     continue
-
 
                 time_diff = abs((timestamp.replace(tzinfo=None) - forecast_time.replace(tzinfo=None)).total_seconds())
 
                 if time_diff < min_time_diff:
                     min_time_diff = time_diff
                     closest_forecast_item = forecast_item
-            
+
             if closest_forecast_item:
                 # Map Google API response fields to WeatherConditions
                 # Ensure to handle potential missing keys gracefully with .get() and defaults
                 temp = closest_forecast_item.get("temperature", {}).get("degrees")
                 humidity = closest_forecast_item.get("relativeHumidity")
                 rain_prob = closest_forecast_item.get("precipitation", {}).get("probability", {}).get("percent")
-                wind_speed_kmh = closest_forecast_item.get("wind", {}).get("speed", {}).get("value") # km/h
+                wind_speed_kmh = closest_forecast_item.get("wind", {}).get("speed", {}).get("value")  # km/h
                 cloud_cover_percent = closest_forecast_item.get("cloudCover")
-                
+
                 # Parse timestamp again for the selected forecast
                 forecast_dt_str = closest_forecast_item.get("interval", {}).get("startTime")
-                if not forecast_dt_str: # Should not happen if selected
+                if not forecast_dt_str:  # Should not happen if selected
                     logger.error("Selected forecast item missing startTime.")
                     return None
-                
-                parsed_timestamp = datetime.fromisoformat(forecast_dt_str.replace('Z', '+00:00'))
+
+                parsed_timestamp = datetime.fromisoformat(forecast_dt_str.replace("Z", "+00:00"))
 
                 # Check if all essential values were found
                 if any(v is None for v in [temp, humidity, rain_prob, wind_speed_kmh, cloud_cover_percent]):
                     logger.warning(f"Missing one or more weather values in forecast item: {closest_forecast_item}")
                     # Fallback to safer defaults for missing numeric values if needed, or return None
                     # For now, we proceed, but WeatherConditions might get None if not handled by caller
-                
+
                 return WeatherConditions(
-                    temperature=float(temp) if temp is not None else 0.0, # Default to 0.0 if None
+                    temperature=float(temp) if temp is not None else 0.0,  # Default to 0.0 if None
                     humidity=float(humidity) if humidity is not None else 0.0,
                     rain_probability=float(rain_prob) if rain_prob is not None else 0.0,
-                    wind_speed=float(wind_speed_kmh) if wind_speed_kmh is not None else 0.0, # Already in km/h
+                    wind_speed=float(wind_speed_kmh) if wind_speed_kmh is not None else 0.0,  # Already in km/h
                     cloud_cover=float(cloud_cover_percent) if cloud_cover_percent is not None else 0.0,
                     timestamp=parsed_timestamp,
                     source="api",
@@ -348,7 +323,7 @@ class WeatherService:
                 qpf = forecast_hours[i].get("precipitation", {}).get("qpf", {}).get("quantity")
                 if qpf is not None:
                     current_rain_volume_3h += float(qpf)
-            
+
             # Determine if it's "currently raining"
             is_raining = False
             first_hour_qpf = forecast_hours[0].get("precipitation", {}).get("qpf", {}).get("quantity")
@@ -358,19 +333,19 @@ class WeatherService:
                 # Check weatherCondition.type for rain
                 # Example rain types: 'RAIN', 'LIGHT_RAIN', 'HEAVY_RAIN', 'THUNDERSTORM', 'RAIN_SHOWERS', 'DRIZZLE'
                 # (This list might need adjustment based on Google Weather API documentation for condition types)
-                rain_condition_types = ['RAIN', 'LIGHT_RAIN', 'HEAVY_RAIN', 'THUNDERSTORM', 'RAIN_SHOWERS', 'DRIZZLE']
+                rain_condition_types = ["RAIN", "LIGHT_RAIN", "HEAVY_RAIN", "THUNDERSTORM", "RAIN_SHOWERS", "DRIZZLE"]
                 current_condition_type = current_hour_data.get("weatherCondition", {}).get("type", "").upper()
                 if current_condition_type in rain_condition_types:
                     is_raining = True
-            
+
             # Hourly precipitation probability for the next few hours (e.g., first 3)
             hourly_precip_prob = []
-            for i in range(min(3, len(forecast_hours))): # Get for first 3 hours
+            for i in range(min(3, len(forecast_hours))):  # Get for first 3 hours
                 prob = forecast_hours[i].get("precipitation", {}).get("probability", {}).get("percent")
                 if prob is not None:
                     hourly_precip_prob.append(float(prob))
                 else:
-                    hourly_precip_prob.append(0.0) # Default if missing
+                    hourly_precip_prob.append(0.0)  # Default if missing
 
             # Handle cases where essential data might be missing
             if current_temp is None or current_wind_mps is None:
@@ -379,17 +354,17 @@ class WeatherService:
 
             return {
                 "current_temperature": float(current_temp),
-                "current_wind_speed": current_wind_mps, # m/s
-                "current_rain_volume_3h": current_rain_volume_3h, # mm
+                "current_wind_speed": current_wind_mps,  # m/s
+                "current_rain_volume_3h": current_rain_volume_3h,  # mm
                 "is_currently_raining": is_raining,
-                "hourly_precipitation_probability": hourly_precip_prob, # List of %
-                "error": None
+                "hourly_precipitation_probability": hourly_precip_prob,  # List of %
+                "error": None,
             }
 
         except requests.exceptions.RequestException as e:
             logger.error(f"API request error in get_detailed_weather_for_scheduler (Google): {e}")
             return {"error": f"API request error: {e}"}
-        except (KeyError, IndexError, TypeError, ValueError) as e: # Added ValueError for float conversions
+        except (KeyError, IndexError, TypeError, ValueError) as e:  # Added ValueError for float conversions
             logger.error(f"Error parsing Google weather data in get_detailed_weather_for_scheduler: {e}")
             return {"error": f"Error parsing weather data: {e}"}
         except Exception as e:

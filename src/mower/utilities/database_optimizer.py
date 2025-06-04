@@ -42,10 +42,7 @@ class ConnectionPool:
         for _ in range(max_connections):
             self._create_connection()
 
-        logger.info(
-            f"Connection pool initialized with {max_connections} connections "
-            f"to {db_path}"
-        )
+        logger.info(f"Connection pool initialized with {max_connections} connections " f"to {db_path}")
 
     def _create_connection(self):
         """Create a new database connection and add it to the pool."""
@@ -62,9 +59,7 @@ class ConnectionPool:
             with self.lock:
                 self.active_connections += 1
 
-            logger.debug(
-                f"Created new database connection (total: {self.active_connections})"
-            )
+            logger.debug(f"Created new database connection (total: {self.active_connections})")
         except Exception as e:
             logger.error(f"Error creating database connection: {e}")
 
@@ -190,9 +185,7 @@ class BatchProcessor:
             if len(self.insert_batches[table]) >= self.batch_size:
                 self._process_insert_batch(table)
 
-    def add_update(
-        self, table: str, data: Dict[str, Any], condition: str, params: Tuple
-    ):
+    def add_update(self, table: str, data: Dict[str, Any], condition: str, params: Tuple):
         """
         Add an update operation to the batch.
 
@@ -483,8 +476,7 @@ class QueryOptimizer:
                     self.query_stats[query]["count"] += 1
                     self.query_stats[query]["total_time"] += execution_time
                     self.query_stats[query]["avg_time"] = (
-                        self.query_stats[query]["total_time"]
-                        / self.query_stats[query]["count"]
+                        self.query_stats[query]["total_time"] / self.query_stats[query]["count"]
                     )
                 else:
                     self.query_stats[query] = {
@@ -503,9 +495,7 @@ class QueryOptimizer:
 
                     self.query_cache[cache_key] = results
 
-            logger.debug(
-                f"Executed query in {execution_time:.4f} seconds: {optimized_query}"
-            )
+            logger.debug(f"Executed query in {execution_time:.4f} seconds: {optimized_query}")
             return results
         except Exception as e:
             logger.error(f"Error executing query: {e}")

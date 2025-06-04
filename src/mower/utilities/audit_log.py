@@ -165,16 +165,15 @@ class AuditLogger:
             # This might happen if __init__ failed to set up the logger or hostname
             # Log to a fallback or print if absolutely necessary and no other logger is available
             # For now, using the error_logger if available, or a temp one.
-            fallback_logger = getattr(self, 'error_logger',
-                                      LoggerConfigInfo.get_logger(__name__ + ".log_event_error"))
+            fallback_logger = getattr(self, "error_logger", LoggerConfigInfo.get_logger(__name__ + ".log_event_error"))
             fallback_logger.error(
-                f"AuditLogger not properly initialized. Failed to log audit event: {e}",
-                exc_info=True
+                f"AuditLogger not properly initialized. Failed to log audit event: {e}", exc_info=True
             )
         except Exception as e:
             # Use self.error_logger if available, otherwise a temporary one
-            current_error_logger = getattr(self, 'error_logger',
-                                           LoggerConfigInfo.get_logger(__name__ + ".log_event_error"))
+            current_error_logger = getattr(
+                self, "error_logger", LoggerConfigInfo.get_logger(__name__ + ".log_event_error")
+            )
             current_error_logger.error(f"Failed to log audit event: {e}", exc_info=True)
 
     def log_login(self, user: str, ip_address: str, success: bool) -> None:
@@ -185,11 +184,7 @@ class AuditLogger:
             ip_address: IP address of the client.
             success: Whether the login was successful.
         """
-        event_type = (
-            AuditEventType.LOGIN_SUCCESS
-            if success
-            else AuditEventType.LOGIN_FAILURE
-        )
+        event_type = AuditEventType.LOGIN_SUCCESS if success else AuditEventType.LOGIN_FAILURE
         self.log_event(event_type, user, ip_address, success=success)
 
     def log_logout(self, user: str, ip_address: str) -> None:
@@ -225,9 +220,7 @@ class AuditLogger:
             "old_value": old_value,
             "new_value": new_value,
         }
-        self.log_event(
-            AuditEventType.CONFIG_CHANGE, user, ip_address, details, success
-        )
+        self.log_event(AuditEventType.CONFIG_CHANGE, user, ip_address, details, success)
 
     def log_security_setting_change(
         self,
@@ -261,9 +254,7 @@ class AuditLogger:
             success,
         )
 
-    def log_access_denied(
-        self, user: str, ip_address: str, resource: str, reason: str
-    ) -> None:
+    def log_access_denied(self, user: str, ip_address: str, resource: str, reason: str) -> None:
         """Log an access denied event.
 
         Args:
@@ -300,9 +291,7 @@ class AuditLogger:
             success=False,
         )
 
-    def log_rate_limit_exceeded(
-        self, ip_address: str, endpoint: str, limit: str
-    ) -> None:
+    def log_rate_limit_exceeded(self, ip_address: str, endpoint: str, limit: str) -> None:
         """Log a rate limit exceeded event.
 
         Args:
@@ -323,9 +312,7 @@ class AuditLogger:
 _audit_logger_instance = None
 
 
-def get_audit_logger(
-    log_dir: Optional[Union[str, Path]] = None
-) -> AuditLogger:
+def get_audit_logger(log_dir: Optional[Union[str, Path]] = None) -> AuditLogger:
     """Get the audit logger instance.
 
     Args:

@@ -2,15 +2,17 @@
 Test module for test_service_startup.py.
 """
 
-from mower.main_controller import RobotController, ResourceManager
-import os
-import sys
-import pytest
-import tempfile
-import shutil
 import logging
+import os
+import shutil
+import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from mower.main_controller import ResourceManager, RobotController
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

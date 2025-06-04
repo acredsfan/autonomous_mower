@@ -19,9 +19,7 @@ class UtilitiesInterface(ABC):
 
     @staticmethod
     @abstractmethod
-    def map_range(
-        x: float, X_min: float, X_max: float, Y_min: float, Y_max: float
-    ) -> int:
+    def map_range(x: float, X_min: float, X_max: float, Y_min: float, Y_max: float) -> int:
         """
         Linear mapping between two ranges of values, returning an integer.
 
@@ -39,9 +37,7 @@ class UtilitiesInterface(ABC):
 
     @staticmethod
     @abstractmethod
-    def map_range_float(
-        x: float, X_min: float, X_max: float, Y_min: float, Y_max: float
-    ) -> float:
+    def map_range_float(x: float, X_min: float, X_max: float, Y_min: float, Y_max: float) -> float:
         """
         Linear mapping between two ranges of values, returning a float.
 

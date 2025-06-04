@@ -1,12 +1,13 @@
 # Suppress matplotlib Axes3D warning globally
+import argparse
 import importlib.util
 import logging
-from pathlib import Path
 import subprocess
-import argparse
 import sys
 import warnings
 from datetime import datetime
+from pathlib import Path
+
 warnings.filterwarnings(
     "ignore",
     message=(
@@ -39,9 +40,9 @@ def get_installed_version(package_name):
 
 
 def ensure_required_versions():
-    import sys
-    import subprocess
     import os
+    import subprocess
+    import sys
 
     # Check current installed versions using pip (not module imports)
     tf_ver = get_installed_version("tensorflow")
@@ -598,9 +599,9 @@ def fix_tensorflow_corruption():
         import tensorflow as tf
         if not hasattr(tf, '__version__'):
             print("⚠️  TensorFlow __version__ missing. Fixing installation...")
+            import os
             import subprocess
             import sys
-            import os
 
             # Force clean reinstall
             subprocess.run([

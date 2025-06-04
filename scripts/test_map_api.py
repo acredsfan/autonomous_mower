@@ -66,9 +66,7 @@ def test_set_home_api():
     home_location = {"lat": 47.6062, "lng": -122.3321}
 
     try:
-        response = requests.post(
-            f"{API_BASE_URL}/set_home", json={"location": home_location}
-        )
+        response = requests.post(f"{API_BASE_URL}/set_home", json={"location": home_location})
         print(f"Status code: {response.status_code}")
 
         if response.status_code == 200:
@@ -91,9 +89,7 @@ def test_generate_pattern_api():
     }
 
     try:
-        response = requests.post(
-            f"{API_BASE_URL}/generate_pattern", json=pattern_config
-        )
+        response = requests.post(f"{API_BASE_URL}/generate_pattern", json=pattern_config)
         print(f"Status code: {response.status_code}")
 
         if response.status_code == 200:
@@ -103,8 +99,7 @@ def test_generate_pattern_api():
             print(f"Generated path with {len(path)} points")
             if path:
                 print(f"First few points: {path[:3]}")
-                print(
-                    f"Last few points: {path[-3:] if len(path) >= 3 else path}")
+                print(f"Last few points: {path[-3:] if len(path) >= 3 else path}")
         else:
             print(f"Error: {response.text}")
     except Exception as e:

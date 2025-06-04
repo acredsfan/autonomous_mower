@@ -135,72 +135,72 @@ done
 # Function to deploy locally
 deploy_locally() {
     print_info "Starting local deployment..."
-    
+
     # Check if we're in the repository root
     if [ ! -f "setup.py" ] || [ ! -d "src/mower" ]; then
         print_error "This script must be run from the repository root"
         exit 1
     fi
-    
+
     # Check if we're on a Raspberry Pi
     if [ "$SKIP_HARDWARE_CHECK" = false ] && ! grep -q "Raspberry Pi" /proc/cpuinfo; then
         print_error "This script must be run on a Raspberry Pi"
         exit 1
     fi
-    
+
     # Make sure we're on the correct branch
     print_info "Checking out branch: $BRANCH"
     git checkout $BRANCH
     check_command "Checking out branch $BRANCH" || exit 1
-    
+
     # Pull latest changes
     print_info "Pulling latest changes..."
     git pull
     check_command "Pulling latest changes" || exit 1
-    
+
     # Run the installation script
     print_info "Running installation script..."
     chmod +x install_requirements.sh
-    
+
     # Create answers file for non-interactive installation
     if [ "$SKIP_CORAL" = true ]; then
         echo "n" > coral_answer.txt
     else
         echo "y" > coral_answer.txt
     fi
-    
+
     # Run installation script with answers file
     sudo ./install_requirements.sh < coral_answer.txt
     check_command "Running installation script" || exit 1
     rm coral_answer.txt
-    
+
     # Set up remote access if requested
     if [ "$SKIP_REMOTE_ACCESS" = false ]; then
         print_info "Setting up remote access..."
         python3 src/mower/utilities/setup_remote_access.py
         check_command "Setting up remote access" || exit 1
     fi
-    
+
     # Create log directory if it doesn't exist
     print_info "Setting up log directory..."
     sudo mkdir -p /var/log/autonomous-mower
     sudo chown -R pi:pi /var/log/autonomous-mower
     sudo chmod 755 /var/log/autonomous-mower
     check_command "Setting up log directory" || exit 1
-    
+
     # Enable and start the service
     print_info "Enabling and starting the service..."
     sudo systemctl enable autonomous-mower.service
     sudo systemctl start autonomous-mower.service
     check_command "Enabling and starting the service" || exit 1
-    
+
     # Check service status
     print_info "Checking service status..."
     sudo systemctl status autonomous-mower.service
-    
+
     print_success "Deployment completed successfully!"
     print_info "You can access the web interface at http://localhost:5000"
-    
+
     # Get IP address for remote access
     IP_ADDRESS=$(hostname -I | awk '{print $1}')
     print_info "Or access it remotely at http://$IP_ADDRESS:5000"
@@ -209,20 +209,20 @@ deploy_locally() {
 # Function to deploy to a remote Raspberry Pi
 deploy_remotely() {
     print_info "Starting remote deployment to $REMOTE_HOST..."
-    
+
     # Check if SSH is available
     if ! command_exists ssh; then
         print_error "SSH client not found. Please install SSH."
         exit 1
     fi
-    
+
     # Check if we can connect to the remote host
     print_info "Checking SSH connection to $REMOTE_HOST..."
     ssh -p $REMOTE_PORT -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=accept-new $REMOTE_USER@$REMOTE_HOST "echo SSH connection successful" || {
         print_error "Failed to connect to $REMOTE_HOST. Please check your SSH settings."
         exit 1
     }
-    
+
     # Create a temporary deployment script to run on the remote host
     TEMP_SCRIPT=$(mktemp)
     cat > $TEMP_SCRIPT << EOF
@@ -251,24 +251,24 @@ git pull
                     $([ "$SKIP_CORAL" = true ] && echo "--skip-coral") \
                     $([ "$SKIP_REMOTE_ACCESS" = true ] && echo "--skip-remote-access")
 EOF
-    
+
     # Make the script executable
     chmod +x $TEMP_SCRIPT
-    
+
     # Copy the script to the remote host
     print_info "Copying deployment script to $REMOTE_HOST..."
     scp -P $REMOTE_PORT $TEMP_SCRIPT $REMOTE_USER@$REMOTE_HOST:~/deploy_mower.sh
     check_command "Copying deployment script" || exit 1
-    
+
     # Execute the script on the remote host
     print_info "Executing deployment script on $REMOTE_HOST..."
     ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "chmod +x ~/deploy_mower.sh && ~/deploy_mower.sh"
     check_command "Remote deployment" || exit 1
-    
+
     # Clean up
     rm $TEMP_SCRIPT
     ssh -p $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST "rm ~/deploy_mower.sh"
-    
+
     print_success "Remote deployment to $REMOTE_HOST completed successfully!"
     print_info "You can access the web interface at http://$REMOTE_HOST:5000"
 }

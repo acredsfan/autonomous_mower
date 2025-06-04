@@ -1,7 +1,9 @@
 """
 Test module for test_i2c_sensor_stability.py.
 """
+
 import pytest
+
 # Placeholder for imports that will be needed
 # from unittest.mock import MagicMock, patch
 # from mower.hardware.sensor_interface import EnhancedSensorInterface

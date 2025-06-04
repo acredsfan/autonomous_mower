@@ -42,11 +42,7 @@ class TextLogger:
         return not self.is_empty()
 
     def get(self, row_index: int):
-        return (
-            self.rows[row_index]
-            if (row_index >= 0) and (row_index < self.length())
-            else None
-        )
+        return self.rows[row_index] if (row_index >= 0) and (row_index < self.length()) else None
 
     def reset(self):
         self.rows = []
@@ -113,9 +109,7 @@ class CsvLogger(TextLogger):
         field_count: int = None,
         trim: bool = True,
     ):
-        super().__init__(
-            file_path, append, allow_empty_file, allow_empty_line
-        )
+        super().__init__(file_path, append, allow_empty_file, allow_empty_line)
         self.separator = separator
         self.field_count = field_count
         self.trim = trim
@@ -143,9 +137,7 @@ class CsvLogger(TextLogger):
                     row = [field.strip() for field in row]
             else:
                 row = None
-                logger.debug(
-                    f"CsvLogger: dropping row with field count = {field_count}"
-                )
+                logger.debug(f"CsvLogger: dropping row with field count = {field_count}")
         else:
             logger.error("CsvLogger: line_to_row expected string")
         return row

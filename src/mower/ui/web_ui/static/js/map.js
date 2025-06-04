@@ -53,7 +53,7 @@ function initMap() {
         if (currentPolygon) {
             currentPolygon.setMap(null); // Remove previous polygon from map
         }
-        currentPolygon = event.overlay; 
+        currentPolygon = event.overlay;
         currentPolygon.setEditable(true); // Make the newly drawn polygon editable
 
         const path = currentPolygon.getPath();
@@ -62,7 +62,7 @@ function initMap() {
             const latLng = path.getAt(i);
             coordinates.push({ lat: latLng.lat(), lng: latLng.lng() });
         }
-        
+
         console.log('Polygon completed. Coordinates:', coordinates);
         saveBoundary(coordinates);
 
@@ -103,11 +103,11 @@ function setupMapUIEventListeners() {
                 currentPolygon = null;
             }
             // Optionally, also clear from backend by saving an empty boundary
-            saveBoundary([]); 
+            saveBoundary([]);
             showAlert('Cleared current boundary from map. Saved empty boundary to backend.', 'info');
         });
     }
-    
+
     const saveMapChangesButton = document.getElementById('save-map-changes');
     if(saveMapChangesButton) {
         saveMapChangesButton.addEventListener('click', function() {
@@ -134,7 +134,7 @@ function setupMapUIEventListeners() {
             }
         });
     }
-    
+
     // Address Search
     const searchAddressButton = document.getElementById('search-address');
     const addressInput = document.getElementById('address-input');
@@ -212,7 +212,7 @@ function loadAndDrawBoundary() {
                 const bounds = new google.maps.LatLngBounds();
                 coordinates.forEach(coord => bounds.extend(new google.maps.LatLng(coord.lat, coord.lng)));
                 map.fitBounds(bounds);
-                
+
                 // Add listeners for edits if polygon is editable
                 if (currentPolygon.getEditable()) {
                     google.maps.event.addListener(currentPolygon.getPath(), 'set_at', function() {
@@ -258,7 +258,7 @@ function saveBoundary(coordinates) {
             showAlert('Boundary saved successfully!', 'success');
             // Reload and draw the boundary to ensure it's the one from the server
             // and to clear any temporary drawing overlays.
-            loadAndDrawBoundary(); 
+            loadAndDrawBoundary();
         } else {
             showAlert('Failed to save boundary: ' + (data.error || 'Unknown error'), 'danger');
             console.error('Failed to save boundary:', data.error);

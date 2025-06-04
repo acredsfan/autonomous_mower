@@ -5,6 +5,7 @@ into different languages using Flask-Babel.
 """
 
 import os
+
 from flask import Flask, request, session
 from flask_babel import Babel
 

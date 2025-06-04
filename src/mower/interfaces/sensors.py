@@ -7,8 +7,8 @@ new sensor types and implementing sensor fusion.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SensorInterface(ABC):
@@ -318,9 +318,7 @@ class SensorFusionInterface(ABC):
     """
 
     @abstractmethod
-    def register_sensor(
-        self, sensor_type: str, sensor: SensorInterface
-    ) -> None:
+    def register_sensor(self, sensor_type: str, sensor: SensorInterface) -> None:
         """
         Register a sensor with the fusion system.
 
@@ -331,9 +329,7 @@ class SensorFusionInterface(ABC):
         pass
 
     @abstractmethod
-    def unregister_sensor(
-        self, sensor_type: str, sensor: SensorInterface
-    ) -> None:
+    def unregister_sensor(self, sensor_type: str, sensor: SensorInterface) -> None:
         """
         Unregister a sensor from the fusion system.
 

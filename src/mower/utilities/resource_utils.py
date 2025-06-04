@@ -6,19 +6,14 @@ and initialization/cleanup. It centralizes common functionality used across
 different components of the autonomous mower project.
 """
 
-from mower.utilities.config_schema import validate_config, ValidationError
-import threading
 import json
 import logging
+import threading
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from mower.config_management import (
-    get_config_manager,
-    get_config,
-    set_config,
-    CONFIG_DIR,
-)
+from mower.config_management import CONFIG_DIR, get_config, get_config_manager, set_config
+from mower.utilities.config_schema import ValidationError, validate_config
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -60,8 +55,7 @@ def load_config(filename: str) -> Optional[Dict[str, Any]]:
             validated = validate_config(config)
             return validated.model_dump()  # Return as dict for backward compatibility
         except ValidationError as ve:
-            logger.error(
-                f"Configuration validation failed for {filename}: {ve}")
+            logger.error(f"Configuration validation failed for {filename}: {ve}")
             return None
 
     except Exception as e:
@@ -99,9 +93,7 @@ def save_config(filename: str, data: Dict[str, Any]) -> bool:
         return False
 
 
-def cleanup_resources(
-    resources: Dict[str, Any], initialized: bool, lock: threading.Lock
-) -> bool:
+def cleanup_resources(resources: Dict[str, Any], initialized: bool, lock: threading.Lock) -> bool:
     """
     Clean up all resources.
 

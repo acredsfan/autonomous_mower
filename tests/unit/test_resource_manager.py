@@ -2,8 +2,9 @@
 Test module for test_resource_manager.py.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from mower.main_controller import ResourceManager as MainResourceManager
 from mower.mower import ResourceManager as MowerResourceManager
@@ -162,9 +163,7 @@ class TestMainResourceManager:
         result = resource_manager.cleanup()
 
         # Verify that cleanup_resources was called with the correct arguments
-        mock_cleanup_resources.assert_called_once_with(
-            resource_manager._resources, True, resource_manager._lock
-        )
+        mock_cleanup_resources.assert_called_once_with(resource_manager._resources, True, resource_manager._lock)
 
         # Verify that _initialized was set to False
         assert resource_manager._initialized is False
@@ -316,14 +315,10 @@ class TestMowerResourceManager:
         resource_manager = MowerResourceManager()
 
         # Call _save_config
-        result = resource_manager._save_config(
-            "test_config.json", {"test_key": "test_value"}
-        )
+        result = resource_manager._save_config("test_config.json", {"test_key": "test_value"})
 
         # Verify that save_config was called with the correct arguments
-        mock_save_config.assert_called_once_with(
-            "test_config.json", {"test_key": "test_value"}
-        )
+        mock_save_config.assert_called_once_with("test_config.json", {"test_key": "test_value"})
 
         # Verify that the correct result was returned
         assert result is True

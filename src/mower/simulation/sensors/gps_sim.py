@@ -7,13 +7,13 @@ requiring physical hardware.
 """
 
 import math
-import time
-import threading
 import random
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+import threading
+import time
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from mower.simulation.hardware_sim import SimulatedSensor
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import Vector2D, get_world_instance
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging

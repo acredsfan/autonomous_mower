@@ -128,10 +128,7 @@ class Obstacle:
 
     def __repr__(self) -> str:
         """String representation of obstacle."""
-        return (
-            f"Obstacle({self.position}, r={self.radius:.2f}, "
-            f"h={self.height:.2f}, type={self.obstacle_type})"
-        )
+        return f"Obstacle({self.position}, r={self.radius:.2f}, " f"h={self.height:.2f}, type={self.obstacle_type})"
 
     def contains_point(self, point: Vector2D) -> bool:
         """
@@ -185,9 +182,7 @@ class Terrain:
         self.height_map = np.zeros((self.grid_width, self.grid_height))
 
         # Initialize terrain type map (grass by default)
-        self.type_map = np.zeros(
-            (self.grid_width, self.grid_height), dtype=np.int32
-        )
+        self.type_map = np.zeros((self.grid_width, self.grid_height), dtype=np.int32)
 
     def get_height(self, position: Vector2D) -> float:
         """
@@ -229,13 +224,11 @@ class Terrain:
 
         # Calculate slope in x and y directions
         slope_x = math.atan2(
-            self.height_map[grid_x + 1, grid_y]
-            - self.height_map[grid_x, grid_y],
+            self.height_map[grid_x + 1, grid_y] - self.height_map[grid_x, grid_y],
             self.resolution,
         )
         slope_y = math.atan2(
-            self.height_map[grid_x, grid_y + 1]
-            - self.height_map[grid_x, grid_y],
+            self.height_map[grid_x, grid_y + 1] - self.height_map[grid_x, grid_y],
             self.resolution,
         )
 
@@ -305,9 +298,7 @@ class Robot:
 
     # The Robot class has many attributes to accurately simulate physical state.
     # This is intentional for simulation fidelity.
-    def __init__(
-        self, position: Vector2D = Vector2D(0, 0), heading: float = 0.0
-    ):
+    def __init__(self, position: Vector2D = Vector2D(0, 0), heading: float = 0.0):
         """
         Initialize the robot.
 
@@ -395,16 +386,8 @@ class Robot:
         # For a differential drive robot:
         # - If both motors are the same speed, the robot moves straight
         # - If the motors are different speeds, the robot turns
-        linear_speed = (
-            (self.motor_speeds[0] + self.motor_speeds[1])
-            / 2.0
-            * self.max_speed
-        )
-        angular_speed = (
-            (self.motor_speeds[1] - self.motor_speeds[0])
-            / self.width
-            * self.max_speed
-        )
+        linear_speed = (self.motor_speeds[0] + self.motor_speeds[1]) / 2.0 * self.max_speed
+        angular_speed = (self.motor_speeds[1] - self.motor_speeds[0]) / self.width * self.max_speed
 
         # Set velocity based on heading and linear speed
         self.velocity = Vector2D(
@@ -482,22 +465,16 @@ class VirtualWorld:
             # If robot is colliding with obstacle, move it out
             if distance < 0:
                 # Calculate direction from obstacle to robot
-                direction = (
-                    self.robot.position - obstacle.position
-                ).normalize()
+                direction = (self.robot.position - obstacle.position).normalize()
 
                 # Move robot out of obstacle
-                self.robot.position = obstacle.position + direction * (
-                    obstacle.radius + 0.01
-                )
+                self.robot.position = obstacle.position + direction * (obstacle.radius + 0.01)
 
                 # Stop robot's movement in the collision direction
                 dot_product = self.robot.velocity.dot(direction)
                 if dot_product < 0:
                     # Robot is moving toward obstacle, stop it
-                    self.robot.velocity = (
-                        self.robot.velocity - direction * dot_product
-                    )
+                    self.robot.velocity = self.robot.velocity - direction * dot_product
 
     def add_obstacle(
         self,
@@ -516,18 +493,14 @@ class VirtualWorld:
             obstacle_type: Type of obstacle (e.g., "rock", "tree", "wall")
         """
         with self._lock:
-            self.obstacles.append(
-                Obstacle(position, radius, height, obstacle_type)
-            )
+            self.obstacles.append(Obstacle(position, radius, height, obstacle_type))
 
     def clear_obstacles(self) -> None:
         """Clear all obstacles from the world."""
         with self._lock:
             self.obstacles.clear()
 
-    def get_obstacles_in_range(
-        self, position: Vector2D, max_range: float
-    ) -> List[Obstacle]:
+    def get_obstacles_in_range(self, position: Vector2D, max_range: float) -> List[Obstacle]:
         """
         Get all obstacles within the given range of the position.
 
@@ -542,8 +515,7 @@ class VirtualWorld:
             return [
                 obstacle
                 for obstacle in self.obstacles
-                if position.distance_to(obstacle.position)
-                <= max_range + obstacle.radius
+                if position.distance_to(obstacle.position) <= max_range + obstacle.radius
             ]
 
     def get_distance_to_nearest_obstacle(
@@ -582,18 +554,14 @@ class VirtualWorld:
                     continue
 
                 # Calculate perpendicular distance
-                perpendicular = (
-                    to_obstacle - direction * projection
-                ).magnitude()
+                perpendicular = (to_obstacle - direction * projection).magnitude()
 
                 # Skip if obstacle is too far to the side
                 if perpendicular > obstacle.radius:
                     continue
 
                 # Calculate distance to edge of obstacle
-                distance = projection - math.sqrt(
-                    obstacle.radius**2 - perpendicular**2
-                )
+                distance = projection - math.sqrt(obstacle.radius**2 - perpendicular**2)
 
                 # Update if this is the nearest obstacle
                 if distance < min_distance:
@@ -622,9 +590,7 @@ class VirtualWorld:
                 "motor_speeds": self.robot.motor_speeds.copy(),
             }
 
-    def set_robot_position(
-        self, position: Vector2D, heading: Optional[float] = None
-    ) -> None:
+    def set_robot_position(self, position: Vector2D, heading: Optional[float] = None) -> None:
         """
         Set the robot's position and optionally heading.
         Args:
@@ -647,9 +613,7 @@ class VirtualWorld:
         with self._lock:
             self.robot.set_motor_speeds(left, right)
 
-    def set_robot_blade_state(
-        self, running: bool, speed: float = 1.0
-    ) -> None:
+    def set_robot_blade_state(self, running: bool, speed: float = 1.0) -> None:
         """
         Set the robot's blade state.
 

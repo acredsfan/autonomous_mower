@@ -1,5 +1,7 @@
-from src.mower.utilities.permission_check import run_permission_checks
 import sys
+
+from src.mower.utilities.permission_check import run_permission_checks
+
 l  # !/usr/bin/env python3
 """
 Pre-flight permission check script for the autonomous mower project.
@@ -20,7 +22,8 @@ def main():
     if not success:
         print(
             "\n[ERROR] Permission checks failed. "
-            "Please resolve the above issues before continuing setup or deployment.")
+            "Please resolve the above issues before continuing setup or deployment."
+        )
         sys.exit(1)
     print("[OK] All permission checks passed.")
 

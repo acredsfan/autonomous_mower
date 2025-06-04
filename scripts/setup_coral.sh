@@ -19,7 +19,7 @@ print_info() {
 }
 
 # Check if script is run as root
-if [ "$EUID" -eq 0 ]; then 
+if [ "$EUID" -eq 0 ]; then
     print_error "Please do not run as root"
     exit 1
 fi
@@ -76,4 +76,4 @@ print_info "Notes:"
 print_info "1. Using standard performance mode for thermal stability"
 print_info "2. To switch to max performance, run: sudo apt-get install libedgetpu1-max"
 print_info "3. After connecting the USB Accelerator, run: sudo udevadm trigger"
-print_info "4. Check logs for any detection performance issues before considering max performance mode" 
+print_info "4. Check logs for any detection performance issues before considering max performance mode"

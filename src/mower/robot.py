@@ -1,11 +1,11 @@
 # Updated 11.1.24
 from mower.mower import (
-    get_blade_controller,
-    get_robohat_driver,
-    get_localization,
     get_avoidance_algorithm,
+    get_blade_controller,
     get_gps_nmea_positions,
+    get_localization,
     get_path_planner,
+    get_robohat_driver,
 )
 from mower.utilities.logger_config import LoggerConfigInfo
 

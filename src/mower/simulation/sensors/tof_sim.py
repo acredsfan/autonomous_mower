@@ -7,14 +7,15 @@ requiring physical hardware.
 """
 
 import math
+
 # import time # Not used in this module
 # import threading # Not used in this module
 # import random # Not used in this module
 # , List, Tuple, Union, Type # Unused specific types
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from mower.simulation.hardware_sim import SimulatedSensor
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import Vector2D, get_world_instance
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
@@ -39,8 +40,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
                               of sensors (e.g., {"left": False}).
         """
         super().__init__("VL53L0X ToF Sensors")
-        self._initial_statuses = initial_statuses if initial_statuses is not None \
-            else {}
+        self._initial_statuses = initial_statuses if initial_statuses is not None else {}
 
         # Initialize sensor data
         self.state = {
@@ -63,9 +63,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
         # robot
         self.sensor_positions = {
             "left": Vector2D(0.2, 0.15),  # 20cm forward, 15cm left of center
-            "right": Vector2D(
-                0.2, -0.15
-            ),  # 20cm forward, 15cm right of center
+            "right": Vector2D(0.2, -0.15),  # 20cm forward, 15cm right of center
         }
 
         self.sensor_orientations = {
@@ -83,9 +81,8 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
                 self.state["sensor_status"][sensor_name] = is_working
                 if not is_working:
                     # Set distance to NaN if sensor is not working initially
-                    self.state[f"{sensor_name}_distance"] = float('nan')
-        logger.info(
-            f"Simulated ToF initialized with statuses: {self.state['sensor_status']}")
+                    self.state[f"{sensor_name}_distance"] = float("nan")
+        logger.info(f"Simulated ToF initialized with statuses: {self.state['sensor_status']}")
 
     def _cleanup_sim(self) -> None:
         """Clean up the simulated ToF sensors."""
@@ -104,8 +101,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
         # Update each sensor
         for sensor_name in ["left", "right"]:
             if not self.state["sensor_status"].get(sensor_name, False):
-                self.state[f"{sensor_name}_distance"] = float(
-                    'nan')  # Ensure non-working sensor reads NaN
+                self.state[f"{sensor_name}_distance"] = float("nan")  # Ensure non-working sensor reads NaN
                 continue  # Skip update for non-working sensor
 
             # Calculate sensor position in world coordinates
@@ -114,12 +110,8 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             sensor_position = robot_position + sensor_rel_pos
 
             # Calculate sensor direction in world coordinates
-            sensor_orientation = (
-                robot_heading + self.sensor_orientations[sensor_name]
-            )
-            sensor_direction = Vector2D(
-                math.cos(sensor_orientation), math.sin(sensor_orientation)
-            )
+            sensor_orientation = robot_heading + self.sensor_orientations[sensor_name]
+            sensor_direction = Vector2D(math.cos(sensor_orientation), math.sin(sensor_orientation))
 
             # Get distance to nearest obstacle in sensor direction
             distance, obstacle = self.world.get_distance_to_nearest_obstacle(
@@ -130,9 +122,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
             distance_cm = distance * 100.0
 
             # Clamp to sensor range
-            distance_cm = max(
-                self.min_range, min(self.max_range, distance_cm)
-            )
+            distance_cm = max(self.min_range, min(self.max_range, distance_cm))
 
             # Add noise to distance
             distance_cm = self.add_noise(distance_cm)
@@ -166,7 +156,7 @@ class SimulatedVL53L0XSensors(SimulatedSensor):
         """
         self.get_data()  # Ensure data is up to date
         if not self.state["sensor_status"].get(sensor_name, False):
-            return float('nan')  # Return NaN if sensor is not working
+            return float("nan")  # Return NaN if sensor is not working
         return self.state.get(f"{sensor_name}_distance", float("inf"))
 
     def get_left_distance(self) -> float:

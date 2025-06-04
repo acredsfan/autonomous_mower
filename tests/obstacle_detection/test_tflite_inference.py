@@ -1,11 +1,12 @@
 """
 Test module for test_tflite_inference.py.
 """
+import argparse
+import time
+
 import numpy as np
 import tflite_runtime.interpreter as tflite  # Use the runtime interpreter
 from PIL import Image
-import time
-import argparse
 
 
 def run_inference_test(model_path, image_path, input_size_wh):

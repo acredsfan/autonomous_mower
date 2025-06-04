@@ -6,9 +6,10 @@ allowing for power monitoring across three channels simultaneously.
 The INA3221 can measure voltage, current, and power on three separate channels.
 """
 
+import adafruit_ina3221
 import board
 import busio
-import adafruit_ina3221
+
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -65,22 +66,14 @@ class INA3221Sensor:
                 }
             else:
                 # Log the error instead of raising ValueError immediately
-                logger.error(
-                    "Invalid channel for INA3221: %s. Must be 1, 2, or 3.",
-                    channel)
+                logger.error("Invalid channel for INA3221: %s. Must be 1, 2, or 3.", channel)
                 return {}  # Return empty dict for invalid channel
         except (OSError, RuntimeError) as e:  # Catch potential I2C read errors
-            logger.error(
-                "I2C Error reading INA3221 channel %s: %s",
-                channel,
-                e)
+            logger.error("I2C Error reading INA3221 channel %s: %s", channel, e)
             return {}
         # Replace generic Exception with specific ones
         except (ValueError, AttributeError) as e:
-            logger.error(
-                "Unexpected error reading INA3221 channel %s: %s",
-                channel,
-                e)
+            logger.error("Unexpected error reading INA3221 channel %s: %s", channel, e)
             return {}
 
 

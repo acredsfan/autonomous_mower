@@ -7,7 +7,7 @@ exceptions, making it easier to handle errors in a consistent way.
 """
 
 import traceback
-from typing import Optional, Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 
 class MowerError(Exception):
@@ -38,9 +38,7 @@ class MowerError(Exception):
         self.error_code = error_code
         self.original_exception = original_exception
         self.context = context or {}
-        self.traceback = (
-            traceback.format_exc() if original_exception else None
-        )
+        self.traceback = traceback.format_exc() if original_exception else None
 
         # Call the base class constructor with the message
         super().__init__(message)
@@ -83,9 +81,7 @@ class MowerError(Exception):
             parts.append(f"Error code: {self.error_code}")
 
         if self.context:
-            context_str = ", ".join(
-                f"{k}={v}" for k, v in self.context.items()
-            )
+            context_str = ", ".join(f"{k}={v}" for k, v in self.context.items())
             parts.append(f"Context: {context_str}")
 
         return " | ".join(parts)
@@ -168,11 +164,7 @@ def convert_exception(
     # Find the most specific matching exception type
     for exc_type, mower_error_class in EXCEPTION_MAP.items():
         if isinstance(exception, exc_type):
-            return mower_error_class.from_exception(
-                exception, error_code=error_code, context=context
-            )
+            return mower_error_class.from_exception(exception, error_code=error_code, context=context)
 
     # Default to base MowerError if no specific match
-    return MowerError.from_exception(
-        exception, error_code=error_code, context=context
-    )
+    return MowerError.from_exception(exception, error_code=error_code, context=context)

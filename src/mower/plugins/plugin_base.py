@@ -7,7 +7,7 @@ plugin system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 
 class Plugin(ABC):

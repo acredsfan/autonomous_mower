@@ -12,7 +12,7 @@
                 Oops! Something went wrong
             {% endif %}
         </h1>
-        
+
         <div class="error-message">
             {% if error_message %}
                 {{ error_message }}
@@ -20,13 +20,13 @@
                 An unexpected error occurred. Please try again later.
             {% endif %}
         </div>
-        
+
         <div class="error-details">
             {% if error_details %}
                 <pre>{{ error_details }}</pre>
             {% endif %}
         </div>
-        
+
         <div class="error-actions">
             <a href="{{ url_for('index') }}" class="btn btn-primary">
                 <i class="fas fa-home"></i> Return to Dashboard
@@ -48,7 +48,7 @@
         min-height: 60vh;
         padding: 2rem;
     }
-    
+
     .error-content {
         text-align: center;
         max-width: 600px;
@@ -57,23 +57,23 @@
         border-radius: var(--border-radius);
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .error-title {
         color: var(--danger);
         margin-bottom: 1.5rem;
     }
-    
+
     .error-message {
         font-size: 1.2rem;
         color: var(--dark);
         margin-bottom: 1.5rem;
     }
-    
+
     .error-details {
         margin: 1.5rem 0;
         text-align: left;
     }
-    
+
     .error-details pre {
         background-color: var(--dirt-pale);
         padding: 1rem;
@@ -81,14 +81,14 @@
         overflow-x: auto;
         font-size: 0.9rem;
     }
-    
+
     .error-actions {
         display: flex;
         gap: 1rem;
         justify-content: center;
         margin-top: 2rem;
     }
-    
+
     .error-actions .btn {
         min-width: 150px;
     }
