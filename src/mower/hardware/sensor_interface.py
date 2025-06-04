@@ -4,8 +4,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-import board
-import busio
+try:
+    import board
+    import busio
+except Exception:  # pragma: no cover - optional on non-Pi systems
+    board = None
+    busio = None
 
 from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.imu import BNO085Sensor
@@ -471,10 +475,45 @@ class SafetyMonitor:
 
 
 # Singleton accessor function
-sensor_interface_instance = EnhancedSensorInterface()
+sensor_interface_instance: Optional[HardwareSensorInterface] = None
 
 
-def get_sensor_interface():
+class MockSensorInterface(HardwareSensorInterface):
+    """Fallback implementation used when hardware sensors are unavailable."""
+
+    def start(self) -> None:
+        pass
+
+    def stop(self) -> None:
+        pass
+
+    def shutdown(self) -> None:
+        pass
+
+    def get_sensor_data(self) -> Dict[str, Any]:
+        return {}
+
+    def get_sensor_status(self) -> Dict[str, Any]:
+        return {}
+
+    def is_safe_to_operate(self) -> bool:
+        return True
+
+    def cleanup(self) -> None:
+        pass
+
+
+def get_sensor_interface() -> HardwareSensorInterface:
+    global sensor_interface_instance
+    if sensor_interface_instance is None:
+        try:
+            sensor_interface_instance = EnhancedSensorInterface()
+        except Exception as exc:  # pragma: no cover - hardware missing
+            logging.warning(
+                "Falling back to mock sensor interface due to initialization error: %s",
+                exc,
+            )
+            sensor_interface_instance = MockSensorInterface()
     return sensor_interface_instance
 
 
