@@ -1,9 +1,7 @@
-import json  # Added to resolve NameError
-import os
+# flake8: noqa
 
-# Add src to path for imports
+import os
 import sys
-import time
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -11,12 +9,16 @@ from unittest.mock import MagicMock, patch
 
 import requests  # weather_service.py uses requests
 
+# flake8: noqa: E402  # allow path manipulation before imports
+# ruff: noqa: E402
+
+
 project_root = Path(__file__).resolve().parent.parent.parent
 src_root = project_root / "src"
 if str(src_root) not in sys.path:
     sys.path.insert(0, str(src_root))
 
-from mower.weather.weather_service import WeatherConditions, WeatherService
+from mower.weather.weather_service import WeatherService
 
 # Import the logger from the service to check log messages if needed
 # from mower.weather.weather_service import logger as weather_service_logger

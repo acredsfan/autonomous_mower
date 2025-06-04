@@ -12,7 +12,7 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from mower.error_handling.error_codes import ErrorCode, get_error_details
+from mower.error_handling.error_codes import ErrorCode
 from mower.error_handling.exceptions import MowerError
 
 
@@ -179,12 +179,13 @@ def report_error(error: MowerError, log_level: int = logging.ERROR) -> None:
 # Register default error handlers
 def _register_default_handlers():
     """Register default error handlers."""
-    reporter = get_error_reporter()
+    # Retrieve the singleton reporter instance and attach default handlers here
+    get_error_reporter()
 
-    # Add default handlers here if needed
-    # For example, a handler to send critical errors to the UI
+    # Add default handlers here if needed, e.g. send critical errors to the UI
+    # Currently no handlers are registered by default.
 
-    pass
+    return None
 
 
 # Initialize default handlers
