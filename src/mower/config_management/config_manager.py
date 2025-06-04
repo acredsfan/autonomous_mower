@@ -1,13 +1,11 @@
-import json
-
-"""
-Configuration manager for the autonomous mower.
+"""Configuration manager for the autonomous mower.
 
 This module provides a centralized configuration manager for the autonomous mower
-project. It implements the ConfigurationInterface and provides methods for
-accessing and modifying configuration values from various sources.
+project. It implements the :class:`ConfigurationInterface` and exposes helpers
+for accessing and modifying configuration values from multiple sources.
 """
 
+import json
 import os
 import threading
 from typing import Any, Dict, List, Optional, Union
