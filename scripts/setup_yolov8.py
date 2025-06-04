@@ -1,18 +1,16 @@
 # Suppress matplotlib Axes3D warning globally
+import argparse
 import importlib.util
 import logging
-from pathlib import Path
 import subprocess
-import argparse
 import sys
 import warnings
 from datetime import datetime
+from pathlib import Path
+
 warnings.filterwarnings(
     "ignore",
-    message=(
-        "Unable to import Axes3D. This may be due to multiple versions of "
-        "Matplotlib"
-    ),
+    message=("Unable to import Axes3D. This may be due to multiple versions of " "Matplotlib"),
     category=UserWarning,
 )
 if importlib.util.find_spec("matplotlib") is None:
@@ -26,22 +24,20 @@ REQUIRED_FLATBUFFERS_VERSION = "23."
 def get_installed_version(package_name):
     """Get the installed version of a package using pip show."""
     try:
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "show", package_name
-        ], capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-m", "pip", "show", package_name], capture_output=True, text=True)
         if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if line.startswith('Version:'):
-                    return line.split(':', 1)[1].strip()
+            for line in result.stdout.split("\n"):
+                if line.startswith("Version:"):
+                    return line.split(":", 1)[1].strip()
     except Exception:
         pass
     return None
 
 
 def ensure_required_versions():
-    import sys
-    import subprocess
     import os
+    import subprocess
+    import sys
 
     # Check current installed versions using pip (not module imports)
     tf_ver = get_installed_version("tensorflow")
@@ -54,8 +50,7 @@ def ensure_required_versions():
         tf_install_spec = f"tensorflow=={REQUIRED_TF_VERSION}.*"
         installations_needed.append(("tensorflow", tf_install_spec))
     elif not tf_ver.startswith(REQUIRED_TF_VERSION):
-        print(
-            f"TensorFlow {tf_ver} found, downgrading to {REQUIRED_TF_VERSION}...")
+        print(f"TensorFlow {tf_ver} found, downgrading to {REQUIRED_TF_VERSION}...")
         tf_install_spec = f"tensorflow=={REQUIRED_TF_VERSION}.*"
         installations_needed.append(("tensorflow", tf_install_spec))
     else:
@@ -67,18 +62,14 @@ def ensure_required_versions():
         fb_install_spec = f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*"
         installations_needed.append(("flatbuffers", fb_install_spec))
     elif not flatbuffers_ver.startswith(REQUIRED_FLATBUFFERS_VERSION):
-        print(f"FlatBuffers {flatbuffers_ver} found, downgrading to "
-              f"{REQUIRED_FLATBUFFERS_VERSION}...")
+        print(f"FlatBuffers {flatbuffers_ver} found, downgrading to " f"{REQUIRED_FLATBUFFERS_VERSION}...")
         fb_install_spec = f"flatbuffers=={REQUIRED_FLATBUFFERS_VERSION}*"
         installations_needed.append(("flatbuffers", fb_install_spec))
     else:
         print(f"FlatBuffers {flatbuffers_ver} is compatible.")
 
     # Check for required ultralytics dependencies
-    required_deps = [
-        ("onnx", "onnx>=1.12.0,<1.18.0"),
-        ("protobuf", "protobuf>=4.21.6")
-    ]
+    required_deps = [("onnx", "onnx>=1.12.0,<1.18.0"), ("protobuf", "protobuf>=4.21.6")]
 
     for dep_name, dep_spec in required_deps:
         dep_ver = get_installed_version(dep_name)
@@ -90,11 +81,11 @@ def ensure_required_versions():
     if installations_needed:
         for package_name, install_spec in installations_needed:
             print(f"Installing {install_spec}...")
-            result = subprocess.run([
-                sys.executable, "-m", "pip", "install",
-                install_spec,
-                "--break-system-packages"
-            ], capture_output=True, text=True)
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", install_spec, "--break-system-packages"],
+                capture_output=True,
+                text=True,
+            )
             if result.returncode != 0:
                 print(f"Failed to install {package_name}: {result.stderr}")
                 sys.exit(1)
@@ -107,18 +98,14 @@ def ensure_required_versions():
         if tf_ver_new and tf_ver_new.startswith(REQUIRED_TF_VERSION):
             print(f"✓ TensorFlow {tf_ver_new} installed successfully")
         else:
-            print(
-                f"✗ TensorFlow installation verification failed: {tf_ver_new}")
+            print(f"✗ TensorFlow installation verification failed: {tf_ver_new}")
             sys.exit(1)
 
-        if (flatbuffers_ver_new and
-                flatbuffers_ver_new.startswith(REQUIRED_FLATBUFFERS_VERSION)):
-            print(
-                f"✓ FlatBuffers {flatbuffers_ver_new} installed successfully")
+        if flatbuffers_ver_new and flatbuffers_ver_new.startswith(REQUIRED_FLATBUFFERS_VERSION):
+            print(f"✓ FlatBuffers {flatbuffers_ver_new} installed successfully")
         else:
-            print(f"✗ FlatBuffers installation verification failed: "
-                  f"{flatbuffers_ver_new}")
-            sys.exit(1)        # Verify ultralytics dependencies
+            print(f"✗ FlatBuffers installation verification failed: " f"{flatbuffers_ver_new}")
+            sys.exit(1)  # Verify ultralytics dependencies
         for dep_name, _ in required_deps:
             dep_ver_new = get_installed_version(dep_name)
             if dep_ver_new:
@@ -137,19 +124,27 @@ def ensure_required_versions():
     # attributes
     try:
         import tensorflow as tf
-        tf_version = getattr(tf, '__version__', None)
+
+        tf_version = getattr(tf, "__version__", None)
         if tf_version is None:
             print("⚠️  TensorFlow __version__ missing. Fixing installation...")
             # Force clean reinstall
-            subprocess.run([
-                sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y",
-                "--break-system-packages"
-            ], capture_output=True)
-            subprocess.run([
-                sys.executable, "-m", "pip", "install",
-                f"tensorflow=={REQUIRED_TF_VERSION}.*",
-                "--break-system-packages", "--force-reinstall"
-            ], capture_output=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y", "--break-system-packages"],
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    f"tensorflow=={REQUIRED_TF_VERSION}.*",
+                    "--break-system-packages",
+                    "--force-reinstall",
+                ],
+                capture_output=True,
+            )
 
             print("TensorFlow reinstalled. Restarting script...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -181,16 +176,11 @@ Usage:
 try:
     from ultralytics import YOLO
 except ImportError:
-    print(
-        "Error: 'ultralytics' package not found. Please install it: "
-        "pip install ultralytics"
-    )
+    print("Error: 'ultralytics' package not found. Please install it: " "pip install ultralytics")
     sys.exit(1)
 
 # --- Configure Logging ---
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # --- COCO Label Map Content ---
 COCO_LABELS = """person
@@ -277,9 +267,7 @@ toothbrush""".splitlines()
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Set up YOLOv8 TFLite model via local export for obstacle detection"
-    )
+    parser = argparse.ArgumentParser(description="Set up YOLOv8 TFLite model via local export for obstacle detection")
     parser.add_argument(
         "--model",
         choices=["yolov8n", "yolov8s", "yolov8m"],
@@ -290,10 +278,7 @@ def parse_args():
         "--output",
         type=Path,
         default=None,
-        help=(
-            "Output directory for model and label files "
-            "(default: <repo_root>/models/)"
-        ),
+        help=("Output directory for model and label files " "(default: <repo_root>/models/)"),
     )
     parser.add_argument(
         "--imgsz",
@@ -329,9 +314,7 @@ def get_repo_root():
             return current
         current = current.parent
     # Fallback if not in a git repo (e.g., running script directly)
-    logging.warning(
-        "Could not find .git directory. Assuming current directory is root."
-    )
+    logging.warning("Could not find .git directory. Assuming current directory is root.")
     return Path.cwd().absolute()
 
 
@@ -364,11 +347,9 @@ def install_dependencies():
             logging.info(f"✓ {package} installed/verified.")
             installed_count += 1
         except subprocess.CalledProcessError:
-            logging.warning(
-                f"× Failed to install {package} via pip. Please install manually.")
+            logging.warning(f"× Failed to install {package} via pip. Please install manually.")
         except FileNotFoundError:
-            logging.error(
-                "× Failed to run pip. Is Python/pip configured correctly?")
+            logging.error("× Failed to run pip. Is Python/pip configured correctly?")
             return False  # Critical failure
     return installed_count > 0
 
@@ -382,8 +363,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         logging.info(f"Loading base model: {pt_model_name}...")
         model = YOLO(pt_model_name)  # Downloads .pt if needed
 
-        logging.info(
-            f"Exporting {model_name} to TFLite with args: {export_args}...")
+        logging.info(f"Exporting {model_name} to TFLite with args: {export_args}...")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine expected filename based on export args
@@ -396,10 +376,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
 
         # Run export (it might save file relative to CWD)
         export_result_path_str = model.export(**export_args)
-        logging.info(
-            f"Ultralytics export function returned: "
-            f"{export_result_path_str}"
-        )
+        logging.info(f"Ultralytics export function returned: " f"{export_result_path_str}")
 
         # --- Locate the exported file ---
         found_path = None
@@ -411,13 +388,10 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
         ):
             found_path = Path(export_result_path_str)
             expected_filename = found_path.name  # Use the actual name
-            logging.info(
-                f"Located exported model at: {found_path}"
-            )
+            logging.info(f"Located exported model at: {found_path}")
         else:
             # Fallback search if the return value wasn't helpful
-            logging.warning(
-                "Export function did not return a valid path. Searching...")
+            logging.warning("Export function did not return a valid path. Searching...")
             # Try common patterns
             possible_filenames = [
                 f"{model_name}{quant_suffix}.tflite",
@@ -434,9 +408,7 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
                     if potential_path.is_file():
                         found_path = potential_path
                         expected_filename = fname
-                        logging.info(
-                            f"Found exported model at: {found_path}"
-                        )
+                        logging.info(f"Found exported model at: {found_path}")
                         break
                 if found_path:
                     break
@@ -447,15 +419,10 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             try:
                 output_dir.mkdir(parents=True, exist_ok=True)
                 found_path.rename(target_model_path)
-                logging.info(
-                    f"Moved exported model to: {target_model_path}"
-                )
+                logging.info(f"Moved exported model to: {target_model_path}")
                 return target_model_path
             except OSError as e:
-                logging.error(
-                    f"Failed to move model from {found_path} to "
-                    f"{target_model_path}: {e}"
-                )
+                logging.error(f"Failed to move model from {found_path} to " f"{target_model_path}: {e}")
                 return None  # Indicate failure
         else:
             logging.error(
@@ -466,25 +433,19 @@ def export_yolov8_model(model_name: str, output_dir: Path, export_args: dict):
             return None
 
     except Exception as e:
-        logging.error(
-            f"Error during model export for {model_name}: {e}",
-            exc_info=True
-        )
+        logging.error(f"Error during model export for {model_name}: {e}", exc_info=True)
         # FlatBuffers/TensorFlow/onnx2tf version bug detection
-        if ("Builder.EndVector() missing 1 required positional argument" in str(
-                e) or "EndVector()" in str(e)):
+        if "Builder.EndVector() missing 1 required positional argument" in str(e) or "EndVector()" in str(e):
             logging.error(
                 "\n❌ TFLite export failed due to a known incompatibility "
                 "between TensorFlow, FlatBuffers, and onnx2tf.\n"
                 "Try downgrading TensorFlow to 2.14.x and FlatBuffers to 23.x, "
                 "and ensure onnx2tf is >=1.26.0.\n"
                 "See: https://github.com/onnx/onnx-tensorflow/issues/1682 "
-                "and Ultralytics export docs.\n")
-        if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
-            logging.error(
-                "INT8 quantization requires a dataset. "
-                "Please provide --data path/to/coco.yaml"
+                "and Ultralytics export docs.\n"
             )
+        if "Dataset 'None' not found" in str(e) and export_args.get("int8"):
+            logging.error("INT8 quantization requires a dataset. " "Please provide --data path/to/coco.yaml")
         return None
 
 
@@ -495,9 +456,7 @@ def save_label_map(output_dir: Path):
         output_dir.mkdir(parents=True, exist_ok=True)
         with open(labelmap_path, "w") as f:
             f.write("\n".join(COCO_LABELS))
-        logging.info(
-            f"COCO label map saved to {labelmap_path}"
-        )
+        logging.info(f"COCO label map saved to {labelmap_path}")
         return labelmap_path
     except IOError as e:
         logging.error(f"Failed to save label map to {labelmap_path}: {e}")
@@ -540,8 +499,7 @@ def update_env_file(model_path: Path, labelmap_path: Path):
     for line in lines:
         stripped_line = line.strip()
         # Check for YOLOv8 specific lines
-        if stripped_line.startswith(
-                "YOLO_MODEL_PATH="):  # Changed from YOLOV8_
+        if stripped_line.startswith("YOLO_MODEL_PATH="):  # Changed from YOLOV8_
             output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
             updated_model = True
             yolo_section_exists = True
@@ -559,10 +517,10 @@ def update_env_file(model_path: Path, labelmap_path: Path):
             yolo_section_exists = True
         # Check for old/conflicting lines to comment out
         elif (
-            stripped_line.startswith("OBSTACLE_MODEL_PATH=") or
-            stripped_line.startswith("LABEL_MAP_PATH=") or  # Old name
-            stripped_line.startswith("TPU_DETECTION_MODEL=") or
-            stripped_line.startswith("DETECTION_MODEL=")
+            stripped_line.startswith("OBSTACLE_MODEL_PATH=")
+            or stripped_line.startswith("LABEL_MAP_PATH=")  # Old name
+            or stripped_line.startswith("TPU_DETECTION_MODEL=")
+            or stripped_line.startswith("DETECTION_MODEL=")
         ):
             # Comment out old/conflicting model paths if not already commented
             if not stripped_line.startswith("#"):  # Check if already commented
@@ -596,22 +554,30 @@ def fix_tensorflow_corruption():
     """Fix TensorFlow installation if __version__ attribute is missing."""
     try:
         import tensorflow as tf
-        if not hasattr(tf, '__version__'):
+
+        if not hasattr(tf, "__version__"):
             print("⚠️  TensorFlow __version__ missing. Fixing installation...")
+            import os
             import subprocess
             import sys
-            import os
 
             # Force clean reinstall
-            subprocess.run([
-                sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y",
-                "--break-system-packages"
-            ], capture_output=True)
-            subprocess.run([
-                sys.executable, "-m", "pip", "install",
-                f"tensorflow=={REQUIRED_TF_VERSION}.*",
-                "--break-system-packages", "--force-reinstall"
-            ], capture_output=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "uninstall", "tensorflow", "-y", "--break-system-packages"],
+                capture_output=True,
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    f"tensorflow=={REQUIRED_TF_VERSION}.*",
+                    "--break-system-packages",
+                    "--force-reinstall",
+                ],
+                capture_output=True,
+            )
 
             print("TensorFlow reinstalled. Restarting script...")
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -634,10 +600,9 @@ def install_ultralytics_dependencies():
     print("Installing ultralytics dependencies...")
     for dep in dependencies:
         print(f"Installing {dep}...")
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "install", dep,
-            "--break-system-packages"
-        ], capture_output=True, text=True)
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", dep, "--break-system-packages"], capture_output=True, text=True
+        )
         if result.returncode != 0:
             print(f"Warning: Failed to install {dep}: {result.stderr}")
         else:
@@ -654,17 +619,18 @@ def scan_existing_models(models_dir: Path):
         for file_path in models_dir.glob("*.tflite"):
             if file_path.is_file():
                 stat = file_path.stat()
-                models.append({
-                    'path': file_path,
-                    'name': file_path.name,
-                    'size': stat.st_size,
-                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime(
-                        '%Y-%m-%d %H:%M:%S')
-                })
+                models.append(
+                    {
+                        "path": file_path,
+                        "name": file_path.name,
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                )
     except Exception as e:
         logging.warning(f"Error scanning models directory: {e}")
 
-    models.sort(key=lambda x: x['modified'], reverse=True)
+    models.sort(key=lambda x: x["modified"], reverse=True)
     return models
 
 
@@ -679,15 +645,16 @@ def scan_existing_labels(models_dir: Path):
     try:
         for pattern in label_patterns:
             for file_path in models_dir.glob(pattern):
-                if file_path.is_file() and file_path.suffix == '.txt':
+                if file_path.is_file() and file_path.suffix == ".txt":
                     stat = file_path.stat()
-                    labels.append({
-                        'path': file_path,
-                        'name': file_path.name,
-                        'size': stat.st_size,
-                        'modified': datetime.fromtimestamp(stat.st_mtime).strftime(
-                            '%Y-%m-%d %H:%M:%S')
-                    })
+                    labels.append(
+                        {
+                            "path": file_path,
+                            "name": file_path.name,
+                            "size": stat.st_size,
+                            "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+                        }
+                    )
     except Exception as e:
         logging.warning(f"Error scanning for label files: {e}")
 
@@ -695,18 +662,18 @@ def scan_existing_labels(models_dir: Path):
     seen = set()
     unique_labels = []
     for label in labels:
-        if label['path'] not in seen:
+        if label["path"] not in seen:
             unique_labels.append(label)
-            seen.add(label['path'])
+            seen.add(label["path"])
 
-    unique_labels.sort(key=lambda x: x['modified'], reverse=True)
+    unique_labels.sort(key=lambda x: x["modified"], reverse=True)
     return unique_labels
 
 
 def format_file_size(size_bytes: int) -> str:
     """Format file size in human-readable format."""
     size = float(size_bytes)
-    for unit in ['B', 'KB', 'MB', 'GB']:
+    for unit in ["B", "KB", "MB", "GB"]:
         if size < 1024.0:
             return f"{size:.1f} {unit}"
         size /= 1024.0
@@ -722,7 +689,7 @@ def display_existing_models(models: list, labels: list):
     if models:
         print(f"\n📁 Found {len(models)} TFLite model(s):")
         for i, model in enumerate(models, 1):
-            size_str = format_file_size(model['size'])
+            size_str = format_file_size(model["size"])
             print(f"  {i}. {model['name']}")
             print(f"     Size: {size_str} | Modified: {model['modified']}")
     else:
@@ -731,7 +698,7 @@ def display_existing_models(models: list, labels: list):
     if labels:
         print(f"\n🏷️  Found {len(labels)} label file(s):")
         for i, label in enumerate(labels, 1):
-            size_str = format_file_size(label['size'])
+            size_str = format_file_size(label["size"])
             print(f"  {i}. {label['name']}")
             print(f"     Size: {size_str} | Modified: {label['modified']}")
     else:
@@ -745,7 +712,7 @@ def prompt_use_existing(models: list, labels: list) -> dict:
     print("=" * 60)
 
     if not models and not labels:
-        return {'action': 'download_new'}
+        return {"action": "download_new"}
 
     print("\nWhat would you like to do?")
     print("  1. 🔄 Download new YOLOv8 model (overwrite existing)")
@@ -760,11 +727,11 @@ def prompt_use_existing(models: list, labels: list) -> dict:
             choice = input("\nEnter your choice (1-3): ").strip()
 
             if choice == "1":
-                return {'action': 'download_new'}
+                return {"action": "download_new"}
             elif choice == "2" and models:
                 return prompt_select_existing_model(models, labels)
             elif choice == "3":
-                return {'action': 'exit'}
+                return {"action": "exit"}
             else:
                 if choice == "2" and not models:
                     print("❌ No existing models available to use.")
@@ -772,10 +739,10 @@ def prompt_use_existing(models: list, labels: list) -> dict:
                     print("❌ Invalid choice. Please enter 1, 2, or 3.")
         except KeyboardInterrupt:
             print("\n\n❌ Setup interrupted by user.")
-            return {'action': 'exit'}
+            return {"action": "exit"}
         except EOFError:
             print("\n\n❌ Setup interrupted.")
-            return {'action': 'exit'}
+            return {"action": "exit"}
 
 
 def prompt_select_existing_model(models: list, labels: list) -> dict:
@@ -790,7 +757,7 @@ def prompt_select_existing_model(models: list, labels: list) -> dict:
     else:
         print("\n📋 Select a TFLite model:")
         for i, model in enumerate(models, 1):
-            size_str = format_file_size(model['size'])
+            size_str = format_file_size(model["size"])
             print(f"  {i}. {model['name']} ({size_str})")
 
         while True:
@@ -801,12 +768,10 @@ def prompt_select_existing_model(models: list, labels: list) -> dict:
                     selected_model = models[idx]
                     break
                 else:
-                    print(
-                        f"❌ Please enter a number between 1 and {
-                            len(models)}")
+                    print(f"❌ Please enter a number between 1 and {len(models)}")
             except (ValueError, KeyboardInterrupt, EOFError):
                 print("\n❌ Invalid selection or interrupted.")
-                return {'action': 'exit'}
+                return {"action": "exit"}
 
     # Select label file
     if labels:
@@ -816,15 +781,13 @@ def prompt_select_existing_model(models: list, labels: list) -> dict:
         else:
             print("\n📋 Select a label file:")
             for i, label in enumerate(labels, 1):
-                size_str = format_file_size(label['size'])
+                size_str = format_file_size(label["size"])
                 print(f"  {i}. {label['name']} ({size_str})")
             print(f"  {len(labels) + 1}. Skip label file (use existing .env)")
 
             while True:
                 try:
-                    choice = input(
-                        f"\nSelect label file (1-{len(labels) + 1}): "
-                    ).strip()
+                    choice = input(f"\nSelect label file (1-{len(labels) + 1}): ").strip()
                     idx = int(choice) - 1
                     if 0 <= idx < len(labels):
                         selected_label = labels[idx]
@@ -834,31 +797,24 @@ def prompt_select_existing_model(models: list, labels: list) -> dict:
                         print("✅ Skipping label file selection")
                         break
                     else:
-                        print(
-                            f"❌ Please enter a number between 1 and "
-                            f"{len(labels) + 1}"
-                        )
+                        print(f"❌ Please enter a number between 1 and " f"{len(labels) + 1}")
                 except (ValueError, KeyboardInterrupt, EOFError):
                     print("\n❌ Invalid selection or interrupted.")
-                    return {'action': 'exit'}
+                    return {"action": "exit"}
 
-    return {
-        'action': 'use_existing',
-        'model': selected_model,
-        'label': selected_label
-    }
+    return {"action": "use_existing", "model": selected_model, "label": selected_label}
 
 
 def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
     """Configure the system to use existing model and label files."""
     try:
-        model_path = model_info['path']
+        model_path = model_info["path"]
 
         print("\n🔧 Configuring system to use existing model...")
         print(f"   Model: {model_path.name}")
 
         if label_info:
-            label_path = label_info['path']
+            label_path = label_info["path"]
             print(f"   Labels: {label_path.name}")
             update_env_file(model_path, label_path)
         else:
@@ -872,10 +828,7 @@ def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
             try:
                 relative_model_path = model_path.relative_to(repo_root)
             except ValueError:
-                logging.warning(
-                    f"Model path ({model_path}) is outside repo root. "
-                    "Using absolute path."
-                )
+                logging.warning(f"Model path ({model_path}) is outside repo root. " "Using absolute path.")
                 relative_model_path = model_path
 
             model_path_str = str(relative_model_path).replace("\\", "/")
@@ -902,8 +855,7 @@ def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
 
             # Add missing entries
             if not updated_model:
-                if not any("# YOLOv8 configuration" in line
-                           for line in output_lines):
+                if not any("# YOLOv8 configuration" in line for line in output_lines):
                     output_lines.append("\n# YOLOv8 configuration\n")
                 output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
             if not updated_flag:
@@ -970,23 +922,17 @@ def main():
                     logging.info("Continuing with download/export process...")
             else:
                 # Multiple models - let user select
-                selected_model, selected_label = prompt_select_existing_model(
-                    existing_models, existing_labels
-                )
+                selected_model, selected_label = prompt_select_existing_model(existing_models, existing_labels)
                 if selected_model:
-                    success = use_existing_model(
-                        selected_model, selected_label)
+                    success = use_existing_model(selected_model, selected_label)
                     if success:
-                        logging.info(
-                            "✅ Successfully configured existing model!")
+                        logging.info("✅ Successfully configured existing model!")
                         return
                     else:
                         logging.error("❌ Failed to configure existing model.")
-                        logging.info(
-                            "Continuing with download/export process...")
+                        logging.info("Continuing with download/export process...")
                 else:
-                    logging.info(
-                        "No model selected. Continuing with download...")
+                    logging.info("No model selected. Continuing with download...")
         elif choice == "exit":
             logging.info("Setup cancelled by user.")
             return
@@ -1043,8 +989,7 @@ def main():
         logging.info("Updating .env file...")
         update_env_file(model_path, labelmap_path)
     elif model_path:
-        logging.warning(
-            "Skipping .env update because label map saving failed.")
+        logging.warning("Skipping .env update because label map saving failed.")
     else:
         # This case shouldn't be reached due to sys.exit(1) earlier
         logging.warning("Skipping .env update because model export failed.")
@@ -1064,8 +1009,7 @@ def main():
     if model_path and labelmap_path:  # Corrected typo
         logging.info(f"  .env file updated at: {repo_root / '.env'}")
         logging.info("\n✓ YOLOv8 setup process completed successfully!")
-        logging.info(  # Corrected typo
-            "  Ensure 'tflite-runtime' is installed on the target device.")
+        logging.info("  Ensure 'tflite-runtime' is installed on the target device.")  # Corrected typo
     else:
         logging.error("\n× YOLOv8 setup process finished with errors.")
         sys.exit(1)

@@ -7,13 +7,13 @@ requiring physical hardware.
 """
 
 import math
-import time
-import threading
 import random
-from typing import Dict, Any, Optional, List, Tuple, Union, Type
+import threading
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 from mower.simulation.hardware_sim import SimulatedSensor
-from mower.simulation.world_model import get_world_instance, Vector2D
+from mower.simulation.world_model import get_world_instance
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Configure logging
@@ -48,9 +48,7 @@ class SimulatedGpsPosition(SimulatedSensor):
         self.noise_level = 0.0001  # Noise level in degrees (about 10m)
         self.reading_interval = 1.0  # 1Hz update rate (typical for GPS)
         self.fix_probability = 0.95  # Probability of having a GPS fix
-        self.dgps_probability = (
-            0.5  # Probability of having a DGPS fix if we have a fix
-        )
+        self.dgps_probability = 0.5  # Probability of having a DGPS fix if we have a fix
 
         # Initialize GPS parameters
         self.origin_lat = 37.7749  # San Francisco latitude
@@ -69,9 +67,7 @@ class SimulatedGpsPosition(SimulatedSensor):
         """Initialize the simulated GPS sensor."""
         # Start the NMEA generation thread
         self.running = True
-        self.thread = threading.Thread(
-            target=self._generate_nmea_sentences, daemon=True
-        )
+        self.thread = threading.Thread(target=self._generate_nmea_sentences, daemon=True)
         self.thread.start()
 
     def _cleanup_sim(self) -> None:
@@ -95,9 +91,7 @@ class SimulatedGpsPosition(SimulatedSensor):
         # 1 degree of latitude is approximately 111km
         # 1 degree of longitude is approximately 111km * cos(latitude)
         lat = self.origin_lat + position[1] / 111000.0
-        lng = self.origin_lng + position[0] / (
-            111000.0 * math.cos(math.radians(self.origin_lat))
-        )
+        lng = self.origin_lng + position[0] / (111000.0 * math.cos(math.radians(self.origin_lat)))
 
         # Add noise to lat/lng
         lat = self.add_noise(lat, self.noise_level)
@@ -106,11 +100,7 @@ class SimulatedGpsPosition(SimulatedSensor):
         # Convert lat/lng to UTM
         # In a real system, this would use a proper UTM conversion
         # For simulation, we'll use a simple approximation
-        easting = (
-            (lng - self.origin_lng)
-            * 111000.0
-            * math.cos(math.radians(self.origin_lat))
-        )
+        easting = (lng - self.origin_lng) * 111000.0 * math.cos(math.radians(self.origin_lat))
         northing = (lat - self.origin_lat) * 111000.0
 
         # Determine fix quality
@@ -170,22 +160,16 @@ class SimulatedGpsPosition(SimulatedSensor):
                 # Get the current position
                 position = self.state.get("position")
                 if position:
-                    timestamp, easting, northing, zone_number, zone_letter = (
-                        position
-                    )
+                    timestamp, easting, northing, zone_number, zone_letter = position
 
                     # Convert UTM to lat/lng
                     # In a real system, this would use a proper UTM conversion
                     # For simulation, we'll use a simple approximation
                     lat = self.origin_lat + northing / 111000.0
-                    lng = self.origin_lng + easting / (
-                        111000.0 * math.cos(math.radians(self.origin_lat))
-                    )
+                    lng = self.origin_lng + easting / (111000.0 * math.cos(math.radians(self.origin_lat)))
 
                     # Generate NMEA sentences
-                    nmea_sentences = self._generate_nmea_for_position(
-                        lat, lng
-                    )
+                    nmea_sentences = self._generate_nmea_for_position(lat, lng)
 
                     # Update state
                     with self._lock:
@@ -198,9 +182,7 @@ class SimulatedGpsPosition(SimulatedSensor):
                 logger.error(f"Error generating NMEA sentences: {e}")
                 time.sleep(1.0)
 
-    def _generate_nmea_for_position(
-        self, lat: float, lng: float
-    ) -> List[Tuple[float, str]]:
+    def _generate_nmea_for_position(self, lat: float, lng: float) -> List[Tuple[float, str]]:
         """
         Generate NMEA sentences for the given position.
 
@@ -229,6 +211,9 @@ class SimulatedGpsPosition(SimulatedSensor):
         time_str = f"{gps_time.tm_hour:02d}{gps_time.tm_min:02d}{gps_time.tm_sec:02d}"
         date_str = f"{gps_time.tm_year % 100:02d}{gps_time.tm_mon:02d}{gps_time.tm_mday:02d}"
         time_str = f"{time_str}.{int(timestamp % 1 * 1e3):03d}"  # Add milliseconds
+
+        # Generate a simple GPRMC sentence
+        rmc = f"$GPRMC,{time_str},A,{lat_nmea},{lat_dir},{lng_nmea},{lng_dir}," f"0.0,0.0,{date_str},,,A"
         rmc_checksum = self._calculate_nmea_checksum(rmc)
         rmc = f"{rmc}*{rmc_checksum:02X}"
 
@@ -244,13 +229,11 @@ class SimulatedGpsPosition(SimulatedSensor):
         age = ""  # Age of DGPS data
         ref_id = ""  # Reference station ID
 
- (
-     f"$GPGGA,{time_str},{lat_nmea},{lat_dir},{lng_nmea},{lng_dir},"
-     (
-         f"{quality},{satellites},{hdop:.1f},{altitude:.1f},{alt_unit},"
-         f"{geoid_height:.1f},{geoid_unit},{age},{ref_id}"
-     )
- )
+        gga = (
+            f"$GPGGA,{time_str},{lat_nmea},{lat_dir},{lng_nmea},{lng_dir},"
+            f"{quality},{satellites},{hdop:.1f},{altitude:.1f},{alt_unit},"
+            f"{geoid_height:.1f},{geoid_unit},{age},{ref_id}"
+        )
         gga_checksum = self._calculate_nmea_checksum(gga)
         gga = f"{gga}*{gga_checksum:02X}"
 
