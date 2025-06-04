@@ -1,20 +1,13 @@
-"""
-Download Coral EdgeTPU and TFLite models with robust error handling, retries,
-checksum verification, dry-run mode, and actionable logging.
+#!/usr/bin/env python3
+"""Download Coral EdgeTPU and TFLite models.
 
-Intended to replace fragile shell logic in setup_coral.sh.
+Example:
+    python3 download_coral_model.py --model detect_edgetpu.tflite \
+        --url https://github.com/google-coral/test_data/raw/master/ \
+            ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite \
+        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
 
-Usage:
-    python3 download_coral_model.py --model detect_edgetpu.tflite \\
-        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess_edgetpu.tflite \\ \        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
-
-    python3 download_coral_model.py --model detect.tflite \\
-        --url https://github.com/google-coral/test_data/raw/master/ssd_mobilenet_v2_coco_quant_postprocess.tflite \\ \        --checksum <sha256> --output_dir src/mower/obstacle_detection/models
-
-    python3 download_coral_model.py --model labelmap.txt \\
-        --url https://raw.githubusercontent.com/google-coral/test_data/master/coco_labels.txt \\ \        --output_dir src/mower/obstacle_detection/models
-
-Author: Autonomous Mower Team
+Author: Autonomous Mower Team.
 """
 
 import argparse
@@ -28,6 +21,7 @@ logger = logging.getLogger("download_coral_model")
 
 
 def main():
+    """CLI entry point to download models."""
     parser = argparse.ArgumentParser(description="Download Coral EdgeTPU/TFLite models with robust error handling.")
     parser.add_argument(
         "--model",

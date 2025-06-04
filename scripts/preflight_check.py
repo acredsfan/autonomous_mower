@@ -1,8 +1,8 @@
+#!/usr/bin/env python3
 import sys
 
 from src.mower.utilities.permission_check import run_permission_checks
 
-l  # !/usr/bin/env python3
 """
 Pre-flight permission check script for the autonomous mower project.
 
@@ -17,6 +17,7 @@ Usage:
 
 
 def main():
+    """Run permission checks before installation."""
     print("Running pre-flight permission checks...")
     success = run_permission_checks()
     if not success:
