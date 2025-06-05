@@ -123,9 +123,9 @@ load_env_config() {
                     [[ $key =~ ^[[:space:]]*# ]] && continue
                     [[ -z "$key" ]] && continue # Skip lines where key is empty initially
 
-                    # Remove leading/trailing whitespace and quotes
+                    # Remove leading/trailing whitespace and quotes  
                     key=$(echo "$key" | xargs)
-                    value=$(echo "$value" | xargs | sed 's/^["'\'']\\|["'\'']$//g')
+                    value=$(echo "$value" | xargs | sed 's/^["'"'"']//g' | sed 's/["'"'"']$//g')
 
                     # Skip empty keys again after xargs
                     [[ -z "$key" ]] && continue
