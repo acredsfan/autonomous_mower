@@ -122,13 +122,13 @@ load_env_config() {
 
                 # Load dual Wi-Fi specific variables
                 case "$key" in
-                    (DEFAULT_WIFI_SSID_MAIN) DEFAULT_SSID_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_PASS_MAIN) DEFAULT_PASS_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_SSID_FALLBACK) DEFAULT_SSID_FALLBACK="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_PASS_FALLBACK) DEFAULT_PASS_FALLBACK="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_COUNTRY) DEFAULT_COUNTRY="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_GATEWAY_MAIN) DEFAULT_GATEWAY_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_WIFI_GATEWAY_FALLBACK) DEFAULT_GATEWAY_FALLBACK="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_SSID_MAIN) DEFAULT_SSID_MAIN="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_PASS_MAIN) DEFAULT_PASS_MAIN="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_SSID_FALLBACK) DEFAULT_SSID_FALLBACK="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_PASS_FALLBACK) DEFAULT_PASS_FALLBACK="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_COUNTRY) DEFAULT_COUNTRY="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_GATEWAY_MAIN) DEFAULT_GATEWAY_MAIN="$value"; ((wifi_var_count++)) ;;
+                    (DEFAULT_GATEWAY_FALLBACK) DEFAULT_GATEWAY_FALLBACK="$value"; ((wifi_var_count++)) ;;
                 esac
             done < "$env_file"
 
