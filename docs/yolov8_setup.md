@@ -4,7 +4,7 @@ This document describes how to set up a YOLOv8 TFLite model for obstacle detecti
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - `pip` (Python package installer)
 - Git (for cloning the repository)
 - An internet connection (for downloading the base `.pt` model and dependencies if needed)
