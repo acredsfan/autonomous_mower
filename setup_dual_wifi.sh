@@ -12,13 +12,31 @@
 # Hardware: Raspberry Pi 4B/5 with dual Wi-Fi capability
 # Project: autonomous_mower
 #
-# Usage: sudo ./setup_dual_wifi_networkmanager.sh
+# Usage: sudo ./setup_dual_wifi_networkmanager.sh [--test-mode]
+#
+# Options:
+#   --test-mode    Run in test mode (skip hardware checks for development/testing)
 #
 # Author: Autonomous Mower Project
 # License: Project License
 # ============================================================================
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
+# Script execution mode
+TEST_MODE=false
+
+# Check for test mode flag
+for arg in "$@"; do
+    case $arg in
+        --test-mode)
+            TEST_MODE=true
+            shift
+            ;;
+        *)
+            ;;
+    esac
+done
 
 # Global configuration tracking
 CONFIG_SOURCE="defaults"
@@ -73,6 +91,12 @@ command_exists() {
 detect_network_manager() {
     log_info "Detecting network manager..."
 
+    if [[ "$TEST_MODE" == true ]]; then
+        NETWORK_MANAGER="networkmanager"
+        log_info "TEST MODE: Using NetworkManager as default"
+        return 0
+    fi
+
     if systemctl is-active --quiet NetworkManager 2>/dev/null; then
         NETWORK_MANAGER="networkmanager"
         log_info "✓ NetworkManager detected and active"
@@ -125,7 +149,12 @@ load_env_config() {
 
                     # Remove leading/trailing whitespace and quotes  
                     key=$(echo "$key" | xargs)
-                    value=$(echo "$value" | xargs | sed 's/^["'"'"']//g' | sed 's/["'"'"']$//g')
+                    value=$(echo "$value" | xargs)
+                    # Remove surrounding quotes (double or single)
+                    value=${value#\"} # Remove leading double quote
+                    value=${value%\"} # Remove trailing double quote
+                    value=${value#\'} # Remove leading single quote
+                    value=${value%\'} # Remove trailing single quote
 
                     # Skip empty keys again after xargs
                     [[ -z "$key" ]] && continue
@@ -284,6 +313,11 @@ validate_env_config() {
 
 check_system_requirements() {
     log_info "Checking system requirements..."
+
+    if [[ "$TEST_MODE" == true ]]; then
+        log_info "Running in TEST MODE - skipping hardware checks"
+        return 0
+    fi
 
     # Check if running with sudo
     if [[ $EUID -eq 0 ]]; then
