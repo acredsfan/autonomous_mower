@@ -48,7 +48,7 @@ Refer to coverage targets in [docs/test_coverage.md](docs/test_coverage.md)
 ## Prerequisites
 
 - Raspberry Pi 4B or newer (4GB RAM recommended)
-- Python 3.11 (Bookworm as of June 2025)
+- Python 3.9 or newer (tested with Python 3.11)
 - Raspberry Pi OS Bookworm (fully updated)
 - Camera module (v2 or v3 recommended)
 - Various sensors (see Hardware Setup)

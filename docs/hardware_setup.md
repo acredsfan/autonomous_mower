@@ -6,7 +6,7 @@ This document provides detailed instructions for setting up the hardware compone
 
 ## Software Dependencies
 
-- Python 3.10 or newer is required (Raspberry Pi OS Bookworm).
+- Python 3.9 or newer is required (Raspberry Pi OS Bookworm).
 - Install system dependencies:
 
 ```bash
