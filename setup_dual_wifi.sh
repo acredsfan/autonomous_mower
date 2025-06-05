@@ -99,56 +99,98 @@ detect_network_manager() {
 # ============================================================================
 
 load_env_config() {
-    local env_files=(".env" ".env.local" ".env.example")
-    local loaded=false
+    local env_files_to_check=(".env" ".env.local" ".env.example")
+    local loaded_successfully=false
+    ENV_FILE_PATH="" # Reset global ENV_FILE_PATH
 
-    log_info "Loading environment configuration..."
+    log_info "Attempting to load environment configuration..."
 
-    for env_file in "${env_files[@]}"; do
-        if [[ -f "$env_file" ]]; then
-            log_info "Found environment file: $env_file"
-            ENV_FILE_PATH="$env_file"
+    for env_file_candidate in "${env_files_to_check[@]}"; do
+        if [ -f "$env_file_candidate" ]; then
+            if [ -s "$env_file_candidate" ]; then # Check if file is not empty
+                ENV_FILE_PATH="$env_file_candidate"
+                log_info "Found environment file: $ENV_FILE_PATH" # User sees this
+                CONFIG_SOURCE="$ENV_FILE_PATH"
+                
+                local wifi_var_count=0
+                # Temporarily store loaded values before assigning to DEFAULT_ vars
+                local temp_ssid_main="" temp_pass_main="" temp_ssid_fallback="" temp_pass_fallback=""
+                local temp_country="" temp_gateway_main="" temp_gateway_fallback=""
 
-            # Load and count valid Wi-Fi variables
-            local wifi_var_count=0
-            while IFS='=' read -r key value; do
-                # Skip comments and empty lines
-                [[ $key =~ ^[[:space:]]*# ]] && continue
-                [[ -z "$key" ]] && continue
+                # Read the file
+                while IFS='=' read -r key value || [ -n "$key" ]; do
+                    # Skip comments and empty lines
+                    [[ $key =~ ^[[:space:]]*# ]] && continue
+                    [[ -z "$key" ]] && continue # Skip lines where key is empty initially
 
-                # Remove leading/trailing whitespace and quotes
-                key=$(echo "$key" | xargs)
-                value=$(echo "$value" | xargs | sed 's/^["'\'']\|["'\'']$//g')
+                    # Remove leading/trailing whitespace and quotes
+                    key=$(echo "$key" | xargs)
+                    value=$(echo "$value" | xargs | sed 's/^["'\'']\\|["'\'']$//g')
 
-                # Load dual Wi-Fi specific variables
-                case "$key" in
-                    (DEFAULT_SSID_MAIN) DEFAULT_SSID_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_PASS_MAIN) DEFAULT_PASS_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_SSID_FALLBACK) DEFAULT_SSID_FALLBACK="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_PASS_FALLBACK) DEFAULT_PASS_FALLBACK="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_COUNTRY) DEFAULT_COUNTRY="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_GATEWAY_MAIN) DEFAULT_GATEWAY_MAIN="$value"; ((wifi_var_count++)) ;;
-                    (DEFAULT_GATEWAY_FALLBACK) DEFAULT_GATEWAY_FALLBACK="$value"; ((wifi_var_count++)) ;;
-                esac
-            done < "$env_file"
+                    # Skip empty keys again after xargs
+                    [[ -z "$key" ]] && continue
 
-            if [[ $wifi_var_count -gt 0 ]]; then
-                CONFIG_SOURCE="$env_file ($wifi_var_count variables loaded)"
-                loaded=true
-                log_info "✓ Loaded $wifi_var_count dual Wi-Fi variables from $env_file"
-                break
+                    # log_info "Processing key: '$key', value: '$value'" # Uncomment for deep debugging
+                    case "$key" in
+                        (DEFAULT_SSID_MAIN) temp_ssid_main="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_PASS_MAIN) temp_pass_main="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_SSID_FALLBACK) temp_ssid_fallback="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_PASS_FALLBACK) temp_pass_fallback="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_COUNTRY) temp_country="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_GATEWAY_MAIN) temp_gateway_main="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_GATEWAY_FALLBACK) temp_gateway_fallback="$value"; ((wifi_var_count++)) ;;
+                    esac
+                done < "$ENV_FILE_PATH"
+
+                log_info "Finished reading $ENV_FILE_PATH. Wi-Fi variables found in file: $wifi_var_count."
+
+                if [ "$wifi_var_count" -gt 0 ]; then
+                    # Update DEFAULT_ variables if values were found
+                    [ -n "$temp_ssid_main" ] && DEFAULT_SSID_MAIN="$temp_ssid_main"
+                    [ -n "$temp_pass_main" ] && DEFAULT_PASS_MAIN="$temp_pass_main"
+                    [ -n "$temp_ssid_fallback" ] && DEFAULT_SSID_FALLBACK="$temp_ssid_fallback"
+                    [ -n "$temp_pass_fallback" ] && DEFAULT_PASS_FALLBACK="$temp_pass_fallback"
+                    [ -n "$temp_country" ] && DEFAULT_COUNTRY="$temp_country"
+                    [ -n "$temp_gateway_main" ] && DEFAULT_GATEWAY_MAIN="$temp_gateway_main"
+                    [ -n "$temp_gateway_fallback" ] && DEFAULT_GATEWAY_FALLBACK="$temp_gateway_fallback"
+                    
+                    log_info "Successfully processed $wifi_var_count variables from $ENV_FILE_PATH."
+                    loaded_successfully=true
+                else
+                    log_warn "Environment file $ENV_FILE_PATH was read, but no recognized dual Wi-Fi variables were found or values were empty."
+                    ((ENV_LOAD_FAILURES++))
+                fi
+                break # Exit loop once a file is successfully processed or attempted
             else
-                log_warn "⚠ $env_file found but contains no dual Wi-Fi variables"
-                ((ENV_LOAD_FAILURES++))
+                log_warn "Found environment file $env_file_candidate, but it is empty. Skipping."
             fi
         fi
     done
 
-    if [[ "$loaded" != true ]]; then
-        CONFIG_SOURCE="built-in defaults (no .env file found)"
-        log_warn "⚠ No .env file with dual Wi-Fi configuration found, using defaults"
-        ((ENV_LOAD_FAILURES++))
+    if [[ "$loaded_successfully" == true ]]; then
+        log_info "Configuration will be based on $CONFIG_SOURCE."
+    else
+        log_warn "No .env file with Wi-Fi variables processed successfully. Using built-in default Wi-Fi settings."
+        CONFIG_SOURCE="built-in defaults"
+        # Ensure ENV_LOAD_FAILURES is incremented if no file was ever found or all were empty/failed
+        if [ -z "$ENV_FILE_PATH" ]; then # If no file was even found
+             ((ENV_LOAD_FAILURES++))
+        fi
     fi
+
+    # Always assign to operational variables from the (potentially updated) DEFAULT_ variables
+    SSID_MAIN="$DEFAULT_SSID_MAIN"
+    PASS_MAIN="$DEFAULT_PASS_MAIN"
+    SSID_FALLBACK="$DEFAULT_SSID_FALLBACK"
+    PASS_FALLBACK="$DEFAULT_PASS_FALLBACK"
+    COUNTRY="$DEFAULT_COUNTRY"
+    GATEWAY_MAIN="$DEFAULT_GATEWAY_MAIN"
+    GATEWAY_FALLBACK="$DEFAULT_GATEWAY_FALLBACK"
+
+    # Log final values being used (except passwords)
+    log_info "Effective Main SSID: $SSID_MAIN, Gateway: $GATEWAY_MAIN"
+    log_info "Effective Fallback SSID: $SSID_FALLBACK, Gateway: $GATEWAY_FALLBACK"
+    log_info "Effective Country: $COUNTRY"
 }
 
 # ============================================================================
