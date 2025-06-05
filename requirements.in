@@ -1,5 +1,4 @@
-# Core dependencies
-numpy>=2.2.6
+numpy>=1.26.4
 opencv-python>=4.8.1.78
 pillow>=10.3.0
 pyyaml>=6.0.2
@@ -7,7 +6,7 @@ python-dotenv>=1.1.0
 smbus2>=0.5.0
 RPi.GPIO>=0.7.0; sys_platform == "linux"
 adafruit-circuitpython-mpu6050>=1.1.9; sys_platform == "linux"
-flask>=3.0.0F
+flask>=3.0.0
 flask-socketio>=5.5.1
 geopy>=2.1.0
 imutils>=0.5.4
@@ -16,16 +15,11 @@ pathfinding>=1.0.0
 pyserial>=3.5
 rtree>=1.0.0
 shapely>=2.0.7
-# tensorflow>=2.13.0 # Commented out: Full TF likely not needed on Pi, tflite-runtime is used.
 colorama>=0.4.4
 watchdog>=5.0.0
-
-# YOLOv8 dependencies
 ultralytics>=8.1.0
 onnx>=1.15.0
 onnxruntime>=1.16.0
-
-# System monitoring and safety
 psutil>=7.0.0
 py3nvml>=0.2.7
 pyudev>=0.24.3; sys_platform == "linux"
@@ -33,35 +27,20 @@ systemd-python>=234
 python-daemon>=3.0.1
 supervisor>=4.2.5
 prometheus_client>=0.17.0
-
-# GPS and navigation
 pynmea2>=1.18.0
 gpsd-py3>=0.3.0; sys_platform == "linux"
 utm>=0.7.0
-
-# Sensors and hardware
 adafruit-circuitpython-bme280>=2.6.0; sys_platform == "linux"
 adafruit-circuitpython-bno08x>=1.0.0; sys_platform == "linux"
 adafruit-circuitpython-ina3221>=1.0.0; sys_platform == "linux"
 adafruit-circuitpython-vl53l0x>=3.0.0; sys_platform == "linux"
-# picamera2 is installed via apt (python3-picamera2)
-
-# Coral TPU dependencies
-# Ensure tflite-runtime is present for Raspberry Pi (Linux)
 tflite-runtime>=2.14.0
-# Ensure pycoral is present for Coral support on Raspberry Pi (Linux)
-
-# Security
 safety>=3.2.14
 bandit>=1.7.5
 pyOpenSSL>=23.0.0
 certifi>=2024.7.4
-
-# Monitoring
 grafana-client>=2.3.0; sys_platform == "linux"
 statsd>=4.0.1
-
-# Development dependencies
 pytest>=8.3.5
 black>=25.1.0
 flake8>=3.9.2
@@ -76,7 +55,6 @@ tox>=4.15.0
 sphinx>=7.4.7
 sphinx-rtd-theme>=2.0.0
 pre-commit>=3.6.0
-
 flask-cors>=5.0.1
 scipy>=1.10.1
 pydantic>=2.11.5
