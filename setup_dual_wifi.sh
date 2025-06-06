@@ -135,7 +135,7 @@ load_env_config() {
                 ENV_FILE_PATH="$env_file_candidate"
                 log_info "Found environment file: $ENV_FILE_PATH" # User sees this
                 CONFIG_SOURCE="$ENV_FILE_PATH"
-                
+
                 local wifi_var_count=0
                 # Temporarily store loaded values before assigning to DEFAULT_ vars
                 local temp_ssid_main="" temp_pass_main="" temp_ssid_fallback="" temp_pass_fallback=""
@@ -147,7 +147,7 @@ load_env_config() {
                     [[ $key =~ ^[[:space:]]*# ]] && continue
                     [[ -z "$key" ]] && continue # Skip lines where key is empty initially
 
-                    # Remove leading/trailing whitespace and quotes  
+                    # Remove leading/trailing whitespace and quotes
                     key=$(echo "$key" | xargs)
                     value=$(echo "$value" | xargs)
                     # Remove surrounding quotes (double or single)
@@ -182,7 +182,7 @@ load_env_config() {
                     [ -n "$temp_country" ] && DEFAULT_COUNTRY="$temp_country"
                     [ -n "$temp_gateway_main" ] && DEFAULT_GATEWAY_MAIN="$temp_gateway_main"
                     [ -n "$temp_gateway_fallback" ] && DEFAULT_GATEWAY_FALLBACK="$temp_gateway_fallback"
-                    
+
                     log_info "Successfully processed $wifi_var_count variables from $ENV_FILE_PATH."
                     loaded_successfully=true
                 else
@@ -502,7 +502,7 @@ configure_networkmanager() {
         ifname wlan1 ssid "$SSID_MAIN" \
         wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
         connection.autoconnect yes connection.autoconnect-priority 10 \
-        ipv4.method auto ipv6.method ignore
+        ipv4.route-metric 100 ipv4.method auto ipv6.method ignore
 
     # Create fallback Wi-Fi connection (lower priority)
     log_info "Creating fallback Wi-Fi connection (wlan0)..."
@@ -510,7 +510,7 @@ configure_networkmanager() {
         ifname wlan0 ssid "$SSID_FALLBACK" \
         wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
         connection.autoconnect yes connection.autoconnect-priority 5 \
-        ipv4.method auto ipv6.method ignore
+        ipv4.route-metric 200 ipv4.method auto ipv6.method ignore
 
     # Set country code in NetworkManager
     if [[ -f /etc/NetworkManager/conf.d/wifi-country.conf ]]; then

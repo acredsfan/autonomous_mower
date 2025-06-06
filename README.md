@@ -700,8 +700,7 @@ Consider using the dual WiFi setup if:
 2. **Run the setup script**:
 
    ```bash
-   chmod +x setup_dual_wifi.sh
-   ./setup_dual_wifi.sh
+   sudo ./setup_dual_wifi.sh
    ```
 
 3. **Configure your WiFi credentials**:
