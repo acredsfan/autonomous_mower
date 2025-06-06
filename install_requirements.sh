@@ -1001,7 +1001,8 @@ install_python_dependencies() {
 
     print_info "Installing Python dependencies from requirements.txt..."
     if [ -f "requirements.txt" ]; then
-        "$PIP_CMD" install --break-system-packages -r requirements.txt
+        # Avoid uninstall errors for distutils packages shipped by apt
+        "$PIP_CMD" install --break-system-packages --ignore-installed -r requirements.txt
         check_command "Installing dependencies from requirements.txt" || return 1
     else
         print_error "requirements.txt not found."
