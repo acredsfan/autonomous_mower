@@ -1241,8 +1241,18 @@ install_specific_feature() {
                 check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
 
                 print_info "Installing PyCoral library (official Coral method: python3-pycoral)..."
-                sudo apt-get install -y python3-pycoral
-                check_command "Installing python3-pycoral" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install python3-pycoral via apt.\\n"
+                if sudo apt-get install -y python3-pycoral; then
+                    check_command "Installing python3-pycoral"
+                else
+                    print_warning "python3-pycoral package unavailable for this Python version. Falling back to pip."
+                    if sudo python3 -m pip install --break-system-packages \
+                        --extra-index-url https://google-coral.github.io/py-repo/ \
+                        "pycoral~=2.0"; then
+                        check_command "Installing pycoral via pip"
+                    else
+                        POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via apt and pip.\\n"
+                    fi
+                fi
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
@@ -1480,8 +1490,18 @@ run_full_installation() {
                 check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
 
                 print_info "Installing PyCoral library (python3-pycoral via apt)..."
-                sudo apt-get install -y python3-pycoral
-                check_command "Installing python3-pycoral" || POST_INSTALL_MESSAGES+="[ERROR] Failed to install python3-pycoral via apt.\n"
+                if sudo apt-get install -y python3-pycoral; then
+                    check_command "Installing python3-pycoral"
+                else
+                    print_warning "python3-pycoral package unavailable for this Python version. Falling back to pip."
+                    if sudo python3 -m pip install --break-system-packages \
+                        --extra-index-url https://google-coral.github.io/py-repo/ \
+                        "pycoral~=2.0"; then
+                        check_command "Installing pycoral via pip"
+                    else
+                        POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via apt and pip.\n"
+                    fi
+                fi
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
