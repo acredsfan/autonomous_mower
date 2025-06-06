@@ -144,3 +144,7 @@ fix_fstrings_README.md
 fix_fstrings.py
 linter_fixes.py
 library_update_report.md
+
+# Installer checkpoints
+.install_checkpoints
+.install_checkpoints.completed.*
