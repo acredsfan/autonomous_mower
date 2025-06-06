@@ -7,7 +7,7 @@ python-dotenv>=1.1.0
 smbus2>=0.5.0
 RPi.GPIO>=0.7.0; sys_platform == "linux"
 adafruit-circuitpython-mpu6050>=1.1.9; sys_platform == "linux"
-flask>=3.0.0F
+flask>=3.0.0
 flask-socketio>=5.5.1
 geopy>=2.1.0
 imutils>=0.5.4

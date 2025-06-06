@@ -6,27 +6,27 @@ python-dotenv>=1.1.0
 smbus2>=0.5.0
 RPi.GPIO>=0.7.0; sys_platform == "linux"
 adafruit-circuitpython-mpu6050>=1.1.9; sys_platform == "linux"
-flask>=3.0.0; sys_platform == "linux"
-flask-socketio>=5.5.1; sys_platform == "linux"
-geopy>=2.1.0; sys_platform == "linux"
-imutils>=0.5.4; sys_platform == "linux"
-networkx>=2.6.0; sys_platform == "linux"
-pathfinding>=1.0.0; sys_platform == "linux"
-pyserial>=3.5; sys_platform == "linux"
-rtree>=1.0.0; sys_platform == "linux"
-shapely>=2.0.7; sys_platform == "linux"
-colorama>=0.4.4; sys_platform == "linux"
-watchdog>=5.0.0; sys_platform == "linux"
-ultralytics>=8.1.0; sys_platform == "linux"
-onnx>=1.15.0; sys_platform == "linux"
-onnxruntime>=1.16.0; sys_platform == "linux"
-psutil>=7.0.0; sys_platform == "linux"
-py3nvml>=0.2.7; sys_platform == "linux"
+flask>=3.0.0
+flask-socketio>=5.5.1
+geopy>=2.1.0
+imutils>=0.5.4
+networkx>=2.6.0
+pathfinding>=1.0.0
+pyserial>=3.5
+rtree>=1.0.0
+shapely>=2.0.7
+colorama>=0.4.4
+watchdog>=5.0.0
+ultralytics>=8.1.0
+onnx>=1.15.0
+onnxruntime>=1.16.0
+psutil>=7.0.0
+py3nvml>=0.2.7
 pyudev>=0.24.3; sys_platform == "linux"
-systemd-python>=234; sys_platform == "linux"
-python-daemon>=3.0.1; sys_platform == "linux"
-supervisor>=4.2.5; sys_platform == "linux"
-prometheus_client>=0.17.0; sys_platform == "linux"
+systemd-python>=234
+python-daemon>=3.0.1
+supervisor>=4.2.5
+prometheus_client>=0.17.0
 pynmea2>=1.18.0
 gpsd-py3>=0.3.0; sys_platform == "linux"
 utm>=0.7.0
