@@ -1,61 +1,61 @@
 numpy
-opencv-python>=4.8.1.78
-pillow>=10.3.0
-pyyaml>=6.0.2
-python-dotenv>=1.1.0
-smbus2>=0.5.0
-RPi.GPIO>=0.7.0; sys_platform == "linux"
-adafruit-circuitpython-mpu6050>=1.1.9; sys_platform == "linux"
-flask>=3.0.0
-flask-socketio>=5.5.1
-geopy>=2.1.0
-imutils>=0.5.4
-networkx>=2.6.0
-pathfinding>=1.0.0
-pyserial>=3.5
-rtree>=1.0.0
-shapely>=2.0.7
-colorama>=0.4.4
-watchdog>=5.0.0
-ultralytics>=8.1.0
-onnx>=1.15.0
-onnxruntime>=1.16.0
+opencv-python
+pillow
+pyyaml
+python-dotenv
+smbus2
+RPi.GPIO; sys_platform == "linux"
+adafruit-circuitpython-mpu6050; sys_platform == "linux"
+flask
+flask-socketio
+geopy
+imutils
+networkx
+pathfinding
+pyserial
+rtree
+shapely
+colorama
+watchdog
+ultralytics
+onnx
+onnxruntime
 psutil
-py3nvml>=0.2.7
-pyudev>=0.24.3; sys_platform == "linux"
-systemd-python>=234
-python-daemon>=3.0.1
-supervisor>=4.2.5
-prometheus_client>=0.17.0
-pynmea2>=1.18.0
-gpsd-py3>=0.3.0; sys_platform == "linux"
-utm>=0.7.0
-adafruit-circuitpython-bme280>=2.6.0; sys_platform == "linux"
-adafruit-circuitpython-bno08x>=1.0.0; sys_platform == "linux"
-adafruit-circuitpython-ina3221>=1.0.0; sys_platform == "linux"
-adafruit-circuitpython-vl53l0x>=3.0.0; sys_platform == "linux"
-tflite-runtime>=2.14.0
-safety>=3.2.14
-bandit>=1.7.5
-pyOpenSSL>=23.0.0
-certifi>=2024.7.4
-grafana-client>=2.3.0; sys_platform == "linux"
-statsd>=4.0.1
-pytest>=8.3.5
-black>=25.1.0
-flake8>=3.9.2
-mypy>=1.16.0
-pytest-cov>=6.1.1
-pytest-mock>=3.12.0
-pytest-asyncio>=1.0.0
-pytest-timeout>=2.2.0
-pytest-xdist>=3.6.1
-coverage>=7.4.1
-tox>=4.15.0
-sphinx>=7.4.7
-sphinx-rtd-theme>=2.0.0
-pre-commit>=3.6.0
-flask-cors>=5.0.1
-scipy>=1.10.1
+py3nvml
+pyudev
+systemd-python
+python-daemon
+supervisor
+prometheus_client
+pynmea2
+gpsd-py3
+utm
+adafruit-circuitpython-bme280
+adafruit-circuitpython-bno08x
+adafruit-circuitpython-ina3221
+adafruit-circuitpython-vl53l0x
+tflite-runtime
+safety
+bandit
+pyOpenSSL
+certifi
+grafana-client
+statsd
+pytest
+black
+flake8
+mypy
+pytest-cov
+pytest-mock
+pytest-asyncio
+pytest-timeout
+pytest-xdist
+coverage
+tox
+sphinx
+sphinx-rtd-theme
+pre-commit
+flask-cors
+scipy
 pydantic
-Flask-Babel==4.0.0
+Flask-Babel
