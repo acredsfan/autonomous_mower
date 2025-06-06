@@ -243,6 +243,7 @@ Do you want to reset all checkpoints and start fresh? (y/N)
 rm .install_checkpoints
 sudo ./install_requirements.sh
 ```
+The `.install_checkpoints` file is ignored by Git, so it won't block `git pull` after running the installer.
 
 **Benefits:**
 
