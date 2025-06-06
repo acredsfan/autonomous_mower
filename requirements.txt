@@ -1,5 +1,5 @@
 # Core dependencies
-numpy>=2.2.6
+numpy
 opencv-python>=4.8.1.78
 pillow>=10.3.0
 pyyaml>=6.0.2
