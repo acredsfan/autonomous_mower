@@ -32,8 +32,14 @@ echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sud
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 sudo apt-get update
 
-# Install the Edge TPU runtime and Python libraries
-sudo apt-get install libedgetpu1-std python3-pycoral
+# Install the Edge TPU runtime
+sudo apt-get install libedgetpu1-std
+
+# Python 3.11 users (Raspberry Pi OS Bookworm)
+# Install PyCoral using the official Coral pip repository
+sudo python3 -m pip install --break-system-packages \
+    --extra-index-url https://google-coral.github.io/py-repo/ \
+    pycoral~=2.0
 ```
 
 For other systems, please refer to the [official Coral documentation](https://coral.ai/docs/accelerator/get-started/).
