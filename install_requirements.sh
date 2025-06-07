@@ -51,6 +51,12 @@ CHECKPOINT_FILE=".install_checkpoints"
 # Function to mark a step as completed
 mark_step_completed() {
     local step_name="$1"
+    # Ensure checkpoint file is writable
+    touch "$CHECKPOINT_FILE" 2>/dev/null || {
+        print_warning "Cannot write to checkpoint file $CHECKPOINT_FILE. Using /tmp/install_checkpoints instead."
+        CHECKPOINT_FILE="/tmp/.install_checkpoints"
+        touch "$CHECKPOINT_FILE"
+    }
     echo "$step_name=$(date '+%Y-%m-%d %H:%M:%S')" >> "$CHECKPOINT_FILE"
 }
 
@@ -87,7 +93,8 @@ prompt_skip_completed() {
     local description="$2"
 
     if is_step_completed "$step_name"; then
-        local completion_time=$(get_checkpoint_status "$step_name")        print_info "$description appears to be already completed (completed: $completion_time)"
+        local completion_time=$(get_checkpoint_status "$step_name")
+        print_info "$description appears to be already completed (completed: $completion_time)"
         prompt_user "Skip this step?" "Y" "Y/n"
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             print_info "Skipping $description..."
@@ -126,11 +133,15 @@ auto_detect_completed_steps() {
         fi
     fi
 
-    # Check Coral TPU
-    if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && command_exists python3 && python3 -c "import pycoral" 2>/dev/null; then
-        if ! is_step_completed "coral_tpu_setup"; then
-            mark_step_completed "coral_tpu_setup"
-            print_info "✓ Detected Coral TPU installation"
+    # Check Coral TPU (now looks for Python 3.9 virtual environment)
+    local coral_env_dir="$HOME/.coral-python-env"
+    if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && [ -d "$coral_env_dir" ] && [ -f "$coral_env_dir/bin/python" ]; then
+        # Test if PyCoral is available in the Coral environment
+        if "$coral_env_dir/bin/python" -c "import pycoral" 2>/dev/null; then
+            if ! is_step_completed "coral_tpu_setup"; then
+                mark_step_completed "coral_tpu_setup"
+                print_info "✓ Detected Coral TPU installation (Python 3.9 virtual environment)"
+            fi
         fi
     fi
 
@@ -392,7 +403,8 @@ validate_hardware() {
         fi
     elif ls /dev/video* >/dev/null 2>&1; then
         print_info "Legacy camera device(s) found: $(ls /dev/video*). Consider using libcamera stack."
-        POST_INSTALL_MESSAGES+="[INFO] Legacy camera device(s) found. For best results with Pi OS Bookworm and later, ensure you are using the libcamera stack and 'python3-picamera2'.\\n"    else
+        POST_INSTALL_MESSAGES+="[INFO] Legacy camera device(s) found. For best results with Pi OS Bookworm and later, ensure you are using the libcamera stack and 'python3-picamera2'.\\n"
+    else
         print_warning "No camera devices found (neither libcamera nor /dev/video*)."
         POST_INSTALL_MESSAGES+="[WARNING] No camera devices found. Obstacle detection with camera will not work.\\n"
         prompt_user "Continue installation without a camera?" "n" "y/n"
@@ -481,7 +493,9 @@ setup_watchdog() {
         else
             print_warning "Failed to load bcm2835_wdt module. Watchdog may not function."
         fi
-    fi    # Check if hardware watchdog device is available
+    fi
+
+    # Check if hardware watchdog device is available
     if [ ! -e /dev/watchdog ]; then
         print_warning "Hardware watchdog device /dev/watchdog not found."
         if [ "$IS_PI" = true ]; then
@@ -505,23 +519,22 @@ setup_watchdog() {
 
                     print_success "Added dtparam=watchdog=on to $CONFIG_TXT_TARGET"
                     POST_INSTALL_MESSAGES+="[IMPORTANT] Watchdog enabled in boot config. A REBOOT is required for hardware watchdog to become available.\\n"
-
-                    print_warning "Skipping watchdog service setup until after reboot."
-                    print_info "After rebooting, you can run the installation again or manually start watchdog with: sudo systemctl start watchdog"
-                    return 0
+                    POST_INSTALL_MESSAGES+="[INFO] After reboot, you can manually configure the watchdog service with: sudo systemctl enable watchdog && sudo systemctl start watchdog\\n"
                 else
                     print_info "Watchdog is enabled in boot config but device not found."
                     print_warning "This may require a reboot to take effect, or there might be a hardware issue."
+                    POST_INSTALL_MESSAGES+="[INFO] Watchdog is enabled in config but device not available. Try rebooting.\\n"
                 fi
             else
                 print_warning "Could not locate boot configuration file to enable watchdog."
+                POST_INSTALL_MESSAGES+="[WARNING] Could not automatically enable watchdog. Manually add 'dtparam=watchdog=on' to /boot/config.txt and reboot.\\n"
             fi
-
-            print_info "You can manually enable the watchdog by adding 'dtparam=watchdog=on' to /boot/config.txt and rebooting."
         else
             print_warning "Hardware watchdog not available on this system. This is normal for non-Raspberry Pi systems."
         fi
-        print_warning "Skipping watchdog service setup due to missing hardware support."
+        
+        print_warning "Skipping watchdog service setup due to missing hardware device."
+        POST_INSTALL_MESSAGES+="[INFO] Watchdog service setup skipped - hardware device not available.\\n"
         return 0
     fi
 
@@ -566,18 +579,33 @@ setup_watchdog() {
         print_info "Set watchdog-timeout to 15 seconds in /etc/watchdog.conf."
     fi
 
-    # Test watchdog configuration
-    print_info "Testing watchdog configuration..."
-    local config_test_output
-    config_test_output=$(sudo watchdog -t 1 -c /etc/watchdog.conf 2>&1)
-    local config_test_result=$?
-
-    if [ $config_test_result -eq 0 ]; then
-        print_info "Watchdog configuration test passed."
+    # Validate watchdog configuration file
+    print_info "Validating watchdog configuration..."
+    local config_valid=true
+    
+    # Check if watchdog.conf exists and has required settings
+    if [ -f /etc/watchdog.conf ]; then
+        if grep -q "^watchdog-device" /etc/watchdog.conf; then
+            print_info "✓ Watchdog device configured in /etc/watchdog.conf"
+        else
+            print_warning "⚠ Watchdog device not found in /etc/watchdog.conf"
+            config_valid=false
+        fi
+        
+        if grep -q "^watchdog-timeout" /etc/watchdog.conf; then
+            print_info "✓ Watchdog timeout configured in /etc/watchdog.conf"
+        else
+            print_warning "⚠ Watchdog timeout not found in /etc/watchdog.conf"
+        fi
+        
+        if $config_valid; then
+            print_info "Watchdog configuration validation passed."
+        else
+            print_warning "Watchdog configuration has some issues but proceeding with service setup..."
+        fi
     else
-        print_warning "Watchdog configuration test failed with exit code $config_test_result"
-        print_warning "Test output: $config_test_output"
-        print_warning "Proceeding anyway, but service may not work properly."
+        print_error "Watchdog configuration file /etc/watchdog.conf not found!"
+        return 1
     fi
       # Stop any existing watchdog service to avoid conflicts
     if sudo systemctl is-active --quiet watchdog 2>/dev/null; then
@@ -1098,6 +1126,207 @@ setup_mower_service() {
 }
 
 
+# Function to check if Python version is 3.10 or higher (kept for backwards compatibility)
+# Note: Coral TPU now always uses Python 3.9 virtual environment regardless of system Python version
+is_python_version_incompatible_with_coral() {
+    local python_version
+    python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+    if (( $(echo "$python_version >= 3.10" | bc -l 2>/dev/null || echo "0") )); then
+        return 0  # True: version is incompatible (3.10+)
+    else
+        return 1  # False: version is compatible (<3.10)
+    fi
+}
+
+# Function to install pyenv for managing Python versions
+install_pyenv() {
+    print_info "Installing pyenv for Python version management..."
+    
+    # Install dependencies for building Python
+    print_info "Installing build dependencies..."
+    sudo apt-get update
+    sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
+        libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
+        libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
+        libffi-dev liblzma-dev
+    
+    # Install pyenv
+    if [ ! -d "$HOME/.pyenv" ]; then
+        print_info "Cloning pyenv repository..."
+        curl https://pyenv.run | bash
+        
+        # Add pyenv to PATH for current session
+        export PYENV_ROOT="$HOME/.pyenv"
+        [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+        
+        # Add pyenv to shell profile
+        {
+            echo 'export PYENV_ROOT="$HOME/.pyenv"'
+            echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"'
+            echo 'eval "$(pyenv init -)"'
+        } >> "$HOME/.bashrc"
+        
+        print_success "pyenv installed successfully"
+    else
+        print_info "pyenv already installed"
+        # Ensure pyenv is available in current session
+        export PYENV_ROOT="$HOME/.pyenv"
+        [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+        eval "$(pyenv init -)"
+    fi
+}
+
+# Function to setup Python 3.9 virtual environment for Coral TPU
+setup_coral_python_env() {
+    local coral_env_dir="$HOME/.coral-python-env"
+    local python_version="3.9.18"  # Latest stable 3.9.x
+    
+    print_info "Setting up Python 3.9 environment for Coral TPU..."
+    
+    # Ensure pyenv is available
+    export PYENV_ROOT="$HOME/.pyenv"
+    [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    
+    # Install Python 3.9 if not already installed
+    if ! pyenv versions --bare | grep -q "^$python_version\$"; then
+        print_info "Installing Python $python_version via pyenv (this may take 10-15 minutes)..."
+        pyenv install "$python_version"
+        check_command "Installing Python $python_version" || {
+            print_error "Failed to install Python $python_version"
+            return 1
+        }
+    else
+        print_info "Python $python_version already installed"
+    fi
+    
+    # Create virtual environment for Coral
+    if [ ! -d "$coral_env_dir" ]; then
+        print_info "Creating Coral Python environment..."
+        "$HOME/.pyenv/versions/$python_version/bin/python" -m venv "$coral_env_dir"
+        check_command "Creating Coral virtual environment" || {
+            print_error "Failed to create Coral virtual environment"
+            return 1
+        }
+    else
+        print_info "Coral Python environment already exists"
+    fi
+    
+    # Activate the environment and install Coral dependencies
+    print_info "Installing Coral dependencies in Python 3.9 environment..."
+    source "$coral_env_dir/bin/activate"
+    
+    # Upgrade pip
+    python -m pip install --upgrade pip
+    
+    # Install Coral TPU runtime (system packages still needed)
+    print_info "Installing Edge TPU runtime packages..."
+    if [ ! -f "/etc/apt/sources.list.d/coral-edgetpu.list" ]; then
+        echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+        sudo apt-get update
+    fi
+    
+    sudo apt-get install -y libedgetpu1-std
+    check_command "Installing Edge TPU runtime" || {
+        print_error "Failed to install Edge TPU runtime"
+        deactivate
+        return 1
+    }
+    
+    # Install PyCoral and dependencies in the virtual environment
+    print_info "Installing PyCoral in Python 3.9 environment..."
+    python -m pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
+    check_command "Installing PyCoral" || {
+        print_error "Failed to install PyCoral in virtual environment"
+        deactivate
+        return 1
+    }
+    
+    # Install other required packages
+    python -m pip install numpy pillow tflite-runtime
+    check_command "Installing additional Coral dependencies"
+    
+    # Test the installation
+    print_info "Testing PyCoral installation..."
+    if python -c "import pycoral.utils.edgetpu; print('PyCoral import successful')"; then
+        print_success "PyCoral installed and working in Python 3.9 environment"
+        
+        # Create activation script for easy access
+        cat > "$HOME/activate-coral-env.sh" << 'EOF'
+#!/bin/bash
+# Activate the Coral Python 3.9 environment
+source "$HOME/.coral-python-env/bin/activate"
+echo "Coral Python 3.9 environment activated"
+echo "Python version: $(python --version)"
+echo "PyCoral available: $(python -c 'import pycoral; print("Yes")' 2>/dev/null || echo "No")"
+EOF
+        chmod +x "$HOME/activate-coral-env.sh"
+        
+        print_info "Created activation script: ~/activate-coral-env.sh"
+        POST_INSTALL_MESSAGES+="[SUCCESS] Coral TPU environment set up with Python 3.9\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Use 'source ~/activate-coral-env.sh' to activate Coral environment\\n"
+        POST_INSTALL_MESSAGES+="[INFO] Coral environment location: $coral_env_dir\\n"
+    else
+        print_error "PyCoral installation failed"
+        deactivate
+        return 1
+    fi
+    
+    deactivate
+    return 0
+}
+
+# Function to test Coral TPU installation in the dedicated environment
+test_coral_installation() {
+    local coral_env_dir="$HOME/.coral-python-env"
+    
+    if [ ! -d "$coral_env_dir" ]; then
+        print_error "Coral Python environment not found"
+        return 1
+    fi
+    
+    print_info "Testing Coral TPU installation..."
+    
+    # Test in the dedicated environment
+    source "$coral_env_dir/bin/activate"
+    
+    # Test PyCoral import
+    if python -c "import pycoral.utils.edgetpu; print('✓ PyCoral import successful')"; then
+        print_success "PyCoral is working in the dedicated environment"
+        
+        # Test hardware detection
+        if lsusb | grep -q "1a6e:089a"; then
+            print_success "✓ Coral USB Accelerator detected"
+            # Test actual TPU access
+            if python -c "
+from pycoral.utils import edgetpu
+try:
+    interpreters = edgetpu.list_edge_tpus()
+    if interpreters:
+        print(f'✓ Found {len(interpreters)} Coral TPU(s)')
+    else:
+        print('⚠ No Coral TPU detected (may need udev trigger)')
+except Exception as e:
+    print(f'⚠ Coral TPU access error: {e}')
+"; then
+                print_success "Coral TPU hardware test completed"
+            fi
+        else
+            print_warning "No Coral USB Accelerator detected via lsusb"
+            print_info "If you have a Coral TPU, ensure it's connected and run: sudo udevadm trigger"
+        fi
+    else
+        print_error "PyCoral import failed in dedicated environment"
+        deactivate
+        return 1
+    fi
+    
+    deactivate
+    return 0
+}
+
 # Function to show available installation features
 show_available_features() {
     echo ""
@@ -1204,6 +1433,13 @@ install_specific_feature() {
         5)
             print_info "Installing Python Dependencies..."
             install_python_dependencies
+            mark_step_completed "python_dependencies"
+            ;;
+        6)
+            # Option 6 is reserved/skipped in the current implementation
+            print_warning "Option 6 is not currently implemented."
+            print_info "This slot is reserved for future features."
+            return 0
             ;;
         7)
             print_info "Installing YOLOv8 Models..."
@@ -1229,30 +1465,29 @@ install_specific_feature() {
             fi
 
             if $CORAL_INSTALLED_OK; then
-                print_info "Adding Coral package repository..."
-                echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-                check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
-                curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-                check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
-                sudo apt-get update
-                check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
-                print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
-                sudo apt-get install -y libedgetpu1-std
-                check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-
-                print_info "Installing PyCoral library (official Coral method: python3-pycoral)..."
-                if sudo apt-get install -y python3-pycoral; then
-                    check_command "Installing python3-pycoral"
-                else
-                    print_warning "python3-pycoral package unavailable for this Python version. Falling back to pip."
-                    if sudo python3 -m pip install --break-system-packages \
-                        --extra-index-url https://google-coral.github.io/py-repo/ \
-                        "pycoral~=2.0"; then
-                        check_command "Installing pycoral via pip"
-                    else
-                        POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via apt and pip.\\n"
-                    fi
-                fi
+                print_info "Setting up Coral TPU with Python 3.9 virtual environment..."
+                print_info "Following official Coral documentation: Always use Python 3.9 for best compatibility."
+                
+                # Install pyenv if needed
+                install_pyenv
+                check_command "Installing pyenv" || {
+                    print_error "Failed to install pyenv"
+                    POST_INSTALL_MESSAGES+="[ERROR] Failed to install pyenv for Python 3.9 environment.\\n"
+                    return 1
+                }
+                
+                # Set up Python 3.9 environment for Coral (official recommendation)
+                setup_coral_python_env
+                check_command "Setting up Coral Python 3.9 environment" || {
+                    print_error "Failed to set up Coral Python 3.9 environment"
+                    POST_INSTALL_MESSAGES+="[ERROR] Failed to set up Python 3.9 environment for Coral.\\n"
+                    return 1
+                }
+                
+                print_success "Coral TPU support installed in Python 3.9 environment"
+                POST_INSTALL_MESSAGES+="[SUCCESS] Coral TPU installed in Python 3.9 environment.\\n"
+                POST_INSTALL_MESSAGES+="[INFO] Use 'source ~/activate-coral-env.sh' to activate Coral environment.\\n"
+                POST_INSTALL_MESSAGES+="[INFO] See docs/coral_setup.md for usage instructions.\\n"
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
@@ -1390,7 +1625,7 @@ run_full_installation() {
             "python3-pip" "python3-dev" "python3-setuptools" "python3-wheel"
             "git" "libatlas-base-dev" "libhdf5-dev"
             "libportaudio2" "libportaudiocpp0" "portaudio19-dev"
-            "wget" "curl" "gnupg"
+            "wget" "curl" "gnupg" "bc"
             "gdal-bin" "libgdal-dev" "python3-gdal"
         )
 
@@ -1445,7 +1680,10 @@ run_full_installation() {
         mark_step_completed "pythonpath_setup"
     fi
 
-    install_python_dependencies
+    if ! prompt_skip_completed "python_dependencies" "Python dependencies installation"; then
+        install_python_dependencies
+        mark_step_completed "python_dependencies"
+    fi
 
     prompt_user "Do you want to install/configure YOLOv8 models?" "y" "y/n"
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -1478,30 +1716,29 @@ run_full_installation() {
             fi
 
             if $CORAL_INSTALLED_OK; then
-                print_info "Adding Coral package repository..."
-                echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-                check_command "Adding Coral repository" || print_warning "Failed to add Coral repository."
-                curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-                check_command "Adding Coral GPG key" || print_warning "Failed to add Coral GPG key."
-                sudo apt-get update
-                check_command "Updating package list for Coral" || print_warning "Apt update for Coral failed."
-                print_info "Installing Edge TPU runtime (libedgetpu1-std)..."
-                sudo apt-get install -y libedgetpu1-std
-                check_command "Installing Edge TPU runtime" || print_error "Failed to install Edge TPU runtime."
-
-                print_info "Installing PyCoral library (python3-pycoral via apt)..."
-                if sudo apt-get install -y python3-pycoral; then
-                    check_command "Installing python3-pycoral"
-                else
-                    print_warning "python3-pycoral package unavailable for this Python version. Falling back to pip."
-                    if sudo python3 -m pip install --break-system-packages \
-                        --extra-index-url https://google-coral.github.io/py-repo/ \
-                        "pycoral~=2.0"; then
-                        check_command "Installing pycoral via pip"
-                    else
-                        POST_INSTALL_MESSAGES+="[ERROR] Failed to install pycoral via apt and pip.\n"
-                    fi
-                fi
+                print_info "Setting up Coral TPU with Python 3.9 virtual environment..."
+                print_info "Following official Coral documentation: Always use Python 3.9 for best compatibility."
+                
+                # Install pyenv if needed
+                install_pyenv
+                check_command "Installing pyenv" || {
+                    print_error "Failed to install pyenv"
+                    POST_INSTALL_MESSAGES+="[ERROR] Failed to install pyenv for Python 3.9 environment.\\n"
+                    return 1
+                }
+                
+                # Set up Python 3.9 environment for Coral (official recommendation)
+                setup_coral_python_env
+                check_command "Setting up Coral Python 3.9 environment" || {
+                    print_error "Failed to set up Coral Python 3.9 environment"
+                    POST_INSTALL_MESSAGES+="[ERROR] Failed to set up Python 3.9 environment for Coral.\\n"
+                    return 1
+                }
+                
+                print_success "Coral TPU support installed in Python 3.9 environment"
+                POST_INSTALL_MESSAGES+="[SUCCESS] Coral TPU installed in Python 3.9 environment.\\n"
+                POST_INSTALL_MESSAGES+="[INFO] Use 'source ~/activate-coral-env.sh' to activate Coral environment.\\n"
+                POST_INSTALL_MESSAGES+="[INFO] See docs/coral_setup.md for usage instructions.\\n"
             fi
             print_success "Coral TPU support setup attempted."
             mark_step_completed "coral_tpu_setup"
@@ -1552,6 +1789,48 @@ run_full_installation() {
     fi
 
     POST_INSTALL_MESSAGES+="[SUCCESS] Full installation completed successfully.\\n"
+    return 0
+}
+
+# Function to show installation summary and cleanup checkpoints on success
+show_installation_summary() {
+    echo ""
+    print_info "Installation Summary:"
+    echo ""
+
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        local total_steps=0
+        local completed_steps=0
+
+        # Count total possible steps
+        local all_steps=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
+        total_steps=${#all_steps[@]}
+
+        # Count completed steps
+        for step in "${all_steps[@]}"; do
+            if is_step_completed "$step"; then
+                ((completed_steps++))
+            fi
+        done
+
+        echo -e "  ${GREEN}Completed steps: $completed_steps/$total_steps${NC}"
+        echo ""
+
+        # Show completed steps
+        print_info "Completed installation steps:"
+        while IFS='=' read -r step timestamp; do
+            echo -e "  ${GREEN}✓${NC} $step (completed: $timestamp)"
+        done < "$CHECKPOINT_FILE"
+    fi
+}
+
+# Function to cleanup checkpoints on successful completion
+cleanup_checkpoints() {
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        print_info "Installation completed successfully. Cleaning up checkpoint file..."
+        mv "$CHECKPOINT_FILE" "${CHECKPOINT_FILE}.completed.$(date '+%Y%m%d_%H%M%S')"
+        print_success "Checkpoint file archived for reference."
+    fi
 }
 
 # --- Main Installation Logic ---
@@ -1590,6 +1869,9 @@ while true; do
                 rm -f "$CHECKPOINT_FILE"
             fi
             run_full_installation
+            print_success "Fresh installation completed."
+            show_installation_summary
+            cleanup_checkpoints
             break
             ;;
         2)
@@ -1600,11 +1882,15 @@ while true; do
                 print_info "No previous installation found. Starting fresh installation..."
                 run_full_installation
             fi
+            print_success "Installation completed."
+            show_installation_summary
+            cleanup_checkpoints
             break
             ;;
         3)
             print_info "Entering specific feature installation mode..."
             handle_specific_feature_menu
+            # Don't break here - return to main menu after specific features
             ;;
         4)
             echo ""
@@ -1651,46 +1937,6 @@ print_success "Installation and setup process complete."
 
 show_installation_summary
 cleanup_checkpoints
-
-# Function to show installation summary and cleanup checkpoints on success
-show_installation_summary() {
-    echo ""
-    print_info "Installation Summary:"
-    echo ""
-
-    if [ -f "$CHECKPOINT_FILE" ]; then
-        local total_steps=0
-        local completed_steps=0
-
-        # Count total possible steps
-        local all_steps=("hardware_interfaces" "additional_uart" "system_packages" "pythonpath_setup" "python_dependencies" "yolov8_setup" "coral_tpu_setup" "hardware_watchdog" "emergency_stop" "emergency_stop_skip" "systemd_service")
-        total_steps=${#all_steps[@]}
-
-        # Count completed steps
-        for step in "${all_steps[@]}"; do
-            if is_step_completed "$step"; then
-                ((completed_steps++))
-            fi
-        done
-
-        echo -e "  ${GREEN}Completed steps: $completed_steps/$total_steps${NC}"
-        echo ""
-
-        # Show completed steps
-        print_info "Completed installation steps:"
-        while IFS='=' read -r step timestamp; do
-            echo -e "  ${GREEN}✓${NC} $step (completed: $timestamp)"
-        done < "$CHECKPOINT_FILE"
-    fi
-}
-
-# Function to cleanup checkpoints on successful completion
-cleanup_checkpoints() {
-    if [ -f "$CHECKPOINT_FILE" ]; then
-        print_info "Installation completed successfully. Cleaning up checkpoint file..."
-        mv "$CHECKPOINT_FILE" "${CHECKPOINT_FILE}.completed.$(date '+%Y%m%d_%H%M%S')"        print_success "Checkpoint file archived for reference."
-    fi
-}
 
 if [ -n "$POST_INSTALL_MESSAGES" ]; then
     echo -e "\\n${YELLOW}--- Important Post-Installation Notes ---${NC}"

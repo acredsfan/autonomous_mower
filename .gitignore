@@ -157,3 +157,4 @@ yolov8n_saved_model/saved_model.pb
 yolov8n_saved_model/yolov8n_float16.tflite
 yolov8n_saved_model/variables/variables.data-00000-of-00001
 yolov8n_saved_model/variables/variables.index
+INSTALL_REQUIREMENTS_FIX_SUMMARY.md

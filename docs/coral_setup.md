@@ -22,9 +22,41 @@ This guide will help you set up the Google Coral USB Accelerator for improved ob
 3. Ensure the device is securely connected
 
 ### Step 2: Install Software Dependencies
-The system automatically detects the Coral device and will use it if available, but you need to install the required libraries.
 
-For Raspberry Pi or Debian-based systems:
+The installation script automatically handles Python version compatibility and Coral library installation.
+
+**Automatic Installation (Recommended):**
+Run the main installation script, which will automatically:
+- Detect your Python version
+- Set up the appropriate environment for Coral TPU
+- Install all required dependencies
+
+```bash
+./install_requirements.sh
+```
+
+**Important Notes about Python Compatibility:**
+- PyCoral only supports Python 3.6-3.9
+- If your system has Python 3.10+ (like newer Raspberry Pi OS), the script will:
+  - Automatically install pyenv
+  - Create a Python 3.9 virtual environment specifically for Coral
+  - Install PyCoral in that environment
+  - Create an activation script at `~/activate-coral-env.sh`
+
+**For Python 3.10+ Systems:**
+After installation, you'll need to activate the Coral environment when running Coral-dependent code:
+```bash
+# Activate the Coral environment
+source ~/activate-coral-env.sh
+
+# Run your mower code that uses Coral
+python your_script.py
+
+# The environment will remain active for that terminal session
+```
+
+**Manual Installation (Advanced Users):**
+For Raspberry Pi or Debian-based systems with Python 3.6-3.9:
 
 ```bash
 # Add the Coral repository
@@ -35,8 +67,10 @@ sudo apt-get update
 # Install the Edge TPU runtime
 sudo apt-get install libedgetpu1-std
 
-# Python 3.11 users (Raspberry Pi OS Bookworm)
-# Install PyCoral using the official Coral pip repository
+# Install PyCoral via apt (preferred for compatible Python versions)
+sudo apt-get install python3-pycoral
+
+# If apt installation fails, fallback to pip with Coral repository
 sudo python3 -m pip install --break-system-packages \
     --extra-index-url https://google-coral.github.io/py-repo/ \
     pycoral~=2.0
@@ -85,6 +119,59 @@ MIN_CONF_THRESHOLD=0.5
 1. Start the mower software
 2. Check the log for messages indicating the TPU was found and initialized
 3. You should see a message like: "Found X Edge TPU device(s). Using hardware acceleration."
+
+## Using Coral TPU with Python 3.10+ Systems
+
+If your system has Python 3.10 or higher, the installation script will have created a separate Python 3.9 environment for Coral compatibility.
+
+### Running the Mower with Coral Support
+
+**Option 1: Activate the environment manually**
+```bash
+# Activate the Coral environment
+source ~/activate-coral-env.sh
+
+# Run the mower (from the project directory)
+python -m mower.main_controller
+
+# Or run any other Coral-dependent scripts
+python scripts/test_coral_detection.py
+```
+
+**Option 2: Use the activation script in your service files**
+If you're running the mower as a systemd service, update your service file to activate the Coral environment:
+```bash
+# Edit your service file
+sudo nano /etc/systemd/system/autonomous-mower.service
+
+# Update the ExecStart line to include environment activation:
+ExecStart=/bin/bash -c 'source /home/pi/activate-coral-env.sh && python -m mower.main_controller'
+```
+
+### Development and Testing
+
+When developing or testing Coral-related features:
+```bash
+# Always activate the Coral environment first
+source ~/activate-coral-env.sh
+
+# Verify PyCoral is available
+python -c "import pycoral.utils.edgetpu; print('PyCoral is working!')"
+
+# Run your tests
+pytest tests/test_coral_detection.py
+```
+
+### Environment Details
+
+The Coral environment includes:
+- Python 3.9.18 (or latest 3.9.x)
+- PyCoral 2.0+ (installed via Coral's pip repository)
+- TensorFlow Lite Runtime
+- NumPy, Pillow, and other dependencies
+- All Edge TPU runtime libraries
+
+The environment is located at: `~/.coral-python-env/`
 
 ## Troubleshooting
 
