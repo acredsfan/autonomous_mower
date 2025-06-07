@@ -70,6 +70,7 @@ load_dotenv()
 IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA2")
 IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
 RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial comms.
+IMU_INIT_TIMEOUT_S = 15.0  # Timeout for IMU hardware initialization in seconds
 
 
 class IMUStatus(Enum):
@@ -150,90 +151,120 @@ class BNO085Sensor(IMUSensorInterface):
         self.tilt_threshold = float(os.getenv("TILT_THRESHOLD_DEG", "45.0"))
         self.last_impact_time = 0
         self.impact_cooldown = 1.0  # seconds between impact detections
-        self.safety_callbacks = []  # Only try hardware initialization on Linux platforms
+        self.safety_callbacks = []
+
         if platform.system() == "Linux" and HARDWARE_AVAILABLE:
-            try:
-                logger.debug(f"Attempting to initialize IMU on port {IMU_SERIAL_PORT} " f"at {IMU_BAUDRATE} baud.")
-                # Attempt to create and start the serial port
-                self.serial_port_wrapper = SerialPort(
-                    port=IMU_SERIAL_PORT,
-                    baudrate=IMU_BAUDRATE,
-                    timeout=0.1,  # Recommended for BNO08x stability
-                    receiver_buffer_size=RECEIVER_BUFFER_SIZE,
+            imu_init_thread = threading.Thread(target=self._perform_imu_hardware_init_attempt)
+            imu_init_thread.daemon = True
+            imu_init_thread.start()
+
+            imu_init_thread.join(timeout=IMU_INIT_TIMEOUT_S)
+
+            if imu_init_thread.is_alive():
+                logger.error(
+                    f"IMU hardware initialization timed out after {IMU_INIT_TIMEOUT_S}s. IMU will be unavailable."
                 )
-                self.serial_port_wrapper.start()  # This might raise SerialException
-
-                # If start() was successful, serial_port_wrapper.ser should be
-                # an open port
-                if not (self.serial_port_wrapper.ser and self.serial_port_wrapper.ser.is_open):
-                    logger.error(
-                        f"SerialPort.start() completed but port {IMU_SERIAL_PORT} " f"is not open. IMU unavailable."
-                    )
-                    # This condition implies serial_port_wrapper.start() didn't throw an
-                    # error but failed silently, which shouldn't happen based on
-                    # SerialPort.start() implementation.
-                    # However, as a safeguard, explicitly raise to be caught by the
-                    # broader handler.
-                    if serial:
-                        raise serial.SerialException(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
-                    else:
-                        raise Exception(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
-
-                logger.info(f"Serial port {IMU_SERIAL_PORT} opened successfully for IMU.")
-
-                # Now, initialize BNO08X_UART with the raw pyserial object
-                if BNO08X_UART:
-                    self.sensor = BNO08X_UART(self.serial_port_wrapper.ser, debug=False)  # Pass the .ser attribute
-                else:
-                    raise Exception("BNO08X_UART not available")
-
-                logger.debug("Enabling BNO_REPORT_ROTATION_VECTOR for IMU.")
-                if adafruit_bno08x and hasattr(adafruit_bno08x, "BNO_REPORT_ROTATION_VECTOR"):
-                    self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
-                # Optionally, enable other reports if needed:
-                # logger.debug("Enabling BNO_REPORT_ACCELEROMETER.")
-                # self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
-                # logger.debug("Enabling BNO_REPORT_GYROSCOPE.")
-                # self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
-
-                self.is_hardware_available = True
-                logger.info("BNO085 IMU sensor initialized successfully using BNO08X_UART.")
-
-            except Exception as e:
-                error_type = type(e).__name__
-                if serial and isinstance(e, serial.SerialException):
-                    logger.error(f"SerialException during IMU initialization on " f"port {IMU_SERIAL_PORT}: {e}")
-                elif isinstance(e, ImportError):
-                    logger.error(
-                        f"ImportError: {e}. Ensure adafruit_bno08x and pyserial " f"are installed. IMU unavailable."
-                    )
-                elif isinstance(e, AttributeError):
-                    logger.error(
-                        f"AttributeError during BNO08X_UART setup: {e}. "
-                        f"This likely means the wrong object type was passed to "
-                        f"BNO08X_UART."
-                    )
-                else:  # Catch any other unexpected errors
-                    logger.error(f"Unexpected {error_type} initializing BNO085 IMU sensor: {e}", exc_info=True)
-
-                self.is_hardware_available = False  # Mark IMU as unavailable
-                self.sensor = None  # Ensure sensor object is None
-
-                # If serial_port_wrapper was instantiated before the error,
-                # attempt to close it
+                self.is_hardware_available = False
+                self.sensor = None
+                # If self.serial_port_wrapper was instantiated within the (now stuck) thread,
+                # avoid trying to interact with it directly from here.
                 if self.serial_port_wrapper:
-                    logger.debug("Cleaning up serial port due to IMU initialization failure.")
-                    self.serial_port_wrapper.stop()
-                    self.serial_port_wrapper = None
-                    # Clear the reference to the wrapper
-
-        else:  # Non-Linux platform or hardware not available
-            if platform.system() != "Linux":
-                logger.info("Running on non-Linux platform. " "IMU sensor will return simulated values.")
+                    logger.warning(
+                        "IMU init thread is stuck; serial port wrapper might be in an inconsistent state."
+                    )
+                    self.serial_port_wrapper = None # Nullify our reference
             else:
-                logger.warning("Hardware modules not available. " "IMU sensor will return simulated values.")
+                # Thread completed. self.is_hardware_available should be set by the thread.
+                if not self.is_hardware_available:
+                    logger.error(
+                        "IMU hardware initialization thread completed but reported failure. IMU unavailable."
+                    )
+                # else: IMU initialized successfully (logged in thread)
+
+        else:  # Non-Linux platform or HARDWARE_AVAILABLE is False
+            if platform.system() != "Linux":
+                logger.info("Running on non-Linux platform. IMU sensor will return simulated values.")
+            else: # HARDWARE_AVAILABLE was false
+                logger.warning(
+                    "Required hardware modules (adafruit_bno08x, serial) not available. "
+                    "IMU sensor will return simulated values."
+                )
+            self.is_hardware_available = False # Explicitly set for simulation
 
         self._initialized = True
+
+    def _perform_imu_hardware_init_attempt(self):
+        """
+        Attempts to initialize the IMU hardware. This method is run in a separate thread.
+        It sets self.is_hardware_available, self.sensor, and self.serial_port_wrapper.
+        """
+        # Ensure these are reset for the current attempt
+        self.is_hardware_available = False
+        self.sensor = None
+        # Use a local variable for the serial port wrapper during this attempt
+        current_attempt_serial_wrapper = None
+
+        try:
+            logger.debug(
+                f"IMU Init Thread: Attempting to initialize IMU on port {IMU_SERIAL_PORT} "
+                f"at {IMU_BAUDRATE} baud."
+            )
+
+            current_attempt_serial_wrapper = SerialPort(
+                port=IMU_SERIAL_PORT,
+                baudrate=IMU_BAUDRATE,
+                timeout=0.1,
+                receiver_buffer_size=RECEIVER_BUFFER_SIZE,
+            )
+            current_attempt_serial_wrapper.start()
+
+            if not (current_attempt_serial_wrapper.ser and current_attempt_serial_wrapper.ser.is_open):
+                logger.error(
+                    f"IMU Init Thread: SerialPort.start() completed but port {IMU_SERIAL_PORT} "
+                    f"is not open. IMU unavailable."
+                )
+                # Check if 'serial' module was successfully imported before raising serial.SerialException
+                if serial:
+                    raise serial.SerialException(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+                else:
+                    raise Exception(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+
+            logger.info(f"IMU Init Thread: Serial port {IMU_SERIAL_PORT} opened successfully for IMU.")
+            # Assign to self.serial_port_wrapper only after successful open and start
+            self.serial_port_wrapper = current_attempt_serial_wrapper
+
+            if BNO08X_UART:
+                self.sensor = BNO08X_UART(self.serial_port_wrapper.ser, debug=False)
+            else:
+                logger.error("IMU Init Thread: BNO08X_UART library not available.")
+                raise ImportError("BNO08X_UART not available")
+
+            logger.debug("IMU Init Thread: Enabling BNO_REPORT_ROTATION_VECTOR for IMU.")
+            if adafruit_bno08x and hasattr(adafruit_bno08x, "BNO_REPORT_ROTATION_VECTOR"):
+                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
+            else:
+                logger.warning(
+                    "IMU Init Thread: Could not enable BNO_REPORT_ROTATION_VECTOR "
+                    "(adafruit_bno08x or feature missing)."
+                )
+                # Depending on how critical this feature is, you might want to raise an error here.
+
+            self.is_hardware_available = True
+            logger.info("IMU Init Thread: BNO085 IMU sensor initialized successfully using BNO08X_UART.")
+
+        except Exception as e_init:
+            error_type = type(e_init).__name__
+            logger.error(
+                f"IMU Init Thread: Failed during hardware initialization: {error_type}: {e_init}", exc_info=True
+            )
+            self.is_hardware_available = False # Ensure this is false on any error
+            self.sensor = None
+            if current_attempt_serial_wrapper:
+                logger.debug("IMU Init Thread: Cleaning up serial port due to initialization failure.")
+                current_attempt_serial_wrapper.stop()
+            # Ensure self.serial_port_wrapper is also None if it was assigned before an error
+            self.serial_port_wrapper = None
+        # No return value needed, method modifies instance attributes.
 
     def shutdown(self):
         """Cleanly shut down the IMU sensor and release resources."""

@@ -8,6 +8,8 @@ autonomous mower application.
 import logging
 import logging.handlers
 import os
+from pathlib import Path
+import time
 
 
 class LoggerConfigInfo:
@@ -26,6 +28,20 @@ class LoggerConfigInfo:
             return
 
         try:
+            # Ensure the log directory exists
+            log_dir_path = Path(cls._log_dir)
+            if not log_dir_path.exists():
+                try:
+                    log_dir_path.mkdir(parents=True, exist_ok=True)
+                    # Basic print for this specific case, as logger might not be fully set up
+                    print(f"Log directory {log_dir_path} created.")
+                except OSError as e:
+                    # Fallback to console logging if directory creation fails
+                    print(f"Error creating log directory {log_dir_path}: {e}. Logging to console only.")
+                    # Ensure file handler is not added if directory creation fails
+                    # by not setting _initialized to True or by handling it in the file handler setup.
+                    # For now, the existing check os.path.isdir(cls._log_dir) will prevent adding the handler.
+
             # Set up root logger
             root_logger = logging.getLogger()
             root_logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
@@ -42,9 +58,9 @@ class LoggerConfigInfo:
             console_handler.setFormatter(detailed_formatter)
             root_logger.addHandler(console_handler)
 
-            # Set up rotating file handler for main log if directory exists
-            if os.path.isdir(cls._log_dir):
-                main_log = os.path.join(cls._log_dir, "mower.log")
+            # Set up rotating file handler for main log if directory exists or was created
+            if log_dir_path.is_dir(): # Check again after attempting creation
+                main_log = log_dir_path / "mower.log"
                 file_handler = logging.handlers.RotatingFileHandler(
                     main_log, maxBytes=1024 * 1024, backupCount=5  # 1MB
                 )
@@ -57,9 +73,13 @@ class LoggerConfigInfo:
             root_logger.info("Logging system initialized successfully")
 
         except Exception as e:
-            # Use print as a fallback since logging might not be working
-            print(f"Failed to configure logging: {e}")
-            raise
+            # Use basic print for critical errors during logging setup
+            print(f"Critical error during logging configuration: {e}")
+            # Fallback to basic console logging if setup fails
+            logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            logging.error("Logging system failed to initialize properly. Using basicConfig.")
+
+        cls._initialized = True # Mark as initialized even if only console logging is active
 
     @classmethod
     def get_logger(cls, name: str) -> logging.Logger:
@@ -85,19 +105,27 @@ class LoggerConfigInfo:
             days: Number of days to keep logs for
         """
         # Remove log files older than the specified number of days
-        import os
-        import time
 
-        log_dir = "logs"
-        now = time.time()
-        cutoff = now - (days * 86400)
-        if os.path.exists(log_dir):
-            for filename in os.listdir(log_dir):
-                file_path = os.path.join(log_dir, filename)
-                if os.path.isfile(file_path):
-                    file_mtime = os.path.getmtime(file_path)
-                    if file_mtime < cutoff:
-                        try:
-                            os.remove(file_path)
-                        except Exception as e:
-                            print(f"Failed to remove old log file {file_path}: {e}")
+        log_directory = Path(cls._log_dir)  # Corrected line
+
+        # Ensure logging is configured before trying to log, or use basic print as fallback
+        # It's better to get a logger instance if possible.
+        logger_instance = cls.get_logger(__name__)
+
+        if not log_directory.is_dir():
+            logger_instance.warning(f"Log directory {log_directory} not found for cleanup.")
+            return
+
+        cutoff = time.time() - (days * 86400)
+        try:
+            for filename in os.listdir(log_directory):
+                file_path = log_directory / filename
+                if file_path.is_file():  # Ensure it's a file
+                    try:
+                        if file_path.stat().st_mtime < cutoff:
+                            file_path.unlink()
+                            logger_instance.info(f"Deleted old log file: {file_path}")
+                    except OSError as e:
+                        logger_instance.error(f"Error deleting log file {file_path}: {e}")
+        except OSError as e:
+            logger_instance.error(f"Error listing log directory {log_directory} for cleanup: {e}")
