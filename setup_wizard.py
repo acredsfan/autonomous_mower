@@ -306,44 +306,27 @@ def update_env_var(key: str, value: str) -> None:
     # before calling set_key to avoid internal permission errors in
     # python-dotenv
     if not ENV_FILE.exists():
-        print_info(f"Creating {ENV_FILE} with proper permissions...")
-        try:
-            if sys.platform.startswith("linux"):
-                # Use sudo to create file with proper ownership and permissions
-                subprocess.run(
-                    ["sudo", "touch", str(ENV_FILE)],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-
-                subprocess.run(
+        print_info(f"{ENV_FILE} does not exist, creating from example")
+        if ENV_EXAMPLE.exists():
+            shutil.copy(ENV_EXAMPLE, ENV_FILE)
+            print_success(f"Created {ENV_FILE} from {ENV_EXAMPLE}")
+        else:
+            ENV_FILE.touch()
+            print_info(f"Created empty {ENV_FILE}")
+        # Ensure proper permissions on Raspberry Pi
+        if sys.platform.startswith("linux"):
+            try:
+                result = subprocess.run(
                     ["sudo", "chmod", "664", str(ENV_FILE)],
-                    check=True,
                     capture_output=True,
                     text=True,
                 )
-
-                # Change ownership to current user
-                current_user = os.getenv("USER", "pi")
-                subprocess.run(
-                    ["sudo", "chown", f"{current_user}:{current_user}", str(ENV_FILE)],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
-
-                success_msg = f"Created {ENV_FILE} with proper permissions"
-                print_success(success_msg)
-            else:
-                # On Windows, just create normally
-                ENV_FILE.touch()
-                print_info(f"Created {ENV_FILE}")
-        except Exception as e:
-            print_error(f"Failed to create {ENV_FILE}: {e}")
-            print_info("Please manually create the .env file:")
-            print_info("sudo touch .env && sudo chmod 664 .env && sudo chown $USER:$USER .env")
-            sys.exit(1)  # Check if file is writable before attempting to write
+                if result.returncode == 0:
+                    print_success(f"Set proper permissions for {ENV_FILE}")
+                else:
+                    print_warning(f"Could not set permissions: {result.stderr}")
+            except Exception as e:
+                print_warning(f"Permission setting failed: {e}")
     elif not os.access(ENV_FILE, os.W_OK):
         warning_msg = f"{ENV_FILE} is not writable, fixing permissions..."
         print_warning(warning_msg)
