@@ -35,10 +35,11 @@ import os
 import platform
 import signal  # Added for signal handling
 import sys  # Added for sys.exit
-import threading
+import threading  # Added for threading.Lock
 import time
 from enum import Enum
 from typing import Any, Optional
+from pathlib import Path  # Added for Path()
 
 from dotenv import load_dotenv
 
@@ -119,7 +120,10 @@ if platform.system() == "Windows" or use_simulation_env in ("true", "1", "yes") 
 # CONFIG_DIR = BASE_DIR / "config"
 
 # Placeholder for watchdog interval, ensure this is appropriately defined
-WATCHDOG_INTERVAL_S = 10  # seconds, example value. Adjust as needed.
+# WATCHDOG_INTERVAL_S = 10  # seconds, example value. Adjust as needed.
+# Moved WATCHDOG_INTERVAL_S to be configurable via main_config.json or .env
+# Defaulting here if not found in config.
+WATCHDOG_INTERVAL_S = get_config("safety.watchdog_timeout", 15)
 
 
 # System state enumeration
@@ -1114,7 +1118,68 @@ class ResourceManager:
             self._initialized = False  # Ensure this is set on failure
 
     def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
-        """Returns the initialized obstacle detector instance."""
-        if not self.obstacle_detector:
-            logger.warning("Attempted to get obstacle_detector before it was initialized or initialization failed.")
-        return self.obstacle_detector
+        return self.get_resource("obstacle_detector")
+
+
+def main():
+    """
+    Main function to initialize and run the autonomous mower application.
+    """
+    logger.info("Starting Autonomous Mower Application...")
+
+    # Global stop event for all threads
+    stop_event = threading.Event()
+    resource_manager = None  # Ensure resource_manager is defined in this scope
+
+    def signal_handler(signum, frame):
+        logger.info(f"Received signal {signum}. Initiating graceful shutdown...")
+        stop_event.set()
+        # The cleanup will be handled in the finally block
+
+    # Register signal handlers for SIGINT (Ctrl+C) and SIGTERM
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    try:
+        # Initialize ResourceManager
+        # CONFIG_DIR is now APP_CONFIG_DIR from mower.config_management.constants
+        resource_manager = ResourceManager()
+        if not resource_manager.init_all_resources():
+            logger.error("Failed to initialize all resources. Shutting down.")
+            sys.exit(1)
+
+        logger.info("All resources initialized successfully.")
+
+        # Start the web interface (if not already started by init_all_resources)
+        # The web interface start is now handled within init_all_resources
+        # if resource_manager.get_web_interface():
+        # logger.info("Web interface started.")
+        # else:
+        # logger.warning("Web interface could not be started.")
+
+        # Start other background tasks or main operational loop here
+        # For now, we'll just keep the main thread alive until a shutdown signal
+        logger.info("Application started. Waiting for shutdown signal...")
+        while not stop_event.is_set():
+            # Keep the main thread alive, perhaps with a short sleep
+            # Or, if there's a main operational loop for the mower, it would go here.
+            # Example: resource_manager.run_mowing_cycle() or similar
+            time.sleep(1)  # Check for stop_event every second
+
+    except KeyboardInterrupt:
+        logger.info("KeyboardInterrupt received. Shutting down...")
+        stop_event.set()
+    except Exception as e:
+        logger.error(f"An unhandled exception occurred in main: {e}", exc_info=True)
+    finally:
+        logger.info("Initiating final cleanup...")
+        if resource_manager:
+            resource_manager.cleanup_all_resources()
+        logger.info("Application shutdown complete.")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    # This allows running the main_controller.py directly for testing/debugging
+    # In production, it's run via the 'mower' entry point defined in setup.py
+    main()
