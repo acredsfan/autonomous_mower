@@ -31,17 +31,54 @@ logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-PATH_TO_OBJECT_DETECTION_MODEL = os.getenv(
-    "OBSTACLE_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/detect.tflite"
-)
-PI5_IP = os.getenv("OBJECT_DETECTION_IP")  # IP address for remote detection
-# Update label map path to the correct location
-LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH", "/home/pi/mower/obstacle_detection/models/labelmap.txt")
+
+# Define default paths relative to the project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))  # Adjust based on actual structure
+DEFAULT_MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
+DEFAULT_LABEL_MAP_FILE = os.path.join(DEFAULT_MODEL_DIR, "labels.txt")  # coco_labels.txt or labels.txt
+DEFAULT_TFLITE_MODEL = os.path.join(DEFAULT_MODEL_DIR, "pimower_model-edge.tflite")  # or pimower_model.tflite
+DEFAULT_YOLOV8_MODEL = os.path.join(DEFAULT_MODEL_DIR, "yolov8n_float32.tflite")  # or yolov8n.pt, yolov8n.onnx
+
+PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
+if not PATH_TO_OBJECT_DETECTION_MODEL or not os.path.exists(PATH_TO_OBJECT_DETECTION_MODEL):
+    logger.warning(
+        f"OBSTACLE_MODEL_PATH env var not set or path invalid: {PATH_TO_OBJECT_DETECTION_MODEL}. "
+        f"Falling back to default: {DEFAULT_TFLITE_MODEL}"
+    )
+    PATH_TO_OBJECT_DETECTION_MODEL = DEFAULT_TFLITE_MODEL
+    if not os.path.exists(PATH_TO_OBJECT_DETECTION_MODEL):
+        logger.error(f"Default TFLite model not found: {DEFAULT_TFLITE_MODEL}")
+        # Potentially disable TFLite detection or raise an error
+
+PI5_IP = os.getenv("OBJECT_DETECTION_IP")
+
+LABEL_MAP_PATH = os.getenv("LABEL_MAP_PATH")
+if not LABEL_MAP_PATH or not os.path.exists(LABEL_MAP_PATH):
+    logger.warning(
+        f"LABEL_MAP_PATH env var not set or path invalid: {LABEL_MAP_PATH}. "
+        f"Falling back to default: {DEFAULT_LABEL_MAP_FILE}"
+    )
+    LABEL_MAP_PATH = DEFAULT_LABEL_MAP_FILE
+    if not os.path.exists(LABEL_MAP_PATH):
+        logger.error(f"Default label map not found: {DEFAULT_LABEL_MAP_FILE}")
+        # Potentially disable detection or raise an error
+
+
 MIN_CONF_THRESHOLD = float(os.getenv("MIN_CONF_THRESHOLD", "0.5"))
 USE_REMOTE_DETECTION = os.getenv("USE_REMOTE_DETECTION", "False").lower() == "true"
 
 # YOLOv8 specific environment variables
-YOLOV8_MODEL_PATH = os.getenv("YOLOV8_MODEL_PATH", "/home/pi/mower/obstacle_detection/models/yolov8n.tflite")
+YOLOV8_MODEL_PATH = os.getenv("YOLOV8_MODEL_PATH")
+if not YOLOV8_MODEL_PATH or not os.path.exists(YOLOV8_MODEL_PATH):
+    logger.warning(
+        f"YOLOV8_MODEL_PATH env var not set or path invalid: {YOLOV8_MODEL_PATH}. "
+        f"Falling back to default: {DEFAULT_YOLOV8_MODEL}"
+    )
+    YOLOV8_MODEL_PATH = DEFAULT_YOLOV8_MODEL
+    if not os.path.exists(YOLOV8_MODEL_PATH):
+        logger.warning(f"Default YOLOv8 model not found: {DEFAULT_YOLOV8_MODEL}. YOLOv8 will be disabled.")
+        # This will be handled by _initialize_yolov8 which checks USE_YOLOV8 and path existence
+
 USE_YOLOV8 = os.getenv("USE_YOLOV8", "True").lower() == "true"
 
 # Load labels if available

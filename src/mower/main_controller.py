@@ -1075,96 +1075,46 @@ class ResourceManager:
             logger.error(f"Error setting home location: {e}", exc_info=True)
             return False
 
+    def initialize_resources(self):
+        """Initialize all resources."""
+        if self._initialized:
+            logger.warning("Resources already initialized")
+            return
 
-def main():
-    """
-    Main entry point for the autonomous mower application.
+        try:
+            # Set up configuration paths - UPDATED to use APP_CONFIG_DIR
+            # APP_CONFIG_DIR existence is ensured before config manager init.
+            # self.user_polygon_path already uses APP_CONFIG_DIR from __init__
+            if not self.user_polygon_path.exists():
+                logger.warning(f"User polygon file not found at " f"{self.user_polygon_path}. Creating default.")
+                with open(self.user_polygon_path, "w", encoding="utf-8") as f:
+                    json.dump(
+                        {
+                            "boundary": [[0, 0], [10, 0], [10, 10], [0, 10]],
+                            "home": [5, 5],
+                        },
+                        f,
+                    )
 
-    This function:
-    1. Initializes logging.
-    2. Sets up signal handlers for graceful shutdown (SIGTERM, SIGINT).
-    3. Initializes the ResourceManager.
-    4. Starts the watchdog thread.
-    5. Starts the web interface.
-    6. Enters a main loop, waiting for a shutdown signal.
-    7. Cleans up resources on exit.
-    """
-    # MODIFIED: Changed setup_logging to configure_logging and fixed lint
-    # errors
-    LoggerConfigInfo.configure_logging()
-    logger.info("Initializing autonomous mower system...")
+            self._initialize_hardware()
+            self._initialize_software()
 
-    shutdown_flag = threading.Event()
-    resource_manager = None  # Initialize to None for robust finally block
-    exit_code = 0
+            # Initialize obstacle detector separately to manage dependencies
+            try:
+                self.obstacle_detector = get_obstacle_detector(resource_manager=self)
+                logger.info("Obstacle detector initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize obstacle detector: {e}", exc_info=True)
+                self.obstacle_detector = None # Ensure it's None on failure
 
-    def signal_handler(signum, frame):
-        logger.info(f"Signal {signal.Signals(signum).name} received. " "Initiating graceful shutdown...")
-        shutdown_flag.set()
+            self._initialized = True
+            logger.info("All resources initialized with fallbacks for any failures")
+        except Exception as e:
+            logger.error(f"Failed to initialize resources: {e}", exc_info=True)
+            self._initialized = False  # Ensure this is set on failure
 
-    # Register signal handlers
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-
-    try:
-        resource_manager = ResourceManager()
-        if not resource_manager.init_all_resources():
-            logger.error("Failed to initialize critical resources. Exiting application.")
-            exit_code = 1
-            # No need to call sys.exit here; finally block handles cleanup.
-            # Setting shutdown_flag ensures the loop (if it were to run)
-            # terminates.
-            shutdown_flag.set() # Ensure main loop terminates
-        else:
-            logger.info("All resources initialized successfully.")
-            resource_manager._start_watchdog()  # Start watchdog after successful init
-            resource_manager.start_web_interface()  # Start web UI
-
-            logger.info("Main controller running. Waiting for shutdown signal.")
-            while not shutdown_flag.is_set():
-                # Main operational logic would go here or be managed by
-                # other threads started by ResourceManager or a dedicated
-                # MainController class (if it existed separately).
-                # This loop keeps the main thread alive for signals.
-                time.sleep(0.5)  # Check flag periodically
-
-            logger.info("Shutdown signal received or init failed, exiting main loop.")
-
-    except SystemExit as e:
-        # This might be raised if sys.exit() is called directly somewhere
-        # unexpected.
-        logger.info(f"SystemExit caught with code {e.code}.")
-        exit_code = e.code if isinstance(e.code, int) else 1
-    except Exception as e:
-        logger.error(f"Unhandled exception in main: {e}", exc_info=True)
-        exit_code = 1  # Indicate an error occurred
-    finally:
-        logger.info("Main function's finally block: Initiating resource cleanup...")
-        if resource_manager:
-            resource_manager.cleanup_all_resources()
-        else:
-            logger.info("ResourceManager was not instantiated, no cleanup needed from it.")
-        
-        # Wait for non-daemon threads if any were started directly in main
-        # For now, assuming all critical threads are managed by ResourceManager
-        # or are daemon threads.
-
-        logger.info(f"Shutdown sequence complete. Exiting with code {exit_code}.")
-        # Ensure the process terminates with the correct code,
-        # especially when run directly as a script.
-        # sys.exit() should be the very last thing called.
-        if __name__ == "__main__": # Check if running as script
-            pass # sys.exit will be called after this block by Python if main returns
-    
-    # This return is important for when main() is called by other scripts/tests
-    # and for when __name__ == "__main__" to allow sys.exit to be called once.
-    return exit_code
-
-
-if __name__ == "__main__":
-    # sys.exit(main()) # Call sys.exit here to ensure it's the last operation
-    # Correction: The finally block in main() should handle sys.exit if it's the top-level script.
-    # If main() is imported, the caller should handle the exit code.
-    # The previous structure was a bit convoluted. Let's simplify.
-    final_exit_code = main()
-    sys.exit(final_exit_code)
+    def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
+        """Returns the initialized obstacle detector instance."""
+        if not self.obstacle_detector:
+            logger.warning("Attempted to get obstacle_detector before it was initialized or initialization failed.")
+        return self.obstacle_detector

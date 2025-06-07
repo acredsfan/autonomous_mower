@@ -58,13 +58,13 @@ class VL53L0XSensors:
 
                 status_messages = []
                 if self.left_sensor:
-                    addr = hex(self.left_sensor._address)  # Changed from device_address
+                    addr = hex(self.left_sensor._device.device_address)
                     status_messages.append(f"Left ToF sensor OK (Addr: {addr})")
                 else:
                     status_messages.append("Left ToF sensor FAILED")
 
                 if self.right_sensor:
-                    addr = hex(self.right_sensor._address)  # Changed from device_address
+                    addr = hex(self.right_sensor._device.device_address)
                     status_messages.append(f"Right ToF sensor OK (Addr: {addr})")
                 else:
                     status_messages.append("Right ToF sensor FAILED")
@@ -193,7 +193,7 @@ class VL53L0XSensors:
 
         # --- Initialize Left Sensor ---
         logging.info("Initializing Left ToF sensor...")
-        if right_sensor_obj and right_sensor_obj._address == _DEFAULT_I2C_ADDRESS:  # Changed from device_address
+        if right_sensor_obj and right_sensor_obj._device.device_address == _DEFAULT_I2C_ADDRESS:
             # This case implies right_target_addr was default.
             # Or, address change failed and it's still at default.
             # We must reset the right sensor to free up the default address.

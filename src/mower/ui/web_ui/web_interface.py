@@ -56,6 +56,11 @@ class WebInterface:
             self.logger.error(f"Failed to start web interface: {e}")
             raise
 
+    def run(self) -> None:
+        """Run the web interface (calls start)."""
+        self.logger.info("WebInterface.run() called, redirecting to start()")
+        self.start()
+
     def stop(self) -> None:
         """Stop the web interface.
 
