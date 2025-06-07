@@ -168,3 +168,7 @@ setup_state.json
 *.deb
 *.key
 main_config.json
+node_modules/
+package-lock.json
+package.json
+mcp.json
