@@ -425,15 +425,16 @@ class ResourceManager:
             if web_interface and hasattr(web_interface, "stop"):
                 try:
                     logger.info("Stopping web interface...")
-                    web_interface.stop()
+                    web_interface.stop()  # This now handles socketio.stop() internally
+                    # Ensure the thread is properly managed by WebInterface's stop method
+                    # The join should happen after web_interface.stop() has signaled the server
                     if self._web_interface_thread and self._web_interface_thread.is_alive():
                         logger.info("Waiting for web interface thread to join...")
-                        self._web_interface_thread.join(timeout=5)
+                        self._web_interface_thread.join(timeout=10) # Increased timeout slightly
                         if self._web_interface_thread.is_alive():
                             logger.warning("Web interface thread did not join in time.")
                 except Exception as e:
                     logger.error(f"Error stopping web interface: {e}", exc_info=True)
-
 
             # Cleanup other resources in reverse order of initialization if necessary
             # For now, iterating through all and calling cleanup if available

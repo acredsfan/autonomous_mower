@@ -69,22 +69,48 @@ class WebInterface:
             return
 
         try:
+            self.logger.info("Attempting to stop web interface...")
             # Signal the server to stop
-            self._stop_event.set()
+            if self.socketio:
+                self.logger.info("Requesting SocketIO server to stop...")
+                try:
+                    # This is a common way to ask Flask-SocketIO to shutdown
+                    # It might not be available in all versions or configurations
+                    # If this doesn't work, the thread join timeout is the fallback
+                    self.socketio.server.shutdown()
+                    self.logger.info("SocketIO server shutdown requested.")
+                except Exception as e:
+                    self.logger.warning(f"Could not explicitly call socketio.server.shutdown(): {e}. Relying on thread join.")
+
+            self._stop_event.set() # Ensure our internal stop event is also set
 
             # Wait for the server thread to complete
             if self._thread and self._thread.is_alive():
-                self._thread.join(timeout=5.0)
+                self.logger.info(f"Waiting for web server thread (id: {self._thread.ident}) to join...")
+                self._thread.join(timeout=10.0) # Increased timeout
+                if self._thread.is_alive():
+                    self.logger.warning(f"Web server thread (id: {self._thread.ident}) did not join in time.")
+                else:
+                    self.logger.info(f"Web server thread (id: {self._thread.ident}) joined successfully.")
 
-            # Clean up resources
+
+            # Clean up resources - socketio.stop() might be redundant if shutdown worked
+            # but it's good for cleanup.
             if self.socketio:
-                self.socketio.stop()
+                try:
+                    self.logger.info("Calling socketio.stop() for final cleanup...")
+                    self.socketio.stop() # Ensure this is called for cleanup
+                    self.logger.info("Socketio.stop() called.")
+                except Exception as e:
+                    self.logger.error(f"Error during socketio.stop(): {e}")
+
 
             self._is_running = False
             self.logger.info("Web interface stopped successfully")
         except Exception as e:
-            self.logger.error(f"Error stopping web interface: {e}")
-            raise
+            self.logger.error(f"Error stopping web interface: {e}", exc_info=True)
+            # Do not re-raise here if we want the main cleanup to continue
+            # raise
 
     def _run_server(self) -> None:
         """Run the web server.
