@@ -1636,15 +1636,6 @@ def main() -> None:
         print_info(f"Removed setup state file: {SETUP_STATE_FILE}")
 
     print_success("Setup wizard completed successfully!")
-except KeyboardInterrupt:
-    print("\n\nSetup interrupted. Your progress has been saved.")
-    print("Run this script again to continue from where you left off.")
-    sys.exit(0)
-except Exception as e:
-    print_error(f"An error occurred: {e}")
-    print("Your progress has been saved. Run this script again to continue.")
-    traceback.print_exc()
-    sys.exit(1)
 
 
 if __name__ == "__main__":
