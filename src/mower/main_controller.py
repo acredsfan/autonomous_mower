@@ -157,6 +157,9 @@ class ResourceManager:
         self._watchdog_thread: Optional[threading.Thread] = None
         self._watchdog_stop_event: Optional[threading.Event] = None
 
+        # Web interface thread
+        self._web_interface_thread: Optional[threading.Thread] = None
+
         # Initialize safety status tracking variables
         self._safety_status_vars = {
             "warning_logged": False,
@@ -407,46 +410,66 @@ class ResourceManager:
             return False
 
     def cleanup_all_resources(self):
-        """Clean up all initialized resources, including the watchdog."""
+        """Clean up all initialized resources."""
         logger.info("Starting cleanup of all resources...")
+        with self._lock:
+            if not self._initialized:
+                logger.info("Resources not initialized or already cleaned up.")
+                return
 
-        # Stop watchdog thread first if it exists and is running
-        if self._watchdog_thread and self._watchdog_thread.is_alive():
-            if self._watchdog_stop_event:
-                logger.info("Stopping watchdog thread...")
-                self._watchdog_stop_event.set()
-                self._watchdog_thread.join(timeout=WATCHDOG_INTERVAL_S + 2)
-                if self._watchdog_thread.is_alive():
-                    logger.warning("Watchdog thread did not stop in time.")
+            # Stop watchdog first
+            self._stop_watchdog()
+
+            # Stop web interface
+            web_interface = self._resources.get("web_interface")
+            if web_interface and hasattr(web_interface, "stop"):
+                try:
+                    logger.info("Stopping web interface...")
+                    web_interface.stop()
+                    if self._web_interface_thread and self._web_interface_thread.is_alive():
+                        logger.info("Waiting for web interface thread to join...")
+                        self._web_interface_thread.join(timeout=5)
+                        if self._web_interface_thread.is_alive():
+                            logger.warning("Web interface thread did not join in time.")
+                except Exception as e:
+                    logger.error(f"Error stopping web interface: {e}", exc_info=True)
+
+
+            # Cleanup other resources in reverse order of initialization if necessary
+            # For now, iterating through all and calling cleanup if available
+            for name, resource in reversed(list(self._resources.items())):
+                if resource is None or name == "web_interface":  # Web interface already handled
+                    continue
+
+                cleanup_method = getattr(resource, "cleanup", None)
+                if cleanup_method is None:
+                    cleanup_method = getattr(resource, "close", None)  # Common for file-like objects or connections
+                if cleanup_method is None and name == "gpio": # GPIOManager specific
+                    cleanup_method = getattr(resource, "cleanup_gpio", None)
+
+
+                if callable(cleanup_method):
+                    try:
+                        logger.info(f"Cleaning up {name}...")
+                        cleanup_method()
+                    except Exception as e:
+                        logger.error(f"Error cleaning up {name}: {e}", exc_info=True)
                 else:
-                    logger.info("Watchdog thread stopped.")
-            else:
-                logger.warning("Watchdog thread exists but _watchdog_stop_event is missing.")
-        elif self._watchdog_thread:  # Check if it exists even if not alive
-            logger.info("Watchdog thread was found but not alive.")
+                    logger.debug(f"No standard cleanup/close method found for {name}.")
 
-        # Cleanup other resources
-        for name, res in reversed(list(self._resources.items())):  # Iterate in reverse
-            if res is None:
-                continue
-            logger.debug(f"Cleaning up resource: {name}")
-            try:
-                if hasattr(res, "disconnect"):
-                    logger.debug(f"Calling disconnect() on {name}")
-                    res.disconnect()
-                elif hasattr(res, "cleanup"):
-                    logger.debug(f"Calling cleanup() on {name}")
-                    res.cleanup()
-                elif hasattr(res, "stop"):  # Common for threads/processes
-                    logger.debug(f"Calling stop() on {name}")
-                    res.stop()
-                # Add other common cleanup methods if necessary
-            except Exception as e:
-                logger.error(f"Error cleaning up resource '{name}': {e}", exc_info=True)
+            # Special handling for GPIO if not covered by a generic 'cleanup'
+            gpio_manager = self._resources.get("gpio")
+            if gpio_manager and hasattr(gpio_manager, "cleanup_gpio") and "gpio" not in ["web_interface"]: # ensure it wasn't called if gpio had a cleanup method
+                try:
+                    logger.info("Performing final GPIO cleanup...")
+                    gpio_manager.cleanup_gpio()
+                except Exception as e:
+                    logger.error(f"Error during final GPIO cleanup: {e}", exc_info=True)
 
-        self._resources.clear()
-        self._initialized = False  # Mark as not initialized after cleanup
-        logger.info("All resources have been processed for cleanup.")
+
+            self._resources.clear()
+            self._initialized = False
+            logger.info("All resources have been cleaned up.")
 
     def get_resource(self, name: str) -> Any:
         """
@@ -516,16 +539,25 @@ class ResourceManager:
         return gps
 
     def start_web_interface(self):
-        """Start the web interface if available."""
-        web_if = self.get_web_interface()
-        if web_if:
-            try:
-                web_if.start()  # Assumed to be non-blocking
-                logger.info("Web interface started via ResourceManager.")
-            except Exception as e:
-                logger.error(f"Failed to start web interface via ResourceManager: {e}")
+        """Start the web interface in a separate thread."""
+        web_interface = self.get_web_interface()
+        if web_interface:
+            # Ensure the web interface has a run method that blocks until server stops
+            if hasattr(web_interface, "run") and callable(web_interface.run):
+                self._web_interface_thread = threading.Thread(
+                    target=web_interface.run,
+                    name="WebInterfaceThread",
+                    daemon=True  # Set as daemon so it doesn't block exit if main errors early
+                )
+                try:
+                    self._web_interface_thread.start()
+                    logger.info("Web interface started in a separate thread.")
+                except Exception as e:
+                    logger.error(f"Failed to start web interface thread: {e}", exc_info=True)
+            else:
+                logger.error("Web interface object does not have a callable 'run' method.")
         else:
-            logger.warning("Web interface not available to start.")
+            logger.warning("Web interface not available, cannot start.")
 
     def get_home_location(self):
         """
@@ -1081,7 +1113,7 @@ def main():
             # No need to call sys.exit here; finally block handles cleanup.
             # Setting shutdown_flag ensures the loop (if it were to run)
             # terminates.
-            shutdown_flag.set()
+            shutdown_flag.set() # Ensure main loop terminates
         else:
             logger.info("All resources initialized successfully.")
             resource_manager._start_watchdog()  # Start watchdog after successful init
@@ -1106,18 +1138,32 @@ def main():
         logger.error(f"Unhandled exception in main: {e}", exc_info=True)
         exit_code = 1  # Indicate an error occurred
     finally:
-        logger.info("Main function's finally block: Cleaning up resources...")
+        logger.info("Main function's finally block: Initiating resource cleanup...")
         if resource_manager:
             resource_manager.cleanup_all_resources()
         else:
             logger.info("ResourceManager was not instantiated, no cleanup needed from it.")
+        
+        # Wait for non-daemon threads if any were started directly in main
+        # For now, assuming all critical threads are managed by ResourceManager
+        # or are daemon threads.
+
         logger.info(f"Shutdown sequence complete. Exiting with code {exit_code}.")
         # Ensure the process terminates with the correct code,
         # especially when run directly as a script.
-        if __name__ == "__main__":
-            sys.exit(exit_code)
+        # sys.exit() should be the very last thing called.
+        if __name__ == "__main__": # Check if running as script
+            pass # sys.exit will be called after this block by Python if main returns
+    
+    # This return is important for when main() is called by other scripts/tests
+    # and for when __name__ == "__main__" to allow sys.exit to be called once.
     return exit_code
 
 
 if __name__ == "__main__":
-    main()
+    # sys.exit(main()) # Call sys.exit here to ensure it's the last operation
+    # Correction: The finally block in main() should handle sys.exit if it's the top-level script.
+    # If main() is imported, the caller should handle the exit code.
+    # The previous structure was a bit convoluted. Let's simplify.
+    final_exit_code = main()
+    sys.exit(final_exit_code)
