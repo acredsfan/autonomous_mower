@@ -28,7 +28,7 @@ This guide provides step-by-step instructions for setting up remote access to yo
    - Go to `dash.cloudflare.com`.
    - Select your account and then your domain.
 3. **Access Zero Trust Dashboard:**
-   - In the left-hand sidebar, click on "Access" and then "Tunnels" (or look for "Zero Trust" on the main Cloudflare dashboard and navigate to Access > Tunnels from there).
+   - In the left-hand sidebar, click on "Networks" and then "Tunnels" (or look for "Zero Trust" on the main Cloudflare dashboard and navigate to Access > Tunnels from there).
 4. **Create a Tunnel:**
    - Click on "Create a tunnel".
    - Choose "Cloudflared" as the connector type and click "Next".
