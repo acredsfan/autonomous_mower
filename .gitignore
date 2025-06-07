@@ -136,6 +136,7 @@ src/mower/simulation/world_model.py.backup
 .windsurfrules
 roo_models.json
 copilot-instructions*.md
+.copilotignore
 mcp_server/
 mcp.json
 MCP_SERVER.md
@@ -163,3 +164,4 @@ yolov8n_saved_model/variables/variables.index
 INSTALL_REQUIREMENTS_FIX_SUMMARY.md
 CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
 CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
+setup_state.json
