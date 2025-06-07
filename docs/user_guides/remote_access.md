@@ -23,24 +23,42 @@ This guide provides step-by-step instructions for setting up remote access to yo
    - `DDNS_PROVIDER`, `DDNS_DOMAIN`, `DDNS_TOKEN`, `USE_DDNS=True`
 
 ### B. Cloudflare Tunnel
-1. **Sign up for a Cloudflare account** and add your domain.
-2. **Install `cloudflared` on your Pi:**
-   ```bash
-   curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o cloudflared.deb
-   sudo dpkg -i cloudflared.deb
-   ```
-3. **Create a tunnel:**
-   ```bash
-   cloudflared tunnel login
-   cloudflared tunnel create mower-tunnel
-   cloudflared tunnel route dns mower-tunnel mower.example.com
-   ```
-4. **Run the tunnel:**
-   ```bash
-   cloudflared tunnel run mower-tunnel --url http://localhost:5000
-   ```
-5. **Enter your Cloudflare details** in the setup wizard or `.env` file:
-   - `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_DOMAIN`, `USE_CLOUDFLARE=True`
+1. **Sign up for a Cloudflare account** and add your domain to Cloudflare.
+2. **Navigate to the Cloudflare Dashboard:**
+   - Go to `dash.cloudflare.com`.
+   - Select your account and then your domain.
+3. **Access Zero Trust Dashboard:**
+   - In the left-hand sidebar, click on "Access" and then "Tunnels" (or look for "Zero Trust" on the main Cloudflare dashboard and navigate to Access > Tunnels from there).
+4. **Create a Tunnel:**
+   - Click on "Create a tunnel".
+   - Choose "Cloudflared" as the connector type and click "Next".
+   - Give your tunnel a name (e.g., `mower-tunnel`) and click "Save tunnel".
+5. **Install and Run `cloudflared` Connector on your Raspberry Pi:**
+   - Cloudflare will now display commands to install and run the `cloudflared` connector. It will provide a token specific to your tunnel.
+   - **Install `cloudflared` on your Pi (if not already installed):**
+     ```bash
+     curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o cloudflared.deb
+     sudo dpkg -i cloudflared.deb
+     ```
+   - **Run the connector command provided by the Cloudflare dashboard.** It will look something like this (DO NOT use this exact command, use the one from YOUR dashboard):
+     ```bash
+     # Example command from Cloudflare dashboard - YOURS WILL BE DIFFERENT!
+     cloudflared service install eyJhIjoiYOUR_TUNNEL_ID_WILL_BE_HERE........YOUR_TOKEN_WILL_BE_HERE="
+     ```
+     This command installs `cloudflared` as a system service, so it starts automatically.
+6. **Configure the Tunnel to Route Traffic (Public Hostname):**
+   - Back in the Cloudflare dashboard for your tunnel, go to the "Public Hostnames" tab.
+   - Click "Add a public hostname".
+   - **Subdomain:** Enter a subdomain (e.g., `mower`) for your domain (e.g., `example.com`, so it becomes `mower.example.com`).
+   - **Service Type:** Select `HTTP`.
+   - **URL:** Enter `localhost:5000` (or whatever port your mower's web interface runs on).
+   - You can configure additional settings under "Additional application settings" if needed (e.g., HTTPS settings, access policies).
+   - Click "Save hostname".
+7. **Verify:** Your mower should now be accessible via the public hostname you configured (e.g., `https://mower.example.com`).
+8. **Enter your Cloudflare details** in the setup wizard or `.env` file (if the application requires them for API interactions, otherwise this step might not be needed if the tunnel is managed purely from Cloudflare's side):
+   - `CLOUDFLARE_DOMAIN=yourmowerdomain.example.com` (the full public hostname)
+   - `USE_CLOUDFLARE=True`
+   - Note: `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ZONE_ID` might not be strictly necessary for the application if the tunnel is fully managed via the dashboard, but some applications use these for dynamic DNS updates or other Cloudflare API interactions. Check your application's specific needs.
 
 ### C. NGROK
 1. **Sign up for an NGROK account** and get your authtoken.
