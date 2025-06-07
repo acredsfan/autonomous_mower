@@ -27,27 +27,44 @@ The installation script automatically handles Python version compatibility and C
 
 **Automatic Installation (Recommended):**
 Run the main installation script, which will automatically:
-- Detect your Python version
-- Set up the appropriate environment for Coral TPU
-- Install all required dependencies
+- Set up Python 3.9 virtual environment (always, regardless of system Python)
+- Install all required dependencies in the correct order
+- Handle NumPy version compatibility automatically
+- Provide comprehensive error diagnostics
 
 ```bash
 ./install_requirements.sh
 ```
 
-**Important Notes about Python Compatibility:**
-- PyCoral only supports Python 3.6-3.9
-- If your system has Python 3.10+ (like newer Raspberry Pi OS), the script will:
-  - Automatically install pyenv
-  - Create a Python 3.9 virtual environment specifically for Coral
-  - Install PyCoral in that environment
-  - Create an activation script at `~/activate-coral-env.sh`
+**Important Notes about the Installation Process:**
+- **Always uses Python 3.9 virtual environment** - This follows Google's official recommendations for maximum compatibility
+- **Automatic dependency management** - Installs NumPy, TFLite, and PyCoral in the correct order to avoid compatibility issues
+- **Version compatibility handling** - Ensures compatible NumPy versions to prevent import errors
+- **Better error diagnostics** - Provides detailed error messages if installation fails
 
-**For Python 3.10+ Systems:**
-After installation, you'll need to activate the Coral environment when running Coral-dependent code:
+**Using the Coral Environment:**
+After installation, activate the Coral environment when running Coral-dependent code:
 ```bash
-# Activate the Coral environment
+# Activate the Coral environment (includes comprehensive diagnostics)
 source ~/activate-coral-env.sh
+
+# Run your mower code that uses Coral
+python your_script.py
+
+# The environment will remain active for that terminal session
+# Deactivate with: deactivate
+```
+
+**Testing the Installation:**
+After installation, you can test the Coral setup:
+```bash
+# Run the comprehensive test script
+./test_coral_installation.sh
+
+# Or manually test
+source ~/activate-coral-env.sh
+python -c "import pycoral.utils.edgetpu; print('Coral TPU ready!')"
+```
 
 # Run your mower code that uses Coral
 python your_script.py
@@ -56,21 +73,12 @@ python your_script.py
 ```
 
 **Manual Installation (Advanced Users):**
-For Raspberry Pi or Debian-based systems with Python 3.6-3.9:
+If you wish to set up the Coral environment manually, follow the official Coral documentation. The recommended approach is to always use a Python 3.9 virtual environment, even if your system Python is newer. See:
 
-```bash
-# Add the Coral repository
-echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
-curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
-sudo apt-get update
+- [Official Google Coral Python API](https://coral.ai/docs/edgetpu/api-intro/)
+- [PyCoral Installation Guide](https://coral.ai/docs/edgetpu/api-intro/#install-pycoral)
 
-# Install the Edge TPU runtime
-sudo apt-get install libedgetpu1-std
-
-# Install PyCoral via apt (preferred for compatible Python versions)
-sudo apt-get install python3-pycoral
-
-# If apt installation fails, fallback to pip with Coral repository
+**Do not install PyCoral into system Python 3.10+!**
 sudo python3 -m pip install --break-system-packages \
     --extra-index-url https://google-coral.github.io/py-repo/ \
     pycoral~=2.0

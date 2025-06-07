@@ -159,11 +159,15 @@ auto_detect_completed_steps() {
         fi
     fi
 
-    # Check Coral TPU
-    if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && command_exists python3 && python3 -c "import pycoral" 2>/dev/null; then
-        if ! is_step_completed "coral_tpu_setup"; then
-            mark_step_completed "coral_tpu_setup"
-            print_info "✓ Detected Coral TPU installation"
+    # Check Coral TPU (now looks for Python venv and PyCoral import in venv)
+    local coral_env_dir="$HOME/.coral-python-env"
+    if [ -f "/etc/apt/sources.list.d/coral-edgetpu.list" ] && [ -d "$coral_env_dir" ] && [ -f "$coral_env_dir/bin/python" ]; then
+        # Test if PyCoral is available in the Coral environment
+        if "$coral_env_dir/bin/python" -c "import pycoral" 2>/dev/null; then
+            if ! is_step_completed "coral_tpu_setup"; then
+                mark_step_completed "coral_tpu_setup"
+                print_info "✓ Detected Coral TPU installation (Python 3.9 virtual environment)"
+            fi
         fi
     fi
 
@@ -1037,9 +1041,29 @@ install_python_dependencies() {
     "$PIP_CMD" install --upgrade pip
     check_command "Upgrading pip in venv" || return 1
 
-    print_info "Installing Python dependencies from requirements.txt into venv (using $PIP_CMD)..."
+    print_info "Installing Python dependencies into venv (with strict Coral compatibility if needed)..."
     if [ -f "requirements.txt" ]; then
-        "$PIP_CMD" install -r requirements.txt # Removed --break-system-packages
+        "$PIP_CMD" install --upgrade pip wheel setuptools
+        check_command "Upgrading pip/wheel/setuptools in venv" || return 1
+        # Uninstall any pre-existing conflicting packages
+        "$PIP_CMD" uninstall -y numpy tflite-runtime pycoral || true
+        # Install strict NumPy version for Coral compatibility
+        "$PIP_CMD" install "numpy==1.23.5"
+        check_command "Installing compatible NumPy version" || return 1
+        # Install other base dependencies
+        "$PIP_CMD" install "pillow>=8.0.0,<10.0.0" "setuptools>=50.0.0,<69.0.0"
+        check_command "Installing base dependencies" || return 1
+        # Install TFLite runtime (if Coral is to be used)
+        "$PIP_CMD" install "tflite-runtime==2.14.0"
+        check_command "Installing TFLite runtime" || return 1
+        # Install PyCoral (if Coral is to be used)
+        "$PIP_CMD" install --no-deps --extra-index-url https://google-coral.github.io/py-repo/ "pycoral==2.0.0"
+        check_command "Installing PyCoral (no-deps)" || return 1
+        # Install remaining PyCoral dependencies
+        "$PIP_CMD" install "six>=1.15.0"
+        check_command "Installing PyCoral dependencies" || return 1
+        # Now install the rest of the project requirements
+        "$PIP_CMD" install -r requirements.txt
         check_command "Installing dependencies from requirements.txt into venv" || return 1
     else
         print_error "requirements.txt not found."
@@ -1047,7 +1071,7 @@ install_python_dependencies() {
     fi
 
     print_info "Installing project in editable mode into venv (using $PIP_CMD)..."
-    "$PIP_CMD" install -e . # Removed --break-system-packages
+    "$PIP_CMD" install -e .
     check_command "Installing project in editable mode into venv" || return 1
 
     print_success "Python dependencies installed into virtual environment."

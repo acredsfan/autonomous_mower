@@ -368,14 +368,21 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 #### Coral TPU Setup (Optional)
 
 1. Connect Coral USB Accelerator
-2. Install Coral runtime during installation
-3. Verify detection:
+2. Run the main installation script. The script will:
+   - Set up a dedicated Python 3.9 virtual environment for Coral
+   - Install all required system and Python dependencies in the correct order
+   - Provide an activation script at `~/activate-coral-env.sh`
+3. After installation, activate the Coral environment:
+   ```bash
+   source ~/activate-coral-env.sh
+   ```
+4. Verify detection:
    ```bash
    lsusb | grep "1a6e:089a"
    ```
-4. Test with:
+5. Test with:
    ```bash
-   python3 -c "import tflite_runtime.interpreter as tflite; print('Coral TPU detected')"
+   python -c "import pycoral.utils.edgetpu; print('Coral TPU detected')"
    ```
 
 ## YOLOv8 Model Download and Conversion (Required for Obstacle Detection)

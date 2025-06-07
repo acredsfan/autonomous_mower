@@ -1,3 +1,6 @@
+# Ignore test scripts and diagnostic files
+test_coral_installation.sh
+CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
 # Autonomous Mower .gitignore
 # ======================
 
@@ -158,3 +161,5 @@ yolov8n_saved_model/yolov8n_float16.tflite
 yolov8n_saved_model/variables/variables.data-00000-of-00001
 yolov8n_saved_model/variables/variables.index
 INSTALL_REQUIREMENTS_FIX_SUMMARY.md
+CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
+CORAL_TPU_INSTALLATION_FIX_SUMMARY.md

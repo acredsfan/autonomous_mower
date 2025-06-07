@@ -56,9 +56,13 @@
 1. Install pyenv and build dependencies
 2. Install Python 3.9.18 via pyenv
 3. Create dedicated virtual environment
-4. Install Edge TPU runtime (system packages)
-5. Install PyCoral from official Google repository in venv
-6. Test installation and create activation script
+4. Uninstall any pre-existing numpy, tflite-runtime, pycoral in the venv
+5. Install NumPy 1.23.5 (strictly pinned)
+6. Install Pillow and setuptools (compatible versions)
+7. Install TFLite runtime 2.14.0
+8. Install PyCoral 2.0.0 with --no-deps
+9. Install remaining PyCoral dependencies (e.g., six)
+10. Test installation and create activation script
 
 ### File Locations
 - Virtual environment: `$HOME/.coral-python-env`

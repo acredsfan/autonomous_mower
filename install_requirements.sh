@@ -1142,13 +1142,14 @@ is_python_version_incompatible_with_coral() {
 install_pyenv() {
     print_info "Installing pyenv for Python version management..."
     
-    # Install dependencies for building Python
+    # Install dependencies for building Python and Coral TPU support
     print_info "Installing build dependencies..."
     sudo apt-get update
     sudo apt-get install -y make build-essential libssl-dev zlib1g-dev \
         libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
         libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev \
-        libffi-dev liblzma-dev
+        libffi-dev liblzma-dev pkg-config libhdf5-dev libatlas-base-dev \
+        libopenblas-dev liblapack-dev
     
     # Install pyenv
     if [ ! -d "$HOME/.pyenv" ]; then
@@ -1217,10 +1218,11 @@ setup_coral_python_env() {
     print_info "Installing Coral dependencies in Python 3.9 environment..."
     source "$coral_env_dir/bin/activate"
     
-    # Upgrade pip
-    python -m pip install --upgrade pip
+    # Upgrade pip, wheel, and setuptools first
+    print_info "Upgrading build tools..."
+    python -m pip install --upgrade pip wheel setuptools
     
-    # Install Coral TPU runtime (system packages still needed)
+    # Install Coral TPU runtime (system packages must be installed first)
     print_info "Installing Edge TPU runtime packages..."
     if [ ! -f "/etc/apt/sources.list.d/coral-edgetpu.list" ]; then
         echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
@@ -1228,6 +1230,7 @@ setup_coral_python_env() {
         sudo apt-get update
     fi
     
+    # Install system-level Edge TPU runtime
     sudo apt-get install -y libedgetpu1-std
     check_command "Installing Edge TPU runtime" || {
         print_error "Failed to install Edge TPU runtime"
@@ -1235,32 +1238,185 @@ setup_coral_python_env() {
         return 1
     }
     
-    # Install PyCoral and dependencies in the virtual environment
-    print_info "Installing PyCoral in Python 3.9 environment..."
-    python -m pip install --extra-index-url https://google-coral.github.io/py-repo/ pycoral~=2.0
-    check_command "Installing PyCoral" || {
-        print_error "Failed to install PyCoral in virtual environment"
+    # Critical: Install dependencies in specific order to avoid PyCoral import errors
+    print_info "Installing dependencies with strict version compatibility..."
+    
+    # Step 1: Install NumPy first with a version known to work with PyCoral
+    print_info "Uninstalling any previous numpy, tflite-runtime, pycoral..."
+    python -m pip uninstall -y numpy tflite-runtime pycoral || true
+    print_info "Installing NumPy 1.23.5 (known compatible version)..."
+    python -m pip install "numpy==1.23.5"
+    check_command "Installing compatible NumPy" || {
+        print_error "Failed to install compatible NumPy version"
         deactivate
         return 1
     }
     
-    # Install other required packages
-    python -m pip install numpy pillow tflite-runtime
-    check_command "Installing additional Coral dependencies"
+    # Step 2: Install other base dependencies 
+    print_info "Installing other base dependencies..."
+    python -m pip install "pillow>=8.0.0,<10.0.0" "setuptools>=50.0.0,<69.0.0"
+    check_command "Installing base dependencies" || {
+        print_error "Failed to install base dependencies"
+        deactivate
+        return 1
+    }
     
-    # Test the installation
-    print_info "Testing PyCoral installation..."
-    if python -c "import pycoral.utils.edgetpu; print('PyCoral import successful')"; then
-        print_success "PyCoral installed and working in Python 3.9 environment"
+    # Step 3: Install TFLite runtime (must be before PyCoral)
+    print_info "Installing TensorFlow Lite runtime..."
+    python -m pip install "tflite-runtime==2.14.0"
+    check_command "Installing TFLite runtime" || {
+        print_error "Failed to install TFLite runtime"
+        deactivate
+        return 1
+    }
+    
+    # Step 4: Verify NumPy installation before PyCoral
+    print_info "Verifying NumPy installation..."
+    python -c "
+import numpy as np
+import sys
+print(f'NumPy version: {np.__version__}')
+print(f'NumPy location: {np.__file__}')
+# Test array operations to ensure NumPy is working
+arr = np.array([1, 2, 3])
+print(f'NumPy test array: {arr}')
+print('NumPy verification successful')
+" || {
+        print_error "NumPy verification failed"
+        deactivate
+        return 1
+    }
+    
+    # Step 5: Install PyCoral with explicit dependency handling
+    print_info "Installing PyCoral with strict dependencies..."
+    # Use --no-deps to prevent pip from upgrading NumPy
+    python -m pip install --no-deps --extra-index-url https://google-coral.github.io/py-repo/ "pycoral==2.0.0"
+    check_command "Installing PyCoral (no-deps)" || {
+        print_error "Failed to install PyCoral"
+        deactivate
+        return 1
+    }
+    
+    # Step 6: Install remaining PyCoral dependencies manually
+    print_info "Installing PyCoral dependencies manually..."
+    python -m pip install "six>=1.15.0"
+    check_command "Installing PyCoral dependencies" || {
+        print_error "Failed to install PyCoral dependencies"
+        deactivate
+        return 1
+    }
+    
+    # Enhanced diagnostic test with better error reporting
+    print_info "Testing PyCoral installation with comprehensive diagnostics..."
+    if python -c "
+import sys
+import os
+print(f'============ Coral Environment Diagnostics ============')
+print(f'Python executable: {sys.executable}')
+print(f'Python version: {sys.version}')
+print(f'Python path: {sys.path}')
+print()
+
+# Test NumPy with detailed error reporting
+print('Testing NumPy...')
+try:
+    import numpy as np
+    print(f'✓ NumPy version: {np.__version__} (location: {np.__file__})')
+    # Test array operations
+    test_arr = np.array([1, 2, 3])
+    print(f'✓ NumPy array operations working: {test_arr.sum()}')
+except Exception as e:
+    print(f'✗ NumPy test failed: {e}')
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+# Test TFLite runtime
+print()
+print('Testing TensorFlow Lite runtime...')
+try:
+    import tflite_runtime as tflite
+    print(f'✓ TFLite runtime version: {tflite.__version__} (location: {tflite.__file__})')
+except Exception as e:
+    print(f'✗ TFLite runtime test failed: {e}')
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+
+# Test PyCoral import with detailed diagnostics
+print()
+print('Testing PyCoral import...')
+try:
+    import pycoral
+    print(f'✓ PyCoral base import successful (location: {pycoral.__file__})')
+    
+    # Test EdgeTPU utilities specifically
+    import pycoral.utils.edgetpu as edgetpu_utils
+    print(f'✓ PyCoral EdgeTPU utils import successful')
+    
+    # Test actual EdgeTPU functionality
+    print('Testing EdgeTPU detection...')
+    interpreters = edgetpu_utils.list_edge_tpus()
+    print(f'✓ EdgeTPU detection successful: Found {len(interpreters)} TPU(s)')
+    
+    if interpreters:
+        for i, interpreter in enumerate(interpreters):
+            print(f'  TPU {i}: {interpreter}')
+    else:
+        print('  No EdgeTPU devices detected (this is normal if no hardware is connected)')
+    
+except Exception as e:
+    print(f'✗ PyCoral test failed: {e}')
+    print(f'Error type: {type(e).__name__}')
+    import traceback
+    traceback.print_exc()
+    
+    # Additional diagnostics for common issues
+    print()
+    print('=== Additional Diagnostics ===')
+    try:
+        import numpy as np
+        print(f'NumPy _ARRAY_API available: {hasattr(np, \"_ARRAY_API\")}')
+    except:
+        pass
+        
+    print('Checking for libedgetpu...')
+    libedgetpu_paths = [
+        '/usr/lib/aarch64-linux-gnu/libedgetpu.so.1',
+        '/usr/lib/arm-linux-gnueabihf/libedgetpu.so.1',
+        '/usr/lib/x86_64-linux-gnu/libedgetpu.so.1'
+    ]
+    for path in libedgetpu_paths:
+        if os.path.exists(path):
+            print(f'✓ Found libedgetpu at: {path}')
+            break
+    else:
+        print('✗ libedgetpu not found in standard locations')
+    
+    sys.exit(1)
+
+print()
+print('============ All Tests Passed ============')
+"; then
+        print_success "✓ PyCoral installed and working in Python 3.9 environment"
         
         # Create activation script for easy access
         cat > "$HOME/activate-coral-env.sh" << 'EOF'
 #!/bin/bash
 # Activate the Coral Python 3.9 environment
 source "$HOME/.coral-python-env/bin/activate"
+echo "========================================="
 echo "Coral Python 3.9 environment activated"
+echo "========================================="
 echo "Python version: $(python --version)"
-echo "PyCoral available: $(python -c 'import pycoral; print("Yes")' 2>/dev/null || echo "No")"
+echo "NumPy version: $(python -c 'import numpy; print(numpy.__version__)' 2>/dev/null || echo 'Not available')"
+echo "TFLite runtime: $(python -c 'import tflite_runtime; print("Available")' 2>/dev/null || echo 'Not available')"
+echo "PyCoral status: $(python -c 'import pycoral.utils.edgetpu; print("Available")' 2>/dev/null || echo 'Not available')"
+echo "Edge TPUs detected: $(python -c 'import pycoral.utils.edgetpu; print(len(pycoral.utils.edgetpu.list_edge_tpus()))' 2>/dev/null || echo 'Unknown')"
+echo "========================================="
+echo "Environment ready for Coral TPU development"
+echo "Deactivate with: deactivate"
+echo "========================================="
 EOF
         chmod +x "$HOME/activate-coral-env.sh"
         
