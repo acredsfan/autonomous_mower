@@ -13,10 +13,10 @@ import re
 import shutil
 import subprocess
 import sys
-import textwrap
-import traceback
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
+import textwrap
+import traceback
 
 # Try to import dotenv, install if not available
 try:
@@ -225,7 +225,7 @@ def print_error(message: str) -> None:
 def print_help(message: str) -> None:
     """Print a help message with proper wrapping."""
     for line in textwrap.wrap(message, width=76):
-        print(f"{color_text('?', 'MAGENTA')} {line}")
+        print(f"{color_text('💡', 'MAGENTA')} {line}")
 
 
 def ensure_directory(path: Path) -> None:
@@ -238,28 +238,21 @@ def ensure_directory(path: Path) -> None:
 def ensure_env_file() -> None:
     """Ensure .env file exists, create from example if needed."""
     if not ENV_FILE.exists():
-        if ENV_EXAMPLE.exists():
-            shutil.copy(ENV_EXAMPLE, ENV_FILE)
-            print_info(f"Created {ENV_FILE} from {ENV_EXAMPLE}")
-        else:
-            ENV_FILE.touch()
-            print_info(f"Created empty {ENV_FILE}")
-
-        # Ensure proper permissions on Raspberry Pi
-        if sys.platform.startswith("linux"):
-            try:
-                result = subprocess.run(
-                    ["sudo", "chmod", "664", str(ENV_FILE)],
-                    capture_output=True,
-                    text=True,
-                )
-
-                if result.returncode == 0:
-                    print_success(f"Set proper permissions for {ENV_FILE}")
-                else:
-                    print_warning(f"Could not set permissions: " f"{result.stderr}")
-            except Exception as e:
-                print_warning(f"Permission setting failed: {e}")
+        print_info(f"Creating {ENV_FILE} from {ENV_EXAMPLE}...")
+        try:
+            if ENV_EXAMPLE.exists():
+                shutil.copy(ENV_EXAMPLE, ENV_FILE)
+                print_success(f"{ENV_FILE} created successfully.")
+            else:
+                ENV_FILE.touch() # Create an empty .env file
+                print_warning(f"{ENV_EXAMPLE} not found. Created an empty {ENV_FILE}.")
+            # Ensure the new .env file is writable
+            os.chmod(ENV_FILE, 0o600) # Set permissions (rw-------) for security
+        except Exception as e:
+            print_error(f"Could not create {ENV_FILE}: {e}")
+            print_warning("Please ensure you have write permissions in the current directory.")
+            # Exit if .env cannot be created, as it's crucial
+            sys.exit(1)
     elif not os.access(ENV_FILE, os.W_OK):
         # File exists but not writable
         print_warning(f"{ENV_FILE} is not writable")
@@ -292,11 +285,23 @@ def load_setup_state() -> bool:
     if SETUP_STATE_FILE.exists():
         try:
             with open(SETUP_STATE_FILE, "r", encoding="utf-8") as f:
-                setup_state = json.load(f)
-            print_info(f"Loaded setup progress from {SETUP_STATE_FILE}")
-            return True
-        except (json.JSONDecodeError, IOError, OSError) as e:
-            print_warning(f"Failed to load setup state: {e}")
+                loaded_state = json.load(f)
+                # Basic validation of loaded state structure
+                if isinstance(loaded_state, dict) and "completed_sections" in loaded_state:
+                    setup_state = loaded_state
+                    print_info(f"Setup progress loaded from {SETUP_STATE_FILE}")
+                    return True
+                else:
+                    print_warning(f"Invalid format in {SETUP_STATE_FILE}. Starting fresh.")
+                    # Optionally, backup the corrupted file
+                    # SETUP_STATE_FILE.rename(SETUP_STATE_FILE.with_suffix(".json.corrupted"))
+                    return False
+        except json.JSONDecodeError:
+            print_warning(f"Could not parse {SETUP_STATE_FILE}. Starting fresh.")
+            return False
+        except Exception as e:
+            print_error(f"Error loading setup state: {e}")
+            return False
     return False
 
 
@@ -360,7 +365,17 @@ def update_env_var(key: str, value: str) -> None:
 
     # Now attempt to write to the file
     try:
-        set_key(str(ENV_FILE), key, value)
+        # Ensure the .env file is writable before calling set_key
+        if not os.access(ENV_FILE, os.W_OK):
+            try:
+                os.chmod(ENV_FILE, 0o600) # Attempt to make it writable
+            except OSError as e_chmod:
+                print_error(f"Cannot change permissions for {ENV_FILE}: {e_chmod}")
+                print_warning(f"Skipping update for {key} in {ENV_FILE}.")
+                return
+
+        set_key(str(ENV_FILE), key, value, quote_mode="always")
+        print_success(f"Updated {key} in {ENV_FILE}")
     except PermissionError as e:
         print_error(f"Still cannot write to {ENV_FILE}: {e}")
         print_info("Please manually fix permissions and ownership:")
@@ -556,6 +571,35 @@ Let's get started!
     """
     )
     input("Press Enter to continue...")
+
+
+# Helper functions for JSON configuration handling
+def load_main_config(path: Path) -> Dict:
+    """Load the main JSON configuration file."""
+    if path.exists():
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print_warning(f"Could not parse {path}, treating as empty config for this section.")
+            return {}
+        except IOError:
+            print_warning(f"Could not read {path}, treating as empty config for this section.")
+            return {}
+    return {}
+
+
+def save_main_config(path: Path, config_data: Dict) -> None:
+    """Save data to the main JSON configuration file."""
+    try:
+        ensure_directory(path.parent) # Ensure config directory exists
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=4)
+        print_success(f"Configuration saved to {path}")
+    except IOError:
+        print_error(f"Could not write to {path}")
+    except Exception as e:
+        print_error(f"Failed to save {path}: {e}")
 
 
 def setup_hardware_detection() -> Dict[str, bool]:
@@ -842,234 +886,106 @@ def setup_hardware_configuration(detected_hardware: Dict[str, bool]) -> None:
 
 
 def setup_mapping_and_navigation() -> None:
-    """Configure mapping and navigation settings."""
-    print_header("Mapping and Navigation")
+    print_header("Mapping & Navigation Configuration")
+    # Placeholder for mapping and navigation setup
+    print_info("Mapping and navigation setup is not yet implemented.")
+    # Example:
+    # home_lat_lng = prompt_value("Enter home base latitude,longitude (e.g., 40.7128,-74.0060)", ...)
+    # update_env_var("HOME_LAT_LNG", home_lat_lng)
+    # setup_state["user_choices"]["home_location"] = home_lat_lng
 
-    # Check if GPS is enabled in setup state
-    gps_enabled = setup_state.get("hardware_config", {}).get("gps", {}).get("enabled", False)
-
-    if not gps_enabled:
-        print_warning("GPS is not enabled. Some mapping features will be limited.")
-
-    # Home location
-    print_subheader("Home Location")
-    print_info("The home location is where the mower will return when it's finished " "or needs to charge.")
-
-    if gps_enabled:
-        print_help("You can specify the home location as GPS coordinates (latitude,longitude).")
-        home_coords = prompt_value(
-            "Home location coordinates (latitude,longitude)",
-            default=(f"{get_env_var('HOME_LAT', '0.0')},{get_env_var('HOME_LON', '0.0')}"),
-            validator=validate_lat_lng,
-            field_name="Home location",
-        )
-
-        lat, lon = map(float, home_coords.split(","))
-        update_env_var("HOME_LAT", str(lat))
-        update_env_var("HOME_LON", str(lon))
-
-        # Also set default map center for web UI
-        update_env_var("MAP_DEFAULT_LAT", str(lat))
-        update_env_var("MAP_DEFAULT_LNG", str(lon))
-
-        setup_state["user_choices"]["home_location"] = {
-            "lat": lat,
-            "lon": lon,
-        }
-    else:
-        print_info("Since GPS is disabled, the home location will be set relative to " "the starting position.")
-        setup_state["user_choices"]["home_location"] = {"relative": True}
-
-    # Google Maps integration for web UI
-    print_subheader("Google Maps Integration")
-    use_google_maps = prompt_bool(
-        "Use Google Maps in the web interface?",
-        default=True,
-        help_text=("Google Maps provides a visual interface for setting boundaries " "and monitoring the mower."),
-    )
-
-    if use_google_maps:
-        print_info("To use Google Maps, you'll need an API key from the Google Cloud Console.")
-        print_help(
-            "You can get an API key at: " "https://developers.google.com/maps/documentation/javascript/get-api-key"
-        )
-
-        gmaps_key = prompt_value(
-            "Google Maps API Key",
-            default=get_env_var("GOOGLE_MAPS_API_KEY", ""),
-            required=True,
-            field_name="Google Maps API Key",
-        )
-
-        update_env_var("GOOGLE_MAPS_API_KEY", gmaps_key)
-        setup_state["feature_flags"]["google_maps"] = True
-    else:
-        setup_state["feature_flags"]["google_maps"] = False
-
-    # Path planning settings
-    print_subheader("Path Planning")
-
-    pattern_type = prompt_choice(
-        "Select mowing pattern",
-        ["PARALLEL", "SPIRAL", "RANDOM", "ADAPTIVE"],
-        default=1,  # PARALLEL
-    )
-
-    spacing = prompt_value(
-        "Path spacing (meters)",
-        default=get_env_var("PATH_PLANNING_SPACING", "0.3"),
-        validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
-        help_text=(
-            "The distance between parallel paths. Smaller values provide more thorough " "coverage but take longer."
-        ),
-    )
-
-    update_env_var("PATH_PLANNING_PATTERN_TYPE", pattern_type)
-    update_env_var("PATH_PLANNING_SPACING", spacing)
-
-    setup_state["user_choices"]["mowing_pattern"] = {
-        "type": pattern_type,
-        "spacing": float(spacing),
-    }
-
-    setup_state["completed_sections"].append("mapping_and_navigation")
+    if "mapping_navigation" not in setup_state["completed_sections"]:
+        setup_state["completed_sections"].append("mapping_navigation")
     save_setup_state()
-
-    print_success("Mapping and navigation configuration completed!")
+    print_success("Mapping & Navigation configuration placeholder completed.")
 
 
 def setup_safety_features() -> None:
-    """Configure safety features."""
-    print_header("Safety Features")
+    print_header("Safety Features Configuration")
 
-    # Emergency stop
-    print_subheader("Emergency Stop")
-    print_info("The emergency stop button is a critical safety feature that immediately " "stops the mower.")
-
-    e_stop_pin = prompt_value(
-        "Emergency stop GPIO pin",
-        default=get_env_var("EMERGENCY_STOP_PIN", "7"),
-        validator=lambda v, f: validate_int(v, f, 1, 40),
-        help_text=(
-            "The GPIO pin where the emergency stop button is connected. " "The button should be normally closed (NC)."
-        ),
-    )
-
-    update_env_var("EMERGENCY_STOP_PIN", e_stop_pin)
-
-    # Obstacle detection
-    print_subheader("Obstacle Detection")
-
-    # Check if camera is enabled in setup state
-    camera_enabled = setup_state.get("hardware_config", {}).get("camera", {}).get("enabled", False)
-
-    if camera_enabled:
-        min_conf = prompt_value(
-            "Minimum confidence threshold for obstacle detection",
-            default=get_env_var("MIN_CONF_THRESHOLD", "0.5"),
-            validator=lambda v, f: validate_float(v, f, 0.1, 1.0),
-            help_text=(
-                "Lower values detect more objects but may have false positives. " "Higher values are more selective."
-            ),
-        )
-
-        update_env_var("MIN_CONF_THRESHOLD", min_conf)
-
-        setup_state["user_choices"]["obstacle_detection"] = {
-            "enabled": True,
-            "confidence_threshold": float(min_conf),
-        }
+    config_json_path_env = os.environ.get('CONFIG_JSON_PATH')
+    if config_json_path_env:
+        main_config_path = Path(config_json_path_env)
     else:
-        print_warning("Camera is not enabled. Visual obstacle detection will not be available.")
-        setup_state["user_choices"]["obstacle_detection"] = {"enabled": False}
+        main_config_path = CONFIG_DIR / "main_config.json"
+        ensure_directory(CONFIG_DIR) # Ensure config directory exists if using default
 
-    # Safety zones
-    print_subheader("Safety Zones")
-    print_info("Safety zones define areas where the mower should not operate " "or should use extra caution.")
+    current_config = load_main_config(main_config_path)
+    safety_config = current_config.get("safety", {})
+    e_stop_configured_value = safety_config.get("use_physical_emergency_stop")
+    e_stop_pin_configured = safety_config.get("emergency_stop_gpio_pin")
 
-    use_safety_zones = prompt_bool(
-        "Configure safety zones?",
-        default=True,
-        help_text=("Safety zones include no-mow zones, children play areas, and pet zones."),
-    )
+    print_subheader("Physical Emergency Stop")
 
-    if use_safety_zones:
-        safe_buffer = prompt_value(
-            "Safe zone buffer (meters)",
-            default=get_env_var("SAFE_ZONE_BUFFER", "1.0"),
-            validator=lambda v, f: validate_float(v, f, 0.5, 5.0),
-            help_text="The distance the mower will maintain from defined safety zones.",
+    use_e_stop: bool
+    e_stop_pin: Optional[int] = None
+
+    if e_stop_configured_value is True:
+        print_info(f"Physical emergency stop is already enabled in {main_config_path}.")
+        pin_to_report = str(e_stop_pin_configured) if e_stop_pin_configured is not None else "not specified (defaulting to 7)"
+        print_info(f"Configured GPIO pin (BCM): {pin_to_report}")
+        
+        use_e_stop = True
+        e_stop_pin = int(e_stop_pin_configured) if e_stop_pin_configured is not None else 7
+        
+        update_env_var("USE_PHYSICAL_EMERGENCY_STOP", "True")
+        if e_stop_pin is not None: # Should always be true if e_stop_configured_value is True from script
+             update_env_var("EMERGENCY_STOP_GPIO_PIN", str(e_stop_pin))
+
+    elif e_stop_configured_value is False:
+        print_info(f"Physical emergency stop is already disabled in {main_config_path}.")
+        use_e_stop = False
+        e_stop_pin = None
+        update_env_var("USE_PHYSICAL_EMERGENCY_STOP", "False")
+        # Remove from .env if it exists from a previous run
+        update_env_var("EMERGENCY_STOP_GPIO_PIN", "") 
+
+    else: # Not configured in main_config.json or safety section missing
+        print_info(f"Physical emergency stop configuration not found or not set in {main_config_path}.")
+        use_e_stop = prompt_bool(
+            "Do you want to enable the physical emergency stop button?",
+            default=True,
+            help_text="A physical emergency stop button provides a critical safety mechanism. This is highly recommended."
         )
+        
+        current_config.setdefault("safety", {})["use_physical_emergency_stop"] = use_e_stop
+        
+        if use_e_stop:
+            default_pin_str = str(e_stop_pin_configured) if e_stop_pin_configured is not None else "7"
+            e_stop_pin_str = prompt_value(
+                "Enter GPIO pin for emergency stop (BCM numbering)",
+                default=default_pin_str,
+                required=True,
+                validator=lambda val, name: validate_int(val, name, min_value=0, max_value=27), # Typical RPi GPIO range
+                field_name="Emergency Stop GPIO Pin",
+                help_text="Use BCM numbering for the GPIO pin. Default is 7 (matches install script)."
+            )
+            e_stop_pin = int(e_stop_pin_str)
+            current_config["safety"]["emergency_stop_gpio_pin"] = e_stop_pin
+            update_env_var("EMERGENCY_STOP_GPIO_PIN", str(e_stop_pin))
+        else:
+            e_stop_pin = None
+            # If disabling, ensure the pin is also removed from JSON config for clarity
+            if "emergency_stop_gpio_pin" in current_config.get("safety", {}):
+                del current_config["safety"]["emergency_stop_gpio_pin"]
+            update_env_var("EMERGENCY_STOP_GPIO_PIN", "") # Clear from .env
 
-        update_env_var("SAFE_ZONE_BUFFER", safe_buffer)
+        save_main_config(main_config_path, current_config)
+        update_env_var("USE_PHYSICAL_EMERGENCY_STOP", str(use_e_stop))
 
-        print_info("Safety zones can be configured in the web interface after setup.")
-        setup_state["feature_flags"]["safety_zones"] = True
-    else:
-        setup_state["feature_flags"]["safety_zones"] = False
+    # Update setup_state
+    setup_state["feature_flags"]["physical_emergency_stop"] = use_e_stop
+    if use_e_stop and e_stop_pin is not None:
+        setup_state["hardware_config"]["emergency_stop_gpio_pin"] = e_stop_pin
+    elif "emergency_stop_gpio_pin" in setup_state.get("hardware_config", {}): # Clean up if disabled
+        del setup_state["hardware_config"]["emergency_stop_gpio_pin"]
 
-    # Battery safety
-    print_subheader("Battery Safety")
+    print_info("Additional safety feature configurations can be added here (e.g., obstacle sensor sensitivity).")
 
-    batt_low = prompt_value(
-        "Battery low threshold (%)",
-        default=get_env_var("BATTERY_LOW_THRESHOLD", "20"),
-        validator=lambda v, f: validate_int(v, f, 5, 50),
-        help_text=("When battery level falls below this percentage, the mower will return " "to the charging station."),
-    )
-
-    batt_critical = prompt_value(
-        "Battery critical threshold (%)",
-        default=get_env_var("BATTERY_CRITICAL_THRESHOLD", "10"),
-        validator=lambda v, f: validate_int(v, f, 1, int(batt_low) - 1),
-        help_text=("When battery level falls below this percentage, the mower will enter " "emergency shutdown."),
-    )
-
-    update_env_var("BATTERY_LOW_THRESHOLD", batt_low)
-    update_env_var("BATTERY_CRITICAL_THRESHOLD", batt_critical)
-
-    # Tilt sensor
-    print_subheader("Tilt Sensor")
-
-    use_tilt = prompt_bool(
-        "Enable tilt sensor?",
-        default=True,
-        help_text="The tilt sensor prevents the mower from operating on steep slopes.",
-    )
-
-    if use_tilt:
-        max_slope = prompt_value(
-            "Maximum slope angle (degrees)",
-            default=get_env_var("MAX_SLOPE_ANGLE", "15"),
-            validator=lambda v, f: validate_int(v, f, 5, 45),
-            help_text="The maximum slope angle the mower can safely operate on.",
-        )
-
-        update_env_var("TILT_SENSOR_ENABLED", "True")
-        update_env_var("MAX_SLOPE_ANGLE", max_slope)
-
-        setup_state["feature_flags"]["tilt_sensor"] = True
-        setup_state["user_choices"]["max_slope"] = int(max_slope)
-    else:
-        update_env_var("TILT_SENSOR_ENABLED", "False")
-        setup_state["feature_flags"]["tilt_sensor"] = False
-
-    # Rain sensor
-    print_subheader("Rain Sensor")
-
-    use_rain = prompt_bool(
-        "Enable rain sensor?",
-        default=True,
-        help_text=("The rain sensor prevents the mower from operating in wet conditions."),
-    )
-
-    update_env_var("RAIN_SENSOR_ENABLED", str(use_rain))
-    setup_state["feature_flags"]["rain_sensor"] = use_rain
-
-    setup_state["completed_sections"].append("safety_features")
+    if "safety_features" not in setup_state["completed_sections"]:
+        setup_state["completed_sections"].append("safety_features")
     save_setup_state()
-
-    print_success("Safety features configuration completed!")
+    print_success("Safety features configuration updated!")
 
 
 def setup_web_interface() -> None:
@@ -1687,85 +1603,67 @@ For more information, refer to the documentation in the docs/ directory.
 
 
 def main() -> None:
-    """Main function to run the setup wizard."""
-    try:
-        # First, install required dependencies before doing anything else
-        install_dependencies()
+    # Ensure .env file exists and is writable from the start
+    ensure_env_file()
 
-        # Run enhanced permission checks after dependencies are installed
-        run_enhanced_permission_checks()
-
-        # Ensure .env file exists with proper permissions
-        ensure_env_file()
-
-        # Check if we have a saved state
-        has_state = load_setup_state()
-
-        if not has_state:
-            # Start fresh
-            welcome_screen()
-            detected_hardware = setup_hardware_detection()
-            setup_basic_configuration()
-            setup_hardware_configuration(detected_hardware)
-            setup_mapping_and_navigation()
-            setup_safety_features()
-            setup_web_interface()
-            setup_remote_access()
-            setup_scheduling()
-            setup_service_installation()
-            setup_final_verification()
-        else:
-            # Resume from saved state
-            print_header("Resume Setup")
-            print_info("Resuming setup from saved state.")
-
-            completed = setup_state.get("completed_sections", [])
-
-            print_info(f"Completed sections: {', '.join(completed)}")
-
-            # Determine what's left to do
-            detected_hardware = setup_state.get("hardware_config", {})
-
-            if "basic_configuration" not in completed:
-                setup_basic_configuration()
-
-            if "hardware_configuration" not in completed:
-                setup_hardware_configuration(detected_hardware)
-
-            if "mapping_and_navigation" not in completed:
-                setup_mapping_and_navigation()
-
-            if "safety_features" not in completed:
-                setup_safety_features()
-
-            if "web_interface" not in completed:
-                setup_web_interface()
-
-            if "remote_access" not in completed:
-                setup_remote_access()
-
-            if "scheduling" not in completed:
-                setup_scheduling()
-
-            if "final_verification" not in completed:
-                setup_final_verification()
-
-        # Clean up setup state file
-        if SETUP_STATE_FILE.exists():
-            SETUP_STATE_FILE.unlink()
-            print_info(f"Removed setup state file: {SETUP_STATE_FILE}")
-
-        print_success("Setup wizard completed successfully!")
-    except KeyboardInterrupt:
-        print("\n\nSetup interrupted. Your progress has been saved.")
-        print("Run this script again to continue from where you left off.")
-        sys.exit(0)
-    except Exception as e:
-        print_error(f"An error occurred: {e}")
-        print("Your progress has been saved. Run this script again to continue.")
-        traceback.print_exc()
+    if not install_dependencies(): # Install critical dependencies first
+        print_error("Failed to install core dependencies. Setup cannot continue.")
         sys.exit(1)
+
+    # Now that dependencies are installed, run permission checks
+    if not run_enhanced_permission_checks():
+        print_warning("Some permission checks failed. Please review the messages above.")
+        if not prompt_bool("Continue with setup despite permission issues?", default=False):
+            sys.exit(1)
+
+
+    load_setup_state()
+    welcome_screen()
+    detected_hardware = setup_hardware_detection()
+    setup_basic_configuration()
+    setup_hardware_configuration(detected_hardware)
+    setup_mapping_and_navigation()
+    setup_safety_features()
+    setup_web_interface()
+    setup_remote_access()
+    setup_scheduling()
+    setup_service_installation()
+    setup_final_verification()
+
+    # Clean up setup state file
+    if SETUP_STATE_FILE.exists():
+        SETUP_STATE_FILE.unlink()
+        print_info(f"Removed setup state file: {SETUP_STATE_FILE}")
+
+    print_success("Setup wizard completed successfully!")
+except KeyboardInterrupt:
+    print("\n\nSetup interrupted. Your progress has been saved.")
+    print("Run this script again to continue from where you left off.")
+    sys.exit(0)
+except Exception as e:
+    print_error(f"An error occurred: {e}")
+    print("Your progress has been saved. Run this script again to continue.")
+    traceback.print_exc()
+    sys.exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    # Ensure the script is run with sufficient permissions if it needs to install packages or modify system files
+    # Note: python-dotenv installation is handled internally now.
+    # For other operations like `raspi-config` or `systemctl`, sudo might be needed if called directly.
+    # The wizard itself tries to avoid direct sudo calls, guiding user or using user-level configs.
+
+    # Add a try-except block for graceful exit on Ctrl+C
+    try:
+        main()
+    except KeyboardInterrupt:
+        print_info("\nSetup wizard exited by user. Your progress has been saved.")
+        save_setup_state() # Ensure state is saved on Ctrl+C
+        sys.exit(0)
+    except Exception as e:
+        print_error(f"An unexpected error occurred: {e}")
+        # Consider logging the full traceback for debugging
+        # import traceback
+        # print_error(traceback.format_exc())
+        save_setup_state() # Attempt to save state even on error
+        sys.exit(1)
