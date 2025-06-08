@@ -155,8 +155,6 @@ class ResourceManager:
         self.current_state = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config - UPDATED to use APP_CONFIG_DIR
         self.user_polygon_path = APP_CONFIG_DIR / "user_polygon.json"
-        # allow web UI to access resource manager
-        self.resource_manager = self
 
         # Watchdog attributes
         self._watchdog_thread: Optional[threading.Thread] = None
@@ -359,13 +357,18 @@ class ResourceManager:
                 self._resources["avoidance_algorithm"] = None
 
             # Initialize web interface
+            self.web_interface = None # Ensure attribute exists even if init fails
             try:
-                self.web_interface = WebInterface(self.mower_controller) # Pass ResourceManager instance
-                logger.info("Web interface initialized successfully")
-                self._initialized_components["web_interface"] = True
+                # Pass self (ResourceManager instance) to WebInterface
+                # WebInterface constructor likely expects the main controller/resource manager
+                web_interface_instance = WebInterface(self)
+                self._resources["web_interface"] = web_interface_instance
+                self.web_interface = web_interface_instance # Assign to direct attribute
+                logger.info("Web interface initialized successfully and stored in _resources.")
             except Exception as e:
-                logger.error(f"Failed to initialize web interface: {e}")
+                logger.error(f"Failed to initialize web interface: {e}", exc_info=True)
                 self._resources["web_interface"] = None
+                self.web_interface = None # Ensure direct attribute is also None on failure
 
             logger.info("Software components initialized with fallbacks for any " "failures")
         except Exception as e:
@@ -558,24 +561,25 @@ class ResourceManager:
 
     def start_web_interface(self):
         """Starts the web interface if it has been initialized."""
-        print("DEBUG: ResourceManager.start_web_interface() - Entered method") # ADDED
+        print("DEBUG: ResourceManager.start_web_interface() - Entered method")
         self.logger.info("ResourceManager: Attempting to start web interface...")
-        if self.web_interface:
-            print("DEBUG: ResourceManager.start_web_interface() - self.web_interface is not None") # ADDED
-            self.logger.info("ResourceManager: self.web_interface is not None.")
+        web_iface = self.get_resource("web_interface") # Use get_resource
+        if web_iface:
+            print("DEBUG: ResourceManager.start_web_interface() - web_iface (from get_resource) is not None")
+            self.logger.info("ResourceManager: Web interface instance retrieved from resources.")
             try:
-                print("DEBUG: ResourceManager.start_web_interface() - Entering try block to call self.web_interface.start()") # ADDED
-                self.logger.info("ResourceManager: Calling web_interface.start()...")
-                self.web_interface.start()
-                self.logger.info("ResourceManager: web_interface.start() returned.")
-                print("DEBUG: ResourceManager.start_web_interface() - self.web_interface.start() returned") # ADDED
+                print("DEBUG: ResourceManager.start_web_interface() - Entering try block to call web_iface.start()")
+                self.logger.info("ResourceManager: Calling web_iface.start()...")
+                web_iface.start() # Call start on the retrieved instance
+                self.logger.info("ResourceManager: web_iface.start() returned.")
+                print("DEBUG: ResourceManager.start_web_interface() - web_iface.start() returned")
             except Exception as e:
-                print(f"DEBUG: ResourceManager.start_web_interface() - Exception caught: {e}") # ADDED
+                print(f"DEBUG: ResourceManager.start_web_interface() - Exception caught: {e}")
                 self.logger.error(f"ResourceManager: Failed to start web interface: {e}", exc_info=True)
         else:
-            print("DEBUG: ResourceManager.start_web_interface() - self.web_interface is None") # ADDED
-            self.logger.warning("ResourceManager: Web interface not initialized, cannot start.")
-        print("DEBUG: ResourceManager.start_web_interface() - Exiting method") # ADDED
+            print("DEBUG: ResourceManager.start_web_interface() - web_iface (from get_resource) is None")
+            self.logger.warning("ResourceManager: Web interface not initialized or not found in resources, cannot start.")
+        print("DEBUG: ResourceManager.start_web_interface() - Exiting method")
 
     def get_home_location(self):
         """
@@ -927,6 +931,31 @@ class ResourceManager:
             logger.error(f"Exception in watchdog loop: {e}", exc_info=True)
         finally:
             logger.info("Watchdog loop finishing.")
+
+    def _stop_watchdog(self):
+        """Stop the watchdog thread."""
+        logger.info("Stopping system watchdog thread...")
+        if self._watchdog_stop_event:
+            logger.debug("Setting watchdog stop event.")
+            self._watchdog_stop_event.set()
+        else:
+            logger.debug("Watchdog stop event not found (already stopped or never started?).")
+
+        thread_to_join = self._watchdog_thread # Capture before potentially nullifying
+        if thread_to_join and thread_to_join.is_alive():
+            logger.debug(f"Watchdog thread '{thread_to_join.name}' is alive. Attempting to join with 5s timeout.")
+            thread_to_join.join(timeout=5.0)
+            if thread_to_join.is_alive():
+                logger.warning(f"System watchdog thread '{thread_to_join.name}' did not join in time.")
+            else:
+                logger.info(f"System watchdog thread '{thread_to_join.name}' stopped successfully.")
+        elif thread_to_join: # Thread object exists but not alive
+            logger.info(f"System watchdog thread '{thread_to_join.name}' was found but not alive.")
+        else: # No thread object
+            logger.info("System watchdog thread was not running or reference already cleared.")
+
+        self._watchdog_thread = None
+        self._watchdog_stop_event = None
 
     def _start_watchdog(self):
         """Start a watchdog thread to monitor system health."""
