@@ -16,11 +16,11 @@ if TYPE_CHECKING:
 class WebInterface:
     """Web interface for controlling the mower."""
 
-    def __init__(self, mower: "Mower"):
+    def __init__(self, mower: "Mower"): # mower is actually ResourceManager instance
         """Initialize the web interface.
 
         Args:
-            mower: The mower instance to control.
+            mower: The mower instance (actually ResourceManager) to control.
         """
         self.logger = LoggerConfigInfo.get_logger(__name__)
         self.mower = mower
@@ -38,22 +38,39 @@ class WebInterface:
         2. Starts the web server in a separate thread
         3. Sets up WebSocket communication
         """
+        print("DEBUG: WebInterface.start() - Entered method") # ADDED
+        self.logger.info("WebInterface.start() called.")
+
         if self._is_running:
             self.logger.warning("Web interface is already running")
+            print("DEBUG: WebInterface.start() - Already running, returning.") # ADDED
             return
 
         try:
             # Create Flask app and SocketIO instance
-            self.app, self.socketio = create_app(self.mower)
+            print(f"DEBUG: WebInterface.start() - self.mower type: {type(self.mower)}") # ADDED
+            self.logger.info(f"WebInterface: self.mower type is {type(self.mower)}")
+
+            # Pass self.mower (which is ResourceManager) to create_app
+            print("DEBUG: WebInterface.start() - Calling create_app...") # ADDED
+            app_instance, socketio_instance = create_app(self.mower)
+            self.app = app_instance
+            self.socketio = socketio_instance
+            print("DEBUG: WebInterface.start() - create_app returned") # ADDED
+            self.logger.info("WebInterface: create_app returned successfully.")
 
             # Start the web server in a separate thread
             self._thread = threading.Thread(target=self._run_server, daemon=True)
             self._thread.start()
+            print(f"DEBUG: WebInterface.start() - Thread started: {self._thread.ident}") # ADDED
+            self.logger.info(f"WebInterface: Server thread {self._thread.ident} started.")
 
             self._is_running = True
             self.logger.info("Web interface started successfully")
+            print("DEBUG: WebInterface.start() - Exiting method normally.") # ADDED
         except Exception as e:
-            self.logger.error(f"Failed to start web interface: {e}")
+            print(f"DEBUG: WebInterface.start() - Exception caught: {e}") # ADDED
+            self.logger.error(f"Failed to start web interface: {e}", exc_info=True)
             raise
 
     def run(self) -> None:
@@ -123,20 +140,33 @@ class WebInterface:
         This method runs in a separate thread and handles the actual
         web server operation.
         """
+        print(f"DEBUG: WebInterface._run_server() - Entered method in thread {threading.get_ident()}") # ADDED
         try:
             if self.socketio and self.app:
+                print("DEBUG: WebInterface._run_server() - socketio and app exist. Calling socketio.run()") # ADDED
+                self.logger.info("Attempting to start Flask-SocketIO server on 0.0.0.0:5000...")
                 self.socketio.run(
                     self.app,
                     host="0.0.0.0",
                     port=5000,
-                    debug=False,
-                    use_reloader=False,
-                    allow_unsafe_werkzeug=True,
+                    debug=False, # Keep debug False for production/stability
+                    use_reloader=False, # Reloader should be False for threads
+                    allow_unsafe_werkzeug=True, # Necessary for some SocketIO setups
+                    # log_output=True # Consider adding if Flask/SocketIO logs are not appearing
                 )
+                self.logger.info("Flask-SocketIO server has stopped.")
+                print("DEBUG: WebInterface._run_server() - socketio.run() returned.") # ADDED
+            else:
+                self.logger.error("SocketIO or Flask app not initialized. Cannot start server.")
+                print("DEBUG: WebInterface._run_server() - socketio or app is None.") # ADDED
         except Exception as e:
-            self.logger.error(f"Error in web server thread: {e}")
-            self._is_running = False
-            raise
+            print(f"DEBUG: WebInterface._run_server() - Exception caught: {e}") # ADDED
+            self.logger.error(f"Error in web server thread during socketio.run: {e}", exc_info=True)
+            self._is_running = False # Ensure state reflects failure
+        finally:
+            self.logger.info(f"Web server thread (id: {threading.get_ident()}) is exiting.")
+            print(f"DEBUG: WebInterface._run_server() - Exiting method in thread {threading.get_ident()}") # ADDED
+            self._is_running = False # Ensure this is set if server stops for any reason
 
     @property
     def is_running(self) -> bool:

@@ -144,7 +144,8 @@ class ResourceManager:
     accessing resources and ensures proper initialization order and cleanup.
     """
 
-    def __init__(self, config_path=None):  # config_path for specific additional files
+    def __init__(self, config_path=None):
+        self.logger = LoggerConfigInfo.get_logger(__name__)
         """
         Initialize the resource manager.
         """
@@ -359,10 +360,11 @@ class ResourceManager:
 
             # Initialize web interface
             try:
-                self._resources["web_interface"] = WebInterface(self)
+                self.web_interface = WebInterface(self.mower_controller) # Pass ResourceManager instance
                 logger.info("Web interface initialized successfully")
+                self._initialized_components["web_interface"] = True
             except Exception as e:
-                logger.warning(f"Failed to initialize web interface: {e}")
+                logger.error(f"Failed to initialize web interface: {e}")
                 self._resources["web_interface"] = None
 
             logger.info("Software components initialized with fallbacks for any " "failures")
@@ -392,13 +394,24 @@ class ResourceManager:
                     )
 
             self._initialize_hardware()
-            self._initialize_software()
+            logger.info("Hardware components initialization attempt complete.")
 
+            # Mark ResourceManager as initialized here, so that software components
+            # initialized in _initialize_software() can successfully use get_resource().
+            # If _initialize_hardware had critical failures, individual resources might be None,
+            # but the ResourceManager itself is ready for software components to query them.
             self._initialized = True
-            logger.info("All resources initialized with fallbacks for any failures")
+            logger.info("ResourceManager marked as initialized (hardware phase complete). Software initialization will now proceed.")
+
+            self._initialize_software()
+            logger.info("Software components initialization attempt complete.")
+
+            # If we reached here, both hardware and software initialization phases were attempted.
+            # self._initialized is True.
+            logger.info("All resource initialization phases complete with fallbacks for any individual failures.")
         except Exception as e:
-            logger.error(f"Failed to initialize resources: {e}", exc_info=True)
-            self._initialized = False  # Ensure this is set on failure
+            logger.error(f"Critical error during resource initialization process: {e}", exc_info=True)
+            self._initialized = False  # Ensure this is set on any overriding failure
 
     def init_all_resources(self) -> bool:
         """
@@ -544,25 +557,25 @@ class ResourceManager:
         return gps
 
     def start_web_interface(self):
-        """Start the web interface in a separate thread."""
-        web_interface = self.get_web_interface()
-        if web_interface:
-            # Ensure the web interface has a run method that blocks until server stops
-            if hasattr(web_interface, "run") and callable(web_interface.run):
-                self._web_interface_thread = threading.Thread(
-                    target=web_interface.run,
-                    name="WebInterfaceThread",
-                    daemon=True  # Set as daemon so it doesn't block exit if main errors early
-                )
-                try:
-                    self._web_interface_thread.start()
-                    logger.info("Web interface started in a separate thread.")
-                except Exception as e:
-                    logger.error(f"Failed to start web interface thread: {e}", exc_info=True)
-            else:
-                logger.error("Web interface object does not have a callable 'run' method.")
+        """Starts the web interface if it has been initialized."""
+        print("DEBUG: ResourceManager.start_web_interface() - Entered method") # ADDED
+        self.logger.info("ResourceManager: Attempting to start web interface...")
+        if self.web_interface:
+            print("DEBUG: ResourceManager.start_web_interface() - self.web_interface is not None") # ADDED
+            self.logger.info("ResourceManager: self.web_interface is not None.")
+            try:
+                print("DEBUG: ResourceManager.start_web_interface() - Entering try block to call self.web_interface.start()") # ADDED
+                self.logger.info("ResourceManager: Calling web_interface.start()...")
+                self.web_interface.start()
+                self.logger.info("ResourceManager: web_interface.start() returned.")
+                print("DEBUG: ResourceManager.start_web_interface() - self.web_interface.start() returned") # ADDED
+            except Exception as e:
+                print(f"DEBUG: ResourceManager.start_web_interface() - Exception caught: {e}") # ADDED
+                self.logger.error(f"ResourceManager: Failed to start web interface: {e}", exc_info=True)
         else:
-            logger.warning("Web interface not available, cannot start.")
+            print("DEBUG: ResourceManager.start_web_interface() - self.web_interface is None") # ADDED
+            self.logger.warning("ResourceManager: Web interface not initialized, cannot start.")
+        print("DEBUG: ResourceManager.start_web_interface() - Exiting method") # ADDED
 
     def get_home_location(self):
         """
@@ -1101,7 +1114,14 @@ class ResourceManager:
                     )
 
             self._initialize_hardware()
-            self._initialize_software()
+            logger.info("Hardware components initialization attempt complete.")
+
+            # Mark ResourceManager as initialized here, so that software components
+            # initialized in _initialize_software() can successfully use get_resource().
+            # If _initialize_hardware had critical failures, individual resources might be None,
+            # but the ResourceManager itself is ready for software components to query them.
+            self._initialized = True
+            logger.info("ResourceManager marked as initialized (hardware phase complete). Software initialization will now proceed.")
 
             # Initialize obstacle detector separately to manage dependencies
             try:
@@ -1111,11 +1131,15 @@ class ResourceManager:
                 logger.error(f"Failed to initialize obstacle detector: {e}", exc_info=True)
                 self.obstacle_detector = None # Ensure it's None on failure
 
-            self._initialized = True
-            logger.info("All resources initialized with fallbacks for any failures")
+            self._initialize_software()
+            logger.info("Software components initialization attempt complete.")
+
+            # If we reached here, both hardware and software initialization phases were attempted.
+            # self._initialized is True.
+            logger.info("All resource initialization phases complete with fallbacks for any individual failures.")
         except Exception as e:
-            logger.error(f"Failed to initialize resources: {e}", exc_info=True)
-            self._initialized = False  # Ensure this is set on failure
+            logger.error(f"Critical error during resource initialization process: {e}", exc_info=True)
+            self._initialized = False  # Ensure this is set on any overriding failure
 
     def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
         return self.get_resource("obstacle_detector")
@@ -1132,52 +1156,59 @@ def main():
     resource_manager = None  # Ensure resource_manager is defined in this scope
 
     def signal_handler(signum, frame):
-        logger.info(f"Received signal {signum}. Initiating graceful shutdown...")
+        logger.info(f"Signal {signum} received. Initiating shutdown...")
         stop_event.set()
-        # The cleanup will be handled in the finally block
+        if resource_manager:
+            logger.info("Cleaning up resources...")
+            resource_manager.cleanup_all_resources()
+            logger.info("Resources cleaned up.")
+        logger.info("Exiting application.")
+        sys.exit(0)
 
     # Register signal handlers for SIGINT (Ctrl+C) and SIGTERM
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        # Initialize ResourceManager
-        # CONFIG_DIR is now APP_CONFIG_DIR from mower.config_management.constants
-        resource_manager = ResourceManager()
+        resource_manager = ResourceManager(config_path=str(MAIN_CONFIG_FILE))
         if not resource_manager.init_all_resources():
-            logger.error("Failed to initialize all resources. Shutting down.")
+            logger.error("Failed to initialize critical resources. Exiting.")
+            if resource_manager: # Check if resource_manager was instantiated
+                resource_manager.cleanup_all_resources()
             sys.exit(1)
 
-        logger.info("All resources initialized successfully.")
+        # Start the web interface
+        try:
+            print("DEBUG: main() - Before calling resource_manager.start_web_interface()") # ADDED
+            logger.info("MAIN: Attempting to start the web interface...")
+            resource_manager.start_web_interface()
+            logger.info("MAIN: Web interface start process initiated.")
+            print("DEBUG: main() - After calling resource_manager.start_web_interface()") # ADDED
+        except Exception as e:
+            print(f"DEBUG: main() - Exception caught while starting web interface: {e}") # ADDED
+            logger.error(f"MAIN: Failed to start web interface: {e}", exc_info=True)
+            # Decide if this is critical enough to exit. For now, log and continue.
 
-        # Start the web interface (if not already started by init_all_resources)
-        # The web interface start is now handled within init_all_resources
-        # if resource_manager.get_web_interface():
-        # logger.info("Web interface started.")
-        # else:
-        # logger.warning("Web interface could not be started.")
+        # Start the watchdog timer
+        # Ensure watchdog is started only if resource_manager is valid
+        if resource_manager:
+             resource_manager._start_watchdog()
 
-        # Start other background tasks or main operational loop here
-        # For now, we'll just keep the main thread alive until a shutdown signal
+
         logger.info("Application started. Waiting for shutdown signal...")
-        while not stop_event.is_set():
-            # Keep the main thread alive, perhaps with a short sleep
-            # Or, if there's a main operational loop for the mower, it would go here.
-            # Example: resource_manager.run_mowing_cycle() or similar
-            time.sleep(1)  # Check for stop_event every second
+        stop_event.wait()  # Wait indefinitely until stop_event is set
 
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt received. Shutting down...")
-        stop_event.set()
     except Exception as e:
-        logger.error(f"An unhandled exception occurred in main: {e}", exc_info=True)
-    finally:
-        logger.info("Initiating final cleanup...")
+        logger.critical(f"Unhandled exception in main: {e}", exc_info=True)
         if resource_manager:
             resource_manager.cleanup_all_resources()
-        logger.info("Application shutdown complete.")
-        sys.exit(0)
-
+        sys.exit(1)
+    finally:
+        logger.info("Application main loop ended or error occurred.")
+        if resource_manager and not stop_event.is_set(): # If not already shutting down via signal
+            logger.info("Performing final cleanup from main finally block...")
+            resource_manager.cleanup_all_resources()
+            logger.info("Final cleanup complete.")
 
 if __name__ == "__main__":
     # This allows running the main_controller.py directly for testing/debugging

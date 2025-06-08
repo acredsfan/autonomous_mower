@@ -27,37 +27,48 @@ else:
     logger.info("Running in hardware mode - using real sensor data")
 
 
-def create_app(mower):
+def create_app(mower_resource_manager_instance): # Renamed for clarity in previous step, ensure consistency
     """Create the Flask application.
 
     Args:
-        mower: The mower instance to control.
+        mower_resource_manager_instance: The mower resource manager instance.
 
     Returns:
-        The Flask application instance.
+        The Flask application instance and SocketIO instance.
     """
+    print(f"DEBUG: create_app() - Entered method. Mower instance type: {type(mower_resource_manager_instance)}") # ADDED
+    logger.info(f"create_app called with mower type: {type(mower_resource_manager_instance)}")
     app = Flask(__name__)
+    print("DEBUG: create_app() - Flask app created.") # ADDED
     CORS(app)
+    print("DEBUG: create_app() - CORS enabled.") # ADDED
     socketio = SocketIO(
         app, cors_allowed_origins="*", ping_timeout=20, ping_interval=25, logger=True, engineio_logger=True
     )
+    print("DEBUG: create_app() - SocketIO initialized.") # ADDED
 
     # Integrate data collection functionality
     try:
-        integrate_data_collection(app, mower)
+        print("DEBUG: create_app() - Attempting to integrate data collection...") # ADDED
+        integrate_data_collection(app, mower_resource_manager_instance)
         logger.info("Data collection module integrated successfully")
+        print("DEBUG: create_app() - Data collection integrated.") # ADDED
     except Exception as e:
         logger.error(f"Failed to integrate data collection module: {e}")
+        print(f"DEBUG: create_app() - Failed to integrate data collection: {e}") # ADDED
 
     # Initialize Babel for translations using the version-agnostic approach
     # This uses the implementation from i18n.py which works with any
     # Flask-Babel version
     try:
+        print("DEBUG: create_app() - Attempting to init Babel...") # ADDED
         init_babel(app)
         logger.info("Initialized Babel from i18n module")
+        print("DEBUG: create_app() - Babel initialized.") # ADDED
     except Exception as e:
         # Fallback to legacy initialization if needed
         logger.warning(f"Could not initialize Babel from i18n module: {e}")
+        print(f"DEBUG: create_app() - Could not initialize Babel from i18n module: {e}") # ADDED
         babel = Babel(app)
 
         # Define locale selector function instead of using decorator
@@ -70,15 +81,18 @@ def create_app(mower):
             # Flask-Babel >= 2.0
             babel.init_app(app, locale_selector=get_locale)
             logger.info("Initialized Babel with locale_selector parameter")
+            print("DEBUG: create_app() - Babel initialized with locale_selector.") # ADDED
         except TypeError:
             try:
                 # Flask-Babel < 2.0
-                babel.init_app(app)
                 babel.localeselector(get_locale)
                 logger.info("Initialized Babel with localeselector decorator")
+                print("DEBUG: create_app() - Babel initialized with localeselector decorator.") # ADDED
             except Exception as e2:
-                logger.error(f"Failed to initialize Babel: {e2}")
-
+                logger.error(f"Failed to initialize Babel (legacy fallback): {e2}")
+                print(f"DEBUG: create_app() - Failed to initialize Babel (legacy fallback): {e2}") # ADDED
+    
+    print("DEBUG: create_app() - Registering routes...") # ADDED
     # Route handlers
     @app.route("/")
     def index():
@@ -772,34 +786,10 @@ def create_app(mower):
 
     @app.errorhandler(KeyError)
     def handle_key_error(e):
-        """Handle KeyError, specifically for 'Session is disconnected' from engineio."""
-        # The error is raised as `raise KeyError('Session is disconnected')`
-        # So e.args[0] will be 'Session is disconnected'
-        if e.args and e.args[0] == "Session is disconnected":
-            sid_from_url = "N/A"
-            if request and request.args:
-                sid_from_url = request.args.get("sid", "N/A")
+        logger.error(f"KeyError in web UI: {e}", exc_info=True)
+        return jsonify(error=str(e)), 500
 
-            logger.warning(
-                f"EngineIO: Client attempted to use a disconnected session. "
-                f"SID from request: '{sid_from_url}'. "
-                f"URL: {request.url if request else 'N/A'}. "
-                f"Error: {e}"
-            )
-            # Engine.IO standard error for unknown session ID
-            response_data = {"code": 1, "message": "Session ID unknown"}
-            return jsonify(response_data), 400  # Bad Request
-        else:
-            # For other KeyErrors, log them and let Flask produce a 500.
-            logger.error(
-                f"Unhandled KeyError encountered: {e}. "
-                f"SID from request: "
-                f"{request.args.get('sid') if request and request.args else 'N/A'}. "
-                f"URL: {request.url if request else 'N/A'}",
-                exc_info=True,
-            )
-            return jsonify(error="An unexpected KeyError occurred.", details=str(e)), 500
-
+    print("DEBUG: create_app() - Exiting method, returning app and socketio.") # ADDED
     return app, socketio
 
 
