@@ -19,7 +19,7 @@ An autonomous lawn mower system built for Raspberry Pi, featuring advanced navig
 
 ## Environment Variables
 
-See [`.env.example`](.env.example:1) for required environment variables, including:
+See [`.env.example`](.env.example:1) for required environment variables. Copy this to a local `.env` file before first run. The file `.env` is ignored by Git to protect sensitive data.
 
 - `USE_SIMULATION`
 - `LOG_LEVEL`
@@ -794,3 +794,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Ultralytics for the YOLOv8 models
 - Raspberry Pi Foundation for hardware platform
 - OpenCV community for computer vision tools
+
+# Cleaning Up Local Artifacts
+
+To remove local untracked files (e.g., node_modules, temporary logs), you can run:
+
+```bash
+# Preview which files would be removed without deleting them:
+git clean -fdX --dry-run
+
+# Once you’re comfortable, run to delete untracked/ignored files while preserving your local model artifacts:
+git clean -fdX -e models/ -e calibration_image_sample_data_20x128x128x3_float32.npy \
+              -e yolov8n.onnx -e yolov8n.pt -e yolov8n_saved_model/
+```
+
+⚠️ WARNING: This deletes untracked and ignored files—ensure you don’t accidentally remove needed assets.
