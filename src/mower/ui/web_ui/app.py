@@ -27,7 +27,7 @@ else:
     logger.info("Running in hardware mode - using real sensor data")
 
 
-def create_app(mower_resource_manager_instance): # Renamed for clarity in previous step, ensure consistency
+def create_app(mower_resource_manager_instance):
     """Create the Flask application.
 
     Args:
@@ -36,8 +36,8 @@ def create_app(mower_resource_manager_instance): # Renamed for clarity in previo
     Returns:
         The Flask application instance and SocketIO instance.
     """
-    print(f"DEBUG: create_app() - Entered method. Mower instance type: {type(mower_resource_manager_instance)}") # ADDED
-    logger.info(f"create_app called with mower type: {type(mower_resource_manager_instance)}")
+    mower = mower_resource_manager_instance
+    logger.info(f"create_app called with mower type: {type(mower)}")
     app = Flask(__name__)
     print("DEBUG: create_app() - Flask app created.") # ADDED
     CORS(app)
