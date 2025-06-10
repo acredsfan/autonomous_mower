@@ -30,16 +30,47 @@ def integrate_data_collection(app: Flask, mower: Any) -> bool:
         bool: True if integration was successful, False otherwise
     """
     try:
-        # Get resource manager from mower
-        resource_manager = mower.resource_manager
-
-        # Initialize data collector with required components
-        camera = resource_manager.get_camera()
-        path_planner = resource_manager.get_path_planner()
-        config_manager = resource_manager.get_config_manager()
+        # The mower is already a ResourceManager instance
+        resource_manager = mower
+        
+        # Check if ResourceManager is initialized and has necessary methods
+        if not hasattr(resource_manager, 'get_config_manager'):
+            logger.warning("ResourceManager not fully initialized. Using default configuration.")
+            # Use default values when resources aren't available
+            camera = None
+            path_planner = None
+            config_manager = None
+        else:
+            # Try to get components if available
+            try:
+                camera = resource_manager.get_camera()
+            except Exception as e:
+                logger.warning(f"Failed to get camera: {e}")
+                camera = None
+                
+            try:
+                path_planner = resource_manager.get_path_planner()
+            except Exception as e:
+                logger.warning(f"Failed to get path planner: {e}")
+                path_planner = None
+                
+            try:
+                config_manager = resource_manager.get_config_manager()
+            except Exception as e:
+                logger.warning(f"Failed to get config manager: {e}")
+                config_manager = None
 
         # Create the data collection base directory if it doesn't exist
-        storage_path = config_manager.get_config("data_collection", {}).get("storage_path", "data/collected_images")
+        default_storage_path = "data/collected_images"
+        if config_manager:
+            try:
+                storage_path = config_manager.get_config("data_collection", {}).get("storage_path", default_storage_path)
+            except Exception as e:
+                logger.warning(f"Failed to get storage path from config: {e}")
+                storage_path = default_storage_path
+        else:
+            storage_path = default_storage_path
+            
         os.makedirs(storage_path, exist_ok=True)
 
         # Create data collector instance
