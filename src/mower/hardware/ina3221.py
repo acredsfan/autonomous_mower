@@ -24,23 +24,29 @@ class INA3221Sensor:
     voltage, current and power measurements from its three channels.
     """
 
-    @staticmethod
-    def init_ina3221():
-        """Initialize the INA3221 sensor"""
+    def __init__(self):
+        """Initialize the INA3221 sensor."""
+        self.sensor = None
+        self.bus_voltage = None
+        self.shunt_voltage = None
+        self.current = None
+        
         try:
             i2c = busio.I2C(board.SCL, board.SDA)
-
             # Initialize INA3221 sensor with Adafruit library
-            sensor = adafruit_ina3221.INA3221(i2c)
+            self.sensor = adafruit_ina3221.INA3221(i2c)
             logger.info("INA3221 initialized successfully.")
-            return sensor
         except (OSError, ValueError, RuntimeError) as e:  # Catch potential I2C errors
             logger.error("Error initializing INA3221: %s", e)
-            return None
         # Replace generic Exception with specific ones
         except (ImportError, AttributeError) as e:
             logger.error("Unexpected error initializing INA3221: %s", e)
-            return None
+    
+    @staticmethod
+    def init_ina3221():
+        """Initialize the INA3221 sensor and return instance."""
+        ina = INA3221Sensor()
+        return ina.sensor if ina.sensor else ina  # Return either the adafruit sensor or our wrapper
 
     @staticmethod
     def read_ina3221(sensor, channel):

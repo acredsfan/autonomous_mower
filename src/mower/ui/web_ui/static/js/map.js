@@ -1,32 +1,38 @@
-// Global variables for map and drawing tools
-var map;
-var drawingManager;
+// Ensure alertsContainer exists for notifications
+document.addEventListener('DOMContentLoaded', function() {
+    if (!document.getElementById('alertsContainer')) {
+        console.log('Creating alerts container');
+        const alertsContainer = document.createElement('div');
+        alertsContainer.id = 'alertsContainer';
+        alertsContainer.style.position = 'fixed';
+        alertsContainer.style.top = '20px';
+        alertsContainer.style.right = '20px';
+        alertsContainer.style.zIndex = '9999';
+        alertsContainer.style.maxWidth = '400px';
+        document.body.appendChild(alertsContainer);
+    }
+});
+
+// Global variables for drawing tools
+// Avoid declaring 'map' as it conflicts with mowing-patterns.js
+var drawingManager = null;
 var currentPolygon = null; // To keep track of the currently drawn/displayed polygon
+var mapLoaded = false; // Track if the map is loaded
 
 /**
- * Initializes the Google Map and DrawingManager.
- * This function is called by the Google Maps API script callback.
+ * Sets up the Google Maps Drawing Manager on the map.
+ * This function is used to initialize or re-initialize the drawing capabilities.
+ * @param {Object} mapInstance - The Google Maps instance to attach drawing tools to
  */
-function initMap() {
-    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-        console.error('Google Maps API not loaded.');
-        const mapDiv = document.getElementById('map');
-        if (mapDiv) {
-            mapDiv.innerHTML = '<div class="alert alert-danger" role="alert">Error: Google Maps API did not load. Please check your API key and internet connection.</div>';
-        }
+function setupDrawingManager(mapInstance) {
+    // If no map instance provided, use window.map as fallback
+    mapInstance = mapInstance || window.map;
+    
+    if (!mapInstance) {
+        console.error('No map instance available for drawing manager');
         return;
     }
-
-    // Default map center (e.g., a generic location, can be updated later)
-    const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York
-
-    map = new google.maps.Map(document.getElementById('map'), {
-        center: defaultCenter,
-        zoom: 8, // Adjust zoom as needed
-        mapTypeId: 'roadmap' // Default to roadmap, user can toggle satellite
-    });
-
-    // Initialize Drawing Manager
+    
     drawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null, // Initially not drawing
         drawingControl: true,
@@ -46,7 +52,106 @@ function initMap() {
             zIndex: 1
         }
     });
-    drawingManager.setMap(map);
+    drawingManager.setMap(mapInstance);
+
+    // Event listener for when a polygon is completed
+    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(event) {
+        if (currentPolygon) {
+            currentPolygon.setMap(null); // Remove previous polygon from map
+        }
+        currentPolygon = event.overlay;
+        currentPolygon.setEditable(true); // Make the newly drawn polygon editable
+
+        const path = currentPolygon.getPath();
+        const coordinates = [];
+        for (let i = 0; i < path.getLength(); i++) {
+            const latLng = path.getAt(i);
+            coordinates.push({ lat: latLng.lat(), lng: latLng.lng() });
+        }
+
+        console.log('Polygon completed. Coordinates:', coordinates);
+        saveBoundary(coordinates);
+
+        // After completing a polygon, set mode back to navigation (null)
+        drawingManager.setDrawingMode(null);
+    });
+}
+
+/**
+ * Initializes the Google Map and DrawingManager.
+ * This function is called by the Google Maps API script callback.
+ */
+function initMap() {
+    // Check if we've already loaded this function to prevent duplicate initialization
+    if (mapLoaded) {
+        console.log('Map already initialized, skipping duplicate initialization');
+        return;
+    }
+    
+    if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+        console.error('Google Maps API not loaded.');
+        const mapDiv = document.getElementById('map');
+        if (mapDiv) {
+            mapDiv.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h4>Error: Google Maps API did not load</h4>
+                    <p>This is likely due to a missing or invalid API key.</p>
+                    <p>To fix this issue:</p>
+                    <ol>
+                        <li>Create a .env file in the project root directory if not already present</li>
+                        <li>Add your Google Maps API key: <code>GOOGLE_MAPS_API_KEY=your_key_here</code></li>
+                        <li>Restart the mower service: <code>sudo systemctl restart autonomous-mower.service</code></li>
+                    </ol>
+                    <p>You can get a Google Maps API key from the <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Google Cloud Console</a>.</p>
+                </div>
+            `;
+            // Add a helpful command to check status
+            const checkCommand = document.createElement('div');
+            checkCommand.className = 'mt-3';
+            checkCommand.innerHTML = `
+                <p>To check if your API key is properly configured, you can run:</p>
+                <pre>cd /home/pi/autonomous_mower && python3 test_web_ui.py --check-api-key</pre>
+            `;
+            mapDiv.appendChild(checkCommand);
+        }
+        return;
+    }
+    
+    // Set flag that we're initializing
+    mapLoaded = true;
+    
+    // Check if map is already initialized by mowing-patterns.js
+    if (window.map) {
+        console.log('Using existing map from window.map');
+        // Just initialize our map-specific functionality
+        setupDrawingManager(window.map);
+        // Load any existing boundary
+        loadAndDrawBoundary(window.map);
+        // Setup UI event listeners
+        setupMapUIEventListeners(window.map);
+        return;
+    }
+
+    // Default map center (e.g., a generic location, can be updated later)
+    const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York
+
+    window.map = new google.maps.Map(document.getElementById('map'), {
+        center: defaultCenter,
+        zoom: 8, // Adjust zoom as needed
+        mapTypeId: 'roadmap', // Default to roadmap, user can toggle satellite
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT,
+            mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
+        },
+        fullscreenControl: true,
+        streetViewControl: true,
+        zoomControl: true
+    });
+
+    // Initialize Drawing Manager
+    setupDrawingManager(window.map);
 
     // Event listener for when a polygon is completed
     google.maps.event.addListener(drawingManager, 'polygoncomplete', function(event) {
@@ -128,9 +233,16 @@ function setupMapUIEventListeners() {
     const toggleSatelliteButton = document.getElementById('toggle-satellite');
     if (toggleSatelliteButton) {
         toggleSatelliteButton.addEventListener('click', function() {
-            if (map) {
-                const currentTypeId = map.getMapTypeId();
-                map.setMapTypeId(currentTypeId === 'roadmap' ? 'satellite' : 'roadmap');
+            // Use window.map as the source of truth
+            if (window.map) {
+                const currentTypeId = window.map.getMapTypeId();
+                const newTypeId = currentTypeId === 'roadmap' ? 'satellite' : 'roadmap';
+                window.map.setMapTypeId(newTypeId);
+                
+                // Update button text
+                const icon = currentTypeId === 'roadmap' ? 'fa-map' : 'fa-satellite';
+                const text = currentTypeId === 'roadmap' ? 'Toggle Street' : 'Toggle Satellite';
+                this.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
             }
         });
     }
@@ -164,8 +276,8 @@ function geocodeAddress(address) {
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ 'address': address }, function(results, status) {
         if (status === 'OK') {
-            map.setCenter(results[0].geometry.location);
-            map.setZoom(17); // Zoom in closer for addresses
+            mapInstance.setCenter(results[0].geometry.location);
+            mapInstance.setZoom(17); // Zoom in closer for addresses
             // Optionally, place a marker
             // new google.maps.Marker({
             //     map: map,
@@ -183,7 +295,19 @@ function geocodeAddress(address) {
 /**
  * Loads existing boundary data from the backend and draws it on the map.
  */
-function loadAndDrawBoundary() {
+/**
+ * Loads boundary data from the server and draws it on the map
+ * @param {Object} mapInstance - Optional map instance parameter
+ */
+function loadAndDrawBoundary(mapInstance) {
+    // If no map instance provided, use window.map as fallback
+    mapInstance = mapInstance || window.map;
+    
+    if (!mapInstance) {
+        console.error('No map instance available for boundary drawing');
+        return;
+    }
+    
     fetch('/api/get-area') // Uses existing endpoint from app.py
         .then(response => {
             if (!response.ok) {
@@ -205,13 +329,13 @@ function loadAndDrawBoundary() {
                     fillColor: '#4CAF50',
                     fillOpacity: 0.3,
                     editable: true, // Allow editing of loaded polygon
-                    map: map
+                    map: mapInstance
                 });
 
                 // Adjust map to fit the loaded polygon
                 const bounds = new google.maps.LatLngBounds();
                 coordinates.forEach(coord => bounds.extend(new google.maps.LatLng(coord.lat, coord.lng)));
-                map.fitBounds(bounds);
+                mapInstance.fitBounds(bounds);
 
                 // Add listeners for edits if polygon is editable
                 if (currentPolygon.getEditable()) {
@@ -225,6 +349,8 @@ function loadAndDrawBoundary() {
                         // Called when a vertex is added.
                         console.log('Polygon vertex added (insert_at)');
                     });
+                    
+                    console.log('Successfully loaded and drew boundary with', coordinates.length, 'points');
                 }
 
             } else if (data.success && (!data.data || !data.data.boundary_points || data.data.boundary_points.length === 0)) {
@@ -279,7 +405,7 @@ if (typeof showAlert !== 'function') {
     function showAlert(message, type = 'info', duration = 3000) {
         console.log(`Alert (${type}): ${message}`);
         // Simple fallback if a proper showAlert isn't available:
-        const alertsContainer = document.getElementById('alertsContainer'); // Assuming from main.js
+        const alertsContainer = document.getElementById('alertsContainer');
         if (alertsContainer) {
             const alertId = "map_alert_" + Date.now();
             const alertHtml = `
@@ -295,15 +421,65 @@ if (typeof showAlert !== 'function') {
                     if (alertElement) alertElement.remove();
                 }, duration);
             }
+        } else if (type === 'danger' || type === 'error') {
+            // Fallback to browser alert for critical errors if no alerts container exists
+            alert(`Error: ${message}`);
         }
     }
 }
 
+// Fallback sendCommand function if helper.js fails to load
+if (typeof sendCommand !== 'function') {
+    console.log('Adding fallback sendCommand function');
+    window.sendCommand = function(command, params = {}, callback = null) {
+        console.log(`Sending command: ${command}`, params);
+        // Show a temporary loading message
+        showAlert(`Processing command: ${command}...`, 'info', 1000);
+        
+        fetch('/api/' + command, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(params)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log(`Command ${command} succeeded:`, data);
+                if (data.message) {
+                    showAlert(data.message, 'success');
+                }
+            } else {
+                console.error(`Command ${command} failed:`, data);
+                showAlert(`Command failed: ${data.error || 'Unknown error'}`, 'danger');
+            }
+            
+            if (callback) {
+                callback(data);
+            }
+        })
+        .catch(error => {
+            console.error('Error sending command:', error);
+            showAlert(`Error: ${error.message}`, 'danger');
+            if (callback) {
+                callback({success: false, error: error.message});
+            }
+        });
+    };
+}
+
 // Ensure setupMapUIEventListeners is called if initMap was already called by Google API
 // before this script fully parsed (less likely with defer, but good practice).
-if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && map) {
+if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && mapInstance) {
     // If map is already initialized, but perhaps event listeners weren't set up
     // because this script loaded after initMap ran.
     // This situation needs careful handling if initMap itself has async parts.
-    // For now, assuming initMap will call setupMapUIEventListeners.
+    console.log('Map already initialized, setting up UI event listeners');
+    setupMapUIEventListeners();
 }

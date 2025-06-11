@@ -142,22 +142,29 @@ load_env_config() {
                 local temp_country="" temp_gateway_main="" temp_gateway_fallback=""
 
                 # Read the file
-                while IFS='=' read -r key value || [ -n "$key" ]; do
+                while IFS='=' read -r key value || [[ -n "$key" ]]; do
                     # Skip comments and empty lines
                     [[ $key =~ ^[[:space:]]*# ]] && continue
                     [[ -z "$key" ]] && continue # Skip lines where key is empty initially
 
-                    # Remove leading/trailing whitespace and quotes
+                    # Remove leading/trailing whitespace
                     key=$(echo "$key" | xargs)
-                    value=$(echo "$value" | xargs)
-                    # Remove surrounding quotes (double or single)
-                    value=${value#\"} # Remove leading double quote
-                    value=${value%\"} # Remove trailing double quote
-                    value=${value#\'} # Remove leading single quote
-                    value=${value%\'} # Remove trailing single quote
+                    
+                    # Handle inline comments by removing everything after # in the value
+                    if [[ -n "$value" ]]; then
+                        # Remove inline comments (everything after #)
+                        value=$(echo "$value" | sed 's/#.*//' | xargs)
+                        # Remove surrounding quotes (double or single)
+                        value=${value#\"} # Remove leading double quote
+                        value=${value%\"} # Remove trailing double quote
+                        value=${value#\'} # Remove leading single quote
+                        value=${value%\'} # Remove trailing single quote
+                    fi
 
                     # Skip empty keys again after xargs
                     [[ -z "$key" ]] && continue
+                    # Skip if value is empty after processing
+                    [[ -z "$value" ]] && continue
 
                     # log_info "Processing key: '$key', value: '$value'" # Uncomment for deep debugging
                     case "$key" in
@@ -977,20 +984,37 @@ main() {
     echo ""
 
     # Load environment and detect network manager
+    log_info "MAIN: Starting script execution"
+    log_info "MAIN: Calling load_env_config"
     load_env_config
+    log_info "MAIN: load_env_config completed"
+    log_info "MAIN: Calling detect_network_manager"
     detect_network_manager
+    log_info "MAIN: detect_network_manager completed. NETWORK_MANAGER is $NETWORK_MANAGER"
+    log_info "MAIN: Calling check_system_requirements"
     check_system_requirements
+    log_info "MAIN: check_system_requirements completed"
 
     # Interactive configuration
+    log_info "MAIN: Calling configure_wifi_settings"
     configure_wifi_settings
+    log_info "MAIN: configure_wifi_settings completed"
+    log_info "MAIN: Calling confirm_configuration"
     confirm_configuration
+    log_info "MAIN: confirm_configuration completed"
 
     # Execute configuration
+    log_info "MAIN: Calling main_configuration"
     main_configuration
+    log_info "MAIN: main_configuration completed"
 
     # Test and display results
+    log_info "MAIN: Calling test_connectivity"
     test_connectivity
+    log_info "MAIN: test_connectivity completed"
+    log_info "MAIN: Calling display_completion_summary"
     display_completion_summary
+    log_info "MAIN: display_completion_summary completed"
 
     log_info "Dual Wi-Fi setup completed successfully!"
 }

@@ -69,8 +69,22 @@ class DataCollector:
     def _load_config(self) -> Dict[str, Any]:  # Changed return type hint
         """Load data collection configuration"""
         try:
-            # Changed to use .get() from ConfigurationManager instance
-            dc_config = self.config_manager.get("data_collection", {})
+            # Handle different types of config_manager or None
+            if self.config_manager is None:
+                # If config_manager is None, use default config
+                logger.warning("No config manager provided, using default configuration")
+                dc_config = {}
+            elif hasattr(self.config_manager, 'get'):
+                # Use .get() method if available
+                dc_config = self.config_manager.get("data_collection", {})
+            elif hasattr(self.config_manager, 'get_config'):
+                # Use get_config method if that's what's available
+                dc_config = self.config_manager.get_config("data_collection", {})
+            else:
+                # Fallback to empty dict if no known method is available
+                logger.warning("Config manager lacks expected methods, using default configuration")
+                dc_config = {}
+                
             return {
                 "storage_path": dc_config.get("storage_path", "data/collected_images"),
                 "image_interval": dc_config.get("image_interval", 5),

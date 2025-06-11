@@ -139,8 +139,8 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                     self._i2c,
                     self.shutdown_lines.get("left"),
                     self.shutdown_lines.get("right"),
-                    left_target_addr=0x30,
-                    right_target_addr=0x31,
+                    left_target_addr=0x29,  # Use consistent addresses from tof.py
+                    right_target_addr=0x30,
                 )
         except Exception as e:
             _log_error("VL53L0X initialization failed", e)
@@ -207,8 +207,19 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             return {}
 
         try:
-            solar_data = INA3221Sensor.read_ina3221(self._sensors["ina3221"], 1)
-            battery_data = INA3221Sensor.read_ina3221(self._sensors["ina3221"], 3)
+            # Check if we're working with the Adafruit sensor directly or our wrapper
+            sensor = self._sensors["ina3221"]
+            is_adafruit_sensor = hasattr(sensor, '__getitem__')
+            
+            if is_adafruit_sensor:
+                # Original implementation using Adafruit sensor directly
+                solar_data = INA3221Sensor.read_ina3221(sensor, 1)
+                battery_data = INA3221Sensor.read_ina3221(sensor, 3)
+            else:
+                # Fallback for our wrapper object
+                solar_data = INA3221Sensor.read_ina3221(sensor.sensor, 1) if sensor.sensor else {}
+                battery_data = INA3221Sensor.read_ina3221(sensor.sensor, 3) if sensor.sensor else {}
+                
             return {
                 "solar_voltage": solar_data.get("bus_voltage"),
                 "solar_current": solar_data.get("current"),

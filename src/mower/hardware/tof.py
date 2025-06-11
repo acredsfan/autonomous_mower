@@ -123,8 +123,25 @@ class VL53L0XSensors:
     @staticmethod
     def read_vl53l0x(sensor):
         """Read VL53L0X ToF sensor data."""
+        if sensor is None:
+            return -1  # Return error value if sensor is None
+            
         try:
-            distance = sensor.range
+            # Add a small delay before reading to avoid I/O errors
+            time.sleep(0.01)
+            
+            # Lock the I2C bus if possible before reading
+            if hasattr(sensor._device, '_i2c'):
+                try:
+                    sensor._device._i2c.try_lock()
+                    distance = sensor.range
+                    sensor._device._i2c.unlock()
+                except Exception:
+                    # If locking fails, try without lock
+                    distance = sensor.range
+            else:
+                distance = sensor.range
+                
             if distance > 0:
                 return distance
             else:
@@ -133,6 +150,13 @@ class VL53L0XSensors:
                 # Library might return 0 for errors. Treat > 0 as valid.
                 logging.debug(f"VL53L0X returned non-positive distance: {distance}")
                 return -1  # Error value or out of range
+        except OSError as e:
+            # More specific error handling for I/O errors
+            if "Input/output error" in str(e):
+                logging.debug(f"I/O error reading VL53L0X: {e}. Common with concurrent access.")
+            else:
+                logging.error(f"OSError reading VL53L0X data: {e}")
+            return -1
         except Exception as e:
             logging.error(f"Error reading VL53L0X data: {e}")
             return -1

@@ -183,6 +183,9 @@ function initMap() {
       }
       isSatelliteView = !isSatelliteView;
     });
+
+  // Make map accessible to other scripts
+  window.map = map;
 }
 
 /**
@@ -364,26 +367,61 @@ function geocodeAddress(address) {
  * Save all map changes (boundary, no-go zones, home location)
  */
 function saveMapChanges() {
+  // Display saving feedback
+  showAlert("Saving map changes, please wait...", "info");
+  
+  // Track success of all operations
+  let boundarySuccess = true;
+  let homeSuccess = true;
+  let nogoSuccess = true;
+  
   // Save boundary
   if (boundaryPoints.length >= 3) {
-    sendCommand(
-      "save_area",
-      { coordinates: boundaryPoints },
-      function (response) {
-        if (response.success) {
-          showAlert("Yard boundary saved successfully!", "success");
-        } else {
-          showAlert(
-            "Failed to save yard boundary: " +
-              (response.error || "Unknown error"),
-            "danger"
-          );
-        }
+    console.log("Saving boundary points:", JSON.stringify(boundaryPoints));
+    
+    // Try both REST API and socket approach for robustness
+    // First try the REST API approach
+    fetch('/api/save-area', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ coordinates: boundaryPoints })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log("REST API response:", data);
+      if (data.success) {
+        showAlert("Yard boundary saved successfully via REST API!", "success");
+      } else {
+        // Fall back to socket approach if REST fails
+        sendCommand(
+          "save_area",
+          { coordinates: boundaryPoints },
+          function (response) {
+            console.log("Socket API response:", response);
+            if (response.success) {
+              showAlert("Yard boundary saved successfully via Socket!", "success");
+            } else {
+              boundarySuccess = false;
+              showAlert(
+                "Failed to save yard boundary: " +
+                  (response.error || "Unknown error"),
+                "danger"
+              );
+            }
+          }
+        );
       }
-    );
+    })
+    .catch(error => {
+      console.error("Error saving boundary via REST API:", error);
+      boundarySuccess = false;
+      showAlert("Error saving boundary: " + error.message, "danger");
+    });
   } else {
     showAlert("Please draw a valid yard boundary before saving.", "warning");
-    return;
+    boundarySuccess = false;
   }
 
   // Save home location
@@ -392,11 +430,15 @@ function saveMapChanges() {
       lat: homeMarker.getPosition().lat(),
       lng: homeMarker.getPosition().lng(),
     };
+    
+    console.log("Saving home location:", JSON.stringify(homeLocation));
 
     sendCommand("set_home", { location: homeLocation }, function (response) {
+      console.log("Home location save response:", response);
       if (response.success) {
         showAlert("Home location saved successfully!", "success");
       } else {
+        homeSuccess = false;
         showAlert(
           "Failed to save home location: " +
             (response.error || "Unknown error"),
@@ -419,11 +461,15 @@ function saveMapChanges() {
       }
       return points;
     });
+    
+    console.log("Saving no-go zones:", JSON.stringify(zones));
 
     sendCommand("save_no_go_zones", { zones: zones }, function (response) {
+      console.log("No-go zones save response:", response);
       if (response.success) {
         showAlert("No-go zones saved successfully!", "success");
       } else {
+        nogoSuccess = false;
         showAlert(
           "Failed to save no-go zones: " + (response.error || "Unknown error"),
           "danger"
@@ -431,6 +477,13 @@ function saveMapChanges() {
       }
     });
   }
+  
+  // Show comprehensive save status after a short delay
+  setTimeout(() => {
+    if (boundarySuccess && (homeSuccess || !homeMarker) && (nogoSuccess || noGoZones.length === 0)) {
+      showAlert("Map changes saved successfully!", "success");
+    }
+  }, 3000);
 }
 
 /**

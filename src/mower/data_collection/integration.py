@@ -30,8 +30,12 @@ def integrate_data_collection(app: Flask, mower: Any) -> bool:
         bool: True if integration was successful, False otherwise
     """
     try:
-        # The mower is already a ResourceManager instance
-        resource_manager = mower
+        # Check if mower has resource_manager attribute or is the resource_manager itself
+        if hasattr(mower, 'resource_manager'):
+            resource_manager = mower.resource_manager
+        else:
+            # If not, assume mower is the resource_manager itself
+            resource_manager = mower
         
         # Check if ResourceManager is initialized and has necessary methods
         if not hasattr(resource_manager, 'get_config_manager'):

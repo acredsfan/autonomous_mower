@@ -178,3 +178,8 @@ tools/diagnose_tof.py
 tools/diagnose_tof.sh
 tools/diagnose_webui.py
 tools/diagnose_webui.sh
+test_web_ui.py
+debug_map_endpoint.py
+debug_web_ui.py
+test_env_loading.sh
+test_simple_flask.py

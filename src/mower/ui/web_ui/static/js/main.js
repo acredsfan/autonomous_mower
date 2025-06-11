@@ -136,6 +136,7 @@ function setupSocketConnection() {
 
   // Handle sensor data updates
   socket.on("sensor_data", function (data) {
+    console.log("Received sensor data:", data);
     updateSensorData(data);
   });
 
@@ -419,53 +420,66 @@ function updateAdditionalStatusElements() {
  * @param {Object} data - Sensor data from the server
  */
 function updateSensorData(data) {
-  // Update our internal state for top-level properties
-  Object.assign(systemState.sensors, data);
-
-  // Process environment sensor data
-  if (data.environment) {
-    const env = data.environment;
-
-    // Update temperature
-    const tempElement = document.getElementById("sensor_temperature");
-    if (tempElement && env.temperature !== undefined) {
-      tempElement.textContent = `${env.temperature.toFixed(1)}°C`;
+  try {
+    // Update our internal state for top-level properties
+    if (data && typeof data === 'object') {
+      Object.assign(systemState.sensors, data);
+    } else {
+      console.warn('Received invalid sensor data:', data);
+      return;
     }
 
-    // Update humidity
-    const humidityElement = document.getElementById("sensor_humidity");
-    if (humidityElement && env.humidity !== undefined) {
-      humidityElement.textContent = `${env.humidity.toFixed(1)}%`;
-    }
+    // Process environment sensor data
+    if (data.environment) {
+      const env = data.environment;
 
-    // Update pressure
-    const pressureElement = document.getElementById("sensor_pressure");
-    if (pressureElement && env.pressure !== undefined) {
-      pressureElement.textContent = `${env.pressure.toFixed(0)} hPa`;
+      // Update temperature
+      const tempElement = document.getElementById("sensor_temperature");
+      if (tempElement && env.temperature !== undefined) {
+        tempElement.textContent = `${Number(env.temperature).toFixed(1)}°C`;
+      }
+
+      // Update humidity
+      const humidityElement = document.getElementById("sensor_humidity");
+      if (humidityElement && env.humidity !== undefined) {
+        humidityElement.textContent = `${Number(env.humidity).toFixed(1)}%`;
+      }
+
+      // Update pressure
+      const pressureElement = document.getElementById("sensor_pressure");
+      if (pressureElement && env.pressure !== undefined) {
+        pressureElement.textContent = `${Number(env.pressure).toFixed(0)} hPa`;
+      }
     }
+  } catch (err) {
+    console.error('Error processing environment sensor data:', err);
   }
 
   // Process ToF (Time of Flight) distance sensor data
-  if (data.tof) {
-    const tof = data.tof;
+  try {
+    if (data.tof) {
+      const tof = data.tof;
 
-    // Update left distance sensor
-    const leftDistElement = document.getElementById("sensor_leftDistance");
-    if (leftDistElement && tof.left !== undefined) {
-      leftDistElement.textContent = `${tof.left.toFixed(1)} cm`;
-    }
+      // Update left distance sensor
+      const leftDistElement = document.getElementById("sensor_leftDistance");
+      if (leftDistElement && tof.left !== undefined) {
+        leftDistElement.textContent = `${Number(tof.left).toFixed(1)} cm`;
+      }
 
-    // Update right distance sensor
-    const rightDistElement = document.getElementById("sensor_rightDistance");
-    if (rightDistElement && tof.right !== undefined) {
-      rightDistElement.textContent = `${tof.right.toFixed(1)} cm`;
-    }
+      // Update right distance sensor
+      const rightDistElement = document.getElementById("sensor_rightDistance");
+      if (rightDistElement && tof.right !== undefined) {
+        rightDistElement.textContent = `${Number(tof.right).toFixed(1)} cm`;
+      }
 
-    // Update front distance sensor if available
-    const frontDistElement = document.getElementById("sensor_frontDistance");
-    if (frontDistElement && tof.front !== undefined) {
-      frontDistElement.textContent = `${tof.front.toFixed(1)} cm`;
+      // Update front distance sensor if available
+      const frontDistElement = document.getElementById("sensor_frontDistance");
+      if (frontDistElement && tof.front !== undefined) {
+        frontDistElement.textContent = `${Number(tof.front).toFixed(1)} cm`;
+      }
     }
+  } catch (err) {
+    console.error('Error processing ToF sensor data:', err);
   } // Update IMU data if available
   if (data.imu) {
     Object.assign(systemState.imu, data.imu);
@@ -637,21 +651,36 @@ function showSafetyAlert(messages) {
  * @param {Object} data - Position data from the server
  */
 function updatePositionData(data) {
-  // Update our internal state
-  Object.assign(systemState.position, data);
+  try {
+    // Log the data for debugging
+    console.log("Received position update:", data);
+    
+    // Update our internal state if data is valid
+    if (data && typeof data === 'object') {
+      Object.assign(systemState.position, data);
+    } else {
+      console.warn('Received invalid position data:', data);
+      return;
+    }
 
-  // Update position display elements
-  const latElement = document.getElementById("position_latitude");
-  const lngElement = document.getElementById("position_longitude");
+    // Update position display elements
+    const latElement = document.getElementById("position_latitude");
+    const lngElement = document.getElementById("position_longitude");
 
-  if (latElement && lngElement && data.currentPosition) {
-    latElement.textContent = data.currentPosition[0].toFixed(6);
-    lngElement.textContent = data.currentPosition[1].toFixed(6);
-  }
+    if (latElement && lngElement && data.currentPosition) {
+      latElement.textContent = Number(data.currentPosition[0]).toFixed(6);
+      lngElement.textContent = Number(data.currentPosition[1]).toFixed(6);
+    }
 
-  // Update map if it exists and the updateMap function is available
-  if (typeof updateMap === "function" && data.currentPosition) {
-    updateMap(data);
+    // Update map if it exists and the updateMap function is available
+    if (typeof updateMap === "function" && data.currentPosition) {
+      console.log("Updating map with position data");
+      updateMap(data);
+    } else if (data.currentPosition) {
+      console.log("updateMap function not available, but position data received");
+    }
+  } catch (err) {
+    console.error('Error processing position data:', err);
   }
 }
 

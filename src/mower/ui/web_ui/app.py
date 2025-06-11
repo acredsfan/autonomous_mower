@@ -112,9 +112,19 @@ def create_app(mower_resource_manager_instance):
     @app.route("/map")
     def map_view():
         """Render the map view page."""
-        # Use a default API key or retrieve from environment/config
-        # For development purposes, we'll use a placeholder API key
-        google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+        # Use API key from environment or configuration
+        google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+        
+        print(f"DEBUG: map_view() - Using Google Maps API key: {google_maps_api_key}")
+        
+        if not google_maps_api_key:
+            logger.warning("GOOGLE_MAPS_API_KEY not set in environment. Map functionality will be limited.")
+            # Check if a .env file exists but hasn't been loaded
+            env_file = Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.env"))
+            if env_file.exists():
+                logger.warning(f".env file exists at {env_file} but may not be loaded. Consider restarting the service.")
+                print(f"WARNING: .env file exists but may not be loaded. Please restart the service.")
+                
         return render_template("map.html", google_maps_api_key=google_maps_api_key)
 
     @app.route("/diagnostics")
@@ -291,9 +301,33 @@ def create_app(mower_resource_manager_instance):
                     400,
                 )
 
-            path_planner = mower.resource_manager.get_path_planner()
-            path_planner.pattern_config.boundary_points = coordinates
-            return jsonify({"success": True})
+            # First try to use the pattern_config approach
+            try:
+                path_planner = mower.resource_manager.get_path_planner()
+                if hasattr(path_planner, 'pattern_config'):
+                    path_planner.pattern_config.boundary_points = coordinates
+                    logger.info(f"Successfully saved boundary with {len(coordinates)} points using pattern_config")
+                    return jsonify({"success": True, "message": "Boundary saved successfully (pattern_config)"})
+                # If pattern_config doesn't exist, try with set_boundary_points
+                elif hasattr(path_planner, 'set_boundary_points'):
+                    path_planner.set_boundary_points(coordinates)
+                    logger.info(f"Successfully saved boundary with {len(coordinates)} points using set_boundary_points")
+                    return jsonify({"success": True, "message": "Boundary saved successfully (set_boundary_points)"})
+                # Last resort: save directly to mower
+                else:
+                    mower.save_boundary(coordinates)
+                    logger.info(f"Successfully saved boundary with {len(coordinates)} points using mower.save_boundary")
+                    return jsonify({"success": True, "message": "Boundary saved successfully (mower.save_boundary)"})
+            except Exception as e:
+                # Try the fallback option directly
+                logger.warning(f"Primary save approach failed: {e}. Trying fallback...")
+                try:
+                    mower.save_boundary(coordinates)
+                    logger.info(f"Successfully saved boundary with {len(coordinates)} points using fallback")
+                    return jsonify({"success": True, "message": "Boundary saved successfully (fallback)"})
+                except Exception as fallback_e:
+                    logger.error(f"Fallback save approach failed: {fallback_e}")
+                    raise fallback_e
         except Exception as e:
             logger.error(f"Failed to save mowing area: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
@@ -685,11 +719,7 @@ def create_app(mower_resource_manager_instance):
                     ),
                     "coverage": 0.85,  # Example coverage value
                 },
-                "save_area": lambda params: (
-                    {"success": True, "message": "Boundary saved successfully"}
-                    if (mower.resource_manager.get_path_planner().set_boundary_points(params.get("coordinates", [])))
-                    else {"success": False, "error": "Failed to save boundary"}
-                ),
+                "save_area": lambda params: save_area_command_handler(params, mower),
                 "set_home": lambda params: (
                     {
                         "success": True,
@@ -791,6 +821,46 @@ def create_app(mower_resource_manager_instance):
 
     print("DEBUG: create_app() - Exiting method, returning app and socketio.") # ADDED
     return app, socketio
+
+
+def save_area_command_handler(params, mower):
+    """Helper function to handle the save_area command with robust fallbacks."""
+    coordinates = params.get("coordinates", [])
+    logger.info(f"Handling save_area command with {len(coordinates)} points")
+    
+    if not coordinates:
+        logger.warning("No coordinates provided in save_area command")
+        return {"success": False, "error": "No coordinates provided"}
+    
+    # Try all possible methods to save the boundary
+    try:
+        # Method 1: Using path_planner.set_boundary_points
+        path_planner = mower.resource_manager.get_path_planner()
+        if hasattr(path_planner, 'set_boundary_points'):
+            result = path_planner.set_boundary_points(coordinates)
+            if result:
+                logger.info("Successfully saved boundary using set_boundary_points")
+                return {"success": True, "message": "Boundary saved successfully (set_boundary_points)"}
+        
+        # Method 2: Using pattern_config directly
+        if hasattr(path_planner, 'pattern_config'):
+            path_planner.pattern_config.boundary_points = coordinates
+            logger.info("Successfully saved boundary using pattern_config")
+            return {"success": True, "message": "Boundary saved successfully (pattern_config)"}
+        
+        # Method 3: Using mower.save_boundary
+        if hasattr(mower, 'save_boundary'):
+            mower.save_boundary(coordinates)
+            logger.info("Successfully saved boundary using mower.save_boundary")
+            return {"success": True, "message": "Boundary saved successfully (mower.save_boundary)"}
+        
+        # If we get here, none of the methods worked
+        logger.error("No suitable method found to save boundary")
+        return {"success": False, "error": "No suitable method found to save boundary"}
+        
+    except Exception as e:
+        logger.error(f"Error saving boundary: {e}")
+        return {"success": False, "error": f"Error saving boundary: {str(e)}"}
 
 
 if __name__ == "__main__":

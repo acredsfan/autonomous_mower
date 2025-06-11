@@ -326,7 +326,10 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Helper script must be loaded first as it contains core utilities -->
+<script src="{{ url_for('static', filename='js/helper.js') }}"></script>
 <script src="{{ url_for('static', filename='js/mowing-patterns.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
     // Initialize connection status
     function updateMapConnectionStatus() {
@@ -405,5 +408,4 @@
     // Initialize with default pattern
     document.querySelector('.pattern-card[data-pattern="PARALLEL"]').classList.add('active');
 </script>
-<script src="{{ url_for('static', filename='js/map.js') }}" defer></script>
 {% endblock %}
