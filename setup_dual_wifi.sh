@@ -123,6 +123,7 @@ detect_network_manager() {
 # ============================================================================
 
 load_env_config() {
+    # set -x
     local env_files_to_check=(".env" ".env.local" ".env.example")
     local loaded_successfully=false
     ENV_FILE_PATH="" # Reset global ENV_FILE_PATH
@@ -142,23 +143,35 @@ load_env_config() {
                 local temp_country="" temp_gateway_main="" temp_gateway_fallback=""
 
                 # Read the file
-                while IFS='=' read -r key value || [[ -n "$key" ]]; do
+                while IFS= read -r line || [[ -n "$line" ]]; do
                     # Skip comments and empty lines
-                    [[ $key =~ ^[[:space:]]*# ]] && continue
-                    [[ -z "$key" ]] && continue # Skip lines where key is empty initially
-
-                    # Remove leading/trailing whitespace
+                    [[ -z "$line" ]] && continue
+                    [[ $line =~ ^[[:space:]]*# ]] && continue
+                    
+                    # Check if line contains '='
+                    if [[ ! "$line" =~ = ]]; then
+                        continue
+                    fi
+                    
+                    # Split key and value safely
+                    key="${line%%=*}"
+                    value="${line#*=}"
+                    
+                    # Trim whitespace from key
                     key=$(echo "$key" | xargs)
                     
-                    # Handle inline comments by removing everything after # in the value
+                    # Skip if key is empty after trimming
+                    [[ -z "$key" ]] && continue
+                    
+                    # Process value if it exists
                     if [[ -n "$value" ]]; then
-                        # Remove inline comments (everything after #)
+                        # Remove inline comments and trim
                         value=$(echo "$value" | sed 's/#.*//' | xargs)
-                        # Remove surrounding quotes (double or single)
-                        value=${value#\"} # Remove leading double quote
-                        value=${value%\"} # Remove trailing double quote
-                        value=${value#\'} # Remove leading single quote
-                        value=${value%\'} # Remove trailing single quote
+                        # Remove quotes
+                        value=${value#\"} 
+                        value=${value%\"} 
+                        value=${value#\'} 
+                        value=${value%\'} 
                     fi
 
                     # Skip empty keys again after xargs
@@ -168,13 +181,13 @@ load_env_config() {
 
                     # log_info "Processing key: '$key', value: '$value'" # Uncomment for deep debugging
                     case "$key" in
-                        (DEFAULT_SSID_MAIN) temp_ssid_main="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_PASS_MAIN) temp_pass_main="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_SSID_FALLBACK) temp_ssid_fallback="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_PASS_FALLBACK) temp_pass_fallback="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_COUNTRY) temp_country="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_GATEWAY_MAIN) temp_gateway_main="$value"; ((wifi_var_count++)) ;;
-                        (DEFAULT_GATEWAY_FALLBACK) temp_gateway_fallback="$value"; ((wifi_var_count++)) ;;
+                        (DEFAULT_SSID_MAIN) temp_ssid_main="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_PASS_MAIN) temp_pass_main="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_SSID_FALLBACK) temp_ssid_fallback="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_PASS_FALLBACK) temp_pass_fallback="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_COUNTRY) temp_country="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_GATEWAY_MAIN) temp_gateway_main="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
+                        (DEFAULT_GATEWAY_FALLBACK) temp_gateway_fallback="$value"; wifi_var_count=$((wifi_var_count + 1)) ;;
                     esac
                 done < "$ENV_FILE_PATH"
 
@@ -327,8 +340,10 @@ check_system_requirements() {
     fi
 
     # Check if running with sudo
-    if [[ $EUID -eq 0 ]]; then
-        log_warn "Running as root. This script should be run with sudo, not as root user."
+    if [[ $EUID -ne 0 ]]; then
+        log_error "❌ This script must be run with sudo privileges"
+        log_error "Please run: sudo $0 $@"
+        exit 1
     fi
 
     # Check required commands based on network manager
@@ -364,77 +379,148 @@ check_system_requirements() {
 
 configure_wifi_settings() {
     echo "Starting Dual Wi-Fi Setup for Network Manager: $NETWORK_MANAGER"
-    echo "You will be prompted for configuration values. Press Enter to accept the default."
+    echo "Configuration values were loaded from: ${CONFIG_SOURCE}"
     echo ""
 
     validate_env_config
     display_config_summary
 
-    # Main Wi-Fi SSID
-    while true; do
-        read -p "Enter the SSID for your main Wi-Fi network [default: ${DEFAULT_SSID_MAIN}]: " SSID_MAIN
-        SSID_MAIN=${SSID_MAIN:-$DEFAULT_SSID_MAIN}
-        if validate_ssid "$SSID_MAIN"; then
-            break
-        else
-            echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
+    # Ask for overall confirmation first
+    read -p "Are all these settings correct? (Y/n): " overall_confirm
+    
+    if [[ ! "$overall_confirm" =~ ^[Nn]$ ]]; then
+        # User confirmed all settings are correct
+        SSID_MAIN="$DEFAULT_SSID_MAIN"
+        PASS_MAIN="$DEFAULT_PASS_MAIN"
+        SSID_FALLBACK="$DEFAULT_SSID_FALLBACK"
+        PASS_FALLBACK="$DEFAULT_PASS_FALLBACK"
+        COUNTRY="$DEFAULT_COUNTRY"
+        GATEWAY_MAIN="$DEFAULT_GATEWAY_MAIN"
+        GATEWAY_FALLBACK="$DEFAULT_GATEWAY_FALLBACK"
+        
+        # Just verify passwords were set
+        echo ""
+        read -p "Have you set the main Wi-Fi password in the .env file? (Y/n): " pass_confirm
+        if [[ "$pass_confirm" =~ ^[Nn]$ ]]; then
+            read -s -p "Enter the password for your main Wi-Fi network (input hidden): " PASS_MAIN
+            echo
         fi
-    done
-
-    # Main Wi-Fi Password
-    read -s -p "Enter the password for your main Wi-Fi network (input hidden) [default: ${DEFAULT_PASS_MAIN}]: " PASS_MAIN
-    echo
-    PASS_MAIN=${PASS_MAIN:-$DEFAULT_PASS_MAIN}
-
-    # Fallback Wi-Fi SSID
-    while true; do
-        read -p "Enter the SSID for your fallback Wi-Fi network [default: ${DEFAULT_SSID_FALLBACK}]: " SSID_FALLBACK
-        SSID_FALLBACK=${SSID_FALLBACK:-$DEFAULT_SSID_FALLBACK}
-        if validate_ssid "$SSID_FALLBACK"; then
-            break
-        else
-            echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
+        
+        read -p "Have you set the fallback Wi-Fi password in the .env file? (Y/n): " pass_confirm
+        if [[ "$pass_confirm" =~ ^[Nn]$ ]]; then
+            read -s -p "Enter the password for your fallback Wi-Fi network (input hidden): " PASS_FALLBACK
+            echo
         fi
-    done
+    else
+        # User wants to change some settings - go through them one by one
+        echo ""
+        echo "Let's review each setting individually..."
+        echo ""
+        
+        # Main Wi-Fi SSID
+        while true; do
+            echo "Main Wi-Fi SSID is currently: ${DEFAULT_SSID_MAIN}"
+            read -p "Is this correct? (Y/n): " confirm
+            if [[ "$confirm" =~ ^[Nn]$ ]]; then
+                read -p "Enter the correct SSID for your main Wi-Fi network: " SSID_MAIN
+                if validate_ssid "$SSID_MAIN"; then
+                    break
+                else
+                    echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
+                fi
+            else
+                SSID_MAIN="$DEFAULT_SSID_MAIN"
+                break
+            fi
+        done
 
-    # Fallback Wi-Fi Password
-    read -s -p "Enter the password for your fallback Wi-Fi network (input hidden) [default: ${DEFAULT_PASS_FALLBACK}]: " PASS_FALLBACK
-    echo
-    PASS_FALLBACK=${PASS_FALLBACK:-$DEFAULT_PASS_FALLBACK}
-
-    # Country Code
-    while true; do
-        read -p "Enter your two-letter ISO country code (e.g., US, GB) [default: ${DEFAULT_COUNTRY}]: " COUNTRY
-        COUNTRY=${COUNTRY:-$DEFAULT_COUNTRY}
-        COUNTRY=$(echo "$COUNTRY" | tr '[:lower:]' '[:upper:]')
-        if validate_country_code "$COUNTRY"; then
-            break
+        # Main Wi-Fi Password
+        read -p "Do you need to update the main Wi-Fi password? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            read -s -p "Enter the password for your main Wi-Fi network (input hidden): " PASS_MAIN
+            echo
         else
-            echo "⚠ Error: Country code must be exactly 2 uppercase letters (e.g., US, GB). Please try again."
+            PASS_MAIN="$DEFAULT_PASS_MAIN"
         fi
-    done
 
-    # Main Gateway IP
-    while true; do
-        read -p "Enter the gateway IP for your main Wi-Fi (wlan1) [default: ${DEFAULT_GATEWAY_MAIN}]: " GATEWAY_MAIN
-        GATEWAY_MAIN=${GATEWAY_MAIN:-$DEFAULT_GATEWAY_MAIN}
-        if validate_ip "$GATEWAY_MAIN"; then
-            break
-        else
-            echo "⚠ Error: Please enter a valid IP address (e.g., 192.168.1.1). Please try again."
-        fi
-    done
+        # Fallback Wi-Fi SSID
+        while true; do
+            echo "Fallback Wi-Fi SSID is currently: ${DEFAULT_SSID_FALLBACK}"
+            read -p "Is this correct? (Y/n): " confirm
+            if [[ "$confirm" =~ ^[Nn]$ ]]; then
+                read -p "Enter the correct SSID for your fallback Wi-Fi network: " SSID_FALLBACK
+                if validate_ssid "$SSID_FALLBACK"; then
+                    break
+                else
+                    echo "⚠ Error: SSID must be 1-32 characters long. Please try again."
+                fi
+            else
+                SSID_FALLBACK="$DEFAULT_SSID_FALLBACK"
+                break
+            fi
+        done
 
-    # Fallback Gateway IP
-    while true; do
-        read -p "Enter the gateway IP for your fallback Wi-Fi (wlan0) [default: ${DEFAULT_GATEWAY_FALLBACK}]: " GATEWAY_FALLBACK
-        GATEWAY_FALLBACK=${GATEWAY_FALLBACK:-$DEFAULT_GATEWAY_FALLBACK}
-        if validate_ip "$GATEWAY_FALLBACK"; then
-            break
+        # Fallback Wi-Fi Password
+        read -p "Do you need to update the fallback Wi-Fi password? (y/N): " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            read -s -p "Enter the password for your fallback Wi-Fi network (input hidden): " PASS_FALLBACK
+            echo
         else
-            echo "⚠ Error: Please enter a valid IP address (e.g., 192.168.4.1). Please try again."
+            PASS_FALLBACK="$DEFAULT_PASS_FALLBACK"
         fi
-    done
+
+        # Country Code
+        while true; do
+            echo "Country code is currently: ${DEFAULT_COUNTRY}"
+            read -p "Is this correct? (Y/n): " confirm
+            if [[ "$confirm" =~ ^[Nn]$ ]]; then
+                read -p "Enter your two-letter ISO country code (e.g., US, GB): " COUNTRY
+                COUNTRY=$(echo "$COUNTRY" | tr '[:lower:]' '[:upper:]')
+                if validate_country_code "$COUNTRY"; then
+                    break
+                else
+                    echo "⚠ Error: Country code must be exactly 2 uppercase letters (e.g., US, GB). Please try again."
+                fi
+            else
+                COUNTRY="$DEFAULT_COUNTRY"
+                break
+            fi
+        done
+
+        # Main Gateway IP
+        while true; do
+            echo "Main Wi-Fi gateway IP is currently: ${DEFAULT_GATEWAY_MAIN}"
+            read -p "Is this correct? (Y/n): " confirm
+            if [[ "$confirm" =~ ^[Nn]$ ]]; then
+                read -p "Enter the correct gateway IP for your main Wi-Fi (wlan1): " GATEWAY_MAIN
+                if validate_ip "$GATEWAY_MAIN"; then
+                    break
+                else
+                    echo "⚠ Error: Please enter a valid IP address (e.g., 192.168.1.1). Please try again."
+                fi
+            else
+                GATEWAY_MAIN="$DEFAULT_GATEWAY_MAIN"
+                break
+            fi
+        done
+
+        # Fallback Gateway IP
+        while true; do
+            echo "Fallback Wi-Fi gateway IP is currently: ${DEFAULT_GATEWAY_FALLBACK}"
+            read -p "Is this correct? (Y/n): " confirm
+            if [[ "$confirm" =~ ^[Nn]$ ]]; then
+                read -p "Enter the correct gateway IP for your fallback Wi-Fi (wlan0): " GATEWAY_FALLBACK
+                if validate_ip "$GATEWAY_FALLBACK"; then
+                    break
+                else
+                    echo "⚠ Error: Please enter a valid IP address (e.g., 192.168.4.1). Please try again."
+                fi
+            else
+                GATEWAY_FALLBACK="$DEFAULT_GATEWAY_FALLBACK"
+                break
+            fi
+        done
+    fi
 }
 
 confirm_configuration() {
