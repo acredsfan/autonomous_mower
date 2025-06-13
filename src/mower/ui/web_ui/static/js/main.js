@@ -76,9 +76,13 @@ function initializeUI() {
     initializeCharts();
   }
 
-  // Initialize map if on map page
+  // Initialize map if on map page (guard against duplicate init)
   if (typeof initializeMap === "function") {
-    initializeMap();
+    try {
+      initializeMap();
+    } catch (e) {
+      console.warn("Map initialization skipped (already initialized or error):", e);
+    }
   }
 
   // Initialize joystick if on control page
@@ -97,7 +101,8 @@ function setupSocketConnection() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const socketUrl = `${protocol}//${window.location.host}`;
 
-  socket = io(socketUrl);
+  // Initialize socket connection using HTTP polling transport to avoid WebSocket frame errors
+  socket = io({ transports: ['polling'] });
 
   // Connection established
   socket.on("connect", function () {
@@ -296,63 +301,50 @@ function updateSystemStatus(data) {
   // Update our internal state
   Object.assign(systemState.status, data);
 
-  // Update battery status
+  // Update battery status display
   if (data.battery !== undefined) {
     Object.assign(systemState.battery, data.battery);
-
-    const batteryStatus = document.getElementById("batteryStatus");
-    if (batteryStatus) {
-      const batteryPercentage = Math.round(systemState.battery.percentage);
-      batteryStatus.textContent = `${batteryPercentage}%`;
-
-      // Add charging indicator if applicable
-      if (systemState.battery.charging) {
-        batteryStatus.innerHTML += ' <i class="fas fa-bolt"></i>';
-      }
-
-      // Color coding based on battery level
-      if (batteryPercentage < 20) {
-        batteryStatus.className = "text-danger";
-      } else if (batteryPercentage < 40) {
-        batteryStatus.className = "text-warning";
-      } else {
-        batteryStatus.className = "";
-      }
+    const batteryDisplay = document.getElementById("batteryDisplay");
+    const batteryVoltageElem = document.getElementById("batteryVoltage");
+    const chargingStatusElem = document.getElementById("chargingStatus");
+    const pct = Math.round(systemState.battery.percentage || 0);
+    if (batteryDisplay) batteryDisplay.textContent = `${pct}%`;
+    if (batteryVoltageElem && systemState.battery.voltage != null) batteryVoltageElem.textContent = `${systemState.battery.voltage.toFixed(1)} V`;
+    if (chargingStatusElem) chargingStatusElem.innerHTML = systemState.battery.charging ? '<i class="fas fa-bolt"></i>' : '';
+    // Color coding
+    if (batteryDisplay) {
+      if (pct < 20) batteryDisplay.className = "text-danger";
+      else if (pct < 40) batteryDisplay.className = "text-warning";
+      else batteryDisplay.className = "";
     }
   }
 
-  // Update mower status
+  // Update mower state
   if (data.state !== undefined) {
-    const mowerStatus = document.getElementById("mowerStatus");
-    if (mowerStatus) {
-      mowerStatus.textContent = formatRobotState(data.state);
-
-      // Apply appropriate styling based on state
-      if (data.state === "ERROR" || data.state === "EMERGENCY_STOP") {
-        mowerStatus.className = "text-danger";
-      } else if (data.state === "MOWING" || data.state === "AVOIDING") {
-        mowerStatus.className = "text-success";
-      } else {
-        mowerStatus.className = "";
-      }
+    const mowerStateElem = document.getElementById("mowerStateDisplay");
+    if (mowerStateElem) {
+      mowerStateElem.textContent = formatRobotState(data.state);
+      if (data.state === "ERROR" || data.state === "EMERGENCY_STOP") mowerStateElem.className = "text-danger";
+      else if (data.state === "MOWING" || data.state === "AVOIDING") mowerStateElem.className = "text-success";
+      else mowerStateElem.className = "";
     }
   }
 
-  // Update GPS status
+  // Update GPS status display
   if (data.gps !== undefined) {
     Object.assign(systemState.gps, data.gps);
-
-    const gpsStatus = document.getElementById("gpsStatus");
-    if (gpsStatus) {
+    const gpsStatusElem = document.getElementById("gpsStatusDisplay");
+    const satCountElem = document.getElementById("satelliteCount");
+    if (gpsStatusElem) {
       if (systemState.gps.fix) {
-        gpsStatus.textContent = `${systemState.gps.satellites} satellites`;
-        gpsStatus.className =
-          systemState.gps.satellites >= 4 ? "text-success" : "text-warning";
+        gpsStatusElem.textContent = `${systemState.gps.satellites} satellites`;
+        gpsStatusElem.className = systemState.gps.satellites >= 4 ? "text-success" : "text-warning";
       } else {
-        gpsStatus.textContent = "No fix";
-        gpsStatus.className = "text-danger";
+        gpsStatusElem.textContent = "No fix";
+        gpsStatusElem.className = "text-danger";
       }
     }
+    if (satCountElem) satCountElem.textContent = `${systemState.gps.satellites} satellites`;
   }
 
   // Update additional status elements if they exist
@@ -421,7 +413,40 @@ function updateAdditionalStatusElements() {
  */
 function updateSensorData(data) {
   try {
-    // Update our internal state for top-level properties
+    // Update battery from sensor data
+    if (data.power) {
+      const power = data.power;
+      systemState.battery.voltage = power.voltage;
+      systemState.battery.percentage = power.percentage || 0;
+      systemState.battery.charging = power.charging || false;
+      // Update battery UI (sidebar and dashboard)
+      const dashPct = Math.round(systemState.battery.percentage);
+      const bd = document.getElementById("batteryDisplay");
+      const bsv = document.getElementById("batteryStatus");
+      const bv = document.getElementById("batteryVoltage");
+      const ch = document.getElementById("chargingStatus");
+      if (bd) bd.textContent = `${dashPct}%`;
+      if (bsv) bsv.textContent = `${dashPct}%`;
+      if (bv && systemState.battery.voltage != null) bv.textContent = `${systemState.battery.voltage.toFixed(1)} V`;
+      if (ch) ch.innerHTML = systemState.battery.charging ? '<i class="fas fa-bolt"></i>' : '';
+    }
+    // Update GPS from sensor data
+    if (data.gps) {
+      const gps = data.gps;
+      systemState.gps.latitude = gps.latitude;
+      systemState.gps.longitude = gps.longitude;
+      // Determine fix status
+      systemState.gps.fix = gps.status && gps.status.toLowerCase() !== 'simulated';
+      // Update GPS UI (sidebar and dashboard)
+      const dashGps = document.getElementById("gpsStatusDisplay");
+      const sideGps = document.getElementById("gpsStatus");
+      const sc = document.getElementById("satelliteCount");
+      const statusText = systemState.gps.fix ? `${systemState.gps.satellites} satellites` : 'No fix';
+      if (dashGps) dashGps.textContent = statusText;
+      if (sideGps) sideGps.textContent = statusText;
+      if (sc) sc.textContent = `${systemState.gps.satellites} satellites`;
+    }
+    // Update our internal state for other top-level sensor properties
     if (data && typeof data === 'object') {
       Object.assign(systemState.sensors, data);
     } else {
@@ -429,26 +454,11 @@ function updateSensorData(data) {
       return;
     }
 
-    // Process environment sensor data
-    if (data.environment) {
-      const env = data.environment;
-
-      // Update temperature
+    // Update temperature from IMU sensor data
+    if (data.imu && data.imu.temperature !== undefined) {
       const tempElement = document.getElementById("sensor_temperature");
-      if (tempElement && env.temperature !== undefined) {
-        tempElement.textContent = `${Number(env.temperature).toFixed(1)}°C`;
-      }
-
-      // Update humidity
-      const humidityElement = document.getElementById("sensor_humidity");
-      if (humidityElement && env.humidity !== undefined) {
-        humidityElement.textContent = `${Number(env.humidity).toFixed(1)}%`;
-      }
-
-      // Update pressure
-      const pressureElement = document.getElementById("sensor_pressure");
-      if (pressureElement && env.pressure !== undefined) {
-        pressureElement.textContent = `${Number(env.pressure).toFixed(0)} hPa`;
+      if (tempElement) {
+        tempElement.textContent = `${Number(data.imu.temperature).toFixed(1)}°C`;
       }
     }
   } catch (err) {

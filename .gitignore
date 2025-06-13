@@ -183,3 +183,5 @@ debug_map_endpoint.py
 debug_web_ui.py
 test_env_loading.sh
 test_simple_flask.py
+ActionPlan.md
+copy_logs.py

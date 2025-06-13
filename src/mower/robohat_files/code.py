@@ -10,8 +10,8 @@ import neopixel
 from pulseio import PulseIn
 from pwmio import PWMOut
 
-USB_SERIAL = False
-rc_control_enabled = True  # <--- This is our global toggle
+USB_SERIAL = True  # Set to True if running on USB serial, False for UART
+rc_control_enabled = False  # <--- This is our global toggle
 
 # RC input pins
 RC1 = board.GP6  # steering input from real RC

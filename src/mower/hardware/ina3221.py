@@ -1,92 +1,35 @@
-"""
-INA3221 current and voltage sensor interface.
 
-This module provides a wrapper around the INA3221 sensor hardware,
-allowing for power monitoring across three channels simultaneously.
-The INA3221 can measure voltage, current, and power on three separate channels.
-"""
-
-import adafruit_ina3221
+# Simple, static-method-only INA3221 interface for compatibility and reliability
 import board
 import busio
-
-from mower.utilities.logger_config import LoggerConfigInfo
-
-# Initialize logger
-logger = LoggerConfigInfo.get_logger(__name__)
-
+from adafruit_ina3221 import INA3221
 
 class INA3221Sensor:
-    """
-    Interface for the INA3221 current and voltage sensor.
-
-    This class provides methods to initialize the INA3221 sensor and read
-    voltage, current and power measurements from its three channels.
-    """
-
-    def __init__(self):
-        """Initialize the INA3221 sensor."""
-        self.sensor = None
-        self.bus_voltage = None
-        self.shunt_voltage = None
-        self.current = None
-        
-        try:
-            i2c = busio.I2C(board.SCL, board.SDA)
-            # Initialize INA3221 sensor with Adafruit library
-            self.sensor = adafruit_ina3221.INA3221(i2c)
-            logger.info("INA3221 initialized successfully.")
-        except (OSError, ValueError, RuntimeError) as e:  # Catch potential I2C errors
-            logger.error("Error initializing INA3221: %s", e)
-        # Replace generic Exception with specific ones
-        except (ImportError, AttributeError) as e:
-            logger.error("Unexpected error initializing INA3221: %s", e)
-    
     @staticmethod
     def init_ina3221():
-        """Initialize the INA3221 sensor and return instance."""
-        ina = INA3221Sensor()
-        return ina.sensor if ina.sensor else ina  # Return either the adafruit sensor or our wrapper
+        try:
+            i2c = busio.I2C(board.SCL, board.SDA)
+            sensor = INA3221(i2c, enable=[0, 1, 2])
+            return sensor
+        except Exception:
+            return None
 
     @staticmethod
-    def read_ina3221(sensor, channel):
-        """Read data from the INA3221 sensor for a specific channel."""
+    def read_ina3221(sensor, channel: int):
+        # User API is 1-based, hardware is 0-based
         if sensor is None:
-            logger.error("INA3221 sensor is not initialized.")
             return {}
+        if not isinstance(channel, int) or channel not in [1, 2, 3]:
+            return {}
+        ch = channel - 1
         try:
-            if channel in [1, 2, 3]:
-                # Convert channel number to zero-based index for Adafruit
-                # library
-                channel_index = channel - 1
-
-                # Read voltage and current using Adafruit library API
-                bus_voltage = sensor[channel_index].bus_voltage
-                shunt_voltage = sensor[channel_index].shunt_voltage
-                current = sensor[channel_index].current
-
-                return {
-                    "bus_voltage": round(bus_voltage, 2),
-                    "shunt_voltage": round(shunt_voltage, 2),
-                    "current": round(current, 2),
-                }
-            else:
-                # Log the error instead of raising ValueError immediately
-                logger.error("Invalid channel for INA3221: %s. Must be 1, 2, or 3.", channel)
-                return {}  # Return empty dict for invalid channel
-        except (OSError, RuntimeError) as e:  # Catch potential I2C read errors
-            logger.error("I2C Error reading INA3221 channel %s: %s", channel, e)
+            bus_voltage = sensor[ch].bus_voltage
+            shunt_voltage = sensor[ch].shunt_voltage
+            current = sensor[ch].current
+            return {
+                "bus_voltage": round(bus_voltage, 2),
+                "shunt_voltage": round(shunt_voltage, 2),
+                "current": round(current, 2),
+            }
+        except Exception:
             return {}
-        # Replace generic Exception with specific ones
-        except (ValueError, AttributeError) as e:
-            logger.error("Unexpected error reading INA3221 channel %s: %s", channel, e)
-            return {}
-
-
-if __name__ == "__main__":
-    # Example usage
-    sensor = INA3221Sensor.init_ina3221()
-    if sensor:
-        for channel in [1, 2, 3]:
-            data = INA3221Sensor.read_ina3221(sensor, channel)
-            print("Channel " + str(channel) + ":", data)

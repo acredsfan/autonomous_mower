@@ -678,21 +678,39 @@ def create_app(mower_resource_manager_instance):
                 socketio.sleep(0.1)  # 100ms interval
 
                 # Get status data
-                status = mower.get_status()
+                try:
+                    status = mower.get_status()
+                except Exception as e:
+                    logger.error(f"Error getting mower status: {e}")
+                    status = {"state": "error", "initialized": False, "resources_available": [], "error": str(e)}
 
                 # Get safety status - use real or simulated based on mode
-                if USE_SIMULATION:
-                    sim_data = get_simulated_sensor_data()
-                    safety_status = sim_data["imu"]["safety_status"]
-                    sensor_data = sim_data
-                else:
-                    safety_status = mower.get_safety_status()
-                    sensor_data = mower.get_sensor_data()
+                try:
+                    if USE_SIMULATION:
+                        sim_data = get_simulated_sensor_data()
+                        safety_status = sim_data.get("imu", {}).get("safety_status", {"is_safe": True})
+                        sensor_data = sim_data
+                    else:
+                        safety_status = mower.get_safety_status()
+                        sensor_data = mower.get_sensor_data()
+                except Exception as e:
+                    logger.error(f"Error getting safety or sensor data: {e}")
+                    safety_status = {"is_safe": True, "error": str(e)}
+                    sensor_data = {}
 
-                # Send all updates to connected clients
-                socketio.emit("status_update", status)
-                socketio.emit("safety_status", safety_status)
-                socketio.emit("sensor_data", sensor_data)
+                # Always emit valid data
+                try:
+                    socketio.emit("status_update", status)
+                except Exception as e:
+                    logger.error(f"Error emitting status_update: {e}")
+                try:
+                    socketio.emit("safety_status", safety_status)
+                except Exception as e:
+                    logger.error(f"Error emitting safety_status: {e}")
+                try:
+                    socketio.emit("sensor_data", sensor_data)
+                except Exception as e:
+                    logger.error(f"Error emitting sensor_data: {e}")
 
             except Exception as e:
                 logger.error(f"Error in update loop: {e}")

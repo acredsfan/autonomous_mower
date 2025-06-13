@@ -293,8 +293,10 @@ endblock %} {% block head_extra %}
 
   // Initialize page-specific elements
   document.addEventListener("DOMContentLoaded", function () {
-    // Initialize map
-    initializeMap();
+    // Initialize map (guard against duplicate initialization)
+    if (typeof initializeMap === 'function') {
+      try { initializeMap(); } catch (e) { console.warn('Map init skipped:', e); }
+    }
 
     // Update time every second
     updateTimeDisplay();
