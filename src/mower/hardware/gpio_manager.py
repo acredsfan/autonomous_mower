@@ -15,6 +15,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 # Attempt to import gpiozero and specific device types
 try:
     from gpiozero import Device as GpioZeroDevice
+    from gpiozero import OutputDevice, PWMOutputDevice, InputDevice, Button
     from gpiozero.exc import BadPinFactory as BadPinFactoryReal
     from gpiozero.exc import GPIOZeroError as GPIOZeroErrorReal
     from gpiozero.exc import PinFixedPull as PinFixedPullReal

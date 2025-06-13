@@ -71,7 +71,6 @@ issues.md
 tasks.json
 tasks.md
 old_main.log
-.github/workflows/
 
 # Temporary files
 *.tmp
@@ -135,8 +134,6 @@ src/mower/simulation/world_model.py.backup
 .blackboxrules
 .windsurfrules
 roo_models.json
-copilot-instructions*.md
-.copilotignore
 mcp_server/
 # mcp.json
 MCP_SERVER.md

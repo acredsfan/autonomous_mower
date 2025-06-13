@@ -1,7 +1,14 @@
+# FROZEN_DRIVER – do not edit
 """
 Blade controller module.
 
-This module provides control over the mower's blade motor.
+This module provides control over the mower's blade motor using an IBT-4 driver.
+The IBT-4 is a dual H-bridge motor driver that controls the blade motor through
+two input pins (IN1 and IN2).
+
+@hardware_interface IBT-4 motor driver
+@gpio_pin_usage 24 (BCM) - IBT-4 IN1 input (forward PWM control)
+@gpio_pin_usage 25 (BCM) - IBT-4 IN2 input (reverse PWM control)
 """
 
 from mower.hardware.gpio_manager import GPIOManager
@@ -9,64 +16,86 @@ from mower.utilities.logger_config import LoggerConfigInfo
 
 logging = LoggerConfigInfo.get_logger(__name__)
 
-# GPIO pins for blade control
-BLADE_ENABLE_PIN = 22  # This pin will be used for PWM speed control
-BLADE_DIRECTION_PIN = 23
+# GPIO pins for blade control via IBT-4 driver
+# IN1 connected to GPIO 24 (physical pin 18) - Forward PWM control
+# IN2 connected to GPIO 25 (physical pin 22) - Reverse PWM control
+BLADE_IN1_PIN = 24  # Forward PWM signal to IBT-4 IN1
+BLADE_IN2_PIN = 25  # Reverse PWM signal to IBT-4 IN2
 
 
 class BladeController:
     """
-    Controls the blade motor of the mower.
+    Controls the blade motor of the mower using an IBT-4 motor driver.
 
     This class provides methods to start, stop, and control the blade motor,
-    with safety features to prevent accidental activation.
+    with safety features to prevent accidental activation. The IBT-4 driver
+    uses two input pins (IN1 and IN2) for directional PWM control.
+
+    Control Logic:
+    - Forward: IN1 = PWM, IN2 = LOW
+    - Reverse: IN1 = LOW, IN2 = PWM  
+    - Stop: IN1 = LOW, IN2 = LOW
     """
 
     def __init__(self):
-        """Initialize the blade controller."""
+        """Initialize the blade controller with IBT-4 driver."""
         self._gpio = GPIOManager()
-        self._enabled = False  # Represents if the blade *should* be active
-        self._direction = 0
+        self._enabled = False  # Represents if the blade is logically enabled
+        self._current_speed = 0.0  # Current speed (0.0 to 1.0)
+        self._direction = 0  # 0 = forward, 1 = reverse
 
-        # Set up GPIO pins
-        # BLADE_ENABLE_PIN is a PWM pin for speed control, initialized to 0%
-        # duty cycle.
-        self._gpio.setup_pin(BLADE_ENABLE_PIN, "pwm", initial_value=0.0, frequency=1000, active_high=True)
-        self._gpio.setup_pin(BLADE_DIRECTION_PIN, "out", initial_value=False)
+        # Set up GPIO pins for IBT-4 driver
+        # Both pins are PWM capable for speed control in both directions
+        self._gpio.setup_pin(BLADE_IN1_PIN, "pwm", initial_value=0.0, frequency=1000, active_high=True)
+        self._gpio.setup_pin(BLADE_IN2_PIN, "pwm", initial_value=0.0, frequency=1000, active_high=True)
 
-        logging.info("Blade controller initialized")
+        logging.info("Blade controller initialized with IBT-4 driver (IN1: GPIO%d, IN2: GPIO%d)", 
+                    BLADE_IN1_PIN, BLADE_IN2_PIN)
 
     def enable(self) -> bool:
         """
-        Signal that the blade motor can be active.
-        Actual motor movement is controlled by set_speed.
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        # This method now primarily manages the logical state _enabled.
-        # Physical enabling (PWM > 0) is handled by set_speed.
-        if not self._enabled:
-            self._enabled = True
-            logging.info("Blade motor logically enabled. Use set_speed to start rotation.")
-        return True
-
-    def disable(self) -> bool:
-        """
-        Signal that the blade motor should be inactive and stop it.
-        Sets PWM duty cycle to 0%.
+        Enable the blade motor controller.
+        
+        This allows the blade to be started with set_speed().
+        
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            # Always set speed to 0 to ensure motor stops.
-            self.set_speed(0.0)
-            if self._enabled:
-                self._enabled = False
-                logging.info("Blade motor logically disabled and speed set to 0%.")
+            if not self._enabled:
+                self._enabled = True
+                logging.info("Blade motor controller enabled")
             return True
-        except (IOError, ValueError, RuntimeError) as e:
-            logging.error(f"Error disabling blade motor: {e}")
+        except Exception as e:
+            logging.error(f"Error enabling blade motor controller: {e}")
             return False
+
+    def disable(self) -> bool:
+        """
+        Disable the blade motor controller and stop the blade.
+        
+        This immediately stops the blade and prevents further operation
+        until enable() is called again.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Stop the blade immediately
+            self._stop_blade_motor()
+            self._enabled = False
+            self._current_speed = 0.0
+            logging.info("Blade motor controller disabled and blade stopped")
+            return True
+        except Exception as e:
+            logging.error(f"Error disabling blade motor controller: {e}")
+            return False
+
+    def _stop_blade_motor(self) -> None:
+        """Internal method to stop the blade motor by setting both IN pins to LOW."""
+        self._gpio.set_pin_duty_cycle(BLADE_IN1_PIN, 0.0)
+        self._gpio.set_pin_duty_cycle(BLADE_IN2_PIN, 0.0)
+        self._current_speed = 0.0
 
     def set_direction(self, direction: int) -> bool:
         """
@@ -84,13 +113,29 @@ class BladeController:
                 return False
 
             if self._direction != direction:
-                self._gpio.set_pin(BLADE_DIRECTION_PIN, bool(direction))
                 self._direction = direction
+                # Apply the new direction with current speed
+                self._apply_speed_and_direction()
                 logging.info(f"Blade motor direction set to {direction}")
             return True
         except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting blade motor direction: {e}")
             return False
+
+    def _apply_speed_and_direction(self) -> None:
+        """Apply the current speed and direction to the IBT-4 driver pins."""
+        if not self._enabled or self._current_speed == 0.0:
+            # Stop the motor
+            self._gpio.set_pin_duty_cycle(BLADE_IN1_PIN, 0.0)
+            self._gpio.set_pin_duty_cycle(BLADE_IN2_PIN, 0.0)
+        elif self._direction == 0:
+            # Forward: IN1 = PWM, IN2 = LOW
+            self._gpio.set_pin_duty_cycle(BLADE_IN1_PIN, self._current_speed)
+            self._gpio.set_pin_duty_cycle(BLADE_IN2_PIN, 0.0)
+        else:
+            # Reverse: IN1 = LOW, IN2 = PWM
+            self._gpio.set_pin_duty_cycle(BLADE_IN1_PIN, 0.0)
+            self._gpio.set_pin_duty_cycle(BLADE_IN2_PIN, self._current_speed)
 
     def set_speed(self, speed: float) -> bool:
         """
@@ -110,22 +155,18 @@ class BladeController:
 
             if not self._enabled and speed > 0.0:
                 logging.warning("Blade motor is not enabled. Call enable() first to set speed > 0.")
-                # Optionally, we could auto-enable here, but explicit control is safer.
-                # self.enable()
-                # However, we will allow setting speed to 0 even if not
-                # enabled.
-                if speed > 0.0:
-                    return False  # Do not set speed if not enabled and speed > 0
+                return False
 
-            # If speed is 0, we always allow it, effectively stopping the motor.
-            # If speed > 0, it will only be applied if self._enabled is True.
-            if self._enabled or speed == 0.0:
-                self._gpio.set_pin_duty_cycle(BLADE_ENABLE_PIN, speed)
-                logging.info("Blade motor speed set to %.1f%%", speed * 100)
-                if speed == 0.0 and self._enabled:
-                    logging.info("Blade motor speed set to 0%, but still logically enabled.")
-                elif speed == 0.0 and not self._enabled:
-                    logging.info("Blade motor speed set to 0% and is logically disabled.")
+            # Update current speed and apply to hardware
+            self._current_speed = speed
+            self._apply_speed_and_direction()
+            
+            logging.info("Blade motor speed set to %.1f%%", speed * 100)
+            if speed == 0.0 and self._enabled:
+                logging.info("Blade motor speed set to 0%, but still logically enabled.")
+            elif speed == 0.0 and not self._enabled:
+                logging.info("Blade motor speed set to 0% and is logically disabled.")
+            
             return True
         except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error setting blade motor speed: {e}")
@@ -149,12 +190,80 @@ class BladeController:
         """
         return self._direction
 
+    def get_speed(self) -> float:
+        """
+        Get the current blade motor speed.
+
+        Returns:
+            float: Current speed (0.0 to 1.0)
+        """
+        return self._current_speed
+
+    def is_running(self) -> bool:
+        """
+        Check if the blade motor is currently running.
+
+        Returns:
+            bool: True if running (speed > 0 and enabled), False otherwise
+        """
+        return self._enabled and self._current_speed > 0.0
+
+    def start_blade(self, speed: float = 0.8) -> bool:
+        """
+        Start the blade motor at the specified speed.
+        
+        This is a convenience method that enables the controller and sets speed.
+
+        Args:
+            speed: Speed value between 0.0 and 1.0 (default: 0.8)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.enable():
+                return False
+            return self.set_speed(speed)
+        except Exception as e:
+            logging.error(f"Error starting blade motor: {e}")
+            return False
+
+    def start(self, speed: float = 0.8) -> bool:
+        """
+        Start the blade motor at the specified speed.
+        
+        This is an alias for start_blade() for compatibility.
+
+        Args:
+            speed: Speed value between 0.0 and 1.0 (default: 0.8)
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        return self.start_blade(speed)
+
+    def stop(self) -> bool:
+        """
+        Stop the blade motor.
+        
+        This is an alias for stop_blade() for compatibility.
+
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            self.stop_blade()
+            return True
+        except Exception as e:
+            logging.error(f"Error stopping blade motor: {e}")
+            return False
+
     def cleanup(self) -> None:
         """Clean up GPIO resources."""
         try:
             self.disable()
-            self._gpio.cleanup_pin(BLADE_ENABLE_PIN)
-            self._gpio.cleanup_pin(BLADE_DIRECTION_PIN)
+            self._gpio.cleanup_pin(BLADE_IN1_PIN)
+            self._gpio.cleanup_pin(BLADE_IN2_PIN)
             logging.info("Blade controller cleaned up")
         except (IOError, ValueError, RuntimeError) as e:
             logging.error(f"Error cleaning up blade controller: {e}")
@@ -168,17 +277,36 @@ class BladeController:
         """
         return {
             "enabled": self._enabled,
+            "speed": self._current_speed,
             "direction": self._direction,
-            "enable_pin": BLADE_ENABLE_PIN,
-            "direction_pin": BLADE_DIRECTION_PIN,
+            "in1_pin": BLADE_IN1_PIN,
+            "in2_pin": BLADE_IN2_PIN,
         }
 
     def stop_blade(self) -> None:
         """Stop the blade motor."""
         if self._enabled:
             logging.info("Stopping blade motor")
-            self.set_speed(0)  # Set speed to 0 to stop the motor
-            self.disable()  # Disable the motor enable pin
+            self.set_speed(0.0)  # Set speed to 0 to stop the motor
+            self.disable()  # Disable the motor controller
             logging.info("Blade motor stopped")
         else:
             logging.info("Blade motor is already stopped")
+
+
+if __name__ == "__main__":
+    # Simple test to demonstrate functionality
+    blade_controller = BladeController()
+    blade_controller.enable()
+    blade_controller.set_direction(0)  # Set forward direction
+    blade_controller.set_speed(1.0)  # Set speed to 50%
+    
+    logging.info("Blade controller state: %s", blade_controller.get_state())
+    
+    # Simulate some operation
+    import time
+    time.sleep(2)
+    
+    blade_controller.set_speed(0)  # Stop the blade
+    blade_controller.disable()  # Disable the blade controller
+    blade_controller.cleanup()  # Clean up resources
