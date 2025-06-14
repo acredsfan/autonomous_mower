@@ -431,7 +431,9 @@ class RoboHATDriver:
             # Send RC disable command to enable serial control
             logger.info("Disabling RC mode on RP2040...")
             self.pwm.write(b"rc=disable\r")
+            print("Command sent to RP2040 to disable RC mode.")
             if self.debug:
+                print
                 try:
                     echo = self.pwm.read_until(b'\r', timeout=0.05)
                     logger.debug(f"RP2040 echo: {echo}")

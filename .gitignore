@@ -182,5 +182,3 @@ test_env_loading.sh
 test_simple_flask.py
 ActionPlan.md
 copy_logs.py
-src/mower/robohat_files/COMPATIBILITY_FIXES.md
-src/mower/robohat_files/UPDATE_INSTRUCTIONS.md
