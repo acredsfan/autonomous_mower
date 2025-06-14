@@ -431,15 +431,24 @@ class RoboHATDriver:
             # Send RC disable command to enable serial control
             logger.info("Disabling RC mode on RP2040...")
             self.pwm.write(b"rc=disable\r")
+            if self.debug:
+                try:
+                    echo = self.pwm.read_until(b'\r', timeout=0.05)
+                    logger.debug(f"RP2040 echo: {echo}")
+                except Exception as e:
+                    logger.debug(f"No echo or error: {e}")
             time.sleep(0.2)  # Give RP2040 time to process
-            
             # Send initial neutral position
             self.pwm.write(b"1500,1500\r")
+            if self.debug:
+                try:
+                    echo = self.pwm.read_until(b'\r', timeout=0.05)
+                    logger.debug(f"RP2040 echo: {echo}")
+                except Exception as e:
+                    logger.debug(f"No echo or error: {e}")
             time.sleep(0.1)
-            
             self._rc_disabled = True
             logger.info("✓ RP2040 initialized for serial control")
-            
         except Exception as e:
             logger.error(f"Failed to initialize RP2040 connection: {e}")
 
@@ -494,14 +503,24 @@ class RoboHATDriver:
                 # Ensure RC mode is disabled first time
                 if not self._rc_disabled:
                     self.pwm.write(b"rc=disable\r")
+                    if self.debug:
+                        try:
+                            echo = self.pwm.read_until(b'\r', timeout=0.05)
+                            logger.debug(f"RP2040 echo: {echo}")
+                        except Exception as e:
+                            logger.debug(f"No echo or error: {e}")
                     time.sleep(0.1)
                     self._rc_disabled = True
-                
                 # Send PWM command in correct format (no space after comma)
                 pwm_command = b"%d,%d\r" % (steering, throttle)
                 self.pwm.write(pwm_command)
                 if self.debug:
-                    logger.debug(f"Sent PWM command: {pwm_command}")
+                    try:
+                        echo = self.pwm.read_until(b'\r', timeout=0.05)
+                        logger.debug(f"RP2040 echo: {echo}")
+                    except Exception as e:
+                        logger.debug(f"No echo or error: {e}")
+                logger.debug(f"Sent PWM command: {pwm_command}")
             except Exception as e:
                 logger.error(f"Failed to write PWM command: {e}")
         else:
@@ -516,8 +535,20 @@ class RoboHATDriver:
                 # Send stop command and re-enable RC mode
                 logger.info("Sending stop command and re-enabling RC mode...")
                 self.pwm.write(b"1500,1500\r")  # Neutral position
+                if self.debug:
+                    try:
+                        echo = self.pwm.read_until(b'\r', timeout=0.05)
+                        logger.debug(f"RP2040 echo: {echo}")
+                    except Exception as e:
+                        logger.debug(f"No echo or error: {e}")
                 time.sleep(0.1)
                 self.pwm.write(b"rc=enable\r")   # Re-enable RC mode
+                if self.debug:
+                    try:
+                        echo = self.pwm.read_until(b'\r', timeout=0.05)
+                        logger.debug(f"RP2040 echo: {echo}")
+                    except Exception as e:
+                        logger.debug(f"No echo or error: {e}")
                 time.sleep(0.1)
                 
                 self.pwm.close()
@@ -845,3 +876,41 @@ if __name__ == "__main__":
         logger.error("3. Try different communication modes")
         logger.error("4. Run: python3 robohat.py --test-comm")
         sys.exit(1)
+
+# Minimal direct movement test for RoboHAT MM1 (for hardware integration)
+if __name__ == "__main__" and (len(sys.argv) == 1 or sys.argv[1] == "--direct-move-test"):
+    print("\n=== RoboHAT MM1 Direct Movement Test ===")
+    try:
+        driver = RoboHATDriver(debug=True)
+        print("Driver initialized. Moving forward...")
+        driver.run(0, 0.5)
+        time.sleep(2)
+        print("Stopping...")
+        driver.stop_motors()
+        time.sleep(1)
+        print("Moving backward...")
+        driver.run(0, -0.5)
+        time.sleep(2)
+        print("Stopping...")
+        driver.stop_motors()
+        time.sleep(1)
+        print("Turning left...")
+        driver.run(-0.5, 0)
+        time.sleep(2)
+        print("Stopping...")
+        driver.stop_motors()
+        time.sleep(1)
+        print("Turning right...")
+        driver.run(0.5, 0)
+        time.sleep(2)
+        print("Stopping...")
+        driver.stop_motors()
+        print("Direct movement test complete. Shutting down driver.")
+        driver.shutdown()
+    except Exception as e:
+        print(f"Direct movement test failed: {e}")
+        try:
+            driver.shutdown()
+        except Exception:
+            pass
+    print("=== End of Direct Movement Test ===\n")

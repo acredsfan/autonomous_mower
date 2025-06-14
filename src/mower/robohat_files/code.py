@@ -199,7 +199,7 @@ last_update = time.monotonic()
 def main():
     global last_update
 
-    data = bytearray('')
+    data = bytearray()
     datastr = ''
     last_input = 0
     steering_val = steering.value
@@ -241,6 +241,7 @@ def main():
             print("UART write error: " + str(e))
 
         # Read any incoming data from RPi
+
         while True:
             # wait for data on the serial port and read 1 byte
             try:
@@ -259,7 +260,7 @@ def main():
 
             # if data is received, check if it is the end of a stream
             if byte == b'\r':
-                data = bytearray('')
+                data = bytearray()
                 break
 
             data[len(data):len(data)] = byte
@@ -268,16 +269,15 @@ def main():
         datastr = ''.join([chr(c) for c in data]).strip()
 
         # if we make it here, there is serial data from the previous step
-        if len(datastr) >= 10:
-            steering_val = steering.value
-            throttle_val = throttle.value
+        if len(datastr) >= 9:
             try:
-                steering_val = int(datastr[:4])
-                throttle_val = int(datastr[-4:])
-            except ValueError:
+                steer_str, thr_str = datastr.split(',', 1)
+                steering_val = int(steer_str)
+                throttle_val = int(thr_str)
+            except (ValueError, IndexError):
                 pass
 
-            data = bytearray('')
+            data = bytearray()
             datastr = ''
             last_input = time.monotonic()
             logger.info("Set: steering=" + str(int(steering_val)) + ", throttle=" + str(int(throttle_val)))
