@@ -1,6 +1,11 @@
+
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 #!/usr/bin/env python3
 """
 Scripts for operating the RoboHAT MM1 by Robotics Masters.
+
+Serial protocol: "steer,throttle\r" (e.g. 1500,1600\r)
+Units are microseconds of pulse width.
 
 Updated version based on recommendations.
 
@@ -9,6 +14,13 @@ Updated version based on recommendations.
 - Ensures PWM values are integers.
 - Removes navigation logic from controller.
 """
+
+__all__ = ["RoboHATDriver", "RoboHATController"]
+
+# Serial communication constants (centralized)
+SERIAL_PORT = "/dev/ttyAMA4"
+BAUD_RATE = 115200
+SERIAL_TIMEOUT = 0.05
 
 import os
 import sys
@@ -249,72 +261,69 @@ class RoboHATController:
             logger.warning("Controller serial port is not open.")
             return
 
-        line = self.serial.readline().decode().strip("\n").strip("\r")
+        # read a frame terminated by carriage‑return (CR = 13)
+        frame = self.serial.read_until(b'\r').decode(errors="ignore").strip()
+        parts = frame.split(',', 1)          # no space after comma
 
-        output = line.split(", ")
-        if len(output) == 2:
-            if self.SHOW_STEERING_VALUE:
-                logger.debug(f"MM1: steering={output[0]}")
+        if len(parts) == 2 and all(p.isnumeric() for p in parts):
+            angle_pwm    = float(parts[0])
+            throttle_pwm = float(parts[1])
 
-            if output[0].isnumeric() and output[1].isnumeric():
-                angle_pwm = float(output[0])
-                throttle_pwm = float(output[1])
+        if self.debug:
+            logger.debug(f"angle_pwm = {angle_pwm}, " f"throttle_pwm= {throttle_pwm}")
 
-                if self.debug:
-                    logger.debug(f"angle_pwm = {angle_pwm}, " f"throttle_pwm= {throttle_pwm}")
+        if throttle_pwm >= self.STOPPED_PWM:
+            # Scale down the input PWM (1500 - 2000) to our max forward
+            throttle_pwm_mapped = Utils.map_range_float(
+                throttle_pwm,
+                1500,
+                2000,
+                self.STOPPED_PWM,
+                self.MAX_FORWARD,
+            )
+            # Go forward
+            self.throttle = Utils.map_range_float(
+                throttle_pwm_mapped,
+                self.STOPPED_PWM,
+                self.MAX_FORWARD,
+                0,
+                1.0,
+            )
+        else:
+            throttle_pwm_mapped = Utils.map_range_float(
+                throttle_pwm,
+                1000,
+                1500,
+                self.MAX_REVERSE,
+                self.STOPPED_PWM,
+            )
+            # Go backward
+            self.throttle = Utils.map_range_float(
+                throttle_pwm_mapped,
+                self.MAX_REVERSE,
+                self.STOPPED_PWM,
+                -1.0,
+                0,
+            )
 
-                if throttle_pwm >= self.STOPPED_PWM:
-                    # Scale down the input PWM (1500 - 2000) to our max forward
-                    throttle_pwm_mapped = Utils.map_range_float(
-                        throttle_pwm,
-                        1500,
-                        2000,
-                        self.STOPPED_PWM,
-                        self.MAX_FORWARD,
-                    )
-                    # Go forward
-                    self.throttle = Utils.map_range_float(
-                        throttle_pwm_mapped,
-                        self.STOPPED_PWM,
-                        self.MAX_FORWARD,
-                        0,
-                        1.0,
-                    )
-                else:
-                    throttle_pwm_mapped = Utils.map_range_float(
-                        throttle_pwm,
-                        1000,
-                        1500,
-                        self.MAX_REVERSE,
-                        self.STOPPED_PWM,
-                    )
-                    # Go backward
-                    self.throttle = Utils.map_range_float(
-                        throttle_pwm_mapped,
-                        self.MAX_REVERSE,
-                        self.STOPPED_PWM,
-                        -1.0,
-                        0,
-                    )
+        if angle_pwm >= self.STEERING_MID:
+            # Turn left
+            self.angle = Utils.map_range_float(angle_pwm, 2000, self.STEERING_MID, -1, 0)
+        else:
+            # Turn right
+            self.angle = Utils.map_range_float(angle_pwm, self.STEERING_MID, 1000, 0, 1)
 
-                if angle_pwm >= self.STEERING_MID:
-                    # Turn left
-                    self.angle = Utils.map_range_float(angle_pwm, 2000, self.STEERING_MID, -1, 0)
-                else:
-                    # Turn right
-                    self.angle = Utils.map_range_float(angle_pwm, self.STEERING_MID, 1000, 0, 1)
+        if self.debug:
+            logger.debug(f"angle = {self.angle}, throttle = {self.throttle}")
 
-                if self.debug:
-                    logger.debug(f"angle = {self.angle}, throttle = {self.throttle}")
+        if self.auto_record_on_throttle:
+            was_recording = self.recording
+            self.recording = abs(self.throttle) > self.DEAD_ZONE
+            if was_recording != self.recording:
+                self.recording_latch = self.recording
+                logger.debug(f"Recording state changed to {self.recording}")
 
-                if self.auto_record_on_throttle:
-                    was_recording = self.recording
-                    self.recording = abs(self.throttle) > self.DEAD_ZONE
-                    if was_recording != self.recording:
-                        self.recording_latch = self.recording
-                        logger.debug(f"Recording state changed to {self.recording}")
-
-                time.sleep(0.01)
+        time.sleep(0.01)
 
     def update(self):
         # Delay on startup to avoid crashing
@@ -422,30 +431,30 @@ class RoboHATDriver:
         """Initialize the connection with the RP2040."""
         if not self.pwm or not self.pwm.is_open:
             return
-            
         try:
             # Clear any pending data
             self.pwm.reset_input_buffer()
             self.pwm.reset_output_buffer()
-            
+
             # Send RC disable command to enable serial control
             logger.info("Disabling RC mode on RP2040...")
             self.pwm.write(b"rc=disable\r")
-            print("Command sent to RP2040 to disable RC mode.")
             if self.debug:
-                print
                 try:
-                    echo = self.pwm.read_until(b'\r', timeout=0.05)
-                    logger.debug(f"RP2040 echo: {echo}")
+                    echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
+                    if echo.strip(b'\r') != b"rc=disable":
+                        logger.warning(f"Mismatch echo: {echo}")
                 except Exception as e:
                     logger.debug(f"No echo or error: {e}")
+            print("Command sent to RP2040 to disable RC mode.")
             time.sleep(0.2)  # Give RP2040 time to process
             # Send initial neutral position
             self.pwm.write(b"1500,1500\r")
             if self.debug:
                 try:
-                    echo = self.pwm.read_until(b'\r', timeout=0.05)
-                    logger.debug(f"RP2040 echo: {echo}")
+                    echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
+                    if echo.strip(b'\r')  != b"1500,1500":
+                        logger.warning(f"Mismatch echo: {echo}")
                 except Exception as e:
                     logger.debug(f"No echo or error: {e}")
             time.sleep(0.1)
@@ -507,8 +516,9 @@ class RoboHATDriver:
                     self.pwm.write(b"rc=disable\r")
                     if self.debug:
                         try:
-                            echo = self.pwm.read_until(b'\r', timeout=0.05)
-                            logger.debug(f"RP2040 echo: {echo}")
+                            echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
+                            if echo.strip(b'\r')  != b"rc=disable":
+                                logger.warning(f"Mismatch echo: {echo}")
                         except Exception as e:
                             logger.debug(f"No echo or error: {e}")
                     time.sleep(0.1)
@@ -518,8 +528,9 @@ class RoboHATDriver:
                 self.pwm.write(pwm_command)
                 if self.debug:
                     try:
-                        echo = self.pwm.read_until(b'\r', timeout=0.05)
-                        logger.debug(f"RP2040 echo: {echo}")
+                        echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
+                        if echo.strip(b'\r')  != pwm_command.strip():
+                            logger.warning(f"Mismatch echo: {echo}")
                     except Exception as e:
                         logger.debug(f"No echo or error: {e}")
                 logger.debug(f"Sent PWM command: {pwm_command}")
@@ -829,55 +840,123 @@ def test_robohat_controller():
         except Exception as e:
             logger.error(f"Error during controller shutdown: {e}")
 
+def test_robohat_driver():
+    """Test the RoboHAT driver functionality."""
+    logger.info("=== Testing RoboHAT Driver ===")
+    
+    try:
+        # Initialize driver only (not controller to avoid infinite loop)
+        driver = RoboHATDriver(debug=True)
+        logger.info("✓ RoboHAT driver initialized successfully")
+        
+        # Test basic movement commands
+        logger.info("Testing basic movement commands...")
+        
+        # Forward at 50% speed
+        logger.info("Moving forward at 50% speed for 2 seconds...")
+        driver.run(0, 0.5)
+        time.sleep(2)
+        
+        # Stop
+        logger.info("Stopping motors...")
+        driver.stop_motors()
+        time.sleep(1)
+        
+        # Backward at 50% speed
+        logger.info("Moving backward at 50% speed for 2 seconds...")
+        driver.run(0, -0.5)
+        time.sleep(2)
+        
+        # Stop
+        driver.stop_motors()
+        time.sleep(1)
+        
+        # Turn left at 50% steering
+        logger.info("Turning left at 50% steering for 2 seconds...")
+        driver.run(-0.5, 0)
+        time.sleep(2)
+        
+        # Stop
+        driver.stop_motors()
+        time.sleep(1)
+        
+        # Turn right at 50% steering
+        logger.info("Turning right at 50% steering for 2 seconds...")
+        driver.run(0.5, 0)
+        time.sleep(2)
+        
+        # Stop
+        driver.stop_motors()
+        time.sleep(1)
+        
+        # Test status retrieval
+        logger.info("Getting driver status...")
+        status = driver.get_status()
+        logger.info(f"Driver status: {status}")
+        
+        logger.info("✓ All driver tests completed successfully!")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error during RoboHAT driver testing: {e}")
+        return False
+    finally:
+        # Always clean up
+        try:
+            driver.shutdown()
+            logger.info("Driver shutdown complete.")
+        except Exception as e:
+            logger.error(f"Error during driver shutdown: {e}")
 
-if __name__ == "__main__":
-    """Test script for RoboHAT MM1 functionality."""
-    logger.info("Starting RoboHAT MM1 test suite...")
-    logger.info("⚠️ Note: This test assumes the RoboHAT MM1 is connected and configured correctly.")
+
+# if __name__ == "__main__":
+#     """Test script for RoboHAT MM1 functionality."""
+#     logger.info("Starting RoboHAT MM1 test suite...")
+#     logger.info("⚠️ Note: This test assumes the RoboHAT MM1 is connected and configured correctly.")
     
-    # Check command line arguments for specific tests
-    if len(sys.argv) > 1 and sys.argv[1] == "--test-comm":
-        # Run communication mode tests only
-        comm_success = test_communication_modes()
-        sys.exit(0 if comm_success else 1)
+#     # Check command line arguments for specific tests
+#     if len(sys.argv) > 1 and sys.argv[1] == "--test-comm":
+#         # Run communication mode tests only
+#         comm_success = test_communication_modes()
+#         sys.exit(0 if comm_success else 1)
     
-    # Test communication modes first
-    logger.info("\n" + "="*50)
-    logger.info("PHASE 1: Communication Mode Testing")
-    logger.info("="*50)
-    comm_success = test_communication_modes()
+#     # Test communication modes first
+#     logger.info("\n" + "="*50)
+#     logger.info("PHASE 1: Communication Mode Testing")
+#     logger.info("="*50)
+#     comm_success = test_communication_modes()
     
-    if not comm_success:
-        logger.error("Communication mode testing failed. Cannot proceed with driver/controller tests.")
-        sys.exit(1)
+#     if not comm_success:
+#         logger.error("Communication mode testing failed. Cannot proceed with driver/controller tests.")
+#         sys.exit(1)
     
-    # Test both components
-    logger.info("\n" + "="*50)
-    logger.info("PHASE 2: Driver and Controller Testing")
-    logger.info("="*50)
-    driver_success = test_robohat_driver()
-    controller_success = test_robohat_controller()
+#     # Test both components
+#     logger.info("\n" + "="*50)
+#     logger.info("PHASE 2: Driver and Controller Testing")
+#     logger.info("="*50)
+#     driver_success = test_robohat_driver()
+#     controller_success = test_robohat_controller()
     
-    # Report results
-    logger.info("\n=== Final Test Results ===")
-    logger.info(f"Communication Tests: {'✓ PASSED' if comm_success else '❌ FAILED'}")
-    logger.info(f"Driver Test: {'✓ PASSED' if driver_success else '❌ FAILED'}")
-    logger.info(f"Controller Test: {'✓ PASSED' if controller_success else '❌ FAILED'}")
+#     # Report results
+#     logger.info("\n=== Final Test Results ===")
+#     logger.info(f"Communication Tests: {'✓ PASSED' if comm_success else '❌ FAILED'}")
+#     logger.info(f"Driver Test: {'✓ PASSED' if driver_success else '❌ FAILED'}")
+#     logger.info(f"Controller Test: {'✓ PASSED' if controller_success else '❌ FAILED'}")
     
-    if comm_success and driver_success and controller_success:
-        logger.info("🎉 All RoboHAT tests passed!")
-        logger.info("\nRecommended settings for your .env file:")
-        logger.info("MM1_COMMUNICATION_MODE=auto")
-        logger.info("MM1_SERIAL_PORT=/dev/ttyACM1")
-        sys.exit(0)
-    else:
-        logger.error("❌ Some RoboHAT tests failed!")
-        logger.error("\nTroubleshooting:")
-        logger.error("1. Check RoboHAT connections")
-        logger.error("2. Verify device permissions (add user to dialout group)")
-        logger.error("3. Try different communication modes")
-        logger.error("4. Run: python3 robohat.py --test-comm")
-        sys.exit(1)
+#     if comm_success and driver_success and controller_success:
+#         logger.info("🎉 All RoboHAT tests passed!")
+#         logger.info("\nRecommended settings for your .env file:")
+#         logger.info("MM1_COMMUNICATION_MODE=auto")
+#         logger.info("MM1_SERIAL_PORT=/dev/ttyACM1")
+#         sys.exit(0)
+#     else:
+#         logger.error("❌ Some RoboHAT tests failed!")
+#         logger.error("\nTroubleshooting:")
+#         logger.error("1. Check RoboHAT connections")
+#         logger.error("2. Verify device permissions (add user to dialout group)")
+#         logger.error("3. Try different communication modes")
+#         logger.error("4. Run: python3 robohat.py --test-comm")
+#         sys.exit(1)
 
 # Minimal direct movement test for RoboHAT MM1 (for hardware integration)
 if __name__ == "__main__" and (len(sys.argv) == 1 or sys.argv[1] == "--direct-move-test"):

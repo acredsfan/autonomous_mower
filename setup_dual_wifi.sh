@@ -592,16 +592,16 @@ configure_networkmanager() {
     # Create main Wi-Fi connection (higher priority)
     log_info "Creating main Wi-Fi connection (wlan1)..."
     nmcli connection add type wifi con-name "mower-main" \
-        ifname wlan1 ssid "$SSID_MAIN" \
-        wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
+        ifname '*' 802-11-wireless.mac-address AA:BB:CC:DD:EE:FF \
+        ssid "$SSID_MAIN" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
         connection.autoconnect yes connection.autoconnect-priority 10 \
         ipv4.route-metric 100 ipv4.method auto ipv6.method ignore
 
     # Create fallback Wi-Fi connection (lower priority)
     log_info "Creating fallback Wi-Fi connection (wlan0)..."
     nmcli connection add type wifi con-name "mower-fallback" \
-        ifname wlan0 ssid "$SSID_FALLBACK" \
-        wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
+        ifname '*' 802-11-wireless.mac-address 11:22:33:44:55:66 \
+        ssid "$SSID_FALLBACK" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
         connection.autoconnect yes connection.autoconnect-priority 5 \
         ipv4.route-metric 200 ipv4.method auto ipv6.method ignore
 

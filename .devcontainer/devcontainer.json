@@ -1,0 +1,33 @@
+{
+  "name": "Autonomous Mower Pi Dev (Bookworm, ARM64, Python 3.11)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/home/pi/autonomous_mower",
+  "runArgs": [
+    "--privileged", // For hardware access if needed
+    "--cap-add=SYS_PTRACE",
+    "-e", "PYTHONUNBUFFERED=1"
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "/usr/bin/python3.11",
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.mypyEnabled": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["tests"]
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "ms-toolsai.jupyter",
+    "ms-azuretools.vscode-docker"
+  ],
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt && pip install -e . && pip install adafruit-blinka",
+  "remoteUser": "root"
+}

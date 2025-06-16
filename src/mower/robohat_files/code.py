@@ -1,3 +1,4 @@
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 # Donkey Car Driver for Robotics Masters Robo HAT MM1
 # Adapted for Autonomous Mower Project - FIXED VERSION
 #
@@ -9,10 +10,19 @@
 #   - PWM outputs: GP10 (steering to Cytron MDDRC10), GP11 (throttle to Cytron MDDRC10)
 #   - Encoders: GP8 (Encoder1A), GP9 (Encoder1B)
 
+
 import time
 import board
 import busio
 from digitalio import DigitalInOut, Direction
+
+# --- hardware constants ------------------------------------------------
+STEER_PWM_PIN = board.GP10  # PWM out
+THROTTLE_PWM_PIN = board.GP11
+STEER_RC_PIN = board.GP6    # RC input
+THROTTLE_RC_PIN = board.GP5
+TIMEOUT_S = 10              # serial silence before RC‑fallback
+LED_BLINK_S = 1             # onboard LED heartbeat
 
 # Handle CircuitPython version differences for PWM and Pulse
 try:
@@ -130,33 +140,35 @@ except Exception as e:
     print("UART initialization failed: " + str(e))
     raise
 
+
 # set up servos - PWM outputs to Cytron MDDRC10
 # Using project-specific pin assignments with error handling
 try:
-    steering_pwm = PWMOut(board.GP10, duty_cycle=2 ** 15, frequency=60)  # STEERING_PIN
+    steering_pwm = PWMOut(STEER_PWM_PIN, duty_cycle=2 ** 15, frequency=60)  # STEERING_PIN
     print("Steering PWM (GP10) initialized")
 except Exception as e:
     print("Steering PWM initialization failed: " + str(e))
     raise
 
 try:
-    throttle_pwm = PWMOut(board.GP11, duty_cycle=2 ** 15, frequency=60)  # THROTTLE_PIN
+    throttle_pwm = PWMOut(THROTTLE_PWM_PIN, duty_cycle=2 ** 15, frequency=60)  # THROTTLE_PIN
     print("Throttle PWM (GP11) initialized")
 except Exception as e:
     print("Throttle PWM initialization failed: " + str(e))
     raise
 
+
 # set up RC channels - RC inputs from receiver
 # Using project-specific pin assignments with error handling
 try:
-    steering_channel = PulseIn(board.GP6, maxlen=64, idle_state=0)  # RC1 - steering
+    steering_channel = PulseIn(STEER_RC_PIN, maxlen=64, idle_state=0)  # RC1 - steering
     print("Steering RC input (GP6) initialized")
 except Exception as e:
     print("Steering RC input initialization failed: " + str(e))
     steering_channel = None
 
 try:
-    throttle_channel = PulseIn(board.GP5, maxlen=64, idle_state=0)  # RC2 - throttle
+    throttle_channel = PulseIn(THROTTLE_RC_PIN, maxlen=64, idle_state=0)  # RC2 - throttle
     print("Throttle RC input (GP5) initialized")
 except Exception as e:
     print("Throttle RC input initialization failed: " + str(e))
@@ -196,6 +208,10 @@ else:
 last_update = time.monotonic()
 
 
+
+def build_frame(steer: int, thro: int) -> bytes:
+    return f"{steer},{thro}\r".encode()
+
 def main():
     global last_update
 
@@ -204,16 +220,23 @@ def main():
     last_input = 0
     steering_val = steering.value
     throttle_val = throttle.value
+    last_blink = time.monotonic()
 
     print("Donkeycar-based RoboHAT MM1 Driver Started")
     print("Pin Config: RC Inputs GP6/GP5, PWM Outputs GP10/GP11")
     print("RC control enabled by default")
-    
+
     while True:
+        now = time.monotonic()
         # only update every smoothing interval (to avoid jumping)
-        if(last_update + SMOOTHING_INTERVAL_IN_S > time.monotonic()):
+        if(last_update + SMOOTHING_INTERVAL_IN_S > now):
             continue
-        last_update = time.monotonic()
+        last_update = now
+
+        # LED heartbeat (configurable interval)
+        if led and (now - last_blink > LED_BLINK_S):
+            led.value = not led.value
+            last_blink = now
 
         # check for new RC values (channel will contain data)
         # Only process RC if channels are available
@@ -233,57 +256,39 @@ def main():
                 print(str(int(steering.value)) + ", " + str(int(throttle.value)))
             else:
                 # write the RC values to the RPi Serial
-                # Create bytes message directly - this is the key fix!
-                message_str = str(int(steering.value)) + ", " + str(int(throttle.value)) + "\r\n"
-                message_bytes = bytes(message_str, 'utf-8')
-                uart.write(message_bytes)
+                uart.write(build_frame(int(steering.value), int(throttle.value)))
         except Exception as e:
             print("UART write error: " + str(e))
 
-        # Read any incoming data from RPi
-
-        while True:
-            # wait for data on the serial port and read 1 byte
-            try:
-                byte = uart.read(1)
-            except Exception as e:
-                print("UART read error: " + str(e))
+        # --- serial receive & parse (memory‑safe, frame‑safe) -----------
+        while uart.in_waiting:
+            byte_val = uart.read(1)
+            if not byte_val:
                 break
+            byte = byte_val[0]          # 0‑255
 
-            # if no data, break and continue with RC control
-            if byte is None:
-                break
-            last_input = time.monotonic()
+            if byte == 13:              # '\r' marks end‑of‑frame
+                if 4 <= len(data) <= 12:    #  e.g.  "1500,1500"
+                    try:
+                        steer_s, thro_s = data.decode().split(",", 1)
+                        steer   = int(steer_s)
+                        thro    = int(thro_s)
+                        # discard obviously bad pulses
+                        if 1000 <= steer <= 2000 and 1000 <= thro <= 2000:
+                            steering_val, throttle_val = steer, thro
+                            logger.info(f"Set: steering={steer}, throttle={thro}")
+                    except (ValueError, UnicodeError):
+                        pass            # ignore malformed frame
+                data = bytearray()      # reset buffer every frame
+            else:
+                if len(data) < 16:      # cap size to avoid runaway
+                    data.append(byte)
+                else:
+                    data = bytearray()  # too long → start fresh
 
-            if DEBUG:
-                logger.debug("Read from UART: " + str(byte))
-
-            # if data is received, check if it is the end of a stream
-            if byte == b'\r':
-                data = bytearray()
-                break
-
-            data[len(data):len(data)] = byte
-
-        # convert bytearray to string
-        datastr = ''.join([chr(c) for c in data]).strip()
-
-        # if we make it here, there is serial data from the previous step
-        if len(datastr) >= 9:
-            try:
-                steer_str, thr_str = datastr.split(',', 1)
-                steering_val = int(steer_str)
-                throttle_val = int(thr_str)
-            except (ValueError, IndexError):
-                pass
-
-            data = bytearray()
-            datastr = ''
-            last_input = time.monotonic()
-            logger.info("Set: steering=" + str(int(steering_val)) + ", throttle=" + str(int(throttle_val)))
 
         # Set servo positions based on control mode
-        if last_input + 10 < time.monotonic():
+        if last_input + TIMEOUT_S < time.monotonic():
             # set the servo for RC control (default values if RC not connected)
             steering.servo.duty_cycle = servo_duty_cycle(steering.value)
             throttle.servo.duty_cycle = servo_duty_cycle(throttle.value)
