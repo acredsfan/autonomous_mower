@@ -18,7 +18,7 @@ Updated version based on recommendations.
 __all__ = ["RoboHATDriver", "RoboHATController"]
 
 # Serial communication constants (centralized)
-SERIAL_PORT = "/dev/ttyAMA4"
+SERIAL_PORT = "/dev/serial0"
 BAUD_RATE = 115200
 SERIAL_TIMEOUT = 0.05
 
@@ -397,7 +397,7 @@ class RoboHATDriver:
             )
             
             # Initialize serial port
-            self.pwm = serial.Serial(selected_device, 115200, timeout=1)
+            self.pwm = serial.Serial(selected_device, 115200, timeout=1, exclusive=True)
             logger.info(f"Serial port {selected_device} opened for PWM output (mode: {actual_mode})")
             
             # Store communication info for debugging

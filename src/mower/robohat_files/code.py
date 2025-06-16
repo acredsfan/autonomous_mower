@@ -269,6 +269,7 @@ def main():
 
             if byte == 13:              # '\r' marks end‑of‑frame
                 if 4 <= len(data) <= 12:    #  e.g.  "1500,1500"
+
                     try:
                         steer_s, thro_s = data.decode().split(",", 1)
                         steer   = int(steer_s)
@@ -276,9 +277,11 @@ def main():
                         # discard obviously bad pulses
                         if 1000 <= steer <= 2000 and 1000 <= thro <= 2000:
                             steering_val, throttle_val = steer, thro
+                            last_input = time.monotonic() # <-- ADD THIS LINE
                             logger.info(f"Set: steering={steer}, throttle={thro}")
                     except (ValueError, UnicodeError):
                         pass            # ignore malformed frame
+
                 data = bytearray()      # reset buffer every frame
             else:
                 if len(data) < 16:      # cap size to avoid runaway

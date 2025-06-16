@@ -424,6 +424,10 @@ setup_additional_uart() {
     local DTOVERLAY_ENTRY="dtoverlay=uart2"
     local CONFIG_TXT_TARGET=$(get_config_txt_target)
 
+    print_info "Disabling bluetooth..."
+    local DTOVERLAY_ENTRY="dtoverlay=disable-bt"
+    local CONFIG_TXT_TARGET=$(get_config_txt_target)
+
     if [ -z "$CONFIG_TXT_TARGET" ]; then
         print_error "Boot configuration file (config.txt) not found. Skipping additional UART setup."
         POST_INSTALL_MESSAGES+="[WARNING] config.txt not found. Additional UART (UART2) was not configured.\\n"
