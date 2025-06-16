@@ -277,7 +277,7 @@ def main():
                         # discard obviously bad pulses
                         if 1000 <= steer <= 2000 and 1000 <= thro <= 2000:
                             steering_val, throttle_val = steer, thro
-                            last_input = time.monotonic() # <-- ADD THIS LINE
+                            last_input = time.monotonic()
                             logger.info(f"Set: steering={steer}, throttle={thro}")
                     except (ValueError, UnicodeError):
                         pass            # ignore malformed frame
