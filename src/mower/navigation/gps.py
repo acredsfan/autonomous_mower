@@ -837,86 +837,104 @@ if __name__ == "__main__":
 
         ts = time.time()
         state = "prompt" if waypoint_count > 0 else ""
-        while line_reader.running:
-            readings = read_gps()
-            if readings:
-                print("")
-                # Each reading is (timestamp, line). Parse line to (x, y) if possible.
-                parsed_positions = []
-                for reading in readings:
-                    # Defensive unpack: allow for extra fields, but require at least 2 (timestamp, nmea_line)
-                    if isinstance(reading, (tuple, list)) and len(reading) >= 2:
-                        ts_val, nmea_line = reading[0], reading[1]
-                    else:
-                        if args.debug:
-                            print(f"[DEBUG] Unexpected reading format: {reading}")
-                        continue
-                    # Only process if nmea_line is a string
-                    if not isinstance(nmea_line, str):
-                        if args.debug:
-                            print(f"[DEBUG] Skipping non-string NMEA line: {nmea_line} (type: {type(nmea_line)})")
-                        continue
-                    pos = parse_gps_position(nmea_line, debug=args.debug)
-                    if pos is not None:
-                        # pos: (easting, northing, zone_number, zone_letter)
-                        x, y = pos[0], pos[1]
-                        parsed_positions.append((ts_val, x, y))
-                    elif args.debug:
-                        print(f"[DEBUG] Failed to parse NMEA: {nmea_line}")
-
-                if state == "prompt":
-                    print(
-                        f"Move to waypoint #{len(waypoints) + 1} and "
-                        f"press the space bar and enter to start sampling "
-                        f"or any other key to just start logging."
-                    )
-                    state = "move"
-                elif state == "move":
-                    key_press = readchar.readchar()  # sys.stdin.read(1)
-                    if key_press == " ":
-                        waypoint_samples = []
-                        line_reader.clear()  # throw away buffered readings
-                        state = "sampling"
-                    else:
-                        state = ""  # just start logging
-                elif state == "sampling":
-                    waypoint_samples += parsed_positions
-                    count = len(waypoint_samples)
-                    print(f"Collected {count} so far...")
-                    if count >= samples_per_waypoint:
-                        print(f"...done.  Collected {count} samples for waypoint #{len(waypoints) + 1}")
-                        waypoint = Waypoint(waypoint_samples, nstd=args.nstd)
-                        waypoints.append(waypoint)
-                        if len(waypoints) < waypoint_count:
-                            state = "prompt"
+        last_valid_position_time = None
+        valid_position_count = 0
+        max_no_data_seconds = 30  # Warn if no valid NMEA for this many seconds
+        try:
+            while line_reader.running:
+                readings = read_gps()
+                if readings:
+                    print("")
+                    parsed_positions = []
+                    for reading in readings:
+                        # Defensive unpack: allow for extra fields, but require at least 2 (timestamp, nmea_line)
+                        if isinstance(reading, (tuple, list)) and len(reading) >= 2:
+                            ts_val, nmea_line = reading[0], reading[1]
                         else:
-                            state = "test_prompt"
                             if args.debug:
-                                plot(waypoints)
-                elif state == "test_prompt":
-                    print("Waypoints are recorded. Now walk around and see when in a waypoint.")
-                    state = "test"
-                elif state == "test":
-                    for ts_val, x, y in parsed_positions:
-                        print(f"Your position is ({x}, {y})")
-                        hit, index = is_in_waypoint_range(waypoints, x, y)
-                        if hit:
-                            print(f"You are within the sample range of waypoint #{index + 1}")
-                        std_deviation = 1.0
-                        hit, index = is_in_waypoint_std(waypoints, x, y, std_deviation)
-                        if hit:
-                            print(f"You are within {std_deviation} std devs of the center of waypoint #{index + 1}")
-                        hit, index = is_in_waypoint(waypoints, x, y)
-                        if hit:
-                            print(f"You are at waypoint ellipse #{index + 1}")
+                                print(f"[DEBUG] Unexpected reading format: {reading}")
+                            continue
+                        # Print raw NMEA line if debug enabled
+                        if args.debug:
+                            print(f"[DEBUG] Raw NMEA: {nmea_line}")
+                        # Only process if nmea_line is a string
+                        if not isinstance(nmea_line, str):
+                            if args.debug:
+                                print(f"[DEBUG] Skipping non-string NMEA line: {nmea_line} (type: {type(nmea_line)})")
+                            continue
+                        pos = parse_gps_position(nmea_line, debug=args.debug)
+                        if pos is not None:
+                            # pos: (easting, northing, zone_number, zone_letter)
+                            x, y = pos[0], pos[1]
+                            parsed_positions.append((ts_val, x, y))
+                            last_valid_position_time = time.time()
+                            valid_position_count += 1
+                        elif args.debug:
+                            print(f"[DEBUG] Failed to parse NMEA: {nmea_line}")
+
+                    if state == "prompt":
+                        print(
+                            f"Move to waypoint #{len(waypoints) + 1} and "
+                            f"press the space bar and enter to start sampling "
+                            f"or any other key to just start logging."
+                        )
+                        state = "move"
+                    elif state == "move":
+                        key_press = readchar.readchar()  # sys.stdin.read(1)
+                        if key_press == " ":
+                            waypoint_samples = []
+                            line_reader.clear()  # throw away buffered readings
+                            state = "sampling"
+                        else:
+                            state = ""  # just start logging
+                    elif state == "sampling":
+                        waypoint_samples += parsed_positions
+                        count = len(waypoint_samples)
+                        print(f"Collected {count} so far...")
+                        if count >= samples_per_waypoint:
+                            print(f"...done.  Collected {count} samples for waypoint #{len(waypoints) + 1}")
+                            waypoint = Waypoint(waypoint_samples, nstd=args.nstd)
+                            waypoints.append(waypoint)
+                            if len(waypoints) < waypoint_count:
+                                state = "prompt"
+                            else:
+                                state = "test_prompt"
+                                if args.debug:
+                                    plot(waypoints)
+                    elif state == "test_prompt":
+                        print("Waypoints are recorded. Now walk around and see when in a waypoint.")
+                        state = "test"
+                    elif state == "test":
+                        for ts_val, x, y in parsed_positions:
+                            print(f"Your position is ({x}, {y})")
+                            hit, index = is_in_waypoint_range(waypoints, x, y)
+                            if hit:
+                                print(f"You are within the sample range of waypoint #{index + 1}")
+                            std_deviation = 1.0
+                            hit, index = is_in_waypoint_std(waypoints, x, y, std_deviation)
+                            if hit:
+                                print(f"You are within {std_deviation} std devs of the center of waypoint #{index + 1}")
+                            hit, index = is_in_waypoint(waypoints, x, y)
+                            if hit:
+                                print(f"You are at waypoint ellipse #{index + 1}")
+                    else:
+                        # just log the readings
+                        for ts_val, x, y in parsed_positions:
+                            print(f"You are at ({x}, {y})")
                 else:
-                    # just log the readings
-                    for ts_val, x, y in parsed_positions:
-                        print(f"You are at ({x}, {y})")
-            else:
-                if time.time() > (ts + 0.5):
-                    print(".", end="")
-                    ts = time.time()
+                    # No readings, print dot and check for timeout
+                    if time.time() > (ts + 0.5):
+                        print(".", end="")
+                        ts = time.time()
+                    # Warn if no valid NMEA for too long
+                    if (last_valid_position_time is None or (time.time() - last_valid_position_time) > max_no_data_seconds):
+                        print("[WARNING] No valid GPS positions parsed in the last 30 seconds. Check GPS wiring and baud rate.")
+                        last_valid_position_time = time.time()  # Avoid spamming warning
+        except KeyboardInterrupt:
+            print("\n[INFO] Script interrupted by user.")
+        finally:
+            if valid_position_count == 0:
+                print("[SUMMARY] No valid GPS positions were parsed during this session.")
     finally:
         if line_reader:
             line_reader.shutdown()

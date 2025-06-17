@@ -186,19 +186,12 @@ class SerialPort:
             return (False, "")  # Return empty string if port not open
 
         try:
-            # Check buffer first for a complete line
-            if "\n" in self.data_buffer:
-                line, self.data_buffer = self.data_buffer.split("\n", 1)
-                return (True, line + "\n")
-
-            # Read new data if buffer doesn't have a complete line
-            if self.ser.in_waiting > 0:
-                new_data = self.ser.read(self.ser.in_waiting).decode(self.charset, errors="ignore")
-                self.data_buffer += new_data
-                if "\n" in self.data_buffer:
-                    line, self.data_buffer = self.data_buffer.split("\n", 1)
-                    return (True, line + "\n")
-            return (False, "")  # No complete line found yet
+            # Use built-in readline with timeout
+            line = self.ser.readline()
+            if line:
+                decoded_line = line.decode(self.charset, errors="ignore")
+                return (True, decoded_line)
+            return (False, "")
 
         except (serial.serialutil.SerialException, TypeError, UnicodeDecodeError) as e:
             logger.warning(f"Failed reading line from serial port {self.port}: {e}")
@@ -272,8 +265,11 @@ class SerialLineReader:
             try:
                 if SerialLineReader.is_mac() or (self.serial.buffered() > 0):
                     success, buffer = self.serial.read_line()
-                    if success:
-                        return buffer
+                    if success and buffer:
+                        return buffer.strip()
+            except Exception as e:
+                if self.debug:
+                    logger.error(f"Error in _readline: {e}")
             finally:
                 self.lock.release()
         return None
@@ -283,10 +279,11 @@ class SerialLineReader:
             lines = []
             line = self._readline()
             while line is not None:
-                lines.append((time.time(), line))
-                line = None
+                lines.append((time.time(), line.strip()))
                 if self.max_lines is None or self.max_lines == 0 or len(lines) < self.max_lines:
                     line = self._readline()
+                else:
+                    break
             return lines
         return []
 
@@ -304,7 +301,7 @@ class SerialLineReader:
         while self.running:
             line = self._readline()
             if line:
-                buffered_lines.append((time.time(), line))
+                buffered_lines.append((time.time(), line.strip()))
             if buffered_lines:
                 if self.lock.acquire(blocking=False):
                     try:
@@ -312,7 +309,7 @@ class SerialLineReader:
                         buffered_lines = []
                     finally:
                         self.lock.release()
-            time.sleep(0)
+            time.sleep(0.01)  # Small delay to prevent excessive CPU usage
 
     def shutdown(self):
         self.running = False

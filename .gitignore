@@ -182,3 +182,4 @@ test_env_loading.sh
 test_simple_flask.py
 ActionPlan.md
 copy_logs.py
+test_gps_simple.py

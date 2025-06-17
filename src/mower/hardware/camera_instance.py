@@ -22,11 +22,11 @@ load_dotenv()
 logging = LoggerConfigInfo.get_logger(__name__)
 
 # Camera configuration from environment variables
-FPS = int(os.getenv("STREAMING_FPS", 15))
-STREAMING_RESOLUTION = os.getenv("STREAMING_RESOLUTION", "640x480")
+FPS = int(os.getenv("STREAMING_FPS", 30))
+STREAMING_RESOLUTION = os.getenv("STREAMING_RESOLUTION", "1280x960")
 WIDTH, HEIGHT = map(int, STREAMING_RESOLUTION.split("x"))
 # Number of frames to keep in buffer
-BUFFER_SIZE = int(os.getenv("FRAME_BUFFER_SIZE", 5))
+BUFFER_SIZE = int(os.getenv("FRAME_BUFFER_SIZE", 10))
 
 # Try to import picamera2, but don't fail if not available
 try:

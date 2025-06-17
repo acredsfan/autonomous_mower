@@ -579,8 +579,20 @@ img {
 /* Camera feed */
 .camera-feed {
     width: 100%;
-    height: auto;
-    max-height: 480px;
+    height: auto; /* 16:9 aspect ratio */
+    max-height: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-small);
+}
+
+/* Camera overlay */
+.camera-overlay {
+    width: 100%;
+    height: auto; /* 16:9 aspect ratio */
+    max-height: 100%;
+    aspect-ratio: 16 / 9;
     object-fit: contain;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-small);

@@ -209,6 +209,10 @@ def create_app(mower_resource_manager_instance):
                     try:
                         import cv2
 
+                        # --- FIX: Convert color space from BGR to RGB ---
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        # ---------------------------------------------
+
                         _, buffer = cv2.imencode(".jpg", frame)
                         frame_bytes = buffer.tobytes()
 

@@ -192,7 +192,7 @@
               </li>
               <li>
                 <a
-                  href="#camera"
+                  href="{{ url_for('camera') }}"
                   class="{% if request.path == url_for('camera') %}active{% endif %}"
                 >
                   <i class="fas fa-video"></i> Camera Feed
@@ -223,7 +223,7 @@
                 </a>
               </li>
               <li>
-                <a href="#logs">
+                <a href="{{ url_for('system_logs') }}">
                   <i class="fas fa-clipboard-list"></i> System Logs
                 </a>
               </li>
