@@ -271,7 +271,7 @@ class SerialLineReader:
         if self.lock.acquire(blocking=False):
             try:
                 if SerialLineReader.is_mac() or (self.serial.buffered() > 0):
-                    success, buffer = self.serial.readln()
+                    success, buffer = self.serial.read_line()
                     if success:
                         return buffer
             finally:

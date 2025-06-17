@@ -1248,8 +1248,8 @@ setup_coral_python_env() {
     # Step 1: Install NumPy first with a version known to work with PyCoral
     print_info "Uninstalling any previous numpy, tflite-runtime, pycoral..."
     python -m pip uninstall -y numpy tflite-runtime pycoral || true
-    print_info "Installing NumPy 1.23.5 (known compatible version)..."
-    python -m pip install "numpy==1.23.5"
+    print_info "Installing NumPy 2.3.0 (known compatible version)..."
+    python -m pip install "numpy==2.3.0"
     check_command "Installing compatible NumPy" || {
         print_error "Failed to install compatible NumPy version"
         deactivate

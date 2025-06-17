@@ -59,3 +59,4 @@ flask-cors
 scipy
 pydantic
 Flask-Babel
+readchar

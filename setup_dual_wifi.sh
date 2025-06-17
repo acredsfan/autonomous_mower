@@ -589,29 +589,27 @@ configure_networkmanager() {
     nmcli connection delete "mower-main" 2>/dev/null || true
     nmcli connection delete "mower-fallback" 2>/dev/null || true
 
-    # Create main Wi-Fi connection (higher priority)
-    log_info "Creating main Wi-Fi connection (wlan1)..."
+        # Create main Wi-Fi connection (wlan1, higher priority)
+    log_info "Creating main Wi-Fi connection for wlan1 (SSID: $SSID_MAIN)..."
     nmcli connection add type wifi con-name "mower-main" \
-        ifname '*' 802-11-wireless.mac-address AA:BB:CC:DD:EE:FF \
-        ssid "$SSID_MAIN" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
+        ifname wlan1 \
+        ssid "$SSID_MAIN" -- wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_MAIN" \
         connection.autoconnect yes connection.autoconnect-priority 10 \
         ipv4.route-metric 100 ipv4.method auto ipv6.method ignore
 
-    # Create fallback Wi-Fi connection (lower priority)
-    log_info "Creating fallback Wi-Fi connection (wlan0)..."
+    # Create fallback Wi-Fi connection (wlan0, lower priority)
+    log_info "Creating fallback Wi-Fi connection for wlan0 (SSID: $SSID_FALLBACK)..."
     nmcli connection add type wifi con-name "mower-fallback" \
-        ifname '*' 802-11-wireless.mac-address 11:22:33:44:55:66 \
-        ssid "$SSID_FALLBACK" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
+        ifname wlan0 \
+        ssid "$SSID_FALLBACK" -- wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PASS_FALLBACK" \
         connection.autoconnect yes connection.autoconnect-priority 5 \
         ipv4.route-metric 200 ipv4.method auto ipv6.method ignore
 
-    # Set country code in NetworkManager
-    if [[ -f /etc/NetworkManager/conf.d/wifi-country.conf ]]; then
-        sudo rm /etc/NetworkManager/conf.d/wifi-country.conf
-    fi
-
+    # Set country code in NetworkManager config
+    log_info "Configuring country code and Wi-Fi powersave settings..."
     sudo mkdir -p /etc/NetworkManager/conf.d
-    sudo tee /etc/NetworkManager/conf.d/wifi-country.conf > /dev/null <<EOF
+    sudo tee /etc/NetworkManager/conf.d/99-mower-wifi-settings.conf > /dev/null <<EOF
+
 [device]
 wifi.scan-rand-mac-address=no
 
@@ -629,6 +627,7 @@ country=$COUNTRY
 EOF
 
     # Restart NetworkManager to apply changes
+    sudo rm /etc/NetworkManager/system-connections/preconfigured.nmconnection
     log_info "Restarting NetworkManager..."
     sudo systemctl restart NetworkManager
     sleep 5

@@ -76,6 +76,7 @@ class ProjectLibraryUpdater:
         "board": None,  # Adafruit board definitions
         "busio": None,  # Adafruit busio
         "adafruit-blinka": ">=8.0.0",
+        "readchar": None,  # For reading keyboard input
     }
 
     # Files to scan and update

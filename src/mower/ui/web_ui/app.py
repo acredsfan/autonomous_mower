@@ -161,7 +161,7 @@ def create_app(mower_resource_manager_instance):
     def video_feed():
         """Stream camera feed as multipart response."""
         try:
-            camera = mower.resource_manager.get_camera()
+            camera = mower.get_camera()
 
             def generate_frames():
                 """Generate camera frames."""
@@ -239,7 +239,7 @@ def create_app(mower_resource_manager_instance):
     def get_settings():
         """Get current mower settings."""
         try:
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
             settings = {
                 "mowing": {
                     "pattern": path_planner.pattern_config.pattern_type.name,
@@ -261,7 +261,7 @@ def create_app(mower_resource_manager_instance):
             settings = data.get("settings", {})
             mowing = settings.get("mowing", {})
 
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
 
             # Update pattern planner settings
             if "pattern" in mowing:
@@ -282,7 +282,7 @@ def create_app(mower_resource_manager_instance):
     def get_area():
         """Get the current mowing area configuration."""
         try:
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
             area_data = {"boundary_points": path_planner.pattern_config.boundary_points}
             return jsonify({"success": True, "data": area_data})
         except Exception as e:
@@ -303,7 +303,7 @@ def create_app(mower_resource_manager_instance):
 
             # First try to use the pattern_config approach
             try:
-                path_planner = mower.resource_manager.get_path_planner()
+                path_planner = mower.get_path_planner()
                 if hasattr(path_planner, 'pattern_config'):
                     path_planner.pattern_config.boundary_points = coordinates
                     logger.info(f"Successfully saved boundary with {len(coordinates)} points using pattern_config")
@@ -336,7 +336,7 @@ def create_app(mower_resource_manager_instance):
     def get_current_path():
         """Get the current planned path."""
         try:
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
             path = path_planner.current_path
             return jsonify({"success": True, "path": path})
         except Exception as e:
@@ -521,7 +521,7 @@ def create_app(mower_resource_manager_instance):
             emit("status_update", mower.get_status())
             # Use the path_planner directly instead of calling
             # get_current_path()
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
             emit("path_update", path_planner.current_path)
         except Exception as e:
             logger.error(f"Error in handle_connect: {e}") @ socketio.on("disconnect")
@@ -608,7 +608,7 @@ def create_app(mower_resource_manager_instance):
                     settings = params.get("settings", {})
                     mowing = settings.get("mowing", {})
 
-                    path_planner = mower.resource_manager.get_path_planner()
+                    path_planner = mower.get_path_planner()
 
                     # Update pattern planner settings
                     if "pattern" in mowing:
@@ -656,7 +656,7 @@ def create_app(mower_resource_manager_instance):
     def handle_path_update():
         """Send current path to client."""
         try:
-            path_planner = mower.resource_manager.get_path_planner()
+            path_planner = mower.get_path_planner()
             path = path_planner.current_path
             emit("path_update", path)
         except Exception as e:
@@ -730,7 +730,7 @@ def create_app(mower_resource_manager_instance):
                 "generate_pattern": lambda params: {
                     "success": True,
                     "path": (
-                        mower.resource_manager.get_path_planner().generate_pattern(
+                        mower.get_path_planner().generate_pattern(
                             params.get("pattern_type", "PARALLEL"),
                             params.get("settings", {}),
                         )
@@ -763,7 +763,7 @@ def create_app(mower_resource_manager_instance):
                 "get_area": lambda params: {
                     "success": True,
                     "data": {
-                        "boundary_points": (mower.resource_manager.get_path_planner().pattern_config.boundary_points)
+                        "boundary_points": (mower.get_path_planner().pattern_config.boundary_points)
                     },
                 },
                 "get_home": lambda params: {
@@ -779,10 +779,10 @@ def create_app(mower_resource_manager_instance):
                     "success": True,
                     "data": {
                         "mowing": {
-                            "pattern": (mower.resource_manager.get_path_planner().pattern_config.pattern_type.name),
-                            "spacing": (mower.resource_manager.get_path_planner().pattern_config.spacing),
-                            "angle": (mower.resource_manager.get_path_planner().pattern_config.angle),
-                            "overlap": (mower.resource_manager.get_path_planner().pattern_config.overlap),
+                            "pattern": (mower.get_path_planner().pattern_config.pattern_type.name),
+                            "spacing": (mower.get_path_planner().pattern_config.spacing),
+                            "angle": (mower.get_path_planner().pattern_config.angle),
+                            "overlap": (mower.get_path_planner().pattern_config.overlap),
                         }
                     },
                 },
@@ -853,7 +853,7 @@ def save_area_command_handler(params, mower):
     # Try all possible methods to save the boundary
     try:
         # Method 1: Using path_planner.set_boundary_points
-        path_planner = mower.resource_manager.get_path_planner()
+        path_planner = mower.get_path_planner()
         if hasattr(path_planner, 'set_boundary_points'):
             result = path_planner.set_boundary_points(coordinates)
             if result:
