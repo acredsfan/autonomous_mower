@@ -1,4 +1,4 @@
-
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 # Simple, static-method-only INA3221 interface for compatibility and reliability
 import board
 import busio

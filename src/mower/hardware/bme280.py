@@ -1,3 +1,4 @@
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 import board
 import busio
 from adafruit_bme280 import basic as adafruit_bme280

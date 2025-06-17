@@ -1,3 +1,4 @@
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 """
 IMU (Inertial Measurement Unit) module for the autonomous mower.
 

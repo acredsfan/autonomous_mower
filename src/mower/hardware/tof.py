@@ -1,3 +1,4 @@
+# FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 import platform
 import random
 import time
