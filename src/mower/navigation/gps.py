@@ -847,30 +847,18 @@ if __name__ == "__main__":
                     print("")
                     parsed_positions = []
                     for reading in readings:
-                        # Defensive unpack: allow for extra fields, but require at least 2 (timestamp, nmea_line)
-                        if isinstance(reading, (tuple, list)) and len(reading) >= 2:
-                            ts_val, nmea_line = reading[0], reading[1]
-                        else:
-                            if args.debug:
-                                print(f"[DEBUG] Unexpected reading format: {reading}")
-                            continue
-                        # Print raw NMEA line if debug enabled
-                        if args.debug:
-                            print(f"[DEBUG] Raw NMEA: {nmea_line}")
-                        # Only process if nmea_line is a string
-                        if not isinstance(nmea_line, str):
-                            if args.debug:
-                                print(f"[DEBUG] Skipping non-string NMEA line: {nmea_line} (type: {type(nmea_line)})")
-                            continue
-                        pos = parse_gps_position(nmea_line, debug=args.debug)
-                        if pos is not None:
-                            # pos: (easting, northing, zone_number, zone_letter)
-                            x, y = pos[0], pos[1]
-                            parsed_positions.append((ts_val, x, y))
+                        # Reading is already a parsed position: (timestamp, easting, northing, zone_number, zone_letter)
+                        if isinstance(reading, (tuple, list)) and len(reading) >= 5:
+                            ts_val, easting, northing, zone_number, zone_letter = reading[:5]
+                            parsed_positions.append((ts_val, easting, northing))
                             last_valid_position_time = time.time()
                             valid_position_count += 1
-                        elif args.debug:
-                            print(f"[DEBUG] Failed to parse NMEA: {nmea_line}")
+                            if args.debug:
+                                print(f"[DEBUG] Parsed position: {easting:.2f}E, {northing:.2f}N (Zone {zone_number}{zone_letter})")
+                        else:
+                            if args.debug:
+                                print(f"[DEBUG] Unexpected position format: {reading}")
+                            continue
 
                     if state == "prompt":
                         print(

@@ -1049,86 +1049,119 @@ install_python_dependencies() {
 }
 
 setup_mower_service() {
-    print_info "Setting up autonomous mower system service..."
+    print_info "Configuring systemd services..."
+    
+    read -p "Do you want to set up an NTRIP client for RTK corrections? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # --- RTK/NTRIP Setup ---
+        print_info "Setting up services for RTK (NTRIP)..."
+        
+        print_info "Installing RTKLIB..."
+        sudo apt-get update
+        sudo apt-get install rtklib -y
+        check_command "Installing RTKLIB"
+        
+        # --- Collect NTRIP Credentials ---
+        print_info "Please enter your NTRIP connection details:"
+        read -p "NTRIP Server IP/Hostname: " NTRIP_SERVER
+        read -p "NTRIP Port (e.g., 2101): " NTRIP_PORT
+        read -p "NTRIP Username: " NTRIP_USER
+        read -s -p "NTRIP Password: " NTRIP_PASS
+        echo
+        read -p "NTRIP Mountpoint: " NTRIP_MOUNTPOINT
+        read -p "GPS Device Path (e.g., /dev/ttyACM0): " GPS_DEVICE
+        read -p "GPS Baud Rate (e.g., 115200): " GPS_BAUD
 
-    local PROJECT_ROOT_DIR
-    PROJECT_ROOT_DIR=$(pwd)
-    local SERVICE_TEMPLATE_FILE="scripts/autonomous-mower.service.template"
-    local SERVICE_FILE_NAME="autonomous-mower.service"
-    local GENERATED_SERVICE_FILE="/tmp/$SERVICE_FILE_NAME"
+        # --- Create .env file ---
+        ENV_FILE="/home/pi/autonomous_mower/.env"
+        print_info "Creating configuration file at $ENV_FILE..."
+        
+        cat > $ENV_FILE << EOL
+# NTRIP Client Configuration
+NTRIP_URL="${NTRIP_URL}"
+NTRIP_PORT="${NTRIP_PORT}"
+NTRIP_USER="${NTRIP_USER}"
+NTRIP_PASS="${NTRIP_PASS}"
+NTRIP_MOUNTPOINT="${NTRIP_MOUNTPOINT}"
+GPS_SERIAL_PORT="${GPS_SERIAL_PORT}"
+GPS_BAUD_RATE="${GPS_BAUD_RATE}"
+EOL
+        check_command "Writing .env file"
+        
+        # --- Create ntrip-client.service ---
+        print_info "Creating ntrip-client.service..."
+        sudo tee /etc/systemd/system/ntrip-client.service > /dev/null << EOL
+[Unit]
+Description=NTRIP Client (RTKLIB) for Autonomous Mower
+After=network.target
 
-    # Get current user for service configuration
-    local CURRENT_USER
-    CURRENT_USER=$(whoami)
+[Service]
+EnvironmentFile=${ENV_FILE}
+ExecStart=/usr/bin/str2str -in ntrip://\${NTRIP_USER}:\${NTRIP_PASS}@\${NTRIP_URL}:\${NTRIP_PORT}/\${NTRIP_MOUNTPOINT} -out serial://\${GPS_SERIAL_PORT}:\${GPS_BAUD_RATE}:8:n:1 -b 1
+User=pi
+Restart=always
+RestartSec=10
 
+[Install]
+WantedBy=multi-user.target
+EOL
+        check_command "Creating ntrip-client.service"
 
-    # Use system-wide mower executable (installed by pip3 install -e .)
-    local MOWER_EXECUTABLE_PATH="$(command -v mower)"
-    if [ -z "$MOWER_EXECUTABLE_PATH" ]; then
-        print_error "System-wide 'mower' executable not found. Ensure 'pip3 install -e .' was successful."
-        POST_INSTALL_MESSAGES+="[ERROR] Cannot install service: System-wide 'mower' executable missing.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Run the script again or manually install with 'pip3 install -e .'.\\n"
-        return 1
-    fi
+        # --- Create autonomous-mower.service with dependency ---
+        print_info "Creating autonomous-mower.service with NTRIP dependency..."
+        sudo tee /etc/systemd/system/autonomous-mower.service > /dev/null << EOL
+[Unit]
+Description=Autonomous Mower Main Service
+Wants=ntrip-client.service
+After=network.target ntrip-client.service
 
-    print_info "Service will run as user: $CURRENT_USER"
-    print_info "Mower executable path: $MOWER_EXECUTABLE_PATH"
-    print_info "Project root directory: $PROJECT_ROOT_DIR"
-    print_info "Generating service file from template '$SERVICE_TEMPLATE_FILE'..."
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/autonomous_mower
+ExecStart=/usr/bin/python3 -m mower.main_controller
+User=pi
+Restart=always
 
-    # Generate service file with proper user substitution
-    sed -e "s|{{PROJECT_ROOT_DIR}}|$PROJECT_ROOT_DIR|g" \
-        -e "s|{{MOWER_EXECUTABLE_PATH}}|$MOWER_EXECUTABLE_PATH|g" \
-        -e "s|User=pi|User=$CURRENT_USER|g" \
-        -e "s|Group=pi|Group=$CURRENT_USER|g" \
-        "$SERVICE_TEMPLATE_FILE" > "$GENERATED_SERVICE_FILE"
-
-    if [ $? -ne 0 ]; then
-        print_error "Failed to generate service file from template"
-        return 1
-    fi
-    print_info "Installing generated service file to /etc/systemd/system/$SERVICE_FILE_NAME..."
-    if ! sudo cp "$GENERATED_SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE_NAME"; then
-        print_error "Failed to copy service file to /etc/systemd/system/"
-        rm -f "$GENERATED_SERVICE_FILE"
-        return 1
-    fi
-
-    if ! sudo chmod 644 "/etc/systemd/system/$SERVICE_FILE_NAME"; then
-        print_error "Failed to set service file permissions"
-        return 1
-    fi
-
-    # Clean up temporary file
-    rm -f "$GENERATED_SERVICE_FILE"
-
-    print_info "Reloading systemd daemon..."
-    if ! sudo systemctl daemon-reload; then
-        print_error "Failed to reload systemd daemon"
-        return 1
-    fi
-
-    print_info "Enabling autonomous mower service to start on boot..."
-    if ! sudo systemctl enable "$SERVICE_FILE_NAME"; then
-        print_error "Failed to enable autonomous mower service"
-        print_error "You may need to enable it manually with: sudo systemctl enable $SERVICE_FILE_NAME"
-        return 1
-    fi
-
-    # Verify service installation
-    if systemctl is-enabled --quiet "$SERVICE_FILE_NAME" 2>/dev/null; then
-        print_success "Autonomous mower service has been installed and enabled successfully!"
-        POST_INSTALL_MESSAGES+="[SUCCESS] Autonomous mower service installed and enabled.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Service will start automatically on system boot.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl status $SERVICE_FILE_NAME' to check service status.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl start $SERVICE_FILE_NAME' to start service now.\\n"
-        POST_INSTALL_MESSAGES+="[INFO] Use 'sudo systemctl stop $SERVICE_FILE_NAME' to stop service.\\n"
+[Install]
+WantedBy=multi-user.target
+EOL
+        check_command "Creating autonomous-mower.service"
+        
+        # --- Enable NTRIP service ---
+        print_info "Enabling ntrip-client.service..."
+        sudo systemctl enable ntrip-client.service
+        
     else
-        print_warning "Service was copied but may not be properly enabled"
-        POST_INSTALL_MESSAGES+="[WARNING] Service installation may not be complete. Check with 'systemctl status $SERVICE_FILE_NAME'.\\n"
-    fi
-}
+        # --- Standard Setup (No RTK) ---
+        print_info "Creating autonomous-mower.service without NTRIP dependency..."
+        sudo tee /etc/systemd/system/autonomous-mower.service > /dev/null << EOL
+[Unit]
+Description=Autonomous Mower Main Service
+After=network.target
 
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/autonomous_mower
+ExecStart=/usr/bin/python3 -m mower.main_controller
+User=pi
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+        check_command "Creating autonomous-mower.service"
+    fi
+    
+    # --- Enable main service and reload daemon ---
+    print_info "Enabling autonomous-mower.service..."
+    sudo systemctl enable autonomous-mower.service
+    
+    print_info "Reloading systemd daemon..."
+    sudo systemctl daemon-reload
+    
+    print_success "Systemd services configured."
+}
 
 # Function to check if Python version is 3.10 or higher (kept for backwards compatibility)
 # Note: Coral TPU now always uses Python 3.9 virtual environment regardless of system Python version

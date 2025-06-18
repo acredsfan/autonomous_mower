@@ -189,13 +189,17 @@ deploy_locally() {
     check_command "Setting up log directory" || exit 1
 
     # Enable and start the service
-    print_info "Enabling and starting the service..."
+    print_info "Enabling and starting the services..."
+    sudo systemctl enable ntrip-client.service
+    sudo systemctl start ntrip-client.service
     sudo systemctl enable autonomous-mower.service
     sudo systemctl start autonomous-mower.service
+
     check_command "Enabling and starting the service" || exit 1
 
     # Check service status
     print_info "Checking service status..."
+    sudo systemctl status ntrip-client.service
     sudo systemctl status autonomous-mower.service
 
     print_success "Deployment completed successfully!"

@@ -59,6 +59,13 @@ class CommunicationModeHelper:
             if os.path.exists(device_path):
                 usb_devices.append(device_path)
         
+        # Scan for Serial devices (serial*)
+        serial_devices = serial.tools.list_ports.comports()
+        for port in serial_devices:
+            potential_devices.append(port.device)
+            if port.device.startswith("/dev/ttyUSB") or port.device.startswith("/dev/ttyACM"):
+                usb_devices.append(port.device)
+
         # Scan UART devices (ttyAMA*, ttyS*)
         uart_devices = []
         for i in range(5):  # Check common UART ports
@@ -68,7 +75,7 @@ class CommunicationModeHelper:
                     uart_devices.append(device_path)
         
         # Apply device pattern filter if specified
-        all_devices = usb_devices + uart_devices
+        all_devices = usb_devices + uart_devices + serial_devices
         if device_pattern:
             all_devices = [d for d in all_devices if device_pattern in d]
         
@@ -384,7 +391,7 @@ class RoboHATDriver:
         self._rc_disabled = False  # Track if we've disabled RC mode
 
         # Read communication configuration from environment variables
-        specified_port = os.getenv("MM1_SERIAL_PORT", "/dev/ttyACM1")
+        specified_port = os.getenv("MM1_SERIAL_PORT", "/dev/serial0")
         communication_mode = os.getenv("MM1_COMMUNICATION_MODE", "auto").lower()
         device_pattern = os.getenv("MM1_DEVICE_PATTERN", "")
         

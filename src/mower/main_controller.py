@@ -242,7 +242,7 @@ class ResourceManager:
 
         try:
             # Default for Pi; ensure GPS_PORT is defined in constants or .env
-            gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyS0"
+            gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyACM0"
             self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
             logger.info(f"GPS serial port initialized on {gps_port_val} " f"at {GPS_BAUDRATE} baud")
         except Exception as e:
@@ -554,7 +554,7 @@ class ResourceManager:
         if gps is None and self._initialized:  # Try to init on demand
             logger.info("GPS serial port not found, attempting on-demand initialization.")
             try:
-                gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyS0"
+                gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyACM0"
                 self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
                 logger.info(f"GPS serial port initialized on demand on {gps_port_val}")
                 return self._resources["gps_serial"]

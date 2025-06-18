@@ -46,9 +46,9 @@ This document tracks the progress of preparing the autonomous mower codebase for
 
 3. **Path Configurations**:
    - Serial device paths are configured with environment variables:
-     - GPS: /dev/ttyACM1 (configurable via GPS_SERIAL_PORT)
-     - RoboHAT MM1: /dev/ttyACM0 (configurable via MM1_SERIAL_PORT)
-     - IMU: /dev/ttyACM2 (configurable via IMU_SERIAL_PORT)
+     - GPS: /dev/ttyACM0 (configurable via GPS_SERIAL_PORT)
+     - RoboHAT MM1: /dev/ttyACM1 (configurable via MM1_SERIAL_PORT)
+     - IMU: /dev/ttyAMA2 (configurable via IMU_SERIAL_PORT)
    - Default paths should be verified on the specific Raspberry Pi model being used
 
 ## Deployment Preparation
