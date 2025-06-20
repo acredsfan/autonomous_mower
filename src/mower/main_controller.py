@@ -37,6 +37,7 @@ import signal  # Added for signal handling
 import sys  # Added for sys.exit
 import threading  # Added for threading.Lock
 import time
+import utm
 from enum import Enum
 from typing import Any, Optional
 from pathlib import Path  # Added for Path()
@@ -62,6 +63,7 @@ from mower.hardware.tof import VL53L0XSensors
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
+from mower.navigation.gps import GpsPosition
 from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 
@@ -378,6 +380,21 @@ class ResourceManager:
         except Exception as e:
             logger.error(f"Critical error in software initialization: {e}")
             # Don't re-raise here to allow partial initialization
+
+        try:
+            gps_serial_port = self.get_resource("gps_serial")
+            if gps_serial_port:
+                # Create and start the continuous GPS reader
+                gps_position_reader = GpsPosition(gps_serial_port, debug=True)
+                gps_position_reader.start() # Start the background thread
+                self._resources["gps_position_reader"] = gps_position_reader
+                logger.info("GpsPosition reader thread started.")
+            else:
+                logger.warning("GPS serial port not available, cannot start GpsPosition reader.")
+                self._resources["gps_position_reader"] = None
+        except Exception as e:
+            logger.error(f"Failed to initialize and start GpsPosition reader: {e}", exc_info=True)
+            self._resources["gps_position_reader"] = None
 
     def initialize(self):
         """Initialize all resources."""
@@ -788,53 +805,27 @@ class ResourceManager:
         }
 
     def get_gps_location(self):
-        """Get the current GPS location.
-
-        Returns:
-            dict: GPS latitude, longitude, altitude, satellites, fix_quality or None.
-        """
-        gps_device = self.get_gps()  # Uses the on-demand init if needed
-        if gps_device and hasattr(gps_device, "read_line"):  # MODIFIED: Check for read_line
+        """Get the current GPS location from the running GpsPosition thread."""
+        gps_reader = self.get_resource("gps_position_reader")
+        if gps_reader:
             try:
-                # GPS parsing depends heavily on SerialPort and GPS module
-                # capabilities.
-                raw_data_tuple = gps_device.read_line()  # MODIFIED: Call read_line
-                # Check if read was successful and data exists
-                if raw_data_tuple and raw_data_tuple[0]:
-                    raw_data = raw_data_tuple[1]
-                    # Robust NMEA parsing should be in a dedicated GPS class/library.
-                    # This is a simplified placeholder.
-                    logger.debug(f"Raw GPS data: {raw_data}")
-                    if "$GPGGA" in raw_data:  # Example check for GGA sentence
-                        # Basic parsing attempt (highly simplified)
-                        parts = raw_data.split(",")
-                        lat, lon = None, None
-                        if len(parts) > 5 and parts[2] and parts[4]:
-                            try:
-                                lat_raw = float(parts[2])
-                                lon_raw = float(parts[4])
-                                lat_deg = int(lat_raw / 100)
-                                lat_min = lat_raw % 100
-                                lon_deg = int(lon_raw / 100)
-                                lon_min = lon_raw % 100
-                                lat = lat_deg + (lat_min / 60)
-                                lon = lon_deg + (lon_min / 60)
-                                if parts[3] == "S":
-                                    lat = -lat
-                                if parts[5] == "W":
-                                    lon = -lon
-                                return {
-                                    "status": "Fix acquired (parsed GPGGA)",
-                                    "latitude": lat,
-                                    "longitude": lon,
-                                    "raw": raw_data,
-                                }
-                            except ValueError:
-                                logger.warning(f"Could not parse lat/lon from GPGGA: {raw_data}")
-                        return {"status": "Fix acquired (raw GPGGA)", "raw": raw_data}
-                return {"status": "No GPS data or fix", "latitude": None, "longitude": None}
+                # The position format from gps.py is (timestamp, easting, northing, zone_number, zone_letter)
+                position_data = gps_reader.get_latest_position()
+                if position_data:
+                    _, easting, northing, zone_number, zone_letter = position_data
+                    # Convert UTM back to lat/lon for the UI
+                    lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+                    return {
+                        "status": "Fix acquired",
+                        "latitude": lat,
+                        "longitude": lon,
+                    }
+                else:
+                    return {"status": "Waiting for GPS fix", "latitude": None, "longitude": None}
             except Exception as e:
-                logger.warning(f"Error reading from GPS: {e}")
+                logger.warning(f"Error getting or converting data from GpsPosition reader: {e}", exc_info=True)
+                return {"status": "Error processing GPS data", "latitude": None, "longitude": None}
+
         return {"status": "GPS unavailable", "latitude": None, "longitude": None}
 
     def get_sensor_data(self):
