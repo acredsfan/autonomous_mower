@@ -185,20 +185,43 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             self._sensor_status["vl53l0x"].last_error = str(e)
             return None
 
-    def _read_bme280(self):
-        """Read BME280 environmental data."""
-        if not self._sensors["bme280"]:
+    def _read_bme280(self) -> Dict[str, float]:
+        """Read BME280 environmental data with basic debounce/retry logic."""
+        sensor = self._sensors.get("bme280")
+        if sensor is None:
             return {}
 
+        # one‑time warm‑up (BME280 often needs a few ms after power‑up)
+        if not hasattr(self, "_bme280_warmed"):
+            time.sleep(0.2)                 # 200 ms settle
+            self._bme280_warmed = True
+
+        # running failure counter (stored on the instance)
+        fail_attr = "_bme280_consecutive_failures"
+        consecutive = getattr(self, fail_attr, 0)
+        max_failures = 3                    # mark dead after three in a row
+
         try:
-            data = BME280Sensor.read_bme280(self._sensors["bme280"])
+            raw = BME280Sensor.read_bme280(sensor)  # may raise or return {}
+            if not raw:
+                raise ValueError("empty frame")
+
+            # success → reset counter and return converted dict
+            setattr(self, fail_attr, 0)
             return {
-                "temperature": data.get("temperature_f"),
-                "humidity": data.get("humidity"),
-                "pressure": data.get("pressure"),
+                "temperature": raw.get("temperature_f"),
+                "humidity":    raw.get("humidity"),
+                "pressure":    raw.get("pressure"),
             }
-        except Exception as e:
-            self._handle_sensor_error("bme280", e)
+
+        except Exception as exc:
+            consecutive += 1
+            setattr(self, fail_attr, consecutive)
+
+            # only escalate after N consecutive failures
+            if consecutive >= max_failures:
+                self._handle_sensor_error("bme280", exc)
+
             return {}
 
     def _read_bno085(self):

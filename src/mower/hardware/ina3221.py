@@ -33,3 +33,23 @@ class INA3221Sensor:
             }
         except Exception:
             return {}
+
+
+if __name__ == "__main__":
+    # Example usage
+    sensor = INA3221Sensor.init_ina3221()
+    # Initialize the INA3221 sensor
+    print("Initializing INA3221 sensor...")
+    sensor = INA3221Sensor.init_ina3221()
+    # Read data from each channel
+    print("Reading data from INA3221 sensor...")
+    if sensor:
+        ch1_data = INA3221Sensor.read_ina3221(sensor, 1)
+        print(ch1_data)
+        ch2_data = INA3221Sensor.read_ina3221(sensor, 2)
+        print(ch2_data)
+        ch3_data = INA3221Sensor.read_ina3221(sensor, 3)
+        print(ch3_data)
+
+    else:
+        print("INA3221 sensor initialization failed.")
