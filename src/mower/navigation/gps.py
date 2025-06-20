@@ -217,69 +217,51 @@ class GpsPlayer(metaclass=SingletonMeta):
 # Parsing and Utility Functions
 def parse_gps_position(line, debug=False):
     """
-    Parse a GPS NMEA sentence and convert to UTM coordinates.
-
-    Args:
-        line: NMEA sentence to parse
-        debug: Whether to enable debug logging
-
-    Returns:
-        Tuple of (easting, northing, zone_number, zone_letter) or None if parsing failed
+    Parse a GPS NMEA sentence (GPRMC or GPGGA) and convert to UTM coordinates.
+    Uses the pynmea2 library for robust parsing.
     """
     if not line:
         return None
     line = line.strip()
-    if not line:
+    if not line or not line.startswith("$") or "*" not in line:
+        # Basic validation failed, ignore line
         return None
 
-    if "$" != line[0]:
-        logger.info("NMEA Missing line start")
-        return None
-
-    if "*" != line[-3]:
-        logger.info("NMEA Missing checksum")
-        return None
+    # Verify checksum before full parsing
     try:
-        nmea_checksum = parse_nmea_checksum(line)
-    except ValueError:
-        logger.info("Invalid checksum format")
+        # Recalculate and check checksum
+        line_no_checksum = line[1:].split("*")[0]
+        expected_checksum = reduce(operator.xor, map(ord, line_no_checksum), 0)
+        provided_checksum = int(line.split("*")[1], 16)
+        if expected_checksum != provided_checksum:
+            logger.info("NMEA checksum does not match: %s != %s for line %s",
+                        expected_checksum, provided_checksum, line)
+            return None
+    except (IndexError, ValueError) as e:
+        logger.info("Could not validate checksum for line: %s, Error: %s", line, e)
         return None
 
-    nmea_msg = line[1:-3]
-    nmea_parts = nmea_msg.split(",")
-    message = nmea_parts[0]
-    if message in ["GPRMC", "GNRMC"]:
-        calculated_checksum = calculate_nmea_checksum(line)
-        if nmea_checksum != calculated_checksum:
-            logger.info("NMEA checksum does not match: %s != %s", nmea_checksum, calculated_checksum)
-            return None
-
+    # Use pynmea2 to parse the verified line
+    try:
+        msg = pynmea2.parse(line)
+    except pynmea2.ParseError as e:
         if debug:
-            try:
-                pynmea2.parse(line)
-            except pynmea2.ParseError as e:
-                logger.error("NMEA parse error detected: %s", e)
-                return None
+            logger.error("NMEA parse error detected: %s", e)
+        return None
 
-        if nmea_parts[2] == "V":
-            logger.info("GPS receiver warning; position not valid. " "Ignoring invalid position.")
+    # Handle GPGGA sentences (often have the best fix data)
+    if isinstance(msg, pynmea2.types.talker.GGA):
+        # gps_qual: 0=invalid, 1=GPS fix, 2=DGPS, etc. We need at least 1.
+        if msg.gps_qual < 1:
+            if debug:
+                logger.debug("GPGGA sentence received, but GPS fix is not valid (quality: %s).", msg.gps_qual)
+            return None
+        if not msg.latitude or not msg.longitude:
+            if debug:
+                logger.debug("GPGGA sentence received, but lat/lon is empty.")
             return None
 
-        longitude = nmea_to_degrees(nmea_parts[5], nmea_parts[6])
-        latitude = nmea_to_degrees(nmea_parts[3], nmea_parts[4])
-
-        # if debug:
-        #     if hasattr(msg, 'longitude') and msg.longitude != longitude:
-        #         logger.info("Longitude mismatch %s != %s", msg.longitude, longitude)
-        #     if hasattr(msg, 'latitude') and msg.latitude != latitude:
-        #         logger.info("Latitude mismatch %s != %s", msg.latitude, latitude)
-
-        utm_position = utm.from_latlon(latitude, longitude)  # if debug:
-        #     logger.info(
-        #         "UTM easting = %s, UTM northing = %s",
-        #         utm_position[0], utm_position[1]
-        #     )
-
+        utm_position = utm.from_latlon(msg.latitude, msg.longitude)
         return (
             float(utm_position[0]),
             float(utm_position[1]),
@@ -287,6 +269,26 @@ def parse_gps_position(line, debug=False):
             utm_position[3],
         )
 
+    # Handle GPRMC sentences as a fallback
+    elif isinstance(msg, pynmea2.types.talker.RMC):
+        if msg.status == 'V': # 'V' means Void/Warning
+            if debug:
+                logger.debug("GPRMC sentence received, but status is Void. Ignoring invalid position.")
+            return None
+        if not msg.latitude or not msg.longitude:
+            if debug:
+                logger.debug("GPRMC sentence received, but lat/lon is empty.")
+            return None
+
+        utm_position = utm.from_latlon(msg.latitude, msg.longitude)
+        return (
+            float(utm_position[0]),
+            float(utm_position[1]),
+            utm_position[2],
+            utm_position[3],
+        )
+
+    # Return None if it's a different, unhandled NMEA sentence type
     return None
 
 
