@@ -805,28 +805,33 @@ class ResourceManager:
         }
 
     def get_gps_location(self):
-        """Get the current GPS location from the running GpsPosition thread."""
+        """Get the current GPS location and satellite count from the running GpsPosition thread."""
         gps_reader = self.get_resource("gps_position_reader")
         if gps_reader:
             try:
                 # The position format from gps.py is (timestamp, easting, northing, zone_number, zone_letter)
                 position_data = gps_reader.get_latest_position()
+                metadata = gps_reader.get_latest_metadata() if hasattr(gps_reader, "get_latest_metadata") else None
                 if position_data:
                     _, easting, northing, zone_number, zone_letter = position_data
                     # Convert UTM back to lat/lon for the UI
                     lat, lon = utm.to_latlon(easting, northing, zone_number, zone_letter)
+                    satellites = metadata.get("satellites") if metadata else None
+                    hdop = metadata.get("hdop") if metadata else None
                     return {
                         "status": "Fix acquired",
                         "latitude": lat,
                         "longitude": lon,
+                        "satellites": satellites,
+                        "hdop": hdop,
                     }
                 else:
-                    return {"status": "Waiting for GPS fix", "latitude": None, "longitude": None}
+                    return {"status": "Waiting for GPS fix", "latitude": None, "longitude": None, "satellites": 0}
             except Exception as e:
                 logger.warning(f"Error getting or converting data from GpsPosition reader: {e}", exc_info=True)
-                return {"status": "Error processing GPS data", "latitude": None, "longitude": None}
+                return {"status": "Error processing GPS data", "latitude": None, "longitude": None, "satellites": 0}
 
-        return {"status": "GPS unavailable", "latitude": None, "longitude": None}
+        return {"status": "GPS unavailable", "latitude": None, "longitude": None, "satellites": 0}
 
     def get_sensor_data(self):
         """

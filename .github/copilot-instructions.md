@@ -173,7 +173,7 @@
 
 ## VIII. Frozen Drivers  🚧
 
-### Do *not* modify these modules
+### Do *not* modify these modules unless absolutely necessary and explicitly requested.
 The following files implement hardware drivers that are *vendor‑approved* and
 verified on‑device. **Copilot (any model) must treat them as read‑only** unless
 the task *explicitly says “edit frozen driver.”*

@@ -81,6 +81,7 @@ class GpsPosition(metaclass=SingletonMeta):
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
         self.position = None
+        self.metadata = None  # Store GPS metadata (satellites, HDOP, etc.)
         self.running = True
         self.lock = threading.Lock()
 
@@ -91,13 +92,19 @@ class GpsPosition(metaclass=SingletonMeta):
     def _read_gps(self):
         while self.running:
             try:
-                # logger.debug("Reading GPS data...")
+                # Get both position and metadata
                 positions = self.run()
+                metadata = self.run_metadata()
+                
                 if positions:
                     with self.lock:
                         self.position = positions
-                    # logger.debug("New GPS position: %s", positions)
-                else:
+                
+                if metadata:
+                    with self.lock:
+                        self.metadata = metadata
+                        
+                if not positions:
                     logger.debug("No valid GPS position received.")
                 time.sleep(1)  # Adjust as needed
             except IOError as e:
@@ -118,9 +125,31 @@ class GpsPosition(metaclass=SingletonMeta):
         positions = self.position_reader.run(lines)
         return positions[-1] if positions else None
 
+    def run_metadata(self):
+        """Parse GPS metadata from current NMEA lines."""
+        lines = self.line_reader.run()
+        return self.run_metadata_once(lines)
+
+    def run_metadata_once(self, lines):
+        """Parse GPS metadata from given NMEA lines."""
+        if not lines:
+            return None
+            
+        # Try to get metadata from the most recent NMEA sentences
+        for ts, nmea in reversed(lines):
+            metadata = parse_gps_metadata(nmea, self.debug)
+            if metadata:
+                return metadata
+        return None
+
     def get_latest_position(self):
         with self.lock:
             return self.position
+
+    def get_latest_metadata(self):
+        """Get the latest GPS metadata (satellites, HDOP, etc.)."""
+        with self.lock:
+            return self.metadata
 
     def shutdown(self):
         self.running = False
@@ -289,6 +318,91 @@ def parse_gps_position(line, debug=False):
         )
 
     # Return None if it's a different, unhandled NMEA sentence type
+    return None
+
+
+def parse_gps_metadata(line, debug=False):
+    """
+    Parse GPS metadata (satellites, HDOP, fix quality) from NMEA sentences.
+    Extracts additional GPS information beyond just position.
+    
+    Args:
+        line: NMEA sentence string
+        debug: Enable debug logging
+        
+    Returns:
+        dict: GPS metadata or None if parsing fails
+            {
+                'satellites': int,      # Number of satellites in use
+                'hdop': float,         # Horizontal dilution of precision  
+                'fix_quality': int,    # GPS fix quality indicator
+                'altitude': float,     # Altitude above sea level (meters)
+            }
+    """
+    if not line:
+        return None
+    line = line.strip()
+    if not line or not line.startswith("$") or "*" not in line:
+        return None
+
+    # Verify checksum before parsing
+    try:
+        line_no_checksum = line[1:].split("*")[0]
+        expected_checksum = reduce(operator.xor, map(ord, line_no_checksum), 0)
+        provided_checksum = int(line.split("*")[1], 16)
+        if expected_checksum != provided_checksum:
+            if debug:
+                logger.debug("NMEA checksum mismatch in metadata parsing: %s", line)
+            return None
+    except (IndexError, ValueError):
+        if debug:
+            logger.debug("Could not validate checksum for metadata: %s", line)
+        return None
+
+    # Use pynmea2 to parse the line
+    try:
+        msg = pynmea2.parse(line)
+    except pynmea2.ParseError as e:
+        if debug:
+            logger.debug("NMEA parse error in metadata parsing: %s", e)
+        return None
+
+    # Extract metadata from GPGGA/GNGGA sentences (most complete GPS info)
+    if isinstance(msg, pynmea2.types.talker.GGA):
+        if msg.gps_qual < 1:
+            if debug:
+                logger.debug("GPGGA metadata: GPS fix quality insufficient (%s)", msg.gps_qual)
+            return None
+            
+        metadata = {
+            'satellites': int(msg.num_sats) if msg.num_sats else 0,
+            'hdop': float(msg.horizontal_dil) if msg.horizontal_dil else 99.9,
+            'fix_quality': int(msg.gps_qual) if msg.gps_qual else 0,
+            'altitude': float(msg.altitude) if msg.altitude is not None else 0.0,
+        }
+        
+        if debug:
+            logger.debug("GPS metadata extracted: %s", metadata)
+        return metadata
+
+    # GSA sentences also have satellite info (fallback)
+    elif isinstance(msg, pynmea2.types.talker.GSA):
+        # Count active satellites
+        active_sats = [sat for sat in [msg.sv_id01, msg.sv_id02, msg.sv_id03, msg.sv_id04,
+                                      msg.sv_id05, msg.sv_id06, msg.sv_id07, msg.sv_id08,
+                                      msg.sv_id09, msg.sv_id10, msg.sv_id11, msg.sv_id12] if sat]
+        
+        metadata = {
+            'satellites': len(active_sats),
+            'hdop': float(msg.hdop) if msg.hdop else 99.9,
+            'fix_quality': 1 if msg.mode_fix_type == '3' else (1 if msg.mode_fix_type == '2' else 0),
+            'altitude': 0.0,  # GSA doesn't have altitude
+        }
+        
+        if debug:
+            logger.debug("GPS metadata from GSA: %s", metadata)
+        return metadata
+
     return None
 
 

@@ -240,14 +240,19 @@ class NTRIPClient:
             temp_gps_serial.start()
             start_time = time.time()
             while time.time() - start_time < 15:  # Try for 15 seconds
-                line = temp_gps_serial.read_line()
+                line_result = temp_gps_serial.read_line()
                 # Debug: log the type and value of what is returned
-                logger.debug(f"Raw line from GPS: type={type(line)}, value={line}")
-                # If line is a tuple (timestamp, nmea_line), extract nmea_line
-                if isinstance(line, tuple) and len(line) == 2:
-                    nmea_line = line[1]
+                logger.debug(f"Raw line from GPS: type={type(line_result)}, value={line_result}")
+                
+                # SerialPort.read_line() returns (bool, str)
+                if isinstance(line_result, tuple) and len(line_result) == 2:
+                    success, nmea_line = line_result
+                    if not success or not nmea_line:
+                        continue  # Skip empty or failed reads
                 else:
-                    nmea_line = line
+                    # Fallback for unexpected format
+                    nmea_line = str(line_result) if line_result else ""
+                
                 if nmea_line and isinstance(nmea_line, str) and nmea_line.startswith("$GPGGA"):
                     print(f"✓ Found GGA: {nmea_line.strip()}")
                     return nmea_line.strip()
@@ -279,11 +284,7 @@ class NTRIPClient:
         # Add detailed logging for raw GPS data
         logger.debug(f"Raw GPS data received: {gga_sentence}")
 
-        # Fix the 'tuple' object error in GGA sentence retrieval
-        if isinstance(gga_sentence, tuple):
-            gga_sentence = gga_sentence[0]  # Extract the actual string if it's a tuple
-
-        # Validate that gga_sentence is a string
+        # Validate that gga_sentence is a string (should be guaranteed by get_gga_sentence now)
         if not isinstance(gga_sentence, str):
             logger.error(f"Invalid GGA sentence format: {gga_sentence}")
             raise ValueError("Expected a string for GGA sentence")

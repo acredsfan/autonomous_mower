@@ -5,6 +5,8 @@ After=network.target
 [Service]
 User=pi
 Group=pi
+
+# Project root directory
 WorkingDirectory={{PROJECT_ROOT_DIR}}
 ExecStart={{MOWER_EXECUTABLE_PATH}}
 Restart=on-failure
@@ -13,8 +15,11 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=autonomous-mower
 
-# Environment variables can be set here if needed
-# Environment="PYTHONUNBUFFERED=1"
+# Load environment variables from .env file (systemd format)
+# NOTE: All values in .env must be unquoted for systemd compatibility (e.g., GPS_SERIAL_PORT=/dev/ttyACM0)
+EnvironmentFile=/home/pi/autonomous_mower/.env
+# Optionally, set additional environment variables here
+# Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
