@@ -700,11 +700,15 @@ def create_app(mower_resource_manager_instance):
                         safety_status = sim_data.get("imu", {}).get("safety_status", {"is_safe": True})
                         sensor_data = sim_data
                     else:
+                        logger.debug("Not in simulation mode, getting real sensor data...")
                         sensor_interface = mower.get_sensor_interface()
+                        logger.debug(f"APP.PY send_updates: Retrieved sensor_interface: {sensor_interface}")
                         if sensor_interface and hasattr(sensor_interface, 'get_safety_status') and hasattr(sensor_interface, 'get_sensor_data'):
+                            logger.debug("Using sensor_interface for data collection...")
                             safety_status = sensor_interface.get_safety_status()
                             sensor_data = sensor_interface.get_sensor_data()
                         else:
+                            logger.debug("Using mower methods for data collection...")
                             safety_status = mower.get_safety_status()
                             sensor_data = mower.get_sensor_data()
                         logger.info(f"APP.PY send_updates: Received sensor_data from mower: {sensor_data}")
