@@ -148,7 +148,7 @@ class WebInterface:
                 self.logger.info("Attempting to start Flask-SocketIO server on 0.0.0.0:5000...")
                 self.socketio.run(
                     self.app,
-                    host="0.0.0.0",
+                    host="::",
                     port=int(os.environ.get("MOWER_WEB_PORT", 5000)),
                     debug=False, # Keep debug False for production/stability
                     use_reloader=False, # Reloader should be False for threads

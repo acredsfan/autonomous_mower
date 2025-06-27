@@ -84,7 +84,10 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info("I2C bus initialized successfully")
         except Exception as e:
             _log_error("I2C bus initialization failed", e)
-            raise  # Initialize all sensors
+            self._i2c = None  # Ensure i2c is None on failure
+            # Do not raise, allow the interface to exist without a working I2C bus
+        
+        # Initialize all sensors
         self._initialize_sensors()
 
     def _initialize_sensors(self) -> None:
@@ -667,12 +670,12 @@ class SafetyMonitor:
 # Singleton accessor function
 sensor_interface_instance: Optional[EnhancedSensorInterface] = None
 
-def get_sensor_interface() -> EnhancedSensorInterface:
+def get_sensor_interface() -> Optional[EnhancedSensorInterface]:
     """
     Get or create the singleton sensor interface instance.
     
     Returns:
-        EnhancedSensorInterface: The sensor interface singleton instance
+        EnhancedSensorInterface: The sensor interface singleton instance, or None if initialization fails.
     """
     global sensor_interface_instance
     
@@ -684,7 +687,7 @@ def get_sensor_interface() -> EnhancedSensorInterface:
             logging.info("Created and started new sensor interface instance")
         except Exception as e:
             logging.error(f"Failed to create sensor interface instance: {e}", exc_info=True)
-            raise
+            sensor_interface_instance = None  # Ensure instance is None on failure
             
     return sensor_interface_instance
 

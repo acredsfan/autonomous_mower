@@ -877,6 +877,7 @@ class ResourceManager:
             # IMU Data
             try:
                 imu = self.get_resource("imu")
+                logger.debug(f"Fallback: Got IMU resource: {imu}")
                 if imu:
                     heading = imu.get_heading() if hasattr(imu, "get_heading") else 0.0
                     roll = imu.get_roll() if hasattr(imu, "get_roll") else 0.0
@@ -890,7 +891,9 @@ class ResourceManager:
                         "quaternion": (imu.get_quaternion() if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]),
                         "temperature": (imu.get_temperature() if hasattr(imu, "get_temperature") else 0.0),
                     }
+                    logger.debug(f"Fallback: Successfully read IMU data: {sensor_data['imu']}")
                 else:
+                    logger.warning("Fallback: IMU resource is None.")
                     # Simulated IMU data
                     sensor_data["imu"] = {
                         "heading": 0.0,
@@ -902,7 +905,7 @@ class ResourceManager:
                         "temperature": 25.0,
                     }
             except Exception as e:
-                logger.warning(f"Failed to get IMU data: {e}")
+                logger.error(f"Fallback: Failed to get IMU data: {e}", exc_info=True)
                 sensor_data["imu"] = {
                     "heading": 0.0,
                     "roll": 0.0,
@@ -917,29 +920,33 @@ class ResourceManager:
             # ToF Data
             try:
                 tof_sensors = self.get_resource("tof")
+                logger.debug(f"Fallback: Got ToF resource: {tof_sensors}")
                 if tof_sensors and hasattr(tof_sensors, "get_distances"):
                     sensor_data["tof"] = tof_sensors.get_distances()
+                    logger.debug(f"Fallback: Successfully read ToF data: {sensor_data['tof']}")
                 else:
+                    logger.warning("Fallback: ToF resource is None or missing get_distances.")
                     # Simulated ToF data
                     sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0}
             except Exception as e:
-                logger.warning(f"Failed to get ToF data: {e}")
+                logger.error(f"Fallback: Failed to get ToF data: {e}", exc_info=True)
                 sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0, "error": str(e)}
 
             # Power/Battery Data
             try:
                 power_monitor = self.get_resource("ina3221")
-                logger.debug(f"Power monitor resource: {power_monitor} (type: {type(power_monitor)})")
+                logger.debug(f"Fallback: Got Power Monitor resource: {power_monitor}")
                 if power_monitor:
                     battery_info = self.get_battery_status()
-                    logger.debug(f"Battery info from get_battery_status(): {battery_info}")
+                    logger.debug(f"Fallback: Battery info from get_battery_status(): {battery_info}")
                     
                     # Check if we got real data from INA3221
                     if battery_info and battery_info.get("status") not in [None, "Battery sensor unavailable or error."]:
                         sensor_data["power"] = battery_info
+                        logger.debug(f"Fallback: Successfully read Power data: {sensor_data['power']}")
                     else:
                         # INA3221 is available but returned no useful data
-                        logger.debug("INA3221 available but no useful power data, using simulated data")
+                        logger.warning("Fallback: INA3221 available but no useful power data, using simulated data")
                         sensor_data["power"] = {
                             "voltage": 12.0,
                             "current": 1.0,
@@ -948,8 +955,8 @@ class ResourceManager:
                             "status": "Simulated - INA3221 connected but no power detected",
                         }
                 else:
+                    logger.warning("Fallback: Power monitor resource is None, using simulated data")
                     # Simulated battery info
-                    logger.debug("Power monitor resource is None, using simulated data")
                     sensor_data["power"] = {
                         "voltage": 12.0,
                         "current": 1.0,
@@ -958,7 +965,7 @@ class ResourceManager:
                         "status": "Simulated - INA3221 not available",
                     }
             except Exception as e:
-                logger.warning(f"Failed to get power monitor data: {e}")
+                logger.error(f"Fallback: Failed to get power monitor data: {e}", exc_info=True)
                 sensor_data["power"] = {
                     "voltage": 12.0,
                     "current": 1.0,
@@ -967,6 +974,29 @@ class ResourceManager:
                     "status": "Simulated - Error accessing INA3221",
                     "error": str(e),
                 }
+
+            # BME280 Environmental Data
+            try:
+                bme_sensor = self.get_resource("bme280")
+                logger.debug(f"Fallback: Got BME280 resource: {bme_sensor}")
+                if bme_sensor:
+                    env_data = bme_sensor.get_all_data()
+                    if env_data:
+                        sensor_data["environment"] = {
+                            "temperature": env_data.get("temperature"),
+                            "humidity": env_data.get("humidity"),
+                            "pressure": env_data.get("pressure"),
+                        }
+                        logger.debug(f"Fallback: Successfully read BME280 data: {sensor_data['environment']}")
+                    else:
+                        logger.warning("Fallback: BME280 resource returned no data.")
+                        sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25}
+                else:
+                    logger.warning("Fallback: BME280 resource is None.")
+                    sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25}
+            except Exception as e:
+                logger.error(f"Fallback: Failed to get BME280 data: {e}", exc_info=True)
+                sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25, "error": str(e)}
 
         # GPS Data
         try:
@@ -1035,8 +1065,11 @@ class ResourceManager:
             logger.warning(f"Failed to get camera status: {e}")
             sensor_data["camera_status"] = {"operational": True, "simulated": True, "error": str(e)}
 
-        logger.debug(f"get_sensor_data() returning: {sensor_data}")
-        logger.debug(f"get_sensor_data() returning: {sensor_data}")
+        logger.info(f"FINAL SENSOR DATA PAYLOAD: {sensor_data}")
+        import inspect
+        frame = inspect.currentframe()
+        locals_copy = frame.f_locals.copy()
+        logger.info(f"LOCALS at end of get_sensor_data: {locals_copy}")
         return sensor_data
 
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:

@@ -529,12 +529,14 @@ def create_app(mower_resource_manager_instance):
             path_planner = mower.get_path_planner()
             emit("path_update", path_planner.current_path)
         except Exception as e:
-            logger.error(f"Error in handle_connect: {e}") @ socketio.on("disconnect")
+            logger.error(f"Error in handle_connect: {e}")
 
+    @socketio.on("disconnect")
     def handle_disconnect():
         """Handle client disconnection."""
-        logger.info("Client disconnected from web interface") @ socketio.on("request_data")
+        logger.info("Client disconnected from web interface")
 
+    @socketio.on("request_data")
     def handle_data_request(data):
         """Handle data request from client."""
         try:
@@ -698,9 +700,14 @@ def create_app(mower_resource_manager_instance):
                         safety_status = sim_data.get("imu", {}).get("safety_status", {"is_safe": True})
                         sensor_data = sim_data
                     else:
-                        safety_status = mower.get_safety_status()
-                        sensor_data = mower.get_sensor_data()
-                        logger.debug(f"WebUI: Received sensor_data from mower: {sensor_data}")
+                        sensor_interface = mower.get_sensor_interface()
+                        if sensor_interface and hasattr(sensor_interface, 'get_safety_status') and hasattr(sensor_interface, 'get_sensor_data'):
+                            safety_status = sensor_interface.get_safety_status()
+                            sensor_data = sensor_interface.get_sensor_data()
+                        else:
+                            safety_status = mower.get_safety_status()
+                            sensor_data = mower.get_sensor_data()
+                        logger.info(f"APP.PY send_updates: Received sensor_data from mower: {sensor_data}")
                 except Exception as e:
                     logger.error(f"Error getting safety or sensor data: {e}")
                     safety_status = {"is_safe": True, "error": str(e)}
@@ -716,7 +723,9 @@ def create_app(mower_resource_manager_instance):
                 except Exception as e:
                     logger.error(f"Error emitting safety_status: {e}")
                 try:
+                    logger.info(f"APP.PY send_updates: Emitting sensor_data: {sensor_data}")
                     socketio.emit("sensor_data", sensor_data)
+                    logger.debug(f"Emitted sensor_data: {sensor_data}")
                 except Exception as e:
                     logger.error(f"Error emitting sensor_data: {e}")
 

@@ -58,9 +58,10 @@ const systemState = {
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", function () {
   initializeUI();
-  setupSocketConnection();
   setupEventListeners();
 });
+
+setupSocketConnection();
 
 /**
  * Initialize the UI components and set default values
@@ -106,6 +107,7 @@ function setupSocketConnection() {
 
   // Connection established
   socket.on("connect", function () {
+    debugger;
     isConnected = true;
     reconnectAttempts = 0;
     updateConnectionStatus(true);
@@ -141,6 +143,7 @@ function setupSocketConnection() {
 
   // Handle sensor data updates
   socket.on("sensor_data", function (data) {
+    debugger;
     console.log("Received sensor data:", data);
     updateSensorData(data);
   });
@@ -455,13 +458,30 @@ function updateSensorData(data) {
       return;
     }
 
-    // Update temperature from IMU sensor data
-    if (data.imu && data.imu.temperature !== undefined) {
+    // Update temperature from environment sensor data
+    if (data.environment && data.environment.temperature !== undefined) {
       const tempElement = document.getElementById("sensor_temperature");
       if (tempElement) {
-        tempElement.textContent = `${Number(data.imu.temperature).toFixed(1)}°C`;
+        tempElement.textContent = `${Number(data.environment.temperature).toFixed(1)}°C`;
       }
     }
+    
+    // Update humidity from environment sensor data
+    if (data.environment && data.environment.humidity !== undefined) {
+        const humidityElement = document.getElementById("sensor_humidity");
+        if (humidityElement) {
+            humidityElement.textContent = `${Number(data.environment.humidity).toFixed(1)}%`;
+        }
+    }
+
+    // Update pressure from environment sensor data
+    if (data.environment && data.environment.pressure !== undefined) {
+        const pressureElement = document.getElementById("sensor_pressure");
+        if (pressureElement) {
+            pressureElement.textContent = `${Number(data.environment.pressure).toFixed(1)} hPa`;
+        }
+    }
+
   } catch (err) {
     console.error('Error processing environment sensor data:', err);
   }
@@ -473,14 +493,14 @@ function updateSensorData(data) {
 
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
-      if (leftDistElement && tof.front_left !== undefined) {
-        leftDistElement.textContent = `${Number(tof.front_left).toFixed(1)} cm`;
+      if (leftDistElement && tof.left !== undefined) {
+        leftDistElement.textContent = `${Number(tof.left).toFixed(1)} cm`;
       }
 
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
-      if (rightDistElement && tof.front_right !== undefined) {
-        rightDistElement.textContent = `${Number(tof.front_right).toFixed(1)} cm`;
+      if (rightDistElement && tof.right !== undefined) {
+        rightDistElement.textContent = `${Number(tof.right).toFixed(1)} cm`;
       }
 
       // Update front distance sensor if available
