@@ -435,6 +435,7 @@ function updateSensorData(data) {
       const gps = data.gps;
       systemState.gps.latitude = gps.latitude;
       systemState.gps.longitude = gps.longitude;
+      systemState.gps.satellites = gps.satellites;
       // Determine fix status
       systemState.gps.fix = gps.status && gps.status.toLowerCase() !== 'simulated';
       // Update GPS UI (sidebar and dashboard)
@@ -472,14 +473,14 @@ function updateSensorData(data) {
 
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
-      if (leftDistElement && tof.left !== undefined) {
-        leftDistElement.textContent = `${Number(tof.left).toFixed(1)} cm`;
+      if (leftDistElement && tof.front_left !== undefined) {
+        leftDistElement.textContent = `${Number(tof.front_left).toFixed(1)} cm`;
       }
 
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
-      if (rightDistElement && tof.right !== undefined) {
-        rightDistElement.textContent = `${Number(tof.right).toFixed(1)} cm`;
+      if (rightDistElement && tof.front_right !== undefined) {
+        rightDistElement.textContent = `${Number(tof.front_right).toFixed(1)} cm`;
       }
 
       // Update front distance sensor if available
@@ -512,32 +513,6 @@ function updateSensorData(data) {
     // Update safety status if available
     if (data.imu.safety_status) {
       updateSafetyStatus(data.imu.safety_status);
-    }
-  }
-
-  // Update motor data if available
-  if (data.motors) {
-    Object.assign(systemState.motors, data.motors);
-
-    const leftSpeedElement = document.getElementById("motor_left");
-    if (leftSpeedElement) {
-      leftSpeedElement.textContent = `${Math.round(
-        systemState.motors.leftSpeed * 100
-      )}%`;
-    }
-
-    const rightSpeedElement = document.getElementById("motor_right");
-    if (rightSpeedElement) {
-      rightSpeedElement.textContent = `${Math.round(
-        systemState.motors.rightSpeed * 100
-      )}%`;
-    }
-
-    const bladeSpeedElement = document.getElementById("motor_blade");
-    if (bladeSpeedElement) {
-      bladeSpeedElement.textContent = `${Math.round(
-        systemState.motors.bladeSpeed * 100
-      )}%`;
     }
   }
 

@@ -688,27 +688,29 @@ class ResourceManager:
             "system_error": False,
             "status_message": "Safety status nominal or sensor interface unavailable.",
         }
-        sensor_interface = self.get_sensor_interface()
-        if sensor_interface and hasattr(sensor_interface, "get_safety_status"):
-            try:
-                return sensor_interface.get_safety_status()
-            except Exception as e:
-                logger.error(f"Error getting safety status from interface: {e}")
-                default_status["status_message"] = "Error retrieving status from sensor interface."
-                default_status["system_error"] = True
-                return default_status
-        else:
-            # Log a warning if the sensor interface is unavailable, but not too
-            # frequently
-            current_time = time.time()
-            if not self._safety_status_vars["warning_logged"] or (
-                current_time - self._safety_status_vars["last_warning_time"]
-                > self._safety_status_vars["warning_interval"]
-            ):
-                logger.warning("Sensor interface unavailable for safety status. " "Returning default safe status.")
-                self._safety_status_vars["warning_logged"] = True
-                self._safety_status_vars["last_warning_time"] = current_time
-            return default_status
+        for _ in range(3):  # Try up to 3 times
+            sensor_interface = self.get_sensor_interface()
+            if sensor_interface and hasattr(sensor_interface, "get_safety_status"):
+                try:
+                    return sensor_interface.get_safety_status()
+                except Exception as e:
+                    logger.error(f"Error getting safety status from interface: {e}")
+                    default_status["status_message"] = "Error retrieving status from sensor interface."
+                    default_status["system_error"] = True
+                    return default_status
+            time.sleep(0.1) # Wait a bit for the interface to be ready
+
+        # Log a warning if the sensor interface is unavailable, but not too
+        # frequently
+        current_time = time.time()
+        if not self._safety_status_vars["warning_logged"] or (
+            current_time - self._safety_status_vars["last_warning_time"]
+            > self._safety_status_vars["warning_interval"]
+        ):
+            logger.warning("Sensor interface unavailable for safety status. " "Returning default safe status.")
+            self._safety_status_vars["warning_logged"] = True
+            self._safety_status_vars["last_warning_time"] = current_time
+        return default_status
 
     def get_status(self):
         """Get the overall system status."""
@@ -844,25 +846,63 @@ class ResourceManager:
         """
         # Hardened: Always return a complete sensor_data dict, with mock/simulated values if hardware is missing.
         sensor_data = {}
+        logger.debug("get_sensor_data() called - starting sensor data collection")
 
-        # IMU Data
-        try:
-            imu = self.get_resource("imu")
-            if imu:
-                heading = imu.get_heading() if hasattr(imu, "get_heading") else 0.0
-                roll = imu.get_roll() if hasattr(imu, "get_roll") else 0.0
-                pitch = imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0
-                sensor_data["imu"] = {
-                    "heading": heading,
-                    "roll": roll,
-                    "pitch": pitch,
-                    "acceleration": (imu.get_acceleration() if hasattr(imu, "get_acceleration") else [0, 0, 0]),
-                    "gyroscope": (imu.get_gyroscope() if hasattr(imu, "get_gyroscope") else [0, 0, 0]),
-                    "quaternion": (imu.get_quaternion() if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]),
-                    "temperature": (imu.get_temperature() if hasattr(imu, "get_temperature") else 0.0),
+        # Attempt to get the enhanced sensor interface
+        sensor_interface = self.get_sensor_interface()
+
+        if sensor_interface:
+            try:
+                # Use the enhanced interface to get all data at once
+                all_data = sensor_interface.get_sensor_data()
+                logger.debug(f"Data from EnhancedSensorInterface: {all_data}")
+
+                # Structure the data as expected by the UI
+                sensor_data["imu"] = all_data.get("imu", {})
+                sensor_data["environment"] = {
+                    "temperature": all_data.get("temperature"),
+                    "humidity": all_data.get("humidity"),
+                    "pressure": all_data.get("pressure"),
                 }
-            else:
-                # Simulated IMU data
+                sensor_data["tof"] = all_data.get("distance", {})
+                sensor_data["power"] = all_data.get("power", {})
+
+            except Exception as e:
+                logger.error(f"Failed to get data from EnhancedSensorInterface: {e}", exc_info=True)
+                # Fallback to simulated data if the interface fails
+                sensor_interface = None
+
+        if not sensor_interface:
+            logger.warning("EnhancedSensorInterface not available. Falling back to individual sensor reads or simulation.")
+            # IMU Data
+            try:
+                imu = self.get_resource("imu")
+                if imu:
+                    heading = imu.get_heading() if hasattr(imu, "get_heading") else 0.0
+                    roll = imu.get_roll() if hasattr(imu, "get_roll") else 0.0
+                    pitch = imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0
+                    sensor_data["imu"] = {
+                        "heading": heading,
+                        "roll": roll,
+                        "pitch": pitch,
+                        "acceleration": (imu.get_acceleration() if hasattr(imu, "get_acceleration") else [0, 0, 0]),
+                        "gyroscope": (imu.get_gyroscope() if hasattr(imu, "get_gyroscope") else [0, 0, 0]),
+                        "quaternion": (imu.get_quaternion() if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]),
+                        "temperature": (imu.get_temperature() if hasattr(imu, "get_temperature") else 0.0),
+                    }
+                else:
+                    # Simulated IMU data
+                    sensor_data["imu"] = {
+                        "heading": 0.0,
+                        "roll": 0.0,
+                        "pitch": 0.0,
+                        "acceleration": [0, 0, 0],
+                        "gyroscope": [0, 0, 0],
+                        "quaternion": [1, 0, 0, 0],
+                        "temperature": 25.0,
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to get IMU data: {e}")
                 sensor_data["imu"] = {
                     "heading": 0.0,
                     "roll": 0.0,
@@ -871,73 +911,62 @@ class ResourceManager:
                     "gyroscope": [0, 0, 0],
                     "quaternion": [1, 0, 0, 0],
                     "temperature": 25.0,
+                    "error": str(e),
                 }
-        except Exception as e:
-            logger.warning(f"Failed to get IMU data: {e}")
-            sensor_data["imu"] = {
-                "heading": 0.0,
-                "roll": 0.0,
-                "pitch": 0.0,
-                "acceleration": [0, 0, 0],
-                "gyroscope": [0, 0, 0],
-                "quaternion": [1, 0, 0, 0],
-                "temperature": 25.0,
-                "error": str(e),
-            }
 
-        # ToF Data
-        try:
-            tof_sensors = self.get_resource("tof")
-            if tof_sensors and hasattr(tof_sensors, "get_distances"):
-                sensor_data["tof"] = tof_sensors.get_distances()
-            else:
-                # Simulated ToF data
-                sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0}
-        except Exception as e:
-            logger.warning(f"Failed to get ToF data: {e}")
-            sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0, "error": str(e)}
-
-        # Power/Battery Data
-        try:
-            power_monitor = self.get_resource("ina3221")
-            logger.debug(f"Power monitor resource: {power_monitor} (type: {type(power_monitor)})")
-            if power_monitor:
-                battery_info = self.get_battery_status()
-                logger.debug(f"Battery info from get_battery_status(): {battery_info}")
-                
-                # Check if we got real data from INA3221
-                if battery_info and battery_info.get("status") not in [None, "Battery sensor unavailable or error."]:
-                    sensor_data["power"] = battery_info
+            # ToF Data
+            try:
+                tof_sensors = self.get_resource("tof")
+                if tof_sensors and hasattr(tof_sensors, "get_distances"):
+                    sensor_data["tof"] = tof_sensors.get_distances()
                 else:
-                    # INA3221 is available but returned no useful data
-                    logger.debug("INA3221 available but no useful power data, using simulated data")
+                    # Simulated ToF data
+                    sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0}
+            except Exception as e:
+                logger.warning(f"Failed to get ToF data: {e}")
+                sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0, "error": str(e)}
+
+            # Power/Battery Data
+            try:
+                power_monitor = self.get_resource("ina3221")
+                logger.debug(f"Power monitor resource: {power_monitor} (type: {type(power_monitor)})")
+                if power_monitor:
+                    battery_info = self.get_battery_status()
+                    logger.debug(f"Battery info from get_battery_status(): {battery_info}")
+                    
+                    # Check if we got real data from INA3221
+                    if battery_info and battery_info.get("status") not in [None, "Battery sensor unavailable or error."]:
+                        sensor_data["power"] = battery_info
+                    else:
+                        # INA3221 is available but returned no useful data
+                        logger.debug("INA3221 available but no useful power data, using simulated data")
+                        sensor_data["power"] = {
+                            "voltage": 12.0,
+                            "current": 1.0,
+                            "power": 12.0,
+                            "percentage": 80.0,
+                            "status": "Simulated - INA3221 connected but no power detected",
+                        }
+                else:
+                    # Simulated battery info
+                    logger.debug("Power monitor resource is None, using simulated data")
                     sensor_data["power"] = {
                         "voltage": 12.0,
                         "current": 1.0,
                         "power": 12.0,
                         "percentage": 80.0,
-                        "status": "Simulated - INA3221 connected but no power detected",
+                        "status": "Simulated - INA3221 not available",
                     }
-            else:
-                # Simulated battery info
-                logger.debug("Power monitor resource is None, using simulated data")
+            except Exception as e:
+                logger.warning(f"Failed to get power monitor data: {e}")
                 sensor_data["power"] = {
                     "voltage": 12.0,
                     "current": 1.0,
                     "power": 12.0,
                     "percentage": 80.0,
-                    "status": "Simulated - INA3221 not available",
+                    "status": "Simulated - Error accessing INA3221",
+                    "error": str(e),
                 }
-        except Exception as e:
-            logger.warning(f"Failed to get power monitor data: {e}")
-            sensor_data["power"] = {
-                "voltage": 12.0,
-                "current": 1.0,
-                "power": 12.0,
-                "percentage": 80.0,
-                "status": "Simulated - Error accessing INA3221",
-                "error": str(e),
-            }
 
         # GPS Data
         try:
@@ -1006,6 +1035,8 @@ class ResourceManager:
             logger.warning(f"Failed to get camera status: {e}")
             sensor_data["camera_status"] = {"operational": True, "simulated": True, "error": str(e)}
 
+        logger.debug(f"get_sensor_data() returning: {sensor_data}")
+        logger.debug(f"get_sensor_data() returning: {sensor_data}")
         return sensor_data
 
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:

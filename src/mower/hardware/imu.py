@@ -68,7 +68,7 @@ logger = LoggerConfigInfo.get_logger(__name__)
 # Load environment variables
 load_dotenv()
 # Get the UART port from the environment variables
-IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA2")
+IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA4")
 IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
 RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial comms.
 IMU_INIT_TIMEOUT_S = 15.0  # Timeout for IMU hardware initialization in seconds
@@ -240,13 +240,21 @@ class BNO085Sensor(IMUSensorInterface):
                 logger.error("IMU Init Thread: BNO08X_UART library not available.")
                 raise ImportError("BNO08X_UART not available")
 
-            logger.debug("IMU Init Thread: Enabling BNO_REPORT_ROTATION_VECTOR for IMU.")
-            if adafruit_bno08x and hasattr(adafruit_bno08x, "BNO_REPORT_ROTATION_VECTOR"):
+            logger.debug("IMU Init Thread: Enabling BNO reports for IMU.")
+            if adafruit_bno08x:
+                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
+                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
+                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
                 self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
+                # Set report intervals
+                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_ACCELEROMETER, 100000)  # 100ms
+                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_GYROSCOPE, 100000)  # 100ms
+                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_MAGNETOMETER, 100000)  # 100ms
+                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR, 100000)  # 100ms
             else:
                 logger.warning(
-                    "IMU Init Thread: Could not enable BNO_REPORT_ROTATION_VECTOR "
-                    "(adafruit_bno08x or feature missing)."
+                    "IMU Init Thread: Could not enable reports "
+                    "(adafruit_bno08x missing)."
                 )
                 # Depending on how critical this feature is, you might want to raise an error here.
 

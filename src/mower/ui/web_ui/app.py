@@ -36,6 +36,7 @@ def create_app(mower_resource_manager_instance):
     Returns:
         The Flask application instance and SocketIO instance.
     """
+    logger.info("Creating Flask app - v2")
     mower = mower_resource_manager_instance
     logger.info(f"create_app called with mower type: {type(mower)}")
     app = Flask(__name__)
@@ -677,9 +678,11 @@ def create_app(mower_resource_manager_instance):
 
     def send_updates():
         """Send periodic updates to connected clients."""
+        logger.info("Starting send_updates background task.")
         while True:
             try:
                 socketio.sleep(0.1)  # 100ms interval
+                logger.debug("send_updates loop running.")
 
                 # Get status data
                 try:
@@ -697,6 +700,7 @@ def create_app(mower_resource_manager_instance):
                     else:
                         safety_status = mower.get_safety_status()
                         sensor_data = mower.get_sensor_data()
+                        logger.debug(f"WebUI: Received sensor_data from mower: {sensor_data}")
                 except Exception as e:
                     logger.error(f"Error getting safety or sensor data: {e}")
                     safety_status = {"is_safe": True, "error": str(e)}
@@ -720,126 +724,9 @@ def create_app(mower_resource_manager_instance):
                 logger.error(f"Error in update loop: {e}")
                 socketio.sleep(1)  # Wait longer on error
 
-    socketio.start_background_task(send_updates)
-
-    @app.route("/api/<command>", methods=["POST"])
-    def handle_command(command):
-        """Generic handler for commands sent from the frontend."""
-        try:
-            data = request.get_json() or {}
-            logger.info(f"Received command: {command} with data: {data}")
-
-            # Map frontend commands to mower methods
-            command_handlers = {
-                "generate_pattern": lambda params: {
-                    "success": True,
-                    "path": (
-                        mower.get_path_planner().generate_pattern(
-                            params.get("pattern_type", "PARALLEL"),
-                            params.get("settings", {}),
-                        )
-                    ),
-                    "coverage": 0.85,  # Example coverage value
-                },
-                "save_area": lambda params: save_area_command_handler(params, mower),
-                "set_home": lambda params: (
-                    {
-                        "success": True,
-                        "message": "Home location set successfully",
-                    }
-                    if mower.set_home_location(params.get("location", {}))
-                    else {
-                        "success": False,
-                        "error": "Failed to set home location",
-                    }
-                ),
-                "save_no_go_zones": lambda params: (
-                    {
-                        "success": True,
-                        "message": "No-go zones saved successfully",
-                    }
-                    if mower.save_no_go_zones(params.get("zones", []))
-                    else {
-                        "success": False,
-                        "error": "Failed to save no-go zones",
-                    }
-                ),
-                "get_area": lambda params: {
-                    "success": True,
-                    "data": {
-                        "boundary_points": (mower.get_path_planner().pattern_config.boundary_points)
-                    },
-                },
-                "get_home": lambda params: {
-                    "success": True,
-                    "location": mower.get_home_location(),
-                },
-                "get_boundary": lambda params: {
-                    "success": True,
-                    "boundary": mower.get_boundary(),
-                    "no_go_zones": mower.get_no_go_zones(),
-                },
-                "get_settings": lambda params: {
-                    "success": True,
-                    "data": {
-                        "mowing": {
-                            "pattern": (mower.get_path_planner().pattern_config.pattern_type.name),
-                            "spacing": (mower.get_path_planner().pattern_config.spacing),
-                            "angle": (mower.get_path_planner().pattern_config.angle),
-                            "overlap": (mower.get_path_planner().pattern_config.overlap),
-                        }
-                    },
-                },
-            }
-
-            # Execute the command if it exists
-            if command in command_handlers:
-                logger.info(f"Executing command: {command}")
-                try:
-                    result = command_handlers[command](data)
-                    return jsonify(result)
-                except AttributeError as e:
-                    logger.error(f"Attribute error in command handler: {e}")
-                    if "set_boundary_points" in str(e):
-                        # Fallback for older API
-                        if command == "save_area":
-                            mower.save_boundary(data.get("coordinates", []))
-                            return jsonify(
-                                {
-                                    "success": True,
-                                    "message": "Boundary saved successfully",
-                                }
-                            )
-                    elif "generate_pattern" in str(e):
-                        # Fallback for pattern generation
-                        return jsonify(
-                            {
-                                "success": True,
-                                "path": [],  # Return empty path
-                                "message": "Pattern generation not fully implemented",
-                            }
-                        )
-                    return jsonify({"success": False, "error": str(e)}), 500
-            else:
-                logger.warning(f"Unknown command: {command}")
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "error": f"Unknown command: {command}",
-                        }
-                    ),
-                    400,
-                )
-
-        except Exception as e:
-            logger.error(f"Error handling command {command}: {e}")
-            return jsonify({"success": False, "error": str(e)}), 500
-
-    @app.errorhandler(KeyError)
-    def handle_key_error(e):
-        logger.error(f"KeyError in web UI: {e}", exc_info=True)
-        return jsonify(error=str(e)), 500
+    if not hasattr(app, 'update_thread_started') or not app.update_thread_started:
+        socketio.start_background_task(send_updates)
+        app.update_thread_started = True
 
     print("DEBUG: create_app() - Exiting method, returning app and socketio.") # ADDED
     return app, socketio
@@ -891,4 +778,10 @@ if __name__ == "__main__":
 
     mower = Mower()
     app, socketio = create_app(mower)
+
+    # Start the background task only if it's not already running
+    if not hasattr(app, 'update_thread_started') or not app.update_thread_started:
+        socketio.start_background_task(send_updates)
+        app.update_thread_started = True
+
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)

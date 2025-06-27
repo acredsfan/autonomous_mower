@@ -678,11 +678,12 @@ def get_sensor_interface() -> EnhancedSensorInterface:
     
     if sensor_interface_instance is None:
         try:
+            logging.info("Attempting to create EnhancedSensorInterface instance...")
             sensor_interface_instance = EnhancedSensorInterface()
             sensor_interface_instance.start()
             logging.info("Created and started new sensor interface instance")
         except Exception as e:
-            logging.error(f"Failed to create sensor interface instance: {e}")
+            logging.error(f"Failed to create sensor interface instance: {e}", exc_info=True)
             raise
             
     return sensor_interface_instance

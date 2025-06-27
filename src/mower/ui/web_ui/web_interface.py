@@ -1,5 +1,6 @@
 """Web interface for the autonomous mower."""
 
+import os
 import threading
 from typing import TYPE_CHECKING, Optional
 
@@ -148,7 +149,7 @@ class WebInterface:
                 self.socketio.run(
                     self.app,
                     host="0.0.0.0",
-                    port=5000,
+                    port=int(os.environ.get("MOWER_WEB_PORT", 5000)),
                     debug=False, # Keep debug False for production/stability
                     use_reloader=False, # Reloader should be False for threads
                     allow_unsafe_werkzeug=True, # Necessary for some SocketIO setups
