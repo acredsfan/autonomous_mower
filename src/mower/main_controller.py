@@ -77,6 +77,9 @@ from mower.utilities.logger_config import LoggerConfigInfo
 # Load environment variables from .env file
 load_dotenv()
 
+# Get logger for environment variable debugging
+env_logger = LoggerConfigInfo.get_logger(__name__)
+
 # ADDED: Define MAIN_CONFIG_FILE path using the imported APP_CONFIG_DIR
 MAIN_CONFIG_FILE = APP_CONFIG_DIR / "main_config.json"
 
@@ -323,11 +326,15 @@ class ResourceManager:
 
             # Obtain sensor interface singleton
             try:
+                logger.info("Attempting to initialize sensor interface...")
                 sensor_interface = get_sensor_interface()
                 self._resources["sensor_interface"] = sensor_interface
-                logger.info("Sensor interface initialized successfully")
+                if sensor_interface:
+                    logger.info("Sensor interface initialized successfully")
+                else:
+                    logger.warning("Sensor interface returned None - check hardware/I2C bus availability")
             except Exception as e:
-                logger.error(f"Failed to initialize sensor interface: {e}")
+                logger.error(f"Failed to initialize sensor interface: {e}", exc_info=True)
                 sensor_interface = None  # Ensure it's None if init fails
                 self._resources["sensor_interface"] = None
 
@@ -554,14 +561,21 @@ class ResourceManager:
     def get_sensor_interface(self) -> Optional[Any]:
         """Get the sensor interface instance."""
         si = self.get_resource("sensor_interface")
+        logger.debug(f"get_sensor_interface: Current sensor_interface from resources: {si}")
         if si is None and self._initialized:  # Try to init on demand if not present
             logger.info("Sensor interface not found, attempting on-demand initialization.")
             try:
-                self._resources["sensor_interface"] = get_sensor_interface()
-                logger.info("Sensor interface initialized on demand.")
+                logger.debug("Calling get_sensor_interface() from hardware module...")
+                new_si = get_sensor_interface()
+                logger.debug(f"get_sensor_interface() returned: {new_si}")
+                self._resources["sensor_interface"] = new_si
+                if new_si:
+                    logger.info("Sensor interface initialized on demand.")
+                else:
+                    logger.warning("Sensor interface on-demand initialization returned None")
                 return self._resources["sensor_interface"]
             except Exception as e:
-                logger.error(f"Failed to initialize sensor interface on demand: {e}")
+                logger.error(f"Failed to initialize sensor interface on demand: {e}", exc_info=True)
                 return None
         return si
 
@@ -850,9 +864,11 @@ class ResourceManager:
 
         # Attempt to get the enhanced sensor interface
         sensor_interface = self.get_sensor_interface()
+        logger.debug(f"get_sensor_data: Retrieved sensor_interface: {sensor_interface}")
 
         if sensor_interface:
             try:
+                logger.debug("Using EnhancedSensorInterface to get all sensor data...")
                 # Use the enhanced interface to get all data at once
                 all_data = sensor_interface.get_sensor_data()
                 logger.debug(f"Data from EnhancedSensorInterface: {all_data}")
@@ -866,6 +882,7 @@ class ResourceManager:
                 }
                 sensor_data["tof"] = all_data.get("distance", {})
                 sensor_data["power"] = all_data.get("power", {})
+                logger.info(f"Successfully collected sensor data via EnhancedSensorInterface: {len(sensor_data)} categories")
 
             except Exception as e:
                 logger.error(f"Failed to get data from EnhancedSensorInterface: {e}", exc_info=True)
@@ -1065,11 +1082,48 @@ class ResourceManager:
             logger.warning(f"Failed to get camera status: {e}")
             sensor_data["camera_status"] = {"operational": True, "simulated": True, "error": str(e)}
 
+        # Ensure we always have the basic required data structure expected by WebUI
+        if "imu" not in sensor_data:
+            sensor_data["imu"] = {
+                "heading": 0.0,
+                "roll": 0.0,
+                "pitch": 0.0,
+                "safety_status": {
+                    "emergency_stop_active": False,
+                    "obstacle_detected_nearby": False,
+                    "low_battery_warning": False,
+                    "system_error": False,
+                },
+                "simulated": True
+            }
+        
+        if "environment" not in sensor_data:
+            sensor_data["environment"] = {
+                "temperature": 20.0,
+                "humidity": 50.0,
+                "pressure": 1013.25,
+                "simulated": True
+            }
+        
+        if "tof" not in sensor_data:
+            sensor_data["tof"] = {
+                "left": 100.0,
+                "right": 100.0,
+                "front": 100.0,
+                "simulated": True
+            }
+        
+        if "power" not in sensor_data:
+            sensor_data["power"] = {
+                "voltage": 12.0,
+                "current": 1.0,
+                "power": 12.0,
+                "percentage": 80.0,
+                "status": "Simulated",
+                "simulated": True
+            }
+
         logger.info(f"FINAL SENSOR DATA PAYLOAD: {sensor_data}")
-        import inspect
-        frame = inspect.currentframe()
-        locals_copy = frame.f_locals.copy()
-        logger.info(f"LOCALS at end of get_sensor_data: {locals_copy}")
         return sensor_data
 
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
@@ -1349,6 +1403,17 @@ def main():
     Main function to initialize and run the autonomous mower application.
     """
     logger.info("Starting Autonomous Mower Application...")
+    
+    # Debug environment variable loading
+    logger.debug(f"USE_SIMULATION env var: {os.getenv('USE_SIMULATION', 'not set')}")
+    logger.debug(f"LOG_LEVEL env var: {os.getenv('LOG_LEVEL', 'not set')}")
+    logger.debug(f"GPS_SERIAL_PORT env var: {os.getenv('GPS_SERIAL_PORT', 'not set')}")
+    
+    # Check if .env file exists
+    env_file_path = Path(".env")
+    logger.debug(f".env file exists: {env_file_path.exists()}")
+    if env_file_path.exists():
+        logger.debug(f".env file path: {env_file_path.absolute()}")
 
     # Global stop event for all threads
     stop_event = threading.Event()

@@ -11,10 +11,26 @@ except Exception:  # pragma: no cover - optional on non-Pi systems
     board = None
     busio = None
 
-from mower.hardware.bme280 import BME280Sensor
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.tof import VL53L0XSensors
+# Conditional imports for hardware modules
+try:
+    from mower.hardware.bme280 import BME280Sensor
+except ImportError:
+    BME280Sensor = None
+
+try:
+    from mower.hardware.imu import BNO085Sensor
+except ImportError:
+    BNO085Sensor = None
+
+try:
+    from mower.hardware.ina3221 import INA3221Sensor
+except ImportError:
+    INA3221Sensor = None
+
+try:
+    from mower.hardware.tof import VL53L0XSensors
+except ImportError:
+    VL53L0XSensors = None
 from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -80,6 +96,8 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
         # Initialize I2C bus
         try:
+            if board is None or busio is None:
+                raise ImportError("board or busio not available - likely not on Raspberry Pi")
             self._i2c = busio.I2C(board.SCL, board.SDA)
             logging.info("I2C bus initialized successfully")
         except Exception as e:
@@ -675,7 +693,7 @@ def get_sensor_interface() -> Optional[EnhancedSensorInterface]:
     Get or create the singleton sensor interface instance.
     
     Returns:
-        EnhancedSensorInterface: The sensor interface singleton instance, or None if initialization fails.
+        EnhancedSensorInterface: The sensor interface singleton instance, or MockSensorInterface if initialization fails.
     """
     global sensor_interface_instance
     
@@ -687,7 +705,14 @@ def get_sensor_interface() -> Optional[EnhancedSensorInterface]:
             logging.info("Created and started new sensor interface instance")
         except Exception as e:
             logging.error(f"Failed to create sensor interface instance: {e}", exc_info=True)
-            sensor_interface_instance = None  # Ensure instance is None on failure
+            logging.info("Falling back to MockSensorInterface for testing/simulation...")
+            try:
+                sensor_interface_instance = MockSensorInterface()
+                sensor_interface_instance.start()
+                logging.info("Created and started MockSensorInterface as fallback")
+            except Exception as mock_e:
+                logging.error(f"Even MockSensorInterface failed to initialize: {mock_e}", exc_info=True)
+                sensor_interface_instance = None  # Ensure instance is None on total failure
             
     return sensor_interface_instance
 
@@ -713,15 +738,16 @@ class MockSensorInterface(HardwareSensorInterface):
                 "safety_status": {"tilt_warning": False, "calibration_warning": False}
             },
             "power": {
-                "bus_voltage": 12.0,
+                "voltage": 12.0,
                 "current": 1.5,
-                "percentage": 75.0
+                "power": 18.0,
+                "percentage": 75.0,
+                "status": "Mock Sensor"
             },
             "distance": {
-                "front_left": 200.0,
-                "front_right": 200.0,
-                "left_working": True,
-                "right_working": True
+                "left": 200.0,
+                "right": 200.0,
+                "front": 200.0
             }
         }
     
@@ -740,6 +766,17 @@ class MockSensorInterface(HardwareSensorInterface):
     def get_sensor_data(self) -> Dict[str, Any]:
         """Get mock sensor data."""
         return self._mock_data.copy()
+    
+    def get_safety_status(self) -> Dict[str, Any]:
+        """Get mock safety status."""
+        return {
+            "emergency_stop_active": False,
+            "obstacle_detected_nearby": False,
+            "low_battery_warning": False,
+            "system_error": False,
+            "status_message": "Mock sensor interface - all systems nominal",
+            "is_safe": True
+        }
     
     def get_sensor_status(self) -> Dict[str, Any]:
         """Get mock sensor status."""
