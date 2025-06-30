@@ -36,12 +36,10 @@ This guide provides information for developers who want to contribute to the Aut
 3. **Install Dependencies**:
 
    ```bash
-   # Install development dependencies
+   # Install in editable mode with development dependencies
    pip install -e .[dev]
-
-   # Or install all dependencies
-   pip install -r requirements.txt
    ```
+
 
 4. **Set Up Pre-commit Hooks**:
 

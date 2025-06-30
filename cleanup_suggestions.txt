@@ -1,0 +1,33 @@
+# Cleanup Suggestions
+
+This file lists suggestions for decluttering the project.
+
+## Redundant Files
+
+1.  **`docs/changelog.md`**
+    *   **Reason:** This file is a duplicate of the root `CHANGELOG.md`.
+    *   **Suggestion:** Delete `docs/changelog.md` and keep the root `CHANGELOG.md` as the single source of truth for the project's changelog.
+
+2.  **`test_sensor_interface.py`**
+    *   **Reason:** This file in the root directory appears to be a standalone test script. The official tests are located in the `tests/` directory, and a similar file `tests/hardware/test_sensor_interface.py` already exists as part of the `pytest` suite.
+    *   **Suggestion:** Delete the `test_sensor_interface.py` file from the root directory.
+
+## Files to Relocate
+
+1.  **`ntrip_client.py`**
+    *   **Reason:** This appears to be a utility or tool script. Keeping it in the root directory adds to the clutter.
+    *   **Suggestion:** Move `ntrip_client.py` to the `scripts/` or `tools/` directory.
+
+2.  **`imu_test.py`**
+    *   **Reason:** Similar to `ntrip_client.py`, this is a test script that should not be in the root directory.
+    *   **Suggestion:** Move `imu_test.py` to the `tools/` directory, or if it's part of the formal test suite, to the `tests/hardware_integration/` directory.
+
+## Files for Review
+
+1.  **`babel.cfg`**
+    *   **Reason:** This file is used for internationalization (i18n) with the Babel library. It's not clear from the file structure if i18n is actively used in the project.
+    *   **Suggestion:** Review if internationalization is a feature you plan to support. If not, this file can likely be deleted.
+
+2.  **`Raspberry Pi GPIO.xlsx`**
+    *   **Reason:** Storing documentation in a binary format like XLSX within a git repository is not ideal. It's not easily diff-able and can't be viewed in the browser.
+    *   **Suggestion:** Convert the content of this file to a Markdown file (e.g., `docs/gpio_mapping.md`) for better version control and accessibility.

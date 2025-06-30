@@ -58,13 +58,8 @@ print_success "Virtual environment activated."
 pip install --upgrade pip wheel setuptools
 
 # 6. Install Python requirements
-REQ_FILE="requirements-ubuntu2404.txt"
-if [ ! -f "$REQ_FILE" ]; then
-    print_error "requirements-ubuntu2404.txt not found!"
-    exit 1
-fi
-print_info "Installing Python dependencies from $REQ_FILE..."
-	pip install --only-binary=:all: --no-binary=imutils --no-binary=systemd-python -r requirements-ubuntu2404.txt
+print_info "Installing Python dependencies from pyproject.toml..."
+pip install .[test]
 
 
 # 7. (Optional) Install dev/test requirements if present

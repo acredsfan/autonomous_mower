@@ -81,9 +81,6 @@ class ProjectLibraryUpdater:
 
     # Files to scan and update
     TARGET_FILES = [
-        "requirements.txt",
-        "requirements.dev.txt",
-        "requirements.prod.txt",
         "install_requirements.sh",
         "setup_wizard.py",
         "setup.py",

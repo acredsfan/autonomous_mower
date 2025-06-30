@@ -82,93 +82,26 @@ git clone https://github.com/acredsfan/autonomous_mower.git
 cd autonomous_mower
 ```
 
-### Installation Options
+### 3. Install Dependencies
 
-This project offers two main methods for installing dependencies and configuring the system.
+This project uses `pyproject.toml` to manage dependencies.
 
-#### Option 1: System-wide Installation (Recommended for Dedicated Hardware)
-
-This is the original installation method, suitable if your Raspberry Pi is fully dedicated to running the autonomous mower. It installs Python packages system-wide, which can be simpler for a single-purpose device. For more details on why this method installs packages globally, see the "Note on Python Package Installation" section below.
-
-**Instructions:**
+**For development:**
 
 ```bash
-# Make the script executable
-chmod +x install_requirements.sh
-
-# Run the installation script with sudo (for system packages and hardware setup)
-sudo ./install_requirements.sh
+pip install -e .[dev]
 ```
 
-**Non-Interactive Mode:**
+This will install the project in editable mode along with all development dependencies.
 
-For a non-interactive installation that defaults most options to 'yes' (use with caution, review defaults in the script):
-```bash
-sudo ./install_requirements.sh -y
-# or
-sudo ./install_requirements.sh --yes
-# or
-sudo ./install_requirements.sh --non-interactive
-```
-
-**Help:**
-To see all available options for the script:
-```bash
-./install_requirements.sh --help
-```
-
-This script will guide you through installing system packages, Python dependencies (system-wide), configuring hardware, setting up the systemd service, and more. It also supports checkpoint/resume functionality (see details further down).
-
-
-#### Option 2: Virtual Environment Installation (Recommended for Development / Shared Systems)
-
-This method uses a Python virtual environment to install dependencies, which offers several benefits:
-- **Isolation:** Project dependencies are kept separate from the system's global Python environment.
-- **Conflict Prevention:** Reduces the chance of conflicts with other Python projects or system tools.
-- **Version Management:** Makes it easier to manage project-specific package versions.
-- **Cleanliness:** Keeps your global Python site-packages directory tidy.
-
-This is recommended if you use your Raspberry Pi for other projects or prefer a cleaner separation of dependencies.
-
-**Instructions:**
+**For production:**
 
 ```bash
-# Make the new script executable
-chmod +x install_requirements_venv.sh
-
-# Run the installation script (sudo might still be needed for initial system packages like 'python3-venv' and hardware setup)
-sudo ./install_requirements_venv.sh
+pip install .
 ```
 
-The virtual environment will be created in a directory named `.venv` within the project root.
+This will install the project and its core dependencies.
 
-**Non-Interactive Mode:**
-This script also supports non-interactive mode:
-```bash
-sudo ./install_requirements_venv.sh -y
-# or
-sudo ./install_requirements_venv.sh --yes
-# or
-sudo ./install_requirements_venv.sh --non-interactive
-```
-
-**Help:**
-To see all available options for this script:
-```bash
-./install_requirements_venv.sh --help
-```
-
-**Using the Virtual Environment Manually:**
-After installation, if you need to run mower scripts manually (outside of the systemd service, which handles this automatically), you should first activate the virtual environment:
-```bash
-source .venv/bin/activate
-```
-Alternatively, you can prefix commands with the VENV's Python interpreter:
-```bash
-.venv/bin/python your_script.py
-```
-
-This script also supports checkpoint/resume functionality.
 
 ### 4. Create Log Directory and Set Permissions
 
