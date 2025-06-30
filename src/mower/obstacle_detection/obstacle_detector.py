@@ -22,7 +22,7 @@ import requests  # type: ignore
 from dotenv import load_dotenv
 from PIL import Image
 
-from mower.hardware.camera_instance import get_camera_instance
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.obstacle_detection.sort import Sort  # Import SORT
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -127,7 +127,7 @@ class ObstacleDetector:
         self.input_std = 127.5
 
         # Get camera instance
-        self.camera = get_camera_instance()
+        self.camera = get_hardware_registry().get_camera()
 
         # Remote detection settings
         self.use_remote_detection = USE_REMOTE_DETECTION

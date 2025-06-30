@@ -170,6 +170,11 @@
 - Launch any Web UI server after successful hardware init and system checks.
 - Camera obstacle detection: Validate model and labelmap files in models/ before loading.
 - Critical path classes (as identified in your project) must maintain backward-compatible public APIs unless a major API version change is intended.
+- Use `dotenv` to manage environment variables.
+- **Environment Variables:** Use the .env file for configuration. Do not hardcode sensitive information (e.g., API keys, passwords).
+- **GPIO Pin Usage:** Document GPIO pin usage in the code and ensure it matches the project's hardware design. Use the `@gpio_pin_usage {pin_number} - {purpose}` tag in docstrings for any GPIO-related code.
+- **I2C Addresses:** Define I2C addresses as constants in the code (e.g., `IMU_ADDRESS = 0x68`) and document them using the `@i2c_address {address}` tag in docstrings. Ensure these addresses match the hardware design and are verified against the actual devices connected to the Raspberry Pi.
+- To read mower.log and journalctl logs, use the `copy_logs.py` script in project's main directory. This script will copy the logs to a local directory for easier access and analysis.
 
 ## VIII. Frozen Drivers  🚧
 
@@ -195,91 +200,3 @@ src/mower/hardware/blade_controller.py       # FROZEN_DRIVER
 ---
 
 > **Reminder: Code for reliability, modularity, safety, and maintainability first, always keeping the Raspberry Pi hardware context and specific project (`autonomous_mower`) structure in mind. Actively leverage ALL available MCP tools (filesystem, github, sequential-thinking, terminal, fetch, enhanced memory, local knowledge base) to enhance understanding, planning, and context retention.**
-
-### Current Task:
-✅ Instructions for AI Agent Coder
-Objective: Diagnose why sensor data is not being fed into the WebUI in the autonomous_mower repo on a Raspberry Pi 4B.
-
-Progress is tracked in 'SENSOR_DATA_DIAGNOSIS_CHECKLIST.md'.
-
-🧠 Context:
-All sensors function when tested with isolated scripts.
-
-Systemd service starts fine, emits status_update, sensor_data, and safety_status.
-
-WebUI shows either simulated or no data.
-
-Persistent log message:
-
-pgsql
-Copy
-Edit
-mower.main_controller - WARNING - Sensor interface unavailable for safety status. Returning default safe status.
-Project is running from the main branch.
-
-.env exists, but may not be reliably loaded in systemd.
-
-🛠️ Tasks for the Agent:
-1. Trace how sensors are initialized
-Start at main_controller.py and follow how sensors are loaded or referenced.
-
-Identify the module or function responsible for instantiating/reading sensor classes (e.g. BME280, VL53L0X, IMU).
-
-Confirm whether sensor objects are stored in a shared dictionary/list/object for periodic updates.
-
-2. Verify sensor reading flow
-Locate the function that emits "sensor_data" via Socket.IO.
-
-Check whether:
-
-That function is called repeatedly (likely via a thread or timed loop).
-
-It retrieves values from actual sensor objects (not dummy/simulated sources).
-
-The resulting dictionary passed to emit("sensor_data", ...) is ever populated with real values.
-
-3. Add debug logging if needed
-Inside the function that compiles and emits sensor data, temporarily log:
-
-python
-Copy
-Edit
-logger.debug(f"Sensor data payload: {sensor_data}")
-Inside sensor read methods (e.g. read_bme280, read_tof, etc.), log success/failure with data.
-
-4. Check .env usage
-Identify where the project loads .env values (likely via os.getenv() or dotenv.load_dotenv()).
-
-Verify whether:
-
-.env values affect sensor initialization (e.g. disabling camera, mocking sensors).
-
-These variables are actually loaded when run via systemd.
-
-5. Validate systemd startup
-Review the systemd service file. If .env values are required, ensure it has:
-
-ini
-Copy
-Edit
-EnvironmentFile=/home/pi/autonomous_mower/.env
-If not, append dotenv.load_dotenv() to the top of your main.py so the app loads .env manually on start.
-
-6. Check for silent failures
-Look for try/except blocks around sensor initialization or reads that suppress errors without logging.
-
-If found, ensure exceptions are logged with full tracebacks.
-
-7. Try fallback test
-Create a temporary version of main_controller.get_sensor_data() that returns hardcoded or mock sensor values to confirm the UI is wired properly.
-
-✅ Expected Output
-At the end of the investigation, return:
-
-A list of confirmed breakpoints where data is not propagating.
-
-Any exceptions found but not logged.
-
-A summary of how .env is or isn't affecting behavior.
-
-A PR or patch to restore sensor reads to the WebUI.

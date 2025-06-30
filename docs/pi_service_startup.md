@@ -1,36 +1,39 @@
+
 # Service Startup on Raspberry Pi
 
 This guide describes how to install and manage the autonomous mower as a systemd service on Raspberry Pi.
 
 ## Service Unit Files
 
-Two service unit files are provided in the repository's root:
+The main service unit file is provided in the repository's root:
 
-- `autonomous-mower.service`: The main service that runs the mower.
+- `mower.service`: The main service that runs the mower.
 - `install-mower.service`: A one-shot service for initial installation.
-  **Note:** The service unit specifies `WorkingDirectory=/home/pi/autonomous_mower` (see [autonomous-mower.service:10](autonomous-mower.service:10)) to ensure correct working directory on startup.
+  **Note:** The service unit specifies `WorkingDirectory=/home/pi/autonomous_mower` (see [mower.service:10](mower.service:10)) to ensure correct working directory on startup.
+
 
 ## Installation
 
 1. Copy the main service unit to the systemd directory:
 
 ```sh
-sudo cp autonomous-mower.service /etc/systemd/system/
+sudo cp mower.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable autonomous-mower.service
+sudo systemctl enable mower.service
 ```
 
 2. Start the service:
 
 ```sh
-sudo systemctl start autonomous-mower.service
+sudo systemctl start mower.service
 ```
 
 3. Check service status:
 
 ```sh
-sudo systemctl status autonomous-mower.service
+sudo systemctl status mower.service
 ```
+
 
 ## ResourceManager Initialization
 
@@ -49,10 +52,11 @@ This entrypoint calls `ResourceManager.initialize()` within the `main()` functio
 
 On shutdown or failure, `ResourceManager.cleanup()` is invoked to release all hardware resources.
 
+
 ## Logs
 
 - Service logs are sent to journald. View logs with:
 
 ```sh
-sudo journalctl -u autonomous-mower.service -f
+sudo journalctl -u mower.service -f
 ```

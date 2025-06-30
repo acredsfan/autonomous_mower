@@ -8,7 +8,7 @@ the interface methods to the methods expected by the business logic.
 
 from typing import Any, Dict
 
-from mower.hardware.blade_controller import BladeController
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.interfaces.hardware import BladeControllerInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -25,14 +25,11 @@ class BladeControllerAdapter(BladeControllerInterface):
     expected by the business logic.
     """
 
-    def __init__(self, blade_controller: BladeController = None):
+    def __init__(self):
         """
         Initialize the blade controller adapter.
-
-        Args:
-            blade_controller: The blade controller to wrap, or None to create a new one
         """
-        self._blade_controller = blade_controller or BladeController()
+        self._blade_controller = get_hardware_registry().get_blade_controller()
         logger.info("BladeControllerAdapter initialized")
 
     def enable(self) -> bool:

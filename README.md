@@ -357,7 +357,7 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
 3. Configure detection in .env file:
    ```
    USE_YOLOV8=True
-   YOLO_MODEL_PATH=/path/to/yolov8n.tflite
+   YOLOV8_MODEL_PATH=/path/to/yolov8n.tflite
    YOLO_LABEL_PATH=/path/to/coco_labels.txt
    ```
 4. Test with:
@@ -415,7 +415,7 @@ Logs are automatically rotated when they reach 1MB, with 5 backup files kept.
    - Add or update these lines:
      ```
      # YOLOv8 configuration
-     YOLO_MODEL_PATH=models/yolov8n_float32.tflite
+     YOLOV8_MODEL_PATH=models/yolov8n_float32.tflite
      YOLO_LABEL_PATH=models/coco_labels.txt
      USE_YOLOV8=True
      ```

@@ -39,27 +39,18 @@ import threading  # Added for threading.Lock
 import time
 import utm
 from enum import Enum
-from typing import Any, Optional
-from pathlib import Path  # Added for Path()
 
+from typing import Any, Optional
+from pathlib import Path
+
+# Fix: Import load_dotenv for .env support
 from dotenv import load_dotenv
 
 # ADDED: Import initialize_config_manager and CONFIG_DIR from constants
 from mower.config_management import initialize_config_manager
 from mower.config_management.config_manager import get_config
-
-# Use an alias for clarity and to avoid conflict if CONFIG_DIR was defined
-# locally
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
-from mower.hardware.blade_controller import BladeController
-from mower.hardware.camera_instance import get_camera_instance
-from mower.hardware.gpio_manager import GPIOManager
-from mower.hardware.imu import BNO085Sensor
-from mower.hardware.ina3221 import INA3221Sensor
-from mower.hardware.robohat import RoboHATDriver
-from mower.hardware.sensor_interface import get_sensor_interface
-from mower.hardware.serial_port import GPS_BAUDRATE, GPS_PORT, SerialPort
-from mower.hardware.tof import VL53L0XSensors
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
@@ -192,91 +183,14 @@ class ResourceManager:
                 logger.error(f"Error loading config file {filename}: {e}")
         return None
 
-    def _initialize_sensors(self):
-        """Consolidate sensor initialization logic."""
-        try:
-            # Use the static method to initialize INA3221 sensor
-            logger.debug("Calling INA3221Sensor.init_ina3221()")
-            ina3221_sensor = INA3221Sensor.init_ina3221()
-            logger.debug(f"INA3221Sensor.init_ina3221() returned: {ina3221_sensor} (type: {type(ina3221_sensor)})")
-            self._resources["ina3221"] = ina3221_sensor
-            logger.info("INA3221 power monitor initialized successfully")
-        except Exception as e:
-            logger.warning(f"Error initializing INA3221 sensor: {e}")
-            self._resources["ina3221"] = None
+    
 
-        try:
-            self._resources["tof"] = VL53L0XSensors()
-            logger.info("VL53L0X time-of-flight sensors initialized successfully")
-        except Exception as e:
-            logger.warning(f"Error initializing VL53L0X sensors: {e}")
-            self._resources["tof"] = None
-
-        try:
-            self._resources["imu"] = BNO085Sensor()
-            logger.info("IMU sensor initialized successfully")
-        except Exception as e:
-            logger.warning(f"Error initializing IMU sensor: {e}")
-            self._resources["imu"] = None
-
-    def _initialize_hardware(self):
-        """Initialize all hardware components."""
-        self._resources["gpio"] = GPIOManager()
-        self._initialize_sensors()
-
-        try:
-            self._resources["blade"] = BladeController()
-            logger.info("Blade controller initialized successfully.")
-        except Exception as e:
-            logger.warning(f"Error initializing blade controller: {e}")
-            self._resources["blade"] = None
-
-        try:
-            self._resources["motor_driver"] = RoboHATDriver()
-            logger.info("RoboHAT motor driver initialized successfully")
-        except Exception as e:
-            logger.error(f"Error initializing motor driver: {e}")
-            self._resources["motor_driver"] = None
-
-        try:
-            self._resources["camera"] = get_camera_instance()
-            logger.info("Camera initialized successfully")
-        except Exception as e:
-            logger.warning(f"Error initializing camera: {e}")
-            self._resources["camera"] = None
-
-        try:
-            # Default for Pi; ensure GPS_PORT is defined in constants or .env
-            gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyACM0"
-            self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
-            logger.info(f"GPS serial port initialized on {gps_port_val} " f"at {GPS_BAUDRATE} baud")
-        except Exception as e:
-            logger.warning(f"Error initializing GPS serial port: {e}")
-            self._resources["gps_serial"] = None
-
-        # Initialize each resource if possible
-        for name, res in list(self._resources.items()):
-            if res is None:
-                continue
-
-            if hasattr(res, "initialize"):
-                try:
-                    res.initialize()
-                except Exception as e:
-                    logger.error(f"Error initializing {name}: {e}")
-                    self._resources[name] = None
-            elif hasattr(res, "_initialize"):  # Some components might use _initialize
-                try:
-                    res._initialize()
-                except Exception as e:
-                    logger.error(f"Error _initializing {name}: {e}")
-                    self._resources[name] = None
-
-        logger.info("Hardware components initialized with fallbacks for any " "failures")
+    
 
     def _initialize_software(self):
         """Initialize all software components."""
         try:
+            hardware_registry = get_hardware_registry()
             # Initialize localization
             try:
                 self._resources["localization"] = Localization()
@@ -324,26 +238,11 @@ class ResourceManager:
                 logger.warning(f"Failed to initialize obstacle detector: {e}")
                 self._resources["obstacle_detector"] = None
 
-            # Obtain sensor interface singleton
-            try:
-                logger.info("Attempting to initialize sensor interface...")
-                sensor_interface = get_sensor_interface()
-                self._resources["sensor_interface"] = sensor_interface
-                if sensor_interface:
-                    logger.info("Sensor interface initialized successfully")
-                else:
-                    logger.warning("Sensor interface returned None - check hardware/I2C bus availability")
-            except Exception as e:
-                logger.error(f"Failed to initialize sensor interface: {e}", exc_info=True)
-                sensor_interface = None  # Ensure it's None if init fails
-                self._resources["sensor_interface"] = None
-
             # Initialize NavigationController
             try:
                 localization = self._resources.get("localization")
-                motor_driver = self._resources.get("motor_driver")
-                # sensor_interface is already fetched or None
-                sensor_if = self._resources.get("sensor_interface")
+                motor_driver = hardware_registry.get_robohat()
+                sensor_if = hardware_registry.get_sensor_interface()
                 if localization and motor_driver and sensor_if:
                     self._resources["navigation"] = NavigationController(localization, motor_driver, sensor_if)
                     logger.info("Navigation controller initialized successfully")
@@ -355,10 +254,10 @@ class ResourceManager:
                         missing_items.append("motor_driver")
                     if not sensor_if:
                         missing_items.append("sensor_interface")
-                    logger.error("Cannot initialize navigation controller - " f"missing dependencies: {missing_items}")
+                    logger.error(f"Cannot initialize navigation controller - missing dependencies: {missing_items}")
                     self._resources["navigation"] = None
             except Exception as e:
-                logger.error(f"Failed to initialize navigation controller: {e}")
+                logger.error(f"Failed to initialize navigation controller: {e}", exc_info=True)
                 self._resources["navigation"] = None
 
             # Initialize the avoidance algorithm
@@ -369,15 +268,30 @@ class ResourceManager:
                 logger.error(f"Failed to initialize avoidance algorithm: {e}")
                 self._resources["avoidance_algorithm"] = None
 
-            # Initialize web interface
+            # Initialize web interface with robust fallback
             self.web_interface = None # Ensure attribute exists even if init fails
             try:
-                # Pass self (ResourceManager instance) to WebInterface
-                # WebInterface constructor likely expects the main controller/resource manager
-                web_interface_instance = WebInterface(self)
+                from mower.ui.web_ui.web_interface import WebInterface
+                web_interface_instance = None
+                try:
+                    # Try to pass self (ResourceManager) as normal
+                    web_interface_instance = WebInterface(self)
+                    logger.info("WebInterface initialized with ResourceManager.")
+                except Exception as e:
+                    logger.error(f"WebInterface(ResourceManager) failed: {e}", exc_info=True)
+                    # Fallback: try to initialize with None or a mock if available
+                    try:
+                        web_interface_instance = WebInterface(None)
+                        logger.info("WebInterface fallback to None succeeded.")
+                    except Exception as fallback_e:
+                        logger.error(f"WebInterface fallback to None failed: {fallback_e}", exc_info=True)
+                        web_interface_instance = None
                 self._resources["web_interface"] = web_interface_instance
-                self.web_interface = web_interface_instance # Assign to direct attribute
-                logger.info("Web interface initialized successfully and stored in _resources.")
+                self.web_interface = web_interface_instance
+                if web_interface_instance:
+                    logger.info("Web interface initialized successfully and stored in _resources.")
+                else:
+                    logger.error("Web interface could not be initialized by any means.")
             except Exception as e:
                 logger.error(f"Failed to initialize web interface: {e}", exc_info=True)
                 self._resources["web_interface"] = None
@@ -389,13 +303,13 @@ class ResourceManager:
             # Don't re-raise here to allow partial initialization
 
         try:
-            gps_serial_port = self.get_resource("gps_serial")
-            if gps_serial_port:
-                # Create and start the continuous GPS reader
-                gps_position_reader = GpsPosition(gps_serial_port, debug=True)
-                gps_position_reader.start() # Start the background thread
+            # Get GPS port from .env or config, fallback to /dev/ttyACM0
+            gps_port = os.environ.get("GPS_SERIAL_PORT", "/dev/ttyACM0")
+            if gps_port:
+                gps_position_reader = GpsPosition(serial_port=gps_port)
+                gps_position_reader.start()  # Start the background thread
                 self._resources["gps_position_reader"] = gps_position_reader
-                logger.info("GpsPosition reader thread started.")
+                logger.info(f"GpsPosition reader thread started on port {gps_port}.")
             else:
                 logger.warning("GPS serial port not available, cannot start GpsPosition reader.")
                 self._resources["gps_position_reader"] = None
@@ -410,6 +324,10 @@ class ResourceManager:
             return
 
         try:
+            # Initialize the hardware registry
+            hardware_registry = get_hardware_registry()
+            hardware_registry.initialize()
+
             # Set up configuration paths - UPDATED to use APP_CONFIG_DIR
             # APP_CONFIG_DIR existence is ensured before config manager init.
             # self.user_polygon_path already uses APP_CONFIG_DIR from __init__
@@ -423,16 +341,6 @@ class ResourceManager:
                         },
                         f,
                     )
-
-            self._initialize_hardware()
-            logger.info("Hardware components initialization attempt complete.")
-
-            # Mark ResourceManager as initialized here, so that software components
-            # initialized in _initialize_software() can successfully use get_resource().
-            # If _initialize_hardware had critical failures, individual resources might be None,
-            # but the ResourceManager itself is ready for software components to query them.
-            self._initialized = True
-            logger.info("ResourceManager marked as initialized (hardware phase complete). Software initialization will now proceed.")
 
             self._initialize_software()
             logger.info("Software components initialization attempt complete.")
@@ -552,6 +460,22 @@ class ResourceManager:
         """Get the web interface instance."""
         return self.get_resource("web_interface")
 
+    def get_camera(self) -> Optional[Any]:
+        """Get the camera instance."""
+        return get_hardware_registry().get_camera()
+
+    def get_sensor_interface(self) -> Optional[Any]:
+        """Get the sensor interface instance."""
+        return get_hardware_registry().get_sensor_interface()
+
+    def get_gps(self):
+        """Get the GPS serial port instance."""
+        return get_hardware_registry().get_gps_serial()
+
+    def get_robohat(self):
+        """Get the RoboHAT driver instance."""
+        return get_hardware_registry().get_robohat()
+
     # Replace Any with actual camera type
     def get_camera(self) -> Optional[Any]:
         """Get the camera instance."""
@@ -579,7 +503,7 @@ class ResourceManager:
                 return None
         return si
 
-    def get_gps(self) -> Optional[SerialPort]:
+    def get_gps(self):
         """Get the GPS serial port instance."""
         gps = self.get_resource("gps_serial")
         if gps is None and self._initialized:  # Try to init on demand
@@ -852,279 +776,117 @@ class ResourceManager:
     def get_sensor_data(self):
         """
         Collects and returns data from all available sensors.
-
         Returns:
             dict: A dictionary containing data from various sensors.
                   Keys are sensor names (e.g., 'imu', 'tof', 'power'),
                   and values are their respective readings.
         """
-        # Hardened: Always return a complete sensor_data dict, with mock/simulated values if hardware is missing.
-        sensor_data = {}
-        logger.debug("get_sensor_data() called - starting sensor data collection")
-
-        # Attempt to get the enhanced sensor interface
-        sensor_interface = self.get_sensor_interface()
-        logger.debug(f"get_sensor_data: Retrieved sensor_interface: {sensor_interface}")
-
-        if sensor_interface:
+        for attempt in range(3):
             try:
-                logger.debug("Using EnhancedSensorInterface to get all sensor data...")
-                # Use the enhanced interface to get all data at once
-                all_data = sensor_interface.get_sensor_data()
-                logger.debug(f"Data from EnhancedSensorInterface: {all_data}")
+                sensor_data = {}
+                logger.info(f"get_sensor_data() called - starting sensor data collection (attempt {attempt + 1})")
 
-                # Structure the data as expected by the UI
-                sensor_data["imu"] = all_data.get("imu", {})
-                sensor_data["environment"] = {
-                    "temperature": all_data.get("temperature"),
-                    "humidity": all_data.get("humidity"),
-                    "pressure": all_data.get("pressure"),
-                }
-                sensor_data["tof"] = all_data.get("distance", {})
-                sensor_data["power"] = all_data.get("power", {})
-                logger.info(f"Successfully collected sensor data via EnhancedSensorInterface: {len(sensor_data)} categories")
+                sensor_interface = self.get_sensor_interface()
+                logger.info(f"get_sensor_data: Retrieved sensor_interface: {sensor_interface}")
 
-            except Exception as e:
-                logger.error(f"Failed to get data from EnhancedSensorInterface: {e}", exc_info=True)
-                # Fallback to simulated data if the interface fails
-                sensor_interface = None
+                if sensor_interface:
+                    try:
+                        logger.info("Using EnhancedSensorInterface to get all sensor data...")
+                        all_data = sensor_interface.get_sensor_data()
+                        logger.info(f"Data from EnhancedSensorInterface: {all_data}")
 
-        if not sensor_interface:
-            logger.warning("EnhancedSensorInterface not available. Falling back to individual sensor reads or simulation.")
-            # IMU Data
-            try:
-                imu = self.get_resource("imu")
-                logger.debug(f"Fallback: Got IMU resource: {imu}")
-                if imu:
-                    heading = imu.get_heading() if hasattr(imu, "get_heading") else 0.0
-                    roll = imu.get_roll() if hasattr(imu, "get_roll") else 0.0
-                    pitch = imu.get_pitch() if hasattr(imu, "get_pitch") else 0.0
-                    sensor_data["imu"] = {
-                        "heading": heading,
-                        "roll": roll,
-                        "pitch": pitch,
-                        "acceleration": (imu.get_acceleration() if hasattr(imu, "get_acceleration") else [0, 0, 0]),
-                        "gyroscope": (imu.get_gyroscope() if hasattr(imu, "get_gyroscope") else [0, 0, 0]),
-                        "quaternion": (imu.get_quaternion() if hasattr(imu, "get_quaternion") else [1, 0, 0, 0]),
-                        "temperature": (imu.get_temperature() if hasattr(imu, "get_temperature") else 0.0),
-                    }
-                    logger.debug(f"Fallback: Successfully read IMU data: {sensor_data['imu']}")
-                else:
-                    logger.warning("Fallback: IMU resource is None.")
-                    # Simulated IMU data
-                    sensor_data["imu"] = {
-                        "heading": 0.0,
-                        "roll": 0.0,
-                        "pitch": 0.0,
-                        "acceleration": [0, 0, 0],
-                        "gyroscope": [0, 0, 0],
-                        "quaternion": [1, 0, 0, 0],
-                        "temperature": 25.0,
-                    }
-            except Exception as e:
-                logger.error(f"Fallback: Failed to get IMU data: {e}", exc_info=True)
-                sensor_data["imu"] = {
-                    "heading": 0.0,
-                    "roll": 0.0,
-                    "pitch": 0.0,
-                    "acceleration": [0, 0, 0],
-                    "gyroscope": [0, 0, 0],
-                    "quaternion": [1, 0, 0, 0],
-                    "temperature": 25.0,
-                    "error": str(e),
-                }
-
-            # ToF Data
-            try:
-                tof_sensors = self.get_resource("tof")
-                logger.debug(f"Fallback: Got ToF resource: {tof_sensors}")
-                if tof_sensors and hasattr(tof_sensors, "get_distances"):
-                    sensor_data["tof"] = tof_sensors.get_distances()
-                    logger.debug(f"Fallback: Successfully read ToF data: {sensor_data['tof']}")
-                else:
-                    logger.warning("Fallback: ToF resource is None or missing get_distances.")
-                    # Simulated ToF data
-                    sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0}
-            except Exception as e:
-                logger.error(f"Fallback: Failed to get ToF data: {e}", exc_info=True)
-                sensor_data["tof"] = {"left": 100.0, "right": 100.0, "front": 100.0, "error": str(e)}
-
-            # Power/Battery Data
-            try:
-                power_monitor = self.get_resource("ina3221")
-                logger.debug(f"Fallback: Got Power Monitor resource: {power_monitor}")
-                if power_monitor:
-                    battery_info = self.get_battery_status()
-                    logger.debug(f"Fallback: Battery info from get_battery_status(): {battery_info}")
-                    
-                    # Check if we got real data from INA3221
-                    if battery_info and battery_info.get("status") not in [None, "Battery sensor unavailable or error."]:
-                        sensor_data["power"] = battery_info
-                        logger.debug(f"Fallback: Successfully read Power data: {sensor_data['power']}")
-                    else:
-                        # INA3221 is available but returned no useful data
-                        logger.warning("Fallback: INA3221 available but no useful power data, using simulated data")
-                        sensor_data["power"] = {
-                            "voltage": 12.0,
-                            "current": 1.0,
-                            "power": 12.0,
-                            "percentage": 80.0,
-                            "status": "Simulated - INA3221 connected but no power detected",
-                        }
-                else:
-                    logger.warning("Fallback: Power monitor resource is None, using simulated data")
-                    # Simulated battery info
-                    sensor_data["power"] = {
-                        "voltage": 12.0,
-                        "current": 1.0,
-                        "power": 12.0,
-                        "percentage": 80.0,
-                        "status": "Simulated - INA3221 not available",
-                    }
-            except Exception as e:
-                logger.error(f"Fallback: Failed to get power monitor data: {e}", exc_info=True)
-                sensor_data["power"] = {
-                    "voltage": 12.0,
-                    "current": 1.0,
-                    "power": 12.0,
-                    "percentage": 80.0,
-                    "status": "Simulated - Error accessing INA3221",
-                    "error": str(e),
-                }
-
-            # BME280 Environmental Data
-            try:
-                bme_sensor = self.get_resource("bme280")
-                logger.debug(f"Fallback: Got BME280 resource: {bme_sensor}")
-                if bme_sensor:
-                    env_data = bme_sensor.get_all_data()
-                    if env_data:
+                        sensor_data["imu"] = all_data.get("imu", {})
                         sensor_data["environment"] = {
-                            "temperature": env_data.get("temperature"),
-                            "humidity": env_data.get("humidity"),
-                            "pressure": env_data.get("pressure"),
+                            "temperature": all_data.get("temperature"),
+                            "humidity": all_data.get("humidity"),
+                            "pressure": all_data.get("pressure"),
                         }
-                        logger.debug(f"Fallback: Successfully read BME280 data: {sensor_data['environment']}")
-                    else:
-                        logger.warning("Fallback: BME280 resource returned no data.")
-                        sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25}
+                        sensor_data["tof"] = all_data.get("distance", {})
+                        sensor_data["power"] = all_data.get("power", {})
+                        logger.info(f"Successfully collected sensor data via EnhancedSensorInterface: {len(sensor_data)} categories")
+
+                    except Exception as e:
+                        logger.error(f"Failed to get data from EnhancedSensorInterface: {e}", exc_info=True)
+                        sensor_interface = None
                 else:
-                    logger.warning("Fallback: BME280 resource is None.")
-                    sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25}
+                    logger.warning("EnhancedSensorInterface not available. Falling back to individual sensor reads.")
+                    # IMU Data
+                    try:
+                        imu = self.get_resource("imu")
+                        if imu:
+                            sensor_data["imu"] = {
+                                "heading": imu.get_heading(),
+                                "roll": imu.get_roll(),
+                                "pitch": imu.get_pitch(),
+                                "acceleration": imu.get_acceleration(),
+                                "gyroscope": imu.get_gyroscope(),
+                                "quaternion": imu.get_quaternion(),
+                                "temperature": imu.get_temperature(),
+                            }
+                        else:
+                            sensor_data["imu"] = {}
+                    except Exception as e:
+                        logger.error(f"Failed to get IMU data: {e}", exc_info=True)
+                        sensor_data["imu"] = {}
+
+                    # ToF Data
+                    try:
+                        tof_sensors = self.get_resource("tof")
+                        if tof_sensors:
+                            sensor_data["tof"] = tof_sensors.get_distances()
+                        else:
+                            sensor_data["tof"] = {}
+                    except Exception as e:
+                        logger.error(f"Failed to get ToF data: {e}", exc_info=True)
+                        sensor_data["tof"] = {}
+
+                    # Power/Battery Data
+                    try:
+                        power_monitor = self.get_resource("ina3221")
+                        if power_monitor:
+                            sensor_data["power"] = self.get_battery_status()
+                        else:
+                            sensor_data["power"] = {}
+                    except Exception as e:
+                        logger.error(f"Failed to get power monitor data: {e}", exc_info=True)
+                        sensor_data["power"] = {}
+
+                    # BME280 Environmental Data
+                    try:
+                        bme_sensor = self.get_resource("bme280")
+                        if bme_sensor:
+                            env_data = bme_sensor.get_all_data()
+                            if env_data:
+                                sensor_data["environment"] = {
+                                    "temperature": env_data.get("temperature"),
+                                    "humidity": env_data.get("humidity"),
+                                    "pressure": env_data.get("pressure"),
+                                }
+                            else:
+                                sensor_data["environment"] = {}
+                        else:
+                            sensor_data["environment"] = {}
+                    except Exception as e:
+                        logger.error(f"Failed to get BME280 data: {e}", exc_info=True)
+                        sensor_data["environment"] = {}
+
+                # GPS Data
+                try:
+                    gps_data = self.get_gps_location()
+                    if gps_data and gps_data.get("latitude") is not None and gps_data.get("longitude") is not None:
+                        sensor_data["gps"] = gps_data
+                    else:
+                        sensor_data["gps"] = {}
+                except Exception as e:
+                    logger.warning(f"Failed to get GPS data: {e}")
+                    sensor_data["gps"] = {}
+
+                logger.info(f"FINAL SENSOR DATA PAYLOAD: {sensor_data}")
+                return sensor_data
             except Exception as e:
-                logger.error(f"Fallback: Failed to get BME280 data: {e}", exc_info=True)
-                sensor_data["environment"] = {"temperature": 25.0, "humidity": 50.0, "pressure": 1013.25, "error": str(e)}
-
-        # GPS Data
-        try:
-            gps_data = self.get_gps_location()
-            if gps_data and gps_data.get("latitude") is not None and gps_data.get("longitude") is not None:
-                sensor_data["gps"] = gps_data
-            else:
-                # Simulated GPS data
-                sensor_data["gps"] = {
-                    "status": "Simulated",
-                    "latitude": 37.7749,
-                    "longitude": -122.4194,
-                    "raw": "",
-                }
-        except Exception as e:
-            logger.warning(f"Failed to get GPS data: {e}")
-            sensor_data["gps"] = {
-                "status": "Simulated",
-                "latitude": 37.7749,
-                "longitude": -122.4194,
-                "raw": "",
-                "error": str(e),
-            }
-
-        # GPIO Inputs
-        try:
-            gpio_manager = self.get_resource("gpio")
-            if gpio_manager and hasattr(gpio_manager, "get_all_input_states"):
-                sensor_data["gpio_inputs"] = gpio_manager.get_all_input_states()
-            else:
-                sensor_data["gpio_inputs"] = {"simulated": True}
-        except Exception as e:
-            logger.warning(f"Failed to get GPIO input states: {e}")
-            sensor_data["gpio_inputs"] = {"simulated": True, "error": str(e)}
-
-        # Blade Controller Status
-        try:
-            blade_controller = self.get_resource("blade")
-            if blade_controller and hasattr(blade_controller, "get_state"):
-                sensor_data["blade_status"] = blade_controller.get_state()
-            else:
-                sensor_data["blade_status"] = {"status": "Simulated"}
-        except Exception as e:
-            logger.warning(f"Failed to get blade status: {e}")
-            sensor_data["blade_status"] = {"status": "Simulated", "error": str(e)}
-
-        # Motor Driver Status
-        try:
-            motor_driver = self.get_resource("motor_driver")
-            if motor_driver and hasattr(motor_driver, "get_status"):
-                sensor_data["motor_driver_status"] = motor_driver.get_status()
-            else:
-                sensor_data["motor_driver_status"] = {"status": "Simulated"}
-        except Exception as e:
-            logger.warning(f"Failed to get motor driver status: {e}")
-            sensor_data["motor_driver_status"] = {"status": "Simulated", "error": str(e)}
-
-        # Camera Status
-        try:
-            camera = self.get_resource("camera")
-            if camera and hasattr(camera, "is_operational"):
-                sensor_data["camera_status"] = {"operational": camera.is_operational()}
-            else:
-                sensor_data["camera_status"] = {"operational": True, "simulated": True}
-        except Exception as e:
-            logger.warning(f"Failed to get camera status: {e}")
-            sensor_data["camera_status"] = {"operational": True, "simulated": True, "error": str(e)}
-
-        # Ensure we always have the basic required data structure expected by WebUI
-        if "imu" not in sensor_data:
-            sensor_data["imu"] = {
-                "heading": 0.0,
-                "roll": 0.0,
-                "pitch": 0.0,
-                "safety_status": {
-                    "emergency_stop_active": False,
-                    "obstacle_detected_nearby": False,
-                    "low_battery_warning": False,
-                    "system_error": False,
-                },
-                "simulated": True
-            }
-        
-        if "environment" not in sensor_data:
-            sensor_data["environment"] = {
-                "temperature": 20.0,
-                "humidity": 50.0,
-                "pressure": 1013.25,
-                "simulated": True
-            }
-        
-        if "tof" not in sensor_data:
-            sensor_data["tof"] = {
-                "left": 100.0,
-                "right": 100.0,
-                "front": 100.0,
-                "simulated": True
-            }
-        
-        if "power" not in sensor_data:
-            sensor_data["power"] = {
-                "voltage": 12.0,
-                "current": 1.0,
-                "power": 12.0,
-                "percentage": 80.0,
-                "status": "Simulated",
-                "simulated": True
-            }
-
-        logger.info(f"FINAL SENSOR DATA PAYLOAD: {sensor_data}")
-        return sensor_data
+                logger.error(f"Error in get_sensor_data (attempt {attempt + 1}): {e}", exc_info=True)
+                time.sleep(1)
+        return {}
 
     def get_avoidance_algorithm(self) -> Optional[AvoidanceAlgorithm]:
         """Get the avoidance algorithm instance."""
@@ -1435,13 +1197,21 @@ def main():
 
     try:
         resource_manager = ResourceManager(config_path=str(MAIN_CONFIG_FILE))
-        if not resource_manager.init_all_resources():
-            logger.error("Failed to initialize critical resources. Exiting.")
-            if resource_manager: # Check if resource_manager was instantiated
+        init_ok = resource_manager.init_all_resources()
+        # Check for truly critical resources (navigation, motor driver, safety)
+        nav = resource_manager.get_navigation()
+        motor = resource_manager.get_robohat() if hasattr(resource_manager, 'get_robohat') else None
+        safety = resource_manager.get_sensor_interface()
+        if not (init_ok and nav and motor and safety):
+            logger.error("Failed to initialize one or more critical resources (navigation, motor, safety). Exiting.")
+            if resource_manager:
                 resource_manager.cleanup_all_resources()
             sys.exit(1)
+        # Warn if running in degraded mode (non-critical resources missing)
+        if not resource_manager.get_obstacle_detection() or not resource_manager.get_path_planner():
+            logger.warning("Non-critical resources missing. Running in degraded mode. WebUI will still be available.")
 
-        # Start the web interface
+        # Start the web interface regardless of degraded mode
         try:
             print("DEBUG: main() - Before calling resource_manager.start_web_interface()") # ADDED
             logger.info("MAIN: Attempting to start the web interface...")
@@ -1454,9 +1224,8 @@ def main():
             # Decide if this is critical enough to exit. For now, log and continue.
 
         # Start the watchdog timer
-        # Ensure watchdog is started only if resource_manager is valid
         if resource_manager:
-             resource_manager._start_watchdog()
+            resource_manager._start_watchdog()
 
 
         logger.info("Application started. Waiting for shutdown signal...")

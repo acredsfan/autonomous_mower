@@ -15,7 +15,7 @@ from typing import Any, Dict, Optional
 import cv2
 
 from mower.config_management import ConfigurationManager  # Changed import
-from mower.hardware.camera_instance import CameraInstance
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.hardware.sensor_types import SensorReading
 from mower.navigation.path_planner import PathPlanner, PatternType
 
@@ -31,18 +31,16 @@ class DataCollector:
 
     def __init__(
         self,
-        camera: CameraInstance,
         path_planner: PathPlanner,
         config_manager: ConfigurationManager,  # Changed type hint
     ):
         """Initialize the DataCollector.
 
         Args:
-            camera: Instance of CameraInstance used to capture images
             path_planner: Instance of PathPlanner for navigation
             config_manager: Instance of ConfigManager for configuration access
         """
-        self.camera = camera
+        self.camera = get_hardware_registry().get_camera()
         self.path_planner = path_planner
         self.config_manager = config_manager
 

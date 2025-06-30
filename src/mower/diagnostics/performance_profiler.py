@@ -294,14 +294,16 @@ class PerformanceProfiler:
         Returns:
             Dictionary of performance metrics
         """
-        from mower.hardware.camera_instance import capture_frame
+        from mower.hardware.hardware_registry import get_hardware_registry
+
         from mower.obstacle_detection.obstacle_detector import get_obstacle_detector
 
         # Get obstacle detector
         detector = get_obstacle_detector()
 
         # Capture a frame for testing
-        frame = capture_frame()
+        camera = get_hardware_registry().get_camera()
+        frame = camera.capture_frame()
 
         if frame is None:
             logger.error("Failed to capture frame for profiling")

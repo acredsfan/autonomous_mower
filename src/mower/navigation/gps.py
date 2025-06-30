@@ -15,6 +15,9 @@ import utm
 from mower.utilities.logger_config import LoggerConfigInfo
 from mower.utilities.text_writer import CsvLogger
 
+# Ensure get_hardware_registry is available for GpsPosition
+from mower.hardware.hardware_registry import get_hardware_registry
+
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # --- Google Geocoding API Configuration ---
@@ -74,16 +77,29 @@ class GpsPosition(metaclass=SingletonMeta):
     Reads NMEA lines from serial port and converts them into positions.
     """
 
-    def __init__(self, serial_port, debug=False):
-        from mower.hardware.serial_port import SerialLineReader
-
-        self.line_reader = SerialLineReader(serial_port)
+    def __init__(self, serial_port=None, debug=False):
+        """
+        Args:
+            serial_port: Serial port device string (e.g., '/dev/ttyACM0').
+            debug: Enable debug logging.
+        """
         self.debug = debug
         self.position_reader = GpsNmeaPositions(debug=self.debug)
         self.position = None
         self.metadata = None  # Store GPS metadata (satellites, HDOP, etc.)
         self.running = True
         self.lock = threading.Lock()
+        self.line_reader = None
+        if serial_port:
+            try:
+                import serial
+                self.line_reader = serial.Serial(serial_port, baudrate=115200, timeout=1)
+                logger.info(f"Initialized GPS serial line_reader on {serial_port}")
+            except Exception as e:
+                logger.error(f"Failed to initialize GPS serial line_reader on {serial_port}: {e}")
+                self.line_reader = None
+        else:
+            logger.warning("No serial_port provided to GpsPosition; line_reader will not be available.")
 
     def start(self):
         self.thread = threading.Thread(target=self._read_gps, daemon=True)
@@ -118,8 +134,19 @@ class GpsPosition(metaclass=SingletonMeta):
                 time.sleep(5)  # Wait before retrying
 
     def run(self):
-        lines = self.line_reader.run()
-        return self.run_once(lines)
+        if self.line_reader is None:
+            logger.warning("GPS line_reader is not initialized; cannot run().")
+            return None
+        try:
+            # Read a single NMEA line from the serial port
+            line = self.line_reader.readline().decode(errors='ignore').strip()
+            if line:
+                return self.run_once([line])
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Exception in GpsPosition.run(): {e}")
+            return None
 
     def run_once(self, lines):
         positions = self.position_reader.run(lines)
@@ -127,8 +154,18 @@ class GpsPosition(metaclass=SingletonMeta):
 
     def run_metadata(self):
         """Parse GPS metadata from current NMEA lines."""
-        lines = self.line_reader.run()
-        return self.run_metadata_once(lines)
+        if self.line_reader is None:
+            logger.warning("GPS line_reader is not initialized; cannot run_metadata().")
+            return None
+        try:
+            line = self.line_reader.readline().decode(errors='ignore').strip()
+            if line:
+                return self.run_metadata_once([line])
+            else:
+                return None
+        except Exception as e:
+            logger.error(f"Exception in GpsPosition.run_metadata(): {e}")
+            return None
 
     def run_metadata_once(self, lines):
         """Parse GPS metadata from given NMEA lines."""
@@ -153,8 +190,13 @@ class GpsPosition(metaclass=SingletonMeta):
 
     def shutdown(self):
         self.running = False
-        self.line_reader.shutdown()
-        self.thread.join()
+        if self.line_reader:
+            try:
+                self.line_reader.close()
+            except Exception as e:
+                logger.error(f"Exception closing GPS line_reader: {e}")
+        if hasattr(self, 'thread'):
+            self.thread.join()
         logger.info("GPS Position shut down successfully.")
 
 
@@ -612,7 +654,7 @@ if __name__ == "__main__":
     import numpy as np
     import readchar
 
-    from mower.hardware.serial_port import SerialPort
+    from mower.hardware.hardware_registry import get_hardware_registry
 
     def stats(data):
         """
@@ -928,11 +970,11 @@ if __name__ == "__main__":
     waypoints = []
     waypoint_samples = []
 
-    from mower.hardware.serial_port import SerialLineReader
+    
 
     try:
-        serial_port = SerialPort(args.serial, baudrate=args.baudrate, timeout=args.timeout)
-        line_reader = SerialLineReader(serial_port, max_lines=args.samples, debug=args.debug)
+        serial_port = get_hardware_registry().get_serial_port()
+        line_reader = get_hardware_registry().get_serial_line_reader()
         position_reader = GpsNmeaPositions(args.debug)
 
         # start the threaded part

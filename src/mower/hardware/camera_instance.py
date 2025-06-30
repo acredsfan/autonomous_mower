@@ -68,7 +68,6 @@ def get_device_ip():
 class CameraInstance:
     """
     Singleton class for managing camera access.
-
     This class ensures that only one instance of the camera is active
     at any time, preventing resource conflicts.
     """
@@ -82,56 +81,64 @@ class CameraInstance:
         self._is_initialized = False
         self._last_frame = None
         self._frame_lock = threading.Lock()
+        self._init_lock = threading.Lock()  # Added lock for initialization
 
     def initialize(self) -> bool:
         """
         Initialize the camera hardware.
-
         Returns:
             bool: True if initialization successful, False otherwise
         """
-        if self._is_initialized:
-            return True
+        with self._init_lock:
+            if self._is_initialized:
+                return True
 
-        try:
-            # Try picamera2 first if available
-            if PICAMERA_AVAILABLE:
-                try:
-                    self._camera = Picamera2()
-                    self._camera.configure(
-                        self._camera.create_preview_configuration(
-                            main={
-                                "size": (
-                                    self._frame_width,
-                                    self._frame_height,
-                                )
-                            }
+            try:
+                # Try picamera2 first if available
+                if PICAMERA_AVAILABLE:
+                    try:
+                        self._camera = Picamera2()
+                        self._camera.configure(
+                            self._camera.create_preview_configuration(
+                                main={
+                                    "size": (
+                                        self._frame_width,
+                                        self._frame_height,
+                                    )
+                                }
+                            )
                         )
-                    )
-                    self._camera.start()
-                    self._is_picamera = True
+                        self._camera.start()
+                        self._is_picamera = True
+                        self._is_initialized = True
+                        logging.info("Initialized PiCamera2")
+                        return True
+                    except Exception as e:
+                        logging.warning(f"Failed to initialize PiCamera2: {e}")
+                        if "Device or resource busy" in str(e):
+                            logging.error("Camera is busy. Another process may be using it.")
+                        self._camera = None  # Ensure camera is None on failure
+
+                # Fall back to OpenCV camera
+                if self._camera is None:
+                    self._camera = cv2.VideoCapture(0)
+                    if not self._camera.isOpened():
+                        logging.warning("Failed to open OpenCV camera")
+                        self._camera = None # Ensure camera is None
+                        return False
+
+                    self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, self._frame_width)
+                    self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self._frame_height)
+                    self._is_picamera = False
                     self._is_initialized = True
-                    logging.info("Initialized PiCamera2")
+                    logging.info("Initialized OpenCV camera")
                     return True
-                except Exception as e:
-                    logging.warning(f"Failed to initialize PiCamera2: {e}")
 
-            # Fall back to OpenCV camera
-            self._camera = cv2.VideoCapture(0)
-            if not self._camera.isOpened():
-                logging.warning("Failed to open OpenCV camera")
+            except Exception as e:
+                logging.error(f"Camera initialization failed: {e}")
+                self._camera = None
                 return False
-
-            self._camera.set(cv2.CAP_PROP_FRAME_WIDTH, self._frame_width)
-            self._camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self._frame_height)
-            self._is_picamera = False
-            self._is_initialized = True
-            logging.info("Initialized OpenCV camera")
-            return True
-
-        except Exception as e:
-            logging.error(f"Camera initialization failed: {e}")
-            return False
+        return False
 
     def capture_frame(self) -> Optional[Union[bytes, None]]:
         """

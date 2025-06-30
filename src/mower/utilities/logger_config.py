@@ -19,7 +19,7 @@ class LoggerConfigInfo:
 
     _instance = None
     _initialized = False
-    _log_dir = os.getenv("MOWER_LOG_DIR", "/var/log/autonomous-mower")
+    _log_dir = os.getenv("MOWER_LOG_DIR", str(Path(__file__).resolve().parent.parent.parent / "logs"))
 
     @classmethod
     def configure_logging(cls) -> None:

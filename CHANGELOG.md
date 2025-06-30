@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
   - Created functions: `scan_existing_models()`, `scan_existing_labels()`, `display_existing_models()`, `prompt_use_existing()`, `prompt_select_existing_model()`, `use_existing_model()`
   - Enhanced file size formatting with human-readable units (B, KB, MB, GB)
   - Integrated existing model detection into main workflow to save bandwidth and time
-  - Updated environment variable naming to `YOLO_MODEL_PATH` and `YOLO_LABEL_PATH` for consistency
+  - Updated environment variable naming to `YOLOV8_MODEL_PATH` and `YOLO_LABEL_PATH` for consistency
 
 ### Changed
 

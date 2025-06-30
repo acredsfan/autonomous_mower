@@ -7,7 +7,7 @@ from shapely.geometry import Point, Polygon
 # from mower.navigation.navigation import NavigationController  # Removed:
 # not used directly
 from mower.constants import MIN_DISTANCE_THRESHOLD, polygon_coordinates
-from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.hardware.sensor_interface import EnhancedSensorInterface
 from mower.navigation.localization import Localization
 
@@ -20,11 +20,10 @@ class ObstacleMapper:
         self,
         localization: Localization,
         sensors: EnhancedSensorInterface,
-        driver: RoboHATDriver,
     ):
         self.localization = localization  # Store the instance properly
         self.sensors = sensors
-        self.driver = driver
+        self.driver = get_hardware_registry().get_robohat_driver()
         self.obstacle_map = []  # Store obstacle locations
         # Pass required interfaces to NavigationController
         # NOTE: NavigationController expects GpsLatestPosition,
@@ -209,8 +208,8 @@ class ObstacleMapper:
 if __name__ == "__main__":
     localization = Localization()  # Ensure proper instantiation
     sensors = EnhancedSensorInterface()
-    driver = RoboHATDriver()
+    driver = get_hardware_registry().get_robohat_driver()
 
-    mapper = ObstacleMapper(localization, sensors, driver)
+    mapper = ObstacleMapper(localization, sensors)
     logger.info("Starting yard exploration to build the obstacle map...")
     mapper.explore_yard(duration=600)  # Explore for 10 minutes

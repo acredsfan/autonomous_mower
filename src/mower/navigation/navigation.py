@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple
 
 import utm  # Ensure `utm` is installed in your environment
 
-from mower.hardware.robohat import RoboHATDriver
+from mower.hardware.hardware_registry import get_hardware_registry
 from mower.navigation.gps import GpsLatestPosition, GpsPosition
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -32,7 +32,6 @@ class NavigationController:
     def __init__(
         self,
         gps_latest_position: GpsLatestPosition,
-        robohat_driver: RoboHATDriver,
         sensor_interface,
         debug: bool = False,
     ):
@@ -41,12 +40,11 @@ class NavigationController:
 
         Args:
             gps_latest_position: GPS position handler
-            robohat_driver: Motor controller interface
             sensor_interface: Sensor interface
             debug: Enable debug logging
         """
         self.gps_latest_position = gps_latest_position
-        self.robohat_driver = robohat_driver
+        self.robohat_driver = get_hardware_registry().get_robohat()
         self.sensor_interface = sensor_interface
         self.debug = debug
         self.manual_control_enabled = False  # ADDED: manual control flag
@@ -387,7 +385,7 @@ def initialize_navigation():
         gps_position_instance.start()
 
         gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
-        robohat_driver = RoboHATDriver()
+        robohat_driver = get_hardware_registry().get_robohat()
 
         return gps_latest_position, robohat_driver
 
@@ -401,7 +399,7 @@ if __name__ == "__main__":
 
     if gps_latest_position and robohat_driver:
         sensor_interface = None  # Replace with actual sensor interface
-        controller = NavigationController(gps_latest_position, robohat_driver, sensor_interface, debug=True)
+        controller = NavigationController(gps_latest_position, sensor_interface, debug=True)
 
         # Example target location (latitude, longitude)
         target = (39.123, -84.512)

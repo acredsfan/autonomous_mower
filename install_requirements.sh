@@ -1109,8 +1109,8 @@ EOL
         check_command "Creating ntrip-client.service"
 
         # --- Create autonomous-mower.service with dependency ---
-        print_info "Creating autonomous-mower.service with NTRIP dependency..."
-        sudo tee /etc/systemd/system/autonomous-mower.service > /dev/null << EOL
+        print_info "Creating mower.service with NTRIP dependency..."
+        sudo tee /etc/systemd/system/mower.service > /dev/null << EOL
 [Unit]
 Description=Autonomous Mower Main Service
 Wants=ntrip-client.service
@@ -1126,7 +1126,7 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOL
-        check_command "Creating autonomous-mower.service"
+        check_command "Creating mower.service"
         
         # --- Enable NTRIP service ---
         print_info "Enabling ntrip-client.service..."
@@ -1134,8 +1134,8 @@ EOL
         
     else
         # --- Standard Setup (No RTK) ---
-        print_info "Creating autonomous-mower.service without NTRIP dependency..."
-        sudo tee /etc/systemd/system/autonomous-mower.service > /dev/null << EOL
+        print_info "Creating mower.service without NTRIP dependency..."
+        sudo tee /etc/systemd/system/mower.service > /dev/null << EOL
 [Unit]
 Description=Autonomous Mower Main Service
 After=network.target
@@ -1150,12 +1150,12 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOL
-        check_command "Creating autonomous-mower.service"
+        check_command "Creating mower.service"
     fi
     
     # --- Enable main service and reload daemon ---
-    print_info "Enabling autonomous-mower.service..."
-    sudo systemctl enable autonomous-mower.service
+    print_info "Enabling mower.service..."
+    sudo systemctl enable mower.service
     
     print_info "Reloading systemd daemon..."
     sudo systemctl daemon-reload

@@ -11,26 +11,7 @@ except Exception:  # pragma: no cover - optional on non-Pi systems
     board = None
     busio = None
 
-# Conditional imports for hardware modules
-try:
-    from mower.hardware.bme280 import BME280Sensor
-except ImportError:
-    BME280Sensor = None
 
-try:
-    from mower.hardware.imu import BNO085Sensor
-except ImportError:
-    BNO085Sensor = None
-
-try:
-    from mower.hardware.ina3221 import INA3221Sensor
-except ImportError:
-    INA3221Sensor = None
-
-try:
-    from mower.hardware.tof import VL53L0XSensors
-except ImportError:
-    VL53L0XSensors = None
 from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -50,13 +31,7 @@ def _log_error(message: str, error: Exception):
     logging.error(f"{message}: {str(error)}")
 
 
-def _init_bno085():
-    """Initialize BNO085 sensor."""
-    try:
-        return BNO085Sensor()
-    except Exception as e:
-        _log_error("BNO085 initialization failed", e)
-        return None
+
 
 
 class EnhancedSensorInterface(HardwareSensorInterface):
@@ -110,10 +85,11 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
     def _initialize_sensors(self) -> None:
         """Initialize all sensors."""
-        self._sensors["bme280"] = self.__initialize()
-        self._sensors["bno085"] = _init_bno085()
-        self._sensors["ina3221"] = self._init_ina3221()
-        self._sensors["vl53l0x"] = self._init_vl53l0x()
+        from mower.hardware.hardware_registry import get_hardware_registry
+        self._sensors["bme280"] = get_hardware_registry().get_bme280()
+        self._sensors["bno085"] = get_hardware_registry().get_bno085()
+        self._sensors["ina3221"] = get_hardware_registry().get_ina3221()
+        self._sensors["vl53l0x"] = get_hardware_registry().get_vl53l0x()
 
     def start(self) -> None:
         """Start the sensor interface."""
@@ -155,56 +131,11 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         except Exception as e:
             logging.error(f"Error during sensor cleanup: {e}")
 
-    def __initialize(self):
-        """Initialize BME280 sensor."""
-        try:
-            with self._locks["i2c"]:
-                return BME280Sensor._initialize(self._i2c)
-        except Exception as e:
-            _log_error("BME280 initialization failed", e)
-            return None
+    
 
-    def _init_ina3221(self):
-        """Initialize INA3221 sensor."""
-        try:
-            # Use the static method to initialize INA3221 sensor
-            sensor = INA3221Sensor.init_ina3221()
-            if sensor:
-                self._sensor_status["ina3221"].working = True
-                logging.info("INA3221 sensor initialized successfully using static method.")
-                return sensor
-            else:
-                logging.error("INA3221 sensor initialization failed: static method returned None.")
-                self._sensor_status["ina3221"].working = False
-                self._sensor_status["ina3221"].last_error = "INA3221 static method initialization failed"
-                return None
-        except Exception as e:
-            _log_error("INA3221 initialization failed", e)
-            self._sensor_status["ina3221"].working = False
-            self._sensor_status["ina3221"].last_error = str(e)
-            return None
+    
 
-    def _init_vl53l0x(self):
-        """Initialize VL53L0X sensors."""
-        try:
-            # The VL53L0XSensors class now handles its own initialization
-            # including I2C and pin configuration from environment variables
-            sensor_wrapper = VL53L0XSensors()
-            
-            if sensor_wrapper.is_hardware_available:
-                self._sensor_status["vl53l0x"].working = True
-                logging.info("VL53L0X sensor wrapper initialized successfully.")
-                return sensor_wrapper
-            else:
-                logging.error("VL53L0X sensor wrapper initialization failed: no sensors available.")
-                self._sensor_status["vl53l0x"].working = False
-                self._sensor_status["vl53l0x"].last_error = "VL53L0X sensors not available"
-                return None
-        except Exception as e:
-            _log_error("VL53L0X initialization failed", e)
-            self._sensor_status["vl53l0x"].working = False
-            self._sensor_status["vl53l0x"].last_error = str(e)
-            return None
+    
 
     def _read_bme280(self) -> Dict[str, float]:
         """Read BME280 environmental data with basic debounce/retry logic."""

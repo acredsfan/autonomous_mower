@@ -1,3 +1,4 @@
+# DEPRECATED: This template is no longer used. Use mower.service instead.
 [Unit]
 Description=Autonomous Mower Service
 After=network.target

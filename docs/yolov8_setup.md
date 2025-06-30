@@ -25,7 +25,7 @@ The script automates the process of exporting a YOLOv8 model to the TFLite forma
     - Locates the exported `.tflite` file (usually saved by `ultralytics` in the current working directory or a subdirectory) and moves it to the designated output directory (defaults to `<repo_root>/models/`).
 5.  **Saves Label Map:** Creates a `coco_labels.txt` file containing the standard COCO object detection labels in the output directory.
 6.  **Updates Environment File (`.env`):** Modifies the `.env` file in the repository root:
-    - Sets `YOLO_MODEL_PATH` to the relative path (from repo root) of the exported `.tflite` model.
+    - Sets `YOLOV8_MODEL_PATH` to the relative path (from repo root) of the exported `.tflite` model.
     - Sets `YOLO_LABEL_PATH` to the relative path of the `coco_labels.txt` file.
     - Ensures `USE_YOLOV8=True` is present and set.
     - **Comments out** potentially conflicting older model path variables (like `OBSTACLE_MODEL_PATH`, `LABEL_MAP_PATH`, `TPU_DETECTION_MODEL`, `DETECTION_MODEL`) to avoid conflicts.
@@ -79,7 +79,7 @@ python scripts/setup_yolov8.py [OPTIONS]
 ## After Running the Script
 
 1.  **Verify Files:** Check the specified output directory (e.g., `models/`) for the `.tflite` model file (e.g., `yolov8n_float16.tflite`) and `coco_labels.txt`.
-2.  **Verify `.env`:** Open the `.env` file in the repository root. Confirm that `YOLO_MODEL_PATH`, `YOLO_LABEL_PATH`, and `USE_YOLOV8=True` are set correctly and that old model path variables are commented out (prefixed with `#`).
+2.  **Verify `.env`:** Open the `.env` file in the repository root. Confirm that `YOLOV8_MODEL_PATH`, `YOLO_LABEL_PATH`, and `USE_YOLOV8=True` are set correctly and that old model path variables are commented out (prefixed with `#`).
 3.  **Target Device:** Ensure the `tflite-runtime` package is installed on the target device (e.g., the Raspberry Pi). The setup script **does not** install `tflite-runtime`.
 
     ```bash

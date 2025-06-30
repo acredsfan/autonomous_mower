@@ -145,18 +145,22 @@ class WebInterface:
         try:
             if self.socketio and self.app:
                 print("DEBUG: WebInterface._run_server() - socketio and app exist. Calling socketio.run()") # ADDED
-                self.logger.info("Attempting to start Flask-SocketIO server on 0.0.0.0:5000...")
-                self.socketio.run(
-                    self.app,
-                    host="::",
-                    port=int(os.environ.get("MOWER_WEB_PORT", 5000)),
-                    debug=False, # Keep debug False for production/stability
-                    use_reloader=False, # Reloader should be False for threads
-                    allow_unsafe_werkzeug=True, # Necessary for some SocketIO setups
-                    # log_output=True # Consider adding if Flask/SocketIO logs are not appearing
-                )
-                self.logger.info("Flask-SocketIO server has stopped.")
-                print("DEBUG: WebInterface._run_server() - socketio.run() returned.") # ADDED
+                self.logger.info("Attempting to start Flask-SocketIO server on 0.0.0.0:5000 (IPv4 all interfaces)...")
+                try:
+                    self.socketio.run(
+                        self.app,
+                        host="0.0.0.0",
+                        port=int(os.environ.get("MOWER_WEB_PORT", 5000)),
+                        debug=False, # Keep debug False for production/stability
+                        use_reloader=False, # Reloader should be False for threads
+                        allow_unsafe_werkzeug=True, # Necessary for some SocketIO setups
+                        # log_output=True # Consider adding if Flask/SocketIO logs are not appearing
+                    )
+                    self.logger.info("Flask-SocketIO server has stopped.")
+                    print("DEBUG: WebInterface._run_server() - socketio.run() returned.") # ADDED
+                except Exception as run_exc:
+                    self.logger.error(f"Exception during socketio.run: {run_exc}", exc_info=True)
+                    print(f"DEBUG: WebInterface._run_server() - Exception in socketio.run: {run_exc}")
             else:
                 self.logger.error("SocketIO or Flask app not initialized. Cannot start server.")
                 print("DEBUG: WebInterface._run_server() - socketio or app is None.") # ADDED

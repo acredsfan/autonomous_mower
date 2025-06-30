@@ -499,8 +499,8 @@ def update_env_file(model_path: Path, labelmap_path: Path):
     for line in lines:
         stripped_line = line.strip()
         # Check for YOLOv8 specific lines
-        if stripped_line.startswith("YOLO_MODEL_PATH="):  # Changed from YOLOV8_
-            output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+        if stripped_line.startswith("YOLOV8_MODEL_PATH="):  # Changed from YOLOV8_
+            output_lines.append(f"YOLOV8_MODEL_PATH={model_path_str}\n")
             updated_model = True
             yolo_section_exists = True
         # Changed from LABEL_MAP_
@@ -535,7 +535,7 @@ def update_env_file(model_path: Path, labelmap_path: Path):
     if not yolo_section_exists:
         output_lines.append("\n# YOLOv8 configuration\n")
     if not updated_model:
-        output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+        output_lines.append(f"YOLOV8_MODEL_PATH={model_path_str}\n")
     if not updated_label:
         output_lines.append(f"YOLO_LABEL_PATH={label_path_str}\n")
     if not updated_flag:
@@ -844,8 +844,8 @@ def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
             output_lines = []
             for line in lines:
                 stripped_line = line.strip()
-                if stripped_line.startswith("YOLO_MODEL_PATH="):
-                    output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+                if stripped_line.startswith("YOLOV8_MODEL_PATH="):
+                    output_lines.append(f"YOLOV8_MODEL_PATH={model_path_str}\n")
                     updated_model = True
                 elif stripped_line.startswith("USE_YOLOV8="):
                     output_lines.append("USE_YOLOV8=True\n")
@@ -857,7 +857,7 @@ def use_existing_model(model_info: dict, label_info: dict = None) -> bool:
             if not updated_model:
                 if not any("# YOLOv8 configuration" in line for line in output_lines):
                     output_lines.append("\n# YOLOv8 configuration\n")
-                output_lines.append(f"YOLO_MODEL_PATH={model_path_str}\n")
+                output_lines.append(f"YOLOV8_MODEL_PATH={model_path_str}\n")
             if not updated_flag:
                 output_lines.append("USE_YOLOV8=True\n")
 
