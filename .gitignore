@@ -185,3 +185,6 @@ copy_logs.py
 SENSOR_DATA_DIAGNOSIS_CHECKLIST.md
 GEMINI.md
 mower.service
+
+# Test files
+test_*.py
