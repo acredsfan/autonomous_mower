@@ -13,7 +13,7 @@ import os
 import sys
 from typing import Optional
 
-from mower.ui.web_ui.app import WebInterface
+from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger

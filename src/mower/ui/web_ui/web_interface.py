@@ -39,25 +39,20 @@ class WebInterface:
         2. Starts the web server in a separate thread
         3. Sets up WebSocket communication
         """
-        print("DEBUG: WebInterface.start() - Entered method") # ADDED
         self.logger.info("WebInterface.start() called.")
 
         if self._is_running:
             self.logger.warning("Web interface is already running")
-            print("DEBUG: WebInterface.start() - Already running, returning.") # ADDED
             return
 
         try:
             # Create Flask app and SocketIO instance
-            print(f"DEBUG: WebInterface.start() - self.mower type: {type(self.mower)}") # ADDED
             self.logger.info(f"WebInterface: self.mower type is {type(self.mower)}")
 
             # Pass self.mower (which is ResourceManager) to create_app
-            print("DEBUG: WebInterface.start() - Calling create_app...") # ADDED
             app_instance, socketio_instance = create_app(self.mower)
             self.app = app_instance
             self.socketio = socketio_instance
-            print("DEBUG: WebInterface.start() - create_app returned") # ADDED
             self.logger.info("WebInterface: create_app returned successfully.")
 
             # Start the web server in a separate thread
@@ -68,9 +63,7 @@ class WebInterface:
 
             self._is_running = True
             self.logger.info("Web interface started successfully")
-            print("DEBUG: WebInterface.start() - Exiting method normally.") # ADDED
         except Exception as e:
-            print(f"DEBUG: WebInterface.start() - Exception caught: {e}") # ADDED
             self.logger.error(f"Failed to start web interface: {e}", exc_info=True)
             raise
 
@@ -141,36 +134,29 @@ class WebInterface:
         This method runs in a separate thread and handles the actual
         web server operation.
         """
-        print(f"DEBUG: WebInterface._run_server() - Entered method in thread {threading.get_ident()}") # ADDED
         try:
             if self.socketio and self.app:
-                print("DEBUG: WebInterface._run_server() - socketio and app exist. Calling socketio.run()") # ADDED
                 self.logger.info("Attempting to start Flask-SocketIO server on 0.0.0.0:5000 (IPv4 all interfaces)...")
                 try:
                     self.socketio.run(
                         self.app,
                         host="0.0.0.0",
-                        port=int(os.environ.get("MOWER_WEB_PORT", 5000)),
+                        port=int(os.environ.get("WEB_UI_PORT", 5000)),
                         debug=False, # Keep debug False for production/stability
                         use_reloader=False, # Reloader should be False for threads
                         allow_unsafe_werkzeug=True, # Necessary for some SocketIO setups
                         # log_output=True # Consider adding if Flask/SocketIO logs are not appearing
                     )
                     self.logger.info("Flask-SocketIO server has stopped.")
-                    print("DEBUG: WebInterface._run_server() - socketio.run() returned.") # ADDED
                 except Exception as run_exc:
                     self.logger.error(f"Exception during socketio.run: {run_exc}", exc_info=True)
-                    print(f"DEBUG: WebInterface._run_server() - Exception in socketio.run: {run_exc}")
             else:
                 self.logger.error("SocketIO or Flask app not initialized. Cannot start server.")
-                print("DEBUG: WebInterface._run_server() - socketio or app is None.") # ADDED
         except Exception as e:
-            print(f"DEBUG: WebInterface._run_server() - Exception caught: {e}") # ADDED
             self.logger.error(f"Error in web server thread during socketio.run: {e}", exc_info=True)
             self._is_running = False # Ensure state reflects failure
         finally:
             self.logger.info(f"Web server thread (id: {threading.get_ident()}) is exiting.")
-            print(f"DEBUG: WebInterface._run_server() - Exiting method in thread {threading.get_ident()}") # ADDED
             self._is_running = False # Ensure this is set if server stops for any reason
 
     @property

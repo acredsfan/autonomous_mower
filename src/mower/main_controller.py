@@ -51,6 +51,11 @@ from mower.config_management import initialize_config_manager
 from mower.config_management.config_manager import get_config
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
 from mower.hardware.hardware_registry import get_hardware_registry
+# Added missing imports as per bug report
+from mower.hardware.sensor_interface import get_sensor_interface
+from mower.obstacle_detection.obstacle_detector import ObstacleDetector
+from mower.hardware.ina3221 import INA3221Sensor
+from mower.hardware.serial_port import SerialPort
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
@@ -476,32 +481,7 @@ class ResourceManager:
         """Get the RoboHAT driver instance."""
         return get_hardware_registry().get_robohat()
 
-    # Replace Any with actual camera type
-    def get_camera(self) -> Optional[Any]:
-        """Get the camera instance."""
-        return self.get_resource("camera")
 
-    # Replace Any with actual type
-    def get_sensor_interface(self) -> Optional[Any]:
-        """Get the sensor interface instance."""
-        si = self.get_resource("sensor_interface")
-        logger.debug(f"get_sensor_interface: Current sensor_interface from resources: {si}")
-        if si is None and self._initialized:  # Try to init on demand if not present
-            logger.info("Sensor interface not found, attempting on-demand initialization.")
-            try:
-                logger.debug("Calling get_sensor_interface() from hardware module...")
-                new_si = get_sensor_interface()
-                logger.debug(f"get_sensor_interface() returned: {new_si}")
-                self._resources["sensor_interface"] = new_si
-                if new_si:
-                    logger.info("Sensor interface initialized on demand.")
-                else:
-                    logger.warning("Sensor interface on-demand initialization returned None")
-                return self._resources["sensor_interface"]
-            except Exception as e:
-                logger.error(f"Failed to initialize sensor interface on demand: {e}", exc_info=True)
-                return None
-        return si
 
     def get_gps(self):
         """Get the GPS serial port instance."""
@@ -509,9 +489,10 @@ class ResourceManager:
         if gps is None and self._initialized:  # Try to init on demand
             logger.info("GPS serial port not found, attempting on-demand initialization.")
             try:
-                gps_port_val = GPS_PORT if GPS_PORT is not None else "/dev/ttyACM0"
-                self._resources["gps_serial"] = SerialPort(gps_port_val, GPS_BAUDRATE)
-                logger.info(f"GPS serial port initialized on demand on {gps_port_val}")
+                gps_port_val = os.environ.get("GPS_SERIAL_PORT", "/dev/ttyACM0")
+                gps_baud_rate = int(os.environ.get("GPS_BAUD_RATE", "115200"))
+                self._resources["gps_serial"] = SerialPort(gps_port_val, gps_baud_rate)
+                logger.info(f"GPS serial port initialized on demand on {gps_port_val} at {gps_baud_rate} baud")
                 return self._resources["gps_serial"]
             except Exception as e:
                 logger.error(f"Failed to initialize GPS serial on demand: {e}")

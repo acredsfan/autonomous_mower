@@ -75,7 +75,19 @@ def integrate_data_collection(app: Flask, mower: Any) -> bool:
         else:
             storage_path = default_storage_path
             
-        os.makedirs(storage_path, exist_ok=True)
+        # Check if storage path is writable before proceeding
+        try:
+            os.makedirs(storage_path, exist_ok=True)
+            # Test if directory is writable
+            test_file = os.path.join(storage_path, '.write_test')
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            logger.info(f"Data collection storage path verified: {storage_path}")
+        except (OSError, PermissionError) as e:
+            logger.error(f"Data collection storage path not writable ({storage_path}): {e}")
+            logger.warning("Data collection blueprint disabled due to storage issues")
+            return False
 
         # Create data collector instance
         data_collector = DataCollector(camera, path_planner, config_manager)

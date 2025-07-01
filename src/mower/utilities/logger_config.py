@@ -35,12 +35,20 @@ class LoggerConfigInfo:
                     log_dir_path.mkdir(parents=True, exist_ok=True)
                     # Basic print for this specific case, as logger might not be fully set up
                     print(f"Log directory {log_dir_path} created.")
-                except OSError as e:
-                    # Fallback to console logging if directory creation fails
-                    print(f"Error creating log directory {log_dir_path}: {e}. Logging to console only.")
-                    # Ensure file handler is not added if directory creation fails
-                    # by not setting _initialized to True or by handling it in the file handler setup.
-                    # For now, the existing check os.path.isdir(cls._log_dir) will prevent adding the handler.
+                except (OSError, PermissionError) as e:
+                    # Fallback to /tmp for logging if primary location fails
+                    fallback_log_dir = Path("/tmp/autonomous_mower_logs")
+                    print(f"Error creating log directory {log_dir_path}: {e}")
+                    print(f"Falling back to {fallback_log_dir}")
+                    try:
+                        fallback_log_dir.mkdir(parents=True, exist_ok=True)
+                        cls._log_dir = str(fallback_log_dir)
+                        log_dir_path = fallback_log_dir
+                        print(f"Fallback log directory {fallback_log_dir} created.")
+                    except (OSError, PermissionError) as e2:
+                        print(f"Failed to create fallback log directory {fallback_log_dir}: {e2}")
+                        print("Logging to console only.")
+                        log_dir_path = None
 
             # Set up root logger
             root_logger = logging.getLogger()
@@ -59,7 +67,7 @@ class LoggerConfigInfo:
             root_logger.addHandler(console_handler)
 
             # Set up rotating file handler for main log if directory exists or was created
-            if log_dir_path.is_dir(): # Check again after attempting creation
+            if log_dir_path and log_dir_path.is_dir(): # Check again after attempting creation
                 main_log = log_dir_path / "mower.log"
                 file_handler = logging.handlers.RotatingFileHandler(
                     main_log, maxBytes=1024 * 1024, backupCount=5  # 1MB
@@ -67,7 +75,7 @@ class LoggerConfigInfo:
                 file_handler.setFormatter(detailed_formatter)
                 root_logger.addHandler(file_handler)
             else:
-                root_logger.warning(f"Log directory {cls._log_dir} does not exist. " "Logging to console only.")
+                root_logger.warning(f"Log directory not available. Logging to console only.")
 
             cls._initialized = True
             root_logger.info("Logging system initialized successfully")

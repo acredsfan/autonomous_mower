@@ -2,11 +2,24 @@
 
 import os
 import platform
+import sys
+from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, send_file
-from flask_babel import Babel
-from flask_cors import CORS
-from flask_socketio import SocketIO, emit
+# Critical imports with error handling
+try:
+    from flask import Flask, Response, jsonify, render_template, request, send_file
+    from flask_cors import CORS
+    from flask_socketio import SocketIO, emit
+except ImportError as e:
+    print(f"CRITICAL: Missing required Flask dependencies: {e}")
+    print("Please install with: pip install -e .[dev]")
+    sys.exit(1)
+
+try:
+    from flask_babel import Babel
+except ImportError:
+    print("WARNING: flask-babel not installed. Translation features will be disabled.")
+    Babel = None
 
 # Import data collection integration
 from mower.data_collection.integration import integrate_data_collection
@@ -39,38 +52,33 @@ def create_app(mower_resource_manager_instance):
     logger.info("Creating Flask app - v2")
     mower = mower_resource_manager_instance
     logger.info(f"create_app called with mower type: {type(mower)}")
-    app = Flask(__name__)
-    print("DEBUG: create_app() - Flask app created.") # ADDED
+    
+    # Configure template folder from environment or use default
+    template_folder = os.environ.get("TEMPLATE_FOLDER", str(Path(__file__).parent / "templates"))
+    app = Flask(__name__, template_folder=template_folder)
     CORS(app)
-    print("DEBUG: create_app() - CORS enabled.") # ADDED
     socketio = SocketIO(
         app, cors_allowed_origins="*", ping_timeout=20, ping_interval=25, logger=True, engineio_logger=True
     )
-    print("DEBUG: create_app() - SocketIO initialized.") # ADDED
 
     # Integrate data collection functionality
     try:
-        print("DEBUG: create_app() - Attempting to integrate data collection...") # ADDED
         integrate_data_collection(app, mower_resource_manager_instance)
         logger.info("Data collection module integrated successfully")
-        print("DEBUG: create_app() - Data collection integrated.") # ADDED
     except Exception as e:
         logger.error(f"Failed to integrate data collection module: {e}")
-        print(f"DEBUG: create_app() - Failed to integrate data collection: {e}") # ADDED
 
     # Initialize Babel for translations using the version-agnostic approach
     # This uses the implementation from i18n.py which works with any
     # Flask-Babel version
-    try:
-        print("DEBUG: create_app() - Attempting to init Babel...") # ADDED
-        init_babel(app)
-        logger.info("Initialized Babel from i18n module")
-        print("DEBUG: create_app() - Babel initialized.") # ADDED
-    except Exception as e:
-        # Fallback to legacy initialization if needed
-        logger.warning(f"Could not initialize Babel from i18n module: {e}")
-        print(f"DEBUG: create_app() - Could not initialize Babel from i18n module: {e}") # ADDED
-        babel = Babel(app)
+    if Babel is not None:
+        try:
+            init_babel(app)
+            logger.info("Initialized Babel from i18n module")
+        except Exception as e:
+            # Fallback to legacy initialization if needed
+            logger.warning(f"Could not initialize Babel from i18n module: {e}")
+            babel = Babel(app)
 
         # Define locale selector function instead of using decorator
         def get_locale():
@@ -82,18 +90,16 @@ def create_app(mower_resource_manager_instance):
             # Flask-Babel >= 2.0
             babel.init_app(app, locale_selector=get_locale)
             logger.info("Initialized Babel with locale_selector parameter")
-            print("DEBUG: create_app() - Babel initialized with locale_selector.") # ADDED
         except TypeError:
             try:
                 # Flask-Babel < 2.0
                 babel.localeselector(get_locale)
                 logger.info("Initialized Babel with localeselector decorator")
-                print("DEBUG: create_app() - Babel initialized with localeselector decorator.") # ADDED
             except Exception as e2:
                 logger.error(f"Failed to initialize Babel (legacy fallback): {e2}")
-                print(f"DEBUG: create_app() - Failed to initialize Babel (legacy fallback): {e2}") # ADDED
+    else:
+        logger.warning("Babel not installed - translations disabled")
     
-    print("DEBUG: create_app() - Registering routes...") # ADDED
     # Route handlers
     @app.route("/")
     def index():
@@ -785,7 +791,6 @@ def create_app(mower_resource_manager_instance):
         socketio.start_background_task(send_updates)
         app.update_thread_started = True
 
-    print("DEBUG: create_app() - Exiting method, returning app and socketio.") # ADDED
     return app, socketio
 
 

@@ -107,7 +107,6 @@ function setupSocketConnection() {
 
   // Connection established
   socket.on("connect", function () {
-    debugger;
     isConnected = true;
     reconnectAttempts = 0;
     updateConnectionStatus(true);
@@ -143,7 +142,6 @@ function setupSocketConnection() {
 
   // Handle sensor data updates
   socket.on("sensor_data", function (data) {
-    debugger;
     console.log("Received sensor data:", data);
     updateSensorData(data);
   });
