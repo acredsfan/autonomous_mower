@@ -76,7 +76,7 @@ dependencies = [
     "statsd==4.0.1",
     "supervisor==4.2.5",
     "systemd-python==235",
-    "tflite-runtime>=2.5.0",
+    "tflite-runtime>=2.5.0; python_version < '3.12'",
     "ultralytics==8.3.151",
     "utm==0.8.1",
     "watchdog>=5.0.0",

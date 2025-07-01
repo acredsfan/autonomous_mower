@@ -160,7 +160,9 @@ class GpsPosition(metaclass=SingletonMeta):
         try:
             line = self.line_reader.readline().decode(errors='ignore').strip()
             if line:
-                return self.run_metadata_once([line])
+                # Fix: run_metadata_once expects (timestamp, nmea) tuples
+                import time
+                return self.run_metadata_once([(time.time(), line)])
             else:
                 return None
         except Exception as e:

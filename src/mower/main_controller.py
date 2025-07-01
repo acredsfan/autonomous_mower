@@ -1179,34 +1179,52 @@ def main():
     try:
         resource_manager = ResourceManager(config_path=str(MAIN_CONFIG_FILE))
         init_ok = resource_manager.init_all_resources()
+        
         # Check for truly critical resources (navigation, motor driver, safety)
         nav = resource_manager.get_navigation()
         motor = resource_manager.get_robohat() if hasattr(resource_manager, 'get_robohat') else None
         safety = resource_manager.get_sensor_interface()
-        if not (init_ok and nav and motor and safety):
-            logger.error("Failed to initialize one or more critical resources (navigation, motor, safety). Exiting.")
-            if resource_manager:
-                resource_manager.cleanup_all_resources()
-            sys.exit(1)
+        
+        # Track if we're in safe mode (critical resources failed)
+        safe_mode = not (init_ok and nav and motor and safety)
+        
+        if safe_mode:
+            logger.warning("Failed to initialize one or more critical resources (navigation, motor, safety).")
+            logger.warning("Running in safe mode - only WebUI will be available for diagnostics.")
+        else:
+            logger.info("All critical resources initialized successfully.")
+            
         # Warn if running in degraded mode (non-critical resources missing)
         if not resource_manager.get_obstacle_detection() or not resource_manager.get_path_planner():
             logger.warning("Non-critical resources missing. Running in degraded mode. WebUI will still be available.")
 
-        # Start the web interface regardless of degraded mode
+        # Start the web interface regardless of hardware failures - this is key for diagnostics
+        web_ui_started = False
         try:
             print("DEBUG: main() - Before calling resource_manager.start_web_interface()") # ADDED
             logger.info("MAIN: Attempting to start the web interface...")
             resource_manager.start_web_interface()
             logger.info("MAIN: Web interface start process initiated.")
             print("DEBUG: main() - After calling resource_manager.start_web_interface()") # ADDED
+            web_ui_started = True
         except Exception as e:
             print(f"DEBUG: main() - Exception caught while starting web interface: {e}") # ADDED
             logger.error(f"MAIN: Failed to start web interface: {e}", exc_info=True)
-            # Decide if this is critical enough to exit. For now, log and continue.
+            
+        # Only exit if WebUI also failed to start
+        if safe_mode and not web_ui_started:
+            logger.error("Both critical resources and WebUI failed to start. Exiting.")
+            if resource_manager:
+                resource_manager.cleanup_all_resources()
+            sys.exit(1)
+        elif safe_mode:
+            logger.info("WebUI started successfully in safe mode. Robot operations disabled, diagnostics available.")
 
-        # Start the watchdog timer
-        if resource_manager:
+        # Start the watchdog timer only if not in safe mode
+        if resource_manager and not safe_mode:
             resource_manager._start_watchdog()
+        elif safe_mode:
+            logger.info("Watchdog disabled in safe mode.")
 
 
         logger.info("Application started. Waiting for shutdown signal...")

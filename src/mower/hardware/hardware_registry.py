@@ -91,9 +91,9 @@ class HardwareRegistry:
         @hardware_interface
         """
         try:
-            from src.mower.hardware import ina3221
+            # Fix: Use the static method from the frozen driver
             if not hasattr(self, "_ina3221"):
-                self._ina3221 = ina3221.INA3221()
+                self._ina3221 = INA3221Sensor.init_ina3221()
             return self._ina3221
         except Exception as e:
             logger = None
