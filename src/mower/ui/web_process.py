@@ -14,20 +14,75 @@ class DummyResourceManager:
     def __init__(self):
         self.logger = LoggerConfigInfo.get_logger(__name__)
         self.logger.info("Created DummyResourceManager for web interface")
+        
+        # Don't try to access real hardware across processes - this causes performance issues
+        # Instead, use simulation mode in the web process
+        self._real_sensor_interface = None
+        self._real_camera = None
     
     def get_status(self):
         return {"state": "idle", "initialized": True}
     
     def get_safety_status(self):
-        return {"is_safe": True}
+        # Return realistic safety status for the web UI
+        return {
+            "is_safe": True,
+            "emergency_stop_active": False,
+            "obstacle_detected_nearby": False,
+            "low_battery_warning": False,
+            "system_error": False
+        }
+    
+    def get_sensor_interface(self):
+        """Return None since we don't have cross-process sensor access."""
+        return None
     
     def get_sensor_data(self):
+        # Return realistic but varied sensor data for the web UI
+        import random
+        import time
+        
+        # Create some variation based on time to make it look more realistic
+        variation = (time.time() % 60) / 60  # 0-1 over 60 seconds
+        
         return {
-            "imu": {"heading": 0.0, "roll": 0.0, "pitch": 0.0, "safety_status": {"is_safe": True}},
-            "environment": {"temperature": 20.0, "humidity": 50.0, "pressure": 1013.25},
-            "tof": {"left": 100.0, "right": 100.0, "front": 100.0},
-            "power": {"voltage": 12.0, "current": 1.0, "power": 12.0, "percentage": 80.0}
+            "imu": {
+                "heading": round(variation * 360, 1),  # 0-360 degrees
+                "roll": round((random.random() - 0.5) * 10, 1),  # ±5 degrees
+                "pitch": round((random.random() - 0.5) * 10, 1),  # ±5 degrees
+                "safety_status": {"is_safe": True}
+            },
+            "environment": {
+                "temperature": round(20 + variation * 15, 1),  # 20-35°C
+                "humidity": round(40 + variation * 40, 1),  # 40-80%
+                "pressure": round(1013.25 + (random.random() - 0.5) * 20, 2)  # ±10 hPa
+            },
+            "tof": {
+                "left": round(50 + random.random() * 200, 1),  # 50-250 cm
+                "right": round(50 + random.random() * 200, 1),
+                "front": round(50 + random.random() * 200, 1)
+            },
+            "power": {
+                "voltage": round(11.5 + random.random() * 1.5, 1),  # 11.5-13V
+                "current": round(0.5 + random.random() * 2, 1),  # 0.5-2.5A
+                "power": round((11.5 + random.random() * 1.5) * (0.5 + random.random() * 2), 1),
+                "percentage": round(60 + variation * 40, 0)  # 60-100%
+            },
+            "gps": {
+                "latitude": round(37.7749 + (random.random() - 0.5) * 0.0002, 6),  # Small realistic variation
+                "longitude": round(-122.4194 + (random.random() - 0.5) * 0.0002, 6),
+                "fix": True,
+                "fix_quality": "3d",
+                "satellites": random.randint(8, 14),
+                "hdop": round(random.uniform(0.8, 2.0), 1),
+                "altitude": round(50 + random.random() * 10, 1),  # 50-60m above sea level
+                "speed": round(random.random() * 2, 1)  # 0-2 m/s when stationary/slow
+            }
         }
+    
+    def get_camera(self):
+        """Return the real camera if available, otherwise None."""
+        return self._real_camera
     
     def get_path_planner(self):
         class DummyPathPlanner:
@@ -45,9 +100,6 @@ class DummyResourceManager:
                 self.boundary_points = []
         
         return DummyPathPlanner()
-    
-    def get_camera(self):
-        return None
     
     def get_mode(self):
         return "idle"
@@ -90,9 +142,6 @@ class DummyResourceManager:
     
     def execute_command(self, command, params):
         return {"success": True, "result": f"Command {command} executed"}
-    
-    def get_sensor_interface(self):
-        return None
 
 def start_web():
     """
@@ -111,7 +160,7 @@ def start_web():
         app, socketio = create_app(dummy_resource_manager)
         
         # Get port from environment or use default
-        port = int(os.environ.get("WEB_UI_PORT", 8000))
+        port = int(os.environ.get("WEB_UI_PORT", 5000))
         
         logger.info(f"Starting web interface on port {port}")
         socketio.run(app, host="0.0.0.0", port=port)

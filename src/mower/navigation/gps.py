@@ -141,7 +141,8 @@ class GpsPosition(metaclass=SingletonMeta):
             # Read a single NMEA line from the serial port
             line = self.line_reader.readline().decode(errors='ignore').strip()
             if line:
-                return self.run_once([line])
+                # Format as (timestamp, nmea) tuple for compatibility
+                return self.run_once([(time.time(), line)])
             else:
                 return None
         except Exception as e:
@@ -160,7 +161,8 @@ class GpsPosition(metaclass=SingletonMeta):
         try:
             line = self.line_reader.readline().decode(errors='ignore').strip()
             if line:
-                return self.run_metadata_once([line])
+                # Format as (timestamp, nmea) tuple for compatibility
+                return self.run_metadata_once([(time.time(), line)])
             else:
                 return None
         except Exception as e:
@@ -224,6 +226,10 @@ class GpsLatestPosition(metaclass=SingletonMeta):
     def get_status(self):
         with self.lock:
             return self.status
+
+    def get_status(self):
+        # Implement status retrieval if needed
+        return "Status not implemented"
 
 
 class GpsPlayer(metaclass=SingletonMeta):

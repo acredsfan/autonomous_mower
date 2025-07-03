@@ -330,19 +330,24 @@ class ResourceManager:
             logger.error(f"Critical error in software initialization: {e}")
             # Don't re-raise here to allow partial initialization
 
+        # Initialize GPS service (singleton) instead of creating individual instances
         try:
-            # Get GPS port from .env or config, fallback to /dev/ttyACM0
+            from mower.services.gps_service import GpsService
             gps_port = os.environ.get("GPS_SERIAL_PORT", "/dev/ttyACM0")
             if gps_port:
-                gps_position_reader = GpsPosition(serial_port=gps_port)
-                gps_position_reader.start()  # Start the background thread
-                self._resources["gps_position_reader"] = gps_position_reader
-                logger.info(f"GpsPosition reader thread started on port {gps_port}.")
+                gps_service = GpsService()
+                gps_service.start(serial_port=gps_port)
+                self._resources["gps_service"] = gps_service
+                # Also provide a reference to the GPS position reader for compatibility
+                self._resources["gps_position_reader"] = gps_service.gps_position
+                logger.info(f"GPS service started on port {gps_port}.")
             else:
-                logger.warning("GPS serial port not available, cannot start GpsPosition reader.")
+                logger.warning("GPS serial port not available, cannot start GPS service.")
+                self._resources["gps_service"] = None
                 self._resources["gps_position_reader"] = None
         except Exception as e:
-            logger.error(f"Failed to initialize and start GpsPosition reader: {e}", exc_info=True)
+            logger.error(f"Failed to initialize GPS service: {e}", exc_info=True)
+            self._resources["gps_service"] = None
             self._resources["gps_position_reader"] = None
 
     def initialize(self):

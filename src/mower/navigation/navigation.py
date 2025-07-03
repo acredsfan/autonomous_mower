@@ -381,14 +381,18 @@ class NavigationController:
 def initialize_navigation():
     """Initialize navigation system components."""
     try:
-        # Get GPS port from environment variable or hardware registry
-        from mower.hardware.serial_port import GPS_PORT
-        gps_port = GPS_PORT if GPS_PORT else "/dev/ttyACM0"
+        # Use the GPS service singleton instead of creating a new GPS instance
+        from mower.services.gps_service import GpsService
+        gps_service = GpsService()
         
-        gps_position_instance = GpsPosition(serial_port=gps_port, debug=True)
-        gps_position_instance.start()
-
-        gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)
+        # The GPS service should already be started by the main controller
+        # If not started, we'll use a default port
+        if not gps_service.gps_position:
+            from mower.hardware.serial_port import GPS_PORT
+            gps_port = GPS_PORT if GPS_PORT else "/dev/ttyACM0"
+            gps_service.start(serial_port=gps_port)
+        
+        gps_latest_position = GpsLatestPosition(gps_position_instance=gps_service.gps_position)
         robohat_driver = get_hardware_registry().get_robohat()
 
         return gps_latest_position, robohat_driver

@@ -175,6 +175,48 @@ def create_app(mower_resource_manager_instance):
         """Stream camera feed as multipart response."""
         try:
             camera = mower.get_camera()
+            
+            if camera is None:
+                # Generate a test pattern when no camera is available
+                def generate_test_pattern():
+                    """Generate a test pattern with timestamp."""
+                    import cv2
+                    import numpy as np
+                    from datetime import datetime
+                    
+                    while True:
+                        # Create a 640x480 test pattern
+                        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                        
+                        # Add some visual elements
+                        cv2.rectangle(frame, (50, 50), (590, 430), (0, 255, 0), 2)
+                        cv2.putText(frame, "Camera Not Available", (150, 200), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                        cv2.putText(frame, f"Time: {datetime.now().strftime('%H:%M:%S')}", 
+                                  (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+                        cv2.putText(frame, "Test Pattern", (250, 300), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                        
+                        # Add some moving elements
+                        import time
+                        x = int((time.time() % 10) * 50) + 50
+                        cv2.circle(frame, (x, 350), 20, (255, 0, 255), -1)
+                        
+                        # Convert to JPEG
+                        _, buffer = cv2.imencode('.jpg', frame)
+                        frame_bytes = buffer.tobytes()
+                        
+                        # Yield the frame in multipart response
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                        
+                        # Small delay
+                        socketio.sleep(0.1)
+                
+                return Response(
+                    generate_test_pattern(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame'
+                )
 
             def generate_frames():
                 """Generate camera frames."""

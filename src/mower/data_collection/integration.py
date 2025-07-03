@@ -90,7 +90,7 @@ def integrate_data_collection(app: Flask, mower: Any) -> bool:
             return False
 
         # Create data collector instance
-        data_collector = DataCollector(camera, path_planner, config_manager)
+        data_collector = DataCollector(path_planner, config_manager)
 
         # Store the data collector instance on the mower for access
         mower.data_collector = data_collector
