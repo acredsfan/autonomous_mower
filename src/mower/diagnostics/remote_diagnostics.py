@@ -226,7 +226,7 @@ class RemoteDiagnostics:
         try:
             # Run systemctl status command
             result = subprocess.run(
-                ["systemctl", "status", "autonomous-mower.service"],
+                ["systemctl", "status", "mower.service"],
                 capture_output=True,
                 text=True,
             )

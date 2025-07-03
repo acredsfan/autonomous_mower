@@ -329,7 +329,7 @@ class BackupRestore:
         logger.info("Stopping autonomous-mower service")
         try:
             subprocess.run(
-                ["sudo", "systemctl", "stop", "autonomous-mower.service"],
+                ["sudo", "systemctl", "stop", "mower.service"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -361,7 +361,7 @@ class BackupRestore:
         logger.info("Starting autonomous-mower service")
         try:
             subprocess.run(
-                ["sudo", "systemctl", "start", "autonomous-mower.service"],
+                ["sudo", "systemctl", "start", "mower.service"],
                 check=True,
                 capture_output=True,
                 text=True,

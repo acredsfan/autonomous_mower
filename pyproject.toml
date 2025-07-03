@@ -51,7 +51,7 @@ dependencies = [
     "gpsd-py3==0.3.0",
     "imutils>=0.5.4",
     "networkx>=2.6.0",
-    "numpy>=1.22.0",
+    "numpy>=1.24,<1.27",
     "opencv-python-headless>=4.8.1.78",
     "pathfinding>=1.0.0",
     "pillow>=10.3.0",

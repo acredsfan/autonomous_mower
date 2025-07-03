@@ -36,6 +36,11 @@
     {% block head_extra %}{% endblock %}
   </head>
   <body>
+    {% if safe_mode %}
+    <div class="safe-mode-banner">
+        <p>Safe-mode – hardware offline</p>
+    </div>
+    {% endif %}
     <div class="page-wrapper">
       <!-- Header -->
       <header class="header">

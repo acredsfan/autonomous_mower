@@ -150,7 +150,7 @@ python scripts/test_coral_detection.py
 If you're running the mower as a systemd service, update your service file to activate the Coral environment:
 ```bash
 # Edit your service file
-sudo nano /etc/systemd/system/autonomous-mower.service
+sudo nano /etc/systemd/system/mower.service
 
 # Update the ExecStart line to include environment activation:
 ExecStart=/bin/bash -c 'source /home/pi/activate-coral-env.sh && python -m mower.main_controller'

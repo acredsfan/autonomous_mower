@@ -199,7 +199,7 @@ class AutoUpdater:
 
             # Backup configuration files
             config_files = [
-                "/etc/systemd/system/autonomous-mower.service",
+                "/etc/systemd/system/mower.service",
                 os.path.join(self.repo_path, ".env"),
             ]
             for config_file in config_files:
@@ -248,7 +248,7 @@ class AutoUpdater:
 
             # Restore configuration files
             config_files = [
-                "/etc/systemd/system/autonomous-mower.service",
+                "/etc/systemd/system/mower.service",
                 os.path.join(self.repo_path, ".env"),
             ]
             for config_file in config_files:
@@ -276,7 +276,7 @@ class AutoUpdater:
         try:
             # Check if the service is running
             result = subprocess.run(
-                ["systemctl", "is-active", "autonomous-mower.service"],
+                ["systemctl", "is-active", "mower.service"],
                 capture_output=True,
                 text=True,
             )
@@ -285,7 +285,7 @@ class AutoUpdater:
             if self.service_was_running:
                 logger.info("Stopping autonomous-mower service")
                 subprocess.run(
-                    ["sudo", "systemctl", "stop", "autonomous-mower.service"],
+                    ["sudo", "systemctl", "stop", "mower.service"],
                     check=True,
                     capture_output=True,
                     text=True,
@@ -324,7 +324,7 @@ class AutoUpdater:
                         "sudo",
                         "systemctl",
                         "start",
-                        "autonomous-mower.service",
+                        "mower.service",
                     ],
                     check=True,
                     capture_output=True,
@@ -334,7 +334,7 @@ class AutoUpdater:
                 time.sleep(2)
                 # Check if the service started successfully
                 result = subprocess.run(
-                    ["systemctl", "is-active", "autonomous-mower.service"],
+                    ["systemctl", "is-active", "mower.service"],
                     capture_output=True,
                     text=True,
                 )

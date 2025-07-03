@@ -11,7 +11,8 @@ except Exception:  # pragma: no cover - optional on non-Pi systems
     board = None
     busio = None
 
-
+from mower.hardware.bme280 import BME280Sensor
+from mower.hardware.ina3221 import INA3221Sensor
 from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -29,6 +30,15 @@ class SensorStatus:
 def _log_error(message: str, error: Exception):
     """Centralized error logging."""
     logging.error(f"{message}: {str(error)}")
+
+
+# Sensor definitions with optional flag
+SENSOR_DEFS = {
+    "bme280": {"cls": "BME280Sensor", "optional": True},
+    "bno085": {"cls": "BNO085Sensor", "optional": False},
+    "ina3221": {"cls": "INA3221Sensor", "optional": True},  # Make optional to prevent hanging
+    "vl53l0x": {"cls": "VL53L0XSensors", "optional": False},
+}
 
 
 
@@ -86,10 +96,37 @@ class EnhancedSensorInterface(HardwareSensorInterface):
     def _initialize_sensors(self) -> None:
         """Initialize all sensors."""
         from mower.hardware.hardware_registry import get_hardware_registry
-        self._sensors["bme280"] = get_hardware_registry().get_bme280()
-        self._sensors["bno085"] = get_hardware_registry().get_bno085()
-        self._sensors["ina3221"] = get_hardware_registry().get_ina3221()
-        self._sensors["vl53l0x"] = get_hardware_registry().get_vl53l0x()
+        hardware_registry = get_hardware_registry()
+        
+        # Initialize BME280 with optional handling
+        try:
+            self._sensors["bme280"] = hardware_registry.get_bme280()
+            if self._sensors["bme280"] is None:
+                logging.info("BME280 optional sensor not available")
+            else:
+                # Mark as working if initialization succeeded
+                self._sensor_status["bme280"].working = True
+                logging.info("BME280 sensor initialized successfully")
+        except Exception as exc:
+            logging.info(f"BME280 optional sensor unavailable: {exc}")
+            self._sensors["bme280"] = None
+        
+        # Initialize INA3221 with optional handling
+        try:
+            self._sensors["ina3221"] = hardware_registry.get_ina3221()
+            if self._sensors["ina3221"] is None:
+                logging.info("INA3221 optional sensor not available")
+            else:
+                # Mark as working if initialization succeeded
+                self._sensor_status["ina3221"].working = True
+                logging.info("INA3221 sensor initialized successfully")
+        except Exception as exc:
+            logging.info(f"INA3221 optional sensor unavailable: {exc}")
+            self._sensors["ina3221"] = None
+        
+        # Initialize other sensors (non-optional)
+        self._sensors["bno085"] = hardware_registry.get_bno085()
+        self._sensors["vl53l0x"] = hardware_registry.get_vl53l0x()
 
     def start(self) -> None:
         """Start the sensor interface."""
@@ -219,11 +256,18 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         """Read INA3221 power data."""
         sensor = self._sensors.get("ina3221")
         if not sensor:  # Check if sensor was initialized
-            self._handle_sensor_error("ina3221", Exception("INA3221 sensor not initialized or failed to initialize."))
-            return {"error": "INA3221 sensor not available"}
+            # For optional sensors, return empty dict instead of error
+            if SENSOR_DEFS.get("ina3221", {}).get("optional", False):
+                return {}
+            else:
+                self._handle_sensor_error("ina3221", Exception("INA3221 sensor not initialized or failed to initialize."))
+                return {"error": "INA3221 sensor not available"}
 
-        all_channels_data = {}
         try:
+            # Import the INA3221Sensor class
+            from mower.hardware.ina3221 import INA3221Sensor
+            
+            all_channels_data = {}
             # Assuming channel 1 is for main battery, 2 for motors, 3 for electronics
             # These channel assignments should be confirmed or made configurable
             for channel_num in [1, 2, 3]:  # INA3221Sensor expects 1-indexed channels (static method)
@@ -261,8 +305,11 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                     percentage = ((voltage - min_volt) / (max_volt - min_volt)) * 100
                 percentage = round(percentage, 1)
 
-            # Update sensor status
-            self._update_sensor_status("ina3221", all_channels_data)
+            # Update sensor status with timeout protection
+            try:
+                self._update_sensor_status("ina3221", all_channels_data)
+            except Exception as status_error:
+                logging.warning(f"Failed to update INA3221 sensor status: {status_error}")
 
             return {
                 "bus_voltage": main_battery_data.get("bus_voltage"),
@@ -313,19 +360,38 @@ class EnhancedSensorInterface(HardwareSensorInterface):
     def _handle_sensor_error(self, sensor_name: str, error: Exception):
         """Handle sensor errors with enhanced logging and recovery options."""
         try:
+            # Check if sensor is optional
+            sensor_def = SENSOR_DEFS.get(sensor_name, {})
+            is_optional = sensor_def.get("optional", False)
+            
             # Increment error count and update last error message
             with self._locks["status"]:
                 status = self._sensor_status[sensor_name]
                 status.error_count += 1
                 status.last_error = str(error)
-                logging.error(f"Sensor '{sensor_name}' error (#{status.error_count}): {str(error)}")
+                
+                # Log appropriately based on optional flag
+                if is_optional:
+                    logging.info(f"Optional sensor '{sensor_name}' unavailable (#{status.error_count}): {str(error)}")
+                else:
+                    logging.error(f"Sensor '{sensor_name}' error (#{status.error_count}): {str(error)}")
 
                 # Check if the error exceeds the threshold
                 if status.error_count >= self._error_thresholds[sensor_name]:
                     status.working = False
-                    logging.error(f"Sensor '{sensor_name}' has exceeded the error threshold and is now disabled.")
-                    # Optionally, trigger a sensor reset or reinitialization
-                    # self._reset_sensor(sensor_name)
+                    if is_optional:
+                        logging.info(f"Optional sensor '{sensor_name}' marked as unavailable after {status.error_count} attempts.")
+                    else:
+                        logging.error(f"Sensor '{sensor_name}' has exceeded the error threshold and is now disabled.")
+                    
+                    # For optional sensors, don't mark the sensor interface as unhealthy
+                    if is_optional:
+                        # Don't affect overall system health for optional sensors
+                        pass
+                    else:
+                        # Optionally, trigger a sensor reset or reinitialization for critical sensors
+                        # self._reset_sensor(sensor_name)
+                        pass
         except Exception as e:
             logging.error(f"Error handling sensor error for '{sensor_name}': {str(e)}")
 
@@ -395,15 +461,22 @@ class EnhancedSensorInterface(HardwareSensorInterface):
     def _monitor_sensor(self, sensor_name: str):
         """Monitor a specific sensor for errors and health status."""
         try:
+            # Check if sensor is optional
+            sensor_def = SENSOR_DEFS.get(sensor_name, {})
+            is_optional = sensor_def.get("optional", False)
+            
             while not self._stop_event.is_set():
                 with self._locks["status"]:
                     status = self._sensor_status[sensor_name]
 
                     # Check if the sensor is working
                     if not status.working:
-                        logging.warning(f"Sensor '{sensor_name}' is not working. Error: {status.last_error}")
-                        # Attempt to reset the sensor if it has failed
-                        self._reset_sensor(sensor_name)
+                        if is_optional:
+                            logging.info(f"Optional sensor '{sensor_name}' is not working: {status.last_error}")
+                        else:
+                            logging.warning(f"Sensor '{sensor_name}' is not working. Error: {status.last_error}")
+                            # Attempt to reset the sensor if it has failed
+                            self._reset_sensor(sensor_name)
 
                 # Sleep for a while before the next status check
                 time.sleep(5)
@@ -430,20 +503,31 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             # Read all available sensors
             sensor_data = {}
             
-            # Read environmental data
-            bme_data = self._read_bme280()
+            # Read environmental data only if BME280 is available
+            bme_data = {}
+            if self._sensors.get("bme280") is not None:
+                bme_data = self._read_bme280()
+                
             if bme_data:
-                sensor_data.update(bme_data)
+                # BME280 is working and has data
+                sensor_data["environment"] = {
+                    "temperature": bme_data.get("temperature"),  # BME280 returns temperature in Fahrenheit
+                    "humidity": bme_data.get("humidity"),
+                    "pressure": bme_data.get("pressure")
+                }
+            # If BME280 is not available, don't include environment data
+            # The WebUI will handle the absence gracefully
             
             # Read IMU data
             imu_data = self._read_bno085()
             if imu_data:
                 sensor_data["imu"] = imu_data
             
-            # Read power data
-            power_data = self._read_ina3221()
-            if power_data and "error" not in power_data:
-                sensor_data["power"] = power_data
+            # Read power data only if INA3221 is available
+            if self._sensors.get("ina3221") is not None:
+                power_data = self._read_ina3221()
+                if power_data and "error" not in power_data:
+                    sensor_data["power"] = power_data
             
             # Read distance sensors
             tof_data = self._read_vl53l0x()
@@ -462,16 +546,27 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         Returns:
             Dict[str, Any]: Dictionary containing sensor status information
         """
-        with self._locks["status"]:
-            status_dict = {}
-            for sensor_name, status in self._sensor_status.items():
-                status_dict[sensor_name] = {
-                    "working": status.working,
-                    "last_reading": status.last_reading.isoformat(),
-                    "error_count": status.error_count,
-                    "last_error": status.last_error
-                }
-            return status_dict
+        try:
+            # Try to acquire lock with timeout
+            if self._locks["status"].acquire(timeout=2.0):
+                try:
+                    status_dict = {}
+                    for sensor_name, status in self._sensor_status.items():
+                        status_dict[sensor_name] = {
+                            "working": status.working,
+                            "last_reading": status.last_reading.isoformat(),
+                            "error_count": status.error_count,
+                            "last_error": status.last_error
+                        }
+                    return status_dict
+                finally:
+                    self._locks["status"].release()
+            else:
+                logging.warning("Failed to acquire status lock within timeout")
+                return {"error": "Status lock timeout"}
+        except Exception as e:
+            logging.error(f"Error getting sensor status: {e}")
+            return {"error": str(e)}
 
     def is_safe_to_operate(self) -> bool:
         """

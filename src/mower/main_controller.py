@@ -67,6 +67,7 @@ from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 # mower.config_management.config_manager.get_config is used later,
 # will benefit from early init
 from mower.simulation import enable_simulation
+from mower.ui.web_process import launch as launch_web
 from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -273,34 +274,9 @@ class ResourceManager:
                 logger.error(f"Failed to initialize avoidance algorithm: {e}")
                 self._resources["avoidance_algorithm"] = None
 
-            # Initialize web interface with robust fallback
+            # Initialize web interface placeholder - actual launch happens in initialize_web_interface
             self.web_interface = None # Ensure attribute exists even if init fails
-            try:
-                from mower.ui.web_ui.web_interface import WebInterface
-                web_interface_instance = None
-                try:
-                    # Try to pass self (ResourceManager) as normal
-                    web_interface_instance = WebInterface(self)
-                    logger.info("WebInterface initialized with ResourceManager.")
-                except Exception as e:
-                    logger.error(f"WebInterface(ResourceManager) failed: {e}", exc_info=True)
-                    # Fallback: try to initialize with None or a mock if available
-                    try:
-                        web_interface_instance = WebInterface(None)
-                        logger.info("WebInterface fallback to None succeeded.")
-                    except Exception as fallback_e:
-                        logger.error(f"WebInterface fallback to None failed: {fallback_e}", exc_info=True)
-                        web_interface_instance = None
-                self._resources["web_interface"] = web_interface_instance
-                self.web_interface = web_interface_instance
-                if web_interface_instance:
-                    logger.info("Web interface initialized successfully and stored in _resources.")
-                else:
-                    logger.error("Web interface could not be initialized by any means.")
-            except Exception as e:
-                logger.error(f"Failed to initialize web interface: {e}", exc_info=True)
-                self._resources["web_interface"] = None
-                self.web_interface = None # Ensure direct attribute is also None on failure
+            # Web process will be started by initialize_web_interface method
 
             logger.info("Software components initialized with fallbacks for any " "failures")
         except Exception as e:
@@ -381,21 +357,17 @@ class ResourceManager:
             # Stop watchdog first
             self._stop_watchdog()
 
-            # Stop web interface
-            web_interface = self._resources.get("web_interface")
-            if web_interface and hasattr(web_interface, "stop"):
+            # Stop web process
+            web_process = self._resources.get("web_process")
+            if web_process and web_process.is_alive():
                 try:
-                    logger.info("Stopping web interface...")
-                    web_interface.stop()  # This now handles socketio.stop() internally
-                    # Ensure the thread is properly managed by WebInterface's stop method
-                    # The join should happen after web_interface.stop() has signaled the server
-                    if self._web_interface_thread and self._web_interface_thread.is_alive():
-                        logger.info("Waiting for web interface thread to join...")
-                        self._web_interface_thread.join(timeout=10) # Increased timeout slightly
-                        if self._web_interface_thread.is_alive():
-                            logger.warning("Web interface thread did not join in time.")
+                    logger.info("Terminating web interface process...")
+                    web_process.terminate()
+                    web_process.join(timeout=5)
+                    if web_process.is_alive():
+                        logger.warning("Web interface process did not terminate in time.")
                 except Exception as e:
-                    logger.error(f"Error stopping web interface: {e}", exc_info=True)
+                    logger.error(f"Error terminating web interface process: {e}", exc_info=True)
 
             # Cleanup other resources in reverse order of initialization if necessary
             # For now, iterating through all and calling cleanup if available
@@ -940,6 +912,38 @@ class ResourceManager:
         self._watchdog_thread.start()
         logger.info("System watchdog thread started.")
 
+    def initialize_web_interface(self) -> bool:
+        """
+        Initialize web interface in separate process.
+        
+        Returns:
+            bool: True if web interface started successfully, False otherwise
+        """
+        try:
+            if os.getenv("DISABLE_WEB_UI", "false").lower() == "true":
+                logger.info("Web UI disabled via environment variable")
+                return True
+                
+            logger.info("Starting web interface in separate process...")
+            
+            # Start web process with timeout protection
+            start_time = time.time()
+            self.web_proc = launch_web()
+            
+            # Give web process time to start (with timeout)
+            while time.time() - start_time < 30:  # 30 second timeout
+                time.sleep(1)
+                if hasattr(self, 'web_proc') and self.web_proc.is_alive():
+                    logger.info(f"Web interface started successfully (PID: {self.web_proc.pid})")
+                    return True
+            
+            logger.error("Web interface process failed to start within timeout")
+            return False
+                
+        except Exception as e:
+            logger.error(f"Failed to start web interface: {e}")
+            return False
+    
     def start(self):
         """Start the main controller operations (placeholder)."""
         logger.info("Main controller 'start' method called (currently a placeholder).")
@@ -1140,6 +1144,14 @@ class ResourceManager:
     def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
         return self.get_resource("obstacle_detector")
 
+    def start_web_only_mode(self):
+        """Starts only the web interface for safe mode."""
+        self.logger.info("Entering SAFE-MODE; starting web interface only.")
+        self.start_web_interface()
+        # Keep the main thread alive
+        while not self._watchdog_stop_event.is_set():
+            time.sleep(1)
+
 
 def main():
     """
@@ -1179,15 +1191,24 @@ def main():
     try:
         resource_manager = ResourceManager(config_path=str(MAIN_CONFIG_FILE))
         init_ok = resource_manager.init_all_resources()
+
         # Check for truly critical resources (navigation, motor driver, safety)
         nav = resource_manager.get_navigation()
         motor = resource_manager.get_robohat() if hasattr(resource_manager, 'get_robohat') else None
         safety = resource_manager.get_sensor_interface()
+
         if not (init_ok and nav and motor and safety):
-            logger.error("Failed to initialize one or more critical resources (navigation, motor, safety). Exiting.")
-            if resource_manager:
-                resource_manager.cleanup_all_resources()
-            sys.exit(1)
+            logger.error("Failed to initialize one or more critical resources (navigation, motor, safety).")
+            if os.getenv("SAFE_MODE_ALLOWED", "false").lower() == "true":
+                logger.warning("SAFE_MODE_ALLOWED is true. Starting web interface only.")
+                resource_manager.start_web_only_mode()
+                # The rest of the main function will be skipped, and the app will stay alive in start_web_only_mode
+                return
+            else:
+                logger.error("Exiting because SAFE_MODE_ALLOWED is not enabled.")
+                if resource_manager:
+                    resource_manager.cleanup_all_resources()
+                sys.exit(1)
         # Warn if running in degraded mode (non-critical resources missing)
         if not resource_manager.get_obstacle_detection() or not resource_manager.get_path_planner():
             logger.warning("Non-critical resources missing. Running in degraded mode. WebUI will still be available.")

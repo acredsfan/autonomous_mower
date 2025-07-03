@@ -100,7 +100,7 @@ function initMap() {
                     <ol>
                         <li>Create a .env file in the project root directory if not already present</li>
                         <li>Add your Google Maps API key: <code>GOOGLE_MAPS_API_KEY=your_key_here</code></li>
-                        <li>Restart the mower service: <code>sudo systemctl restart autonomous-mower.service</code></li>
+                        <li>Restart the mower service: <code>sudo systemctl restart mower.service</code></li>
                     </ol>
                     <p>You can get a Google Maps API key from the <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">Google Cloud Console</a>.</p>
                 </div>

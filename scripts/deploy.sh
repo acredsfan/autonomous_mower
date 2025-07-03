@@ -192,15 +192,15 @@ deploy_locally() {
     print_info "Enabling and starting the services..."
     sudo systemctl enable ntrip-client.service
     sudo systemctl start ntrip-client.service
-    sudo systemctl enable autonomous-mower.service
-    sudo systemctl start autonomous-mower.service
+    sudo systemctl enable mower.service
+    sudo systemctl start mower.service
 
     check_command "Enabling and starting the service" || exit 1
 
     # Check service status
     print_info "Checking service status..."
     sudo systemctl status ntrip-client.service
-    sudo systemctl status autonomous-mower.service
+    sudo systemctl status mower.service
 
     print_success "Deployment completed successfully!"
     print_info "You can access the web interface at http://localhost:5000"

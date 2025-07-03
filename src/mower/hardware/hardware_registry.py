@@ -3,10 +3,11 @@ Hardware Registry
 This module provides a single point of access for all hardware resources.
 """
 import threading
+import time
 from typing import Optional
 
-
 import os
+from smbus2 import SMBus
 from mower.hardware.blade_controller import BladeController
 from mower.hardware.camera_instance import get_camera_instance
 from mower.hardware.gpio_manager import GPIOManager
@@ -84,32 +85,37 @@ class HardwareRegistry:
     def get_ina3221(self) -> Optional[object]:
         """
         Returns the INA3221 power monitor instance if available.
+        Uses the shared I2C bus if available.
 
         Returns:
             Optional[object]: The INA3221 instance or None if not available.
 
         @hardware_interface
+        @i2c_address 0x40
         """
         try:
-            from src.mower.hardware import ina3221
             if not hasattr(self, "_ina3221"):
-                self._ina3221 = ina3221.INA3221()
+                from mower.hardware.ina3221 import INA3221Sensor
+                if self._i2c_bus:
+                    # Pass shared I2C bus instead of creating new one
+                    self._ina3221 = INA3221Sensor.init_ina3221(i2c_bus=self._i2c_bus)
+                    logger.info("INA3221 initialized using shared I2C bus")
+                else:
+                    # Fallback to creating its own bus
+                    logger.warning("Shared I2C bus not available, INA3221 creating its own bus")
+                    self._ina3221 = INA3221Sensor.init_ina3221()
             return self._ina3221
         except Exception as e:
-            logger = None
-            try:
-                from mower.utilities.logger_config import LoggerConfigInfo
-                logger = LoggerConfigInfo.get_logger(__name__)
-            except Exception:
-                pass
-            if logger:
-                logger.warning(f"INA3221 not available: {e}")
+            logger.info(f"INA3221 optional sensor unavailable: {e}")
             return None
     def get_bme280(self):
         """
         Returns the BME280 environmental sensor instance if available.
         Returns:
             BME280 sensor object or None if not initialized.
+            
+        @hardware_interface
+        @i2c_address 0x76
         """
         try:
             # Try to get from resources if already initialized
@@ -132,7 +138,7 @@ class HardwareRegistry:
             except Exception:
                 pass
             if logger:
-                logger.error(f"Failed to initialize BME280 sensor: {e}")
+                logger.info(f"BME280 optional sensor unavailable: {e}")
             return None
     _instance = None
     _lock = threading.Lock()
@@ -148,11 +154,21 @@ class HardwareRegistry:
         if not self._initialized:
             self._resources = {}
             self._bno085 = None  # Ensure attribute exists for IMU sensor
+            self._i2c_bus = None  # Shared I2C bus
             self._initialized = True
 
     def initialize(self):
         with self._lock:
             logger.info("Initializing hardware registry...")
+            
+            # Initialize shared I2C bus first
+            try:
+                self._i2c_bus = SMBus(1)  # Default I2C bus on Raspberry Pi
+                logger.info("Shared I2C bus initialized on bus 1")
+            except Exception as e:
+                logger.error(f"Failed to initialize I2C bus: {e}")
+                self._i2c_bus = None
+                
             self._resources["gpio"] = GPIOManager()
             self._resources["sensor_interface"] = get_sensor_interface()
             self._resources["camera"] = get_camera_instance()
@@ -220,6 +236,39 @@ class HardwareRegistry:
         return self.get_resource("gps_serial")
 
 _hardware_registry = HardwareRegistry()
+
+    def cleanup(self):
+        """Clean up all hardware resources including shared I2C bus."""
+        logger.info("Starting hardware registry cleanup...")
+        try:
+            # Clean up individual resources with timeout
+            cleanup_start = time.time()
+            for resource_name, resource in self._resources.items():
+                if time.time() - cleanup_start > 30:  # 30 second timeout
+                    logger.warning("Cleanup timeout reached, forcing exit")
+                    break
+                try:
+                    if hasattr(resource, 'cleanup'):
+                        logger.info(f"Cleaning up {resource_name}...")
+                        resource.cleanup()
+                    elif hasattr(resource, 'close'):
+                        logger.info(f"Closing {resource_name}...")
+                        resource.close()
+                except Exception as e:
+                    logger.warning(f"Error cleaning up {resource_name}: {e}")
+            
+            # Close shared I2C bus
+            if self._i2c_bus:
+                try:
+                    logger.info("Closing shared I2C bus...")
+                    self._i2c_bus.close()
+                    logger.info("Shared I2C bus closed")
+                except Exception as e:
+                    logger.warning(f"Error closing I2C bus: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Error during hardware registry cleanup: {e}")
+
 
 def get_hardware_registry() -> HardwareRegistry:
     return _hardware_registry

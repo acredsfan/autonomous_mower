@@ -36,8 +36,23 @@ The Autonomous Mower requires several hardware components to function properly. 
 - GPS module with RTK compatibility (e.g., SparkFun GPS-RTK-SMA Kit)
 - IMU sensor (e.g., BNO085)
 - 2 x VL53L0X Time of Flight Sensors
-- INA3221 Power Monitor
+- INA3221 Power Monitor (optional)
 - Optional: Google Coral USB Accelerator for improved obstacle detection
+
+## Required vs Optional Components
+
+### Required (System will not start without these):
+- BNO085 IMU sensor (critical for navigation and safety)
+- VL53L0X ToF sensors (obstacle detection)
+- Camera module (obstacle detection and navigation)
+- Motor controllers (RoboHAT and blade controller)
+
+### Optional (System continues without these):
+- BME280 environmental sensor
+- INA3221 power monitor
+- GPS module (degrades navigation capability but system continues)
+- Emergency stop button (can be disabled in configuration)
+- Google Coral USB Accelerator (falls back to CPU inference)
 
 ### Chassis and Mechanical Components
 
@@ -173,6 +188,57 @@ The Autonomous Mower requires several hardware components to function properly. 
 3. Ensure the sensors have a clear view without obstructions
 
 ![ToF Sensors Installation](images/tof_installation.jpg)
+
+## Optional Sensors
+
+The following sensors are optional and the system will continue to operate without them:
+
+### BME280 Environmental Sensor
+- **Purpose:** Temperature, humidity, and pressure monitoring
+- **I2C Address:** 0x76 or 0x77
+- **Behavior if missing:** System continues normally, environmental data unavailable in WebUI
+- **Installation:** Connect VCC to 3.3V, GND to ground, SDA/SCL to I2C pins
+- **Verification:** Check logs with `python3 copy_logs.py && grep -i bme280 copied_mower.log`
+
+1. **Connection** (if installing):
+   - VCC to 3.3V
+   - GND to GND
+   - SDA to GPIO2 (I2C1 SDA) - shared with ToF sensors
+   - SCL to GPIO3 (I2C1 SCL) - shared with ToF sensors
+   - Default I2C address: 0x76
+
+2. **Mounting** (if installing):
+   - Mount in a location with good airflow
+   - Avoid direct sunlight or heat sources
+   - Ensure protection from moisture and debris
+
+3. **Configuration**:
+   - No configuration changes needed - the system auto-detects the sensor
+   - If not present, environmental data will not be displayed in the WebUI
+   - System startup and operation are not affected by sensor absence
+
+**Note**: The BME280 is purely informational and does not affect mower safety or operation.
+
+### INA3221 Power Monitor  
+- **Purpose:** Battery voltage and current monitoring
+- **I2C Address:** 0x40
+- **Behavior if missing:** System continues, power monitoring unavailable
+- **Installation:** Connect to I2C bus, configure for battery monitoring
+- **Verification:** Check logs with `python3 copy_logs.py && grep -i ina3221 copied_mower.log`
+
+1. **Connection** (if installing):
+   - VCC to 3.3V
+   - GND to GND
+   - SDA to GPIO2 (I2C1 SDA) - shared with ToF sensors and BME280
+   - SCL to GPIO3 (I2C1 SCL) - shared with ToF sensors and BME280
+   - Default I2C address: 0x40
+
+2. **Configuration**:
+   - No configuration changes needed - the system auto-detects the sensor
+   - If not present, battery monitoring data will not be displayed in the WebUI
+   - System startup and operation are not affected by sensor absence
+
+**Note**: While battery monitoring is helpful, the system can operate without it.
 
 ### 5. Power System
 
@@ -355,6 +421,44 @@ After completing the assembly, perform the following tests to ensure everything 
 3. Check I2C bus with `i2cdetect -y 1` command
 4. Test sensors with simple test scripts
 5. Check for hardware damage
+
+## Troubleshooting Sensor Issues
+
+**Safe log checking protocol:**
+```bash
+# Check sensor initialization
+python3 copy_logs.py
+grep -E "(sensor|i2c|hardware)" copied_mower.log | tail -20
+
+# Check for specific sensor errors
+grep -i "bme280\|ina3221\|bno085\|vl53l0x" copied_mower.log | tail -20
+
+# Verify I2C device detection (use timeout)
+timeout 30 i2cdetect -y 1
+```
+
+**Common sensor issues:**
+- **I2C address conflicts:** Use `i2cdetect -y 1` to verify addresses
+- **Power supply issues:** Check 3.3V and 5V connections
+- **Wiring problems:** Verify SDA/SCL connections
+- **Optional sensor warnings:** Normal for BME280/INA3221, logged at INFO level
+
+**If optional sensors fail to initialize:**
+- Check I2C connections and addresses
+- Verify sensor power supply
+- Review logs: `python3 copy_logs.py && grep -i sensor copied_mower.log`
+- System will log INFO level messages for missing optional sensors (this is normal)
+
+**Testing sensor connectivity:**
+```bash
+# Test I2C bus (with timeout)
+timeout 30 i2cdetect -y 1
+
+# Check for specific addresses
+# BME280: 0x76 or 0x77
+# INA3221: 0x40
+# BNO085: 0x4A or 0x4B
+```
 
 ### Raspberry Pi Not Booting
 

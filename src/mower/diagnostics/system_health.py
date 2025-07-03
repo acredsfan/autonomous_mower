@@ -334,7 +334,7 @@ class SystemHealth:
             # Check mower service status
             try:
                 result = subprocess.run(
-                    ["systemctl", "is-active", "autonomous-mower.service"],
+                    ["systemctl", "is-active", "mower.service"],
                     capture_output=True,
                     text=True,
                 )
@@ -467,7 +467,7 @@ class SystemHealth:
         if any("Camera" in issue for issue in issues):
             recommendations.append("Check camera connections and configuration")  # Software recommendations
         if any("Mower service not running" in issue for issue in issues):
-            recommendations.append("Start the mower service with: " "sudo systemctl start autonomous-mower.service")
+            recommendations.append("Start the mower service with: " "sudo systemctl start mower.service")
         if any("crashes in logs" in issue for issue in issues):
             recommendations.append("Check error logs for crash details and consider updating software")
         if any("High number of errors" in issue for issue in issues):

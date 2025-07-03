@@ -12,11 +12,11 @@ This guide covers common issues and solutions when the systemd service fails to 
 
 1. Working Directory Misconfiguration
 
-   - Verify `WorkingDirectory` matches project path (see [`autonomous-mower.service`:10](../autonomous-mower.service:10))
+   - Verify `WorkingDirectory` matches project path (see [`mower.service`:10](../mower.service:10))
    - Correct path in service file and reload systemd:
      ```bash
      sudo systemctl daemon-reload
-     sudo systemctl restart autonomous-mower.service
+     sudo systemctl restart mower.service
      ```
 
 2. Environment Variables Not Loaded
@@ -45,6 +45,6 @@ This guide covers common issues and solutions when the systemd service fails to 
 6. Log Channel and Journal Access
    - View logs with:
      ```bash
-     sudo journalctl -u autonomous-mower.service -f
+     sudo journalctl -u mower.service -f
      ```
    - Look for stack traces and error messages for troubleshooting
