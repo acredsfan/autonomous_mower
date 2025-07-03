@@ -155,6 +155,7 @@ class HardwareRegistry:
             self._resources = {}
             self._bno085 = None  # Ensure attribute exists for IMU sensor
             self._i2c_bus = None  # Shared I2C bus
+            self._ina3221 = None  # Ensure attribute exists for INA3221 sensor
             self._initialized = True
 
     def initialize(self):
@@ -235,7 +236,6 @@ class HardwareRegistry:
     def get_gps_serial(self) -> Optional[SerialPort]:
         return self.get_resource("gps_serial")
 
-_hardware_registry = HardwareRegistry()
 
     def cleanup(self):
         """Clean up all hardware resources including shared I2C bus."""
@@ -270,5 +270,15 @@ _hardware_registry = HardwareRegistry()
             logger.error(f"Error during hardware registry cleanup: {e}")
 
 
+# Create singleton instance after class definition is complete
+_hardware_registry = HardwareRegistry()
+
+
 def get_hardware_registry() -> HardwareRegistry:
+    """
+    Get the singleton instance of HardwareRegistry.
+    
+    Returns:
+        HardwareRegistry: The singleton instance of HardwareRegistry.
+    """
     return _hardware_registry

@@ -381,7 +381,11 @@ class NavigationController:
 def initialize_navigation():
     """Initialize navigation system components."""
     try:
-        gps_position_instance = GpsPosition(serial_port="/dev/ttyACM0", debug=True)  # TODO: serial port should be fetched via .env
+        # Get GPS port from environment variable or hardware registry
+        from mower.hardware.serial_port import GPS_PORT
+        gps_port = GPS_PORT if GPS_PORT else "/dev/ttyACM0"
+        
+        gps_position_instance = GpsPosition(serial_port=gps_port, debug=True)
         gps_position_instance.start()
 
         gps_latest_position = GpsLatestPosition(gps_position_instance=gps_position_instance)

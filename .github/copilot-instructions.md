@@ -46,10 +46,17 @@
   - The project uses an .env file for environment-specific configurations (e.g., API keys, remote access settings). Validate these variables thoroughly.
   - Hardware interfaces (camera, serial, I2C) are enabled via raspi-config.
 - **VS Code Terminal Usage:** You are operating directly within the Raspberry Pi's `bash`/`sh` shell via SSH. All terminal commands you generate **must** be valid for Raspberry Pi OS. Use this direct access to verify hardware and file paths.
+  - **CRITICAL TERMINAL SAFETY:** 
+    - **NEVER run open-ended commands** that could hang indefinitely like `journalctl`, `top`, `htop`, or `systemctl status` without a timeout (e.g., always use `timeout 10 systemctl status mower.service`).
+    - **NEVER use raw journalctl** to check service logs; instead use `python3 copy_logs.py --non-interactive --condense --condense-journal` which safely captures logs without hanging the terminal.
+    - **ALWAYS add timeouts** to any test scripts or commands that might hang (especially hardware tests, network operations, or long-running processes).
+    - **ALWAYS use the `--no-pager` flag** with any command that might use a pager (like `systemctl`, `journalctl`).
+    - **ALWAYS include an exit condition** for any loop in shell scripts or test commands.
 - **Deployment & Operation:**
   - The application is designed to run as a systemd service for automatic startup and robust operation.
   - Remote access (e.g., port forwarding, DDNS, Cloudflare Tunnel, NGROK) is configured via the .env file. Respect this pattern for configuration suggestions.
-  - Be mindful of Python package installation; the project may use pip install --break-system-packages (as seen in install_requirements.sh) for system-wide dependencies.
+  - Be mindful of Python package installation; the project may use pip install --break-system-packages (as seen in install_requirements.sh) for system-wide dependencie
+  - Assume no VENV is used in this project by the developers. All Python packages are installed system-wide.
 
 ## III. Python Coding Standards & Raspberry Pi Specifics
 
@@ -175,6 +182,7 @@
 - **GPIO Pin Usage:** Document GPIO pin usage in the code and ensure it matches the project's hardware design. Use the `@gpio_pin_usage {pin_number} - {purpose}` tag in docstrings for any GPIO-related code.
 - **I2C Addresses:** Define I2C addresses as constants in the code (e.g., `IMU_ADDRESS = 0x68`) and document them using the `@i2c_address {address}` tag in docstrings. Ensure these addresses match the hardware design and are verified against the actual devices connected to the Raspberry Pi.
 - To read mower.log and journalctl logs, use the `copy_logs.py` script in project's main directory. This script will copy the logs to a local directory for easier access and analysis.
+- To read mower.log and journalctl logs, use the `copy_logs.py` script in project's main directory. This script will copy the logs to a local directory for easier access and analysis.
 
 ## VIII. Frozen Drivers  🚧
 
@@ -196,6 +204,75 @@ src/mower/hardware/blade_controller.py       # FROZEN_DRIVER
 2. CI job `prevent-driver-edit.yml` fails any PR that changes lines in files
    containing `FROZEN_DRIVER`.
 3. All prompts must include: *“without touching files marked FROZEN_DRIVER.”*
+
+## IX. Terminal Safety Guidelines (CRITICAL)
+
+### Open-Ended Commands
+- **NEVER run open-ended commands** that could hang indefinitely in a terminal. Examples include:
+  - `journalctl` (without limiting options)
+  - `top`, `htop`, `watch`
+  - `systemctl status` (without timeout)
+  - `tail -f`
+  - Any command that displays a pager and waits for user input
+  - Continuous monitoring tools
+
+### Required Safety Measures
+- **ALWAYS add timeouts** to potentially hanging commands:
+  ```bash
+  # Good:
+  timeout 10 systemctl status mower.service
+  
+  # Bad (never use):
+  systemctl status mower.service
+  ```
+
+- **ALWAYS use the `--no-pager` flag** with commands that might use a pager:
+  ```bash
+  # Good:
+  systemctl --no-pager status mower.service
+  
+  # Bad (never use):
+  systemctl status mower.service
+  ```
+
+- **ALWAYS include exit conditions** in loops:
+  ```bash
+  # Good:
+  count=0; while [ $count -lt 10 ]; do echo $count; ((count++)); sleep 1; done
+  
+  # Bad (never use):
+  while true; do echo "Checking..."; sleep 1; done
+  ```
+
+### Log Access Guidelines
+- **NEVER use raw journalctl** to check service logs
+- **ALWAYS use the provided logging script** to safely capture logs:
+  ```bash
+  # Good:
+  python3 copy_logs.py --non-interactive
+  
+  # Bad (never use):
+  journalctl -u mower.service
+  ```
+
+### Script Creation Guidelines
+- Any scripts you create for testing hardware or functionality MUST include timeouts or clear exit conditions
+- All test scripts should run for a specific, limited amount of time (e.g., 10-30 seconds maximum)
+- Use Python's `signal` module to implement timeouts in test scripts:
+  ```python
+  import signal
+  
+  # Setup a timeout handler
+  def timeout_handler(signum, frame):
+      print("Test timed out after 10 seconds")
+      exit(0)
+      
+  # Set a 10-second timeout
+  signal.signal(signal.SIGALRM, timeout_handler)
+  signal.alarm(10)
+  
+  # Your test code here...
+  ```
 
 ---
 

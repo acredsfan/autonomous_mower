@@ -71,34 +71,40 @@ def create_app(mower_resource_manager_instance):
     # Initialize Babel for translations using the version-agnostic approach
     # This uses the implementation from i18n.py which works with any
     # Flask-Babel version
-    if Babel is not None:
-        try:
-            init_babel(app)
-            logger.info("Initialized Babel from i18n module")
-        except Exception as e:
-            # Fallback to legacy initialization if needed
-            logger.warning(f"Could not initialize Babel from i18n module: {e}")
-            babel = Babel(app)
-
-        # Define locale selector function instead of using decorator
-        def get_locale():
-            """Select the best match for supported languages."""
-            return request.accept_languages.best_match(["en", "es", "fr"])
-
-        # Try different Flask-Babel versions' initialization methods
-        try:
-            # Flask-Babel >= 2.0
-            babel.init_app(app, locale_selector=get_locale)
-            logger.info("Initialized Babel with locale_selector parameter")
-        except TypeError:
+    try:
+        # Try to use the i18n module first
+        init_babel(app)
+        logger.info("Initialized Babel from i18n module")
+    except Exception as e:
+        logger.warning(f"Could not initialize Babel from i18n module: {e}")
+        
+        # Only try direct initialization if Babel is available
+        if Babel is not None:
             try:
-                # Flask-Babel < 2.0
-                babel.localeselector(get_locale)
-                logger.info("Initialized Babel with localeselector decorator")
-            except Exception as e2:
-                logger.error(f"Failed to initialize Babel (legacy fallback): {e2}")
-    else:
-        logger.warning("Babel not installed - translations disabled")
+                # Define locale selector function
+                def get_locale():
+                    """Select the best match for supported languages."""
+                    return request.accept_languages.best_match(["en", "es", "fr"])
+                
+                # Create Babel instance
+                babel_instance = Babel(app)
+                
+                # Try different Flask-Babel versions' initialization methods
+                try:
+                    # Flask-Babel >= 2.0
+                    babel_instance.init_app(app, locale_selector=get_locale)
+                    logger.info("Initialized Babel with locale_selector parameter")
+                except TypeError:
+                    try:
+                        # Flask-Babel < 2.0
+                        babel_instance.localeselector(get_locale)
+                        logger.info("Initialized Babel with localeselector decorator")
+                    except Exception as e2:
+                        logger.error(f"Failed to initialize Babel (legacy fallback): {e2}")
+            except Exception as e3:
+                logger.error(f"Failed to initialize Babel directly: {e3}")
+        else:
+            logger.warning("Babel not installed - translations disabled")
     
     # Route handlers
     @app.route("/")
