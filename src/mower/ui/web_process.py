@@ -361,6 +361,7 @@ def launch(resource_manager=None):
     logger.info("Launching web interface in a separate process")
     # We don't pass the resource manager to the process as the web interface
     # creates its own dummy resource manager, so there's no need to pass one here
-    p = Process(target=start_web, daemon=True)
+    # Note: daemon=False for better process lifecycle control
+    p = Process(target=start_web, daemon=False)
     p.start()
     return p

@@ -149,7 +149,7 @@ function setupSocketConnection() {
 
   // Handle sensor data updates
   socket.on("sensor_data", function (data) {
-    console.log("Received sensor data:", data);
+    // console.log("Received sensor data:", data);
     updateSensorData(data);
   });
 

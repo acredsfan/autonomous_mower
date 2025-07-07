@@ -69,6 +69,7 @@ from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 # will benefit from early init
 from mower.simulation import enable_simulation
 from mower.ui.web_process import launch as launch_web
+from mower.utilities.process_management import validate_startup_environment, is_port_available
 from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -579,6 +580,12 @@ class ResourceManager:
             if os.getenv("DISABLE_WEB_UI", "false").lower() == "true":
                 logger.info("Web UI disabled via environment variable")
                 return True
+                
+            # Validate startup environment and clean up any port conflicts
+            web_port = int(os.environ.get("WEB_UI_PORT", 5000))
+            if not validate_startup_environment(web_port, "mower"):
+                logger.error(f"Cannot start web interface - port {web_port} conflicts could not be resolved")
+                return False
                 
             logger.info("Starting web interface in separate process...")
             
