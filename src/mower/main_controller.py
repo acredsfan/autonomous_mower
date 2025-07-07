@@ -411,40 +411,19 @@ class ResourceManager:
 
     def init_all_resources(self) -> bool:
         """
-        Initialize all resources with timeout; return True if successful,
-        False otherwise.
+        Initialize all resources; return True if successful, False otherwise.
         """
-        import signal
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError("ResourceManager initialization timed out after 60 seconds")
-        
         try:
-            # Set timeout for initialization to prevent hanging
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(60)  # 60 second timeout for full initialization
-            
-            logger.info("Starting ResourceManager initialization with 60s timeout...")
+            logger.info("Starting ResourceManager initialization...")
             self.initialize()
             
-            # Clear the timeout if successful
-            signal.alarm(0)
             logger.info(f"ResourceManager initialization completed successfully: {self._initialized}")
             return self._initialized  # Return the actual status
             
-        except TimeoutError as e:
-            logger.error(f"ResourceManager initialization timed out: {e}")
-            logger.error("This usually indicates hardware sensors are not responding properly")
-            logger.error("Consider checking I2C connections, sensor power, or running in safe mode")
-            self._initialized = False
-            return False
         except Exception as e:
             logger.error(f"ResourceManager init_all_resources failed: {e}", exc_info=True)
             self._initialized = False  # Ensure this is set on failure
             return False
-        finally:
-            # Always clear the timeout
-            signal.alarm(0)
 
     def cleanup_all_resources(self):
         """Clean up all initialized resources."""

@@ -39,9 +39,9 @@
 
 **Failure to use server-memory tools will result in inefficient re-work and repeated mistakes.**
 
-## III. Hardware & Safety
+## III. Problem-Solving Philosophy & Hardware Safety
 
-**Safety First:** Motors/blades require failsafes and sanity checks. **Graceful Degradation:** Non-critical hardware failure should log, warn, but never crash the main application.
+**Root Cause First:** Always identify and fix the core issue before implementing fallback mechanisms. Bandaid solutions (timeouts, workarounds) should only be temporary while the root cause is being addressed. Focus on resolving core issues as the primary objective, then create fallback/error handling for failures as secondary measures. **Safety First:** Motors/blades require failsafes and sanity checks. **Graceful Degradation:** Non-critical hardware failure should log, warn, but never crash the main application.
 
 ### Core Requirements:
 - **Resource Management:** All hardware resources (GPIO, I2C, UART, files) MUST use context managers or try...finally blocks
@@ -82,6 +82,7 @@
 - **Hardware Mocking:** unittest.mock for RPi libraries (RPi.GPIO, smbus2, gpiozero, picamera2, pyserial)
 - **Integration Testing:** Create focused scripts in `tests/hardware_integration/` without mocks
 - Scripts must include timeouts and exit conditions (10-30 seconds max runtime)
+- **Test Script Cleanup:** DELETE one-off test scripts immediately after completion to prevent workspace clutter - keep only permanent utilities and integration tests in the tests/ directory
 
 ## VI. Project-Specific Instructions
 
@@ -89,7 +90,7 @@
 - Web UI: Launch after successful hardware init
 - Camera detection: Validate model/labelmap files in models/ before loading
 - Environment variables: Use .env file, document GPIO pins and I2C addresses in code
-- Log access: Use `copy_logs.py --non-interactive` (never raw journalctl)
+- Log access: Use `copy_logs.py --non-interactive` (never raw journalctl) with optional `--condense` flag to condense the mower log and `--condense-journal` to condense the journalctl output. This ensures safe, controlled log access without hanging commands. 
 
 ## VII. Frozen Drivers  🚧
 
@@ -165,6 +166,7 @@ src/mower/hardware/blade_controller.py       # FROZEN_DRIVER
 ### Script Creation Guidelines
 - Any scripts you create for testing hardware or functionality MUST include timeouts or clear exit conditions
 - All test scripts should run for a specific, limited amount of time (e.g., 10-30 seconds maximum)
+- **DELETE test scripts after completion** to prevent workspace clutter - keep only permanent utilities
 - Use Python's `signal` module to implement timeouts in test scripts:
   ```python
   import signal

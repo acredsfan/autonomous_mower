@@ -85,7 +85,7 @@ class HardwareRegistry:
     def get_ina3221(self) -> Optional[object]:
         """
         Returns the INA3221 power monitor instance if available.
-        Uses the shared I2C bus if available.
+        Uses the frozen driver's own I2C initialization.
 
         Returns:
             Optional[object]: The INA3221 instance or None if not available.
@@ -96,14 +96,12 @@ class HardwareRegistry:
         try:
             if not hasattr(self, "_ina3221"):
                 from mower.hardware.ina3221 import INA3221Sensor
-                if self._i2c_bus:
-                    # Pass shared I2C bus instead of creating new one
-                    self._ina3221 = INA3221Sensor.init_ina3221(i2c_bus=self._i2c_bus)
-                    logger.info("INA3221 initialized using shared I2C bus")
+                # Let the frozen driver handle its own I2C initialization
+                self._ina3221 = INA3221Sensor.init_ina3221()
+                if self._ina3221:
+                    logger.info("INA3221 initialized using frozen driver's I2C interface")
                 else:
-                    # Fallback to creating its own bus
-                    logger.warning("Shared I2C bus not available, INA3221 creating its own bus")
-                    self._ina3221 = INA3221Sensor.init_ina3221()
+                    logger.info("INA3221 optional sensor unavailable")
             return self._ina3221
         except Exception as e:
             logger.info(f"INA3221 optional sensor unavailable: {e}")
@@ -162,13 +160,11 @@ class HardwareRegistry:
         with self._lock:
             logger.info("Initializing hardware registry...")
             
-            # Initialize shared I2C bus first
-            try:
-                self._i2c_bus = SMBus(1)  # Default I2C bus on Raspberry Pi
-                logger.info("Shared I2C bus initialized on bus 1")
-            except Exception as e:
-                logger.error(f"Failed to initialize I2C bus: {e}")
-                self._i2c_bus = None
+            # NOTE: Removed shared SMBus creation to fix I2C bus conflicts
+            # All frozen drivers (INA3221, ToF, BME280) use busio.I2C which
+            # handles its own I2C connections without conflicts
+            self._i2c_bus = None
+            logger.info("Hardware registry using individual I2C connections per driver")
                 
             self._resources["gpio"] = GPIOManager()
             self._resources["sensor_interface"] = get_sensor_interface()
@@ -238,7 +234,7 @@ class HardwareRegistry:
 
 
     def cleanup(self):
-        """Clean up all hardware resources including shared I2C bus."""
+        """Clean up all hardware resources."""
         logger.info("Starting hardware registry cleanup...")
         try:
             # Clean up individual resources with timeout
@@ -257,14 +253,8 @@ class HardwareRegistry:
                 except Exception as e:
                     logger.warning(f"Error cleaning up {resource_name}: {e}")
             
-            # Close shared I2C bus
-            if self._i2c_bus:
-                try:
-                    logger.info("Closing shared I2C bus...")
-                    self._i2c_bus.close()
-                    logger.info("Shared I2C bus closed")
-                except Exception as e:
-                    logger.warning(f"Error closing I2C bus: {e}")
+            # Note: No shared I2C bus to close - each driver handles its own I2C
+            logger.info("Hardware registry cleanup complete")
                     
         except Exception as e:
             logger.error(f"Error during hardware registry cleanup: {e}")
