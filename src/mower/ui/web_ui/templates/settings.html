@@ -258,6 +258,38 @@ endblock %} {% block content %}
 
     <div class="card mb-3">
       <div class="card-header">
+        <h3>Display & Units</h3>
+      </div>
+      <div class="card-body">
+        <form id="units-form">
+          <div class="form-group">
+            <label class="form-label">Temperature Units</label>
+            <div>
+              <input type="radio" id="celsius" name="temperature_units" value="celsius" checked>
+              <label for="celsius">Celsius</label>
+            </div>
+            <div>
+              <input type="radio" id="fahrenheit" name="temperature_units" value="fahrenheit">
+              <label for="fahrenheit">Fahrenheit</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Distance Units</label>
+            <div>
+              <input type="radio" id="metric" name="distance_units" value="metric" checked>
+              <label for="metric">Metric</label>
+            </div>
+            <div>
+              <input type="radio" id="imperial" name="distance_units" value="imperial">
+              <label for="imperial">Imperial</label>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">
         <h3>Maintenance</h3>
       </div>
       <div class="card-body">

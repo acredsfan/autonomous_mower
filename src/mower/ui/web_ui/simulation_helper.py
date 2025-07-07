@@ -133,6 +133,7 @@ def get_simulated_sensor_data() -> Dict[str, Any]:
             "longitude": -122.4194 + random.uniform(-0.0001, 0.0001),
             "fix": True,
             "fix_quality": "3d",
+            "status": "valid",  # Add status field for WebUI compatibility
             "satellites": random.randint(6, 12),
             "hdop": random.uniform(1.0, 2.0),
         },

@@ -53,6 +53,10 @@ const systemState = {
     homePosition: [0, 0],
     waypoints: [],
   },
+  units: {
+    temperature: 'celsius',
+    distance: 'metric'
+  }
 };
 
 // Initialize when DOM is ready
@@ -71,6 +75,9 @@ function initializeUI() {
 
   // Initialize language selector
   initializeLanguageSelector();
+
+  // Initialize theme selector
+  initializeThemeSelector();
 
   // Initialize any charts or visualizations
   if (typeof initializeCharts === "function") {
@@ -437,8 +444,8 @@ function updateSensorData(data) {
       systemState.gps.latitude = gps.latitude;
       systemState.gps.longitude = gps.longitude;
       systemState.gps.satellites = gps.satellites;
-      // Determine fix status
-      systemState.gps.fix = gps.status && gps.status.toLowerCase() !== 'simulated';
+      // Determine fix status - valid GPS should show coordinates
+      systemState.gps.fix = gps.fix && gps.status && gps.status.toLowerCase() === 'valid';
       // Update GPS UI (sidebar and dashboard)
       const dashGps = document.getElementById("gpsStatusDisplay");
       const sideGps = document.getElementById("gpsStatus");
@@ -447,6 +454,25 @@ function updateSensorData(data) {
       if (dashGps) dashGps.textContent = statusText;
       if (sideGps) sideGps.textContent = statusText;
       if (sc) sc.textContent = `${systemState.gps.satellites} satellites`;
+      
+      // Update coordinate display from GPS data
+      const latElement = document.getElementById("position_latitude");
+      const lngElement = document.getElementById("position_longitude");
+      if (latElement && lngElement && systemState.gps.fix) {
+        latElement.textContent = Number(systemState.gps.latitude).toFixed(6);
+        lngElement.textContent = Number(systemState.gps.longitude).toFixed(6);
+      } else if (latElement && lngElement) {
+        latElement.textContent = "0.000000";
+        lngElement.textContent = "0.000000";
+      }
+      
+      // Update map with GPS coordinates if we have a valid fix
+      if (systemState.gps.fix && typeof updateMap === "function") {
+        const mapData = {
+          currentPosition: [systemState.gps.latitude, systemState.gps.longitude]
+        };
+        updateMap(mapData);
+      }
     }
     // Update our internal state for other top-level sensor properties
     if (data && typeof data === 'object') {
@@ -460,7 +486,13 @@ function updateSensorData(data) {
     if (data.environment && data.environment.temperature !== undefined) {
       const tempElement = document.getElementById("sensor_temperature");
       if (tempElement) {
-        tempElement.textContent = `${Number(data.environment.temperature).toFixed(1)}°C`;
+        let temp = data.environment.temperature;
+        let unit = '°C';
+        if (systemState.units.temperature === 'fahrenheit') {
+          temp = (temp * 9/5) + 32;
+          unit = '°F';
+        }
+        tempElement.textContent = `${Number(temp).toFixed(1)}${unit}`;
       }
     }
     
@@ -489,22 +521,38 @@ function updateSensorData(data) {
     if (data.tof) {
       const tof = data.tof;
 
+      const convertDistance = (cm) => {
+        if (systemState.units.distance === 'imperial') {
+          return {
+            value: cm * 0.393701,
+            unit: 'in'
+          };
+        }
+        return {
+          value: cm,
+          unit: 'cm'
+        };
+      };
+
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
       if (leftDistElement && tof.left !== undefined) {
-        leftDistElement.textContent = `${Number(tof.left).toFixed(1)} cm`;
+        const dist = convertDistance(tof.left);
+        leftDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
 
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
       if (rightDistElement && tof.right !== undefined) {
-        rightDistElement.textContent = `${Number(tof.right).toFixed(1)} cm`;
+        const dist = convertDistance(tof.right);
+        rightDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
 
       // Update front distance sensor if available
       const frontDistElement = document.getElementById("sensor_frontDistance");
       if (frontDistElement && tof.front !== undefined) {
-        frontDistElement.textContent = `${Number(tof.front).toFixed(1)} cm`;
+        const dist = convertDistance(tof.front);
+        frontDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
     }
   } catch (err) {
@@ -704,6 +752,10 @@ function handleCommandResponse(data) {
     showAlert("Settings updated successfully", "success", 3000);
   }
 
+  if (data.command === "save_settings" && data.success) {
+    showAlert("Settings saved successfully!", "success");
+  }
+
   // If we need to refresh the page after a command
   if (data.refresh) {
     setTimeout(function () {
@@ -766,6 +818,61 @@ function initializeLanguageSelector() {
     .catch((error) => {
       console.error("Error fetching languages:", error);
     });
+}
+
+/**
+ * Initialize the theme selector dropdown
+ */
+function initializeThemeSelector() {
+  const themeDropdown = document.getElementById("themeDropdown");
+  const themeMenu = document.getElementById("themeMenu");
+  const currentThemeText = document.getElementById("currentTheme");
+  const htmlElement = document.documentElement;
+
+  if (!themeDropdown || !themeMenu || !currentThemeText) {
+    return; // Elements not found
+  }
+
+  const setTheme = (theme) => {
+    htmlElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    currentThemeText.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+
+    // Update active class
+    themeMenu.querySelectorAll('.dropdown-item').forEach(item => {
+      if (item.dataset.theme === theme) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  };
+
+  // Set initial theme
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  setTheme(savedTheme);
+
+  // Dropdown functionality
+  themeDropdown.addEventListener("click", function (e) {
+    e.preventDefault();
+    themeMenu.classList.toggle("show");
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!themeDropdown.contains(e.target)) {
+      themeMenu.classList.remove("show");
+    }
+  });
+
+  // Theme selection
+  themeMenu.addEventListener('click', (e) => {
+    e.preventDefault();
+    const theme = e.target.dataset.theme;
+    if (theme) {
+      setTheme(theme);
+      themeMenu.classList.remove('show');
+    }
+  });
 }
 
 /**

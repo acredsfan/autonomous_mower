@@ -249,6 +249,12 @@ world.add_obstacle(Vector2D(15.0, 10.0), 1.0)
 
 ## Documentation
 
+### System Architecture
+
+See [System Architecture](system_architecture.md) for a high-level overview of the project's components and their interactions.
+
+For a detailed explanation of the sensor data flow, see [Sensor Data Flow](sensor_data_flow.md).
+
 ### API Documentation
 
 The API documentation is available in the `docs/api` directory. It provides detailed information about each module, including classes, methods, and functions.

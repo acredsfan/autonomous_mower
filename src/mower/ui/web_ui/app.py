@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Critical imports with error handling
 try:
-    from flask import Flask, Response, jsonify, render_template, request, send_file
+    from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory
     from flask_cors import CORS
     from flask_socketio import SocketIO, emit
 except ImportError as e:
@@ -210,8 +210,8 @@ def create_app(mower_resource_manager_instance):
                         yield (b'--frame\r\n'
                                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
                         
-                        # Small delay
-                        socketio.sleep(0.1)
+                        # 30 FPS timing - 1/30 = 0.033 seconds
+                        socketio.sleep(0.033)
                 
                 return Response(
                     generate_test_pattern(),
@@ -235,8 +235,8 @@ def create_app(mower_resource_manager_instance):
                             # If we got JPEG bytes directly, yield them
                             yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
-                            # Add a small delay
-                            socketio.sleep(0.05)
+                            # 30 FPS timing for JPEG stream
+                            socketio.sleep(0.033)
                             continue
                         except Exception:
                             # If both methods fail, try get_last_frame()
@@ -248,8 +248,8 @@ def create_app(mower_resource_manager_instance):
                                 # If we got JPEG bytes directly, yield them
                                 yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
-                                # Add a small delay
-                                socketio.sleep(0.05)
+                                # 30 FPS timing for fallback JPEG stream
+                                socketio.sleep(0.033)
                                 continue
                             except Exception:
                                 logger.error("All camera frame methods failed")
@@ -264,18 +264,16 @@ def create_app(mower_resource_manager_instance):
                     try:
                         import cv2
 
-                        # --- FIX: Convert color space from BGR to RGB ---
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        # ---------------------------------------------
-
-                        _, buffer = cv2.imencode(".jpg", frame)
+                        # Encode directly to JPEG without color conversion for streaming performance
+                        # Note: Most cameras provide BGR format which works fine for MJPEG streaming
+                        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
                         frame_bytes = buffer.tobytes()
 
                         # Yield the frame in multipart response
                         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
 
-                        # Add a small delay
-                        socketio.sleep(0.05)
+                        # 30 FPS timing - 1/30 = 0.033 seconds
+                        socketio.sleep(0.033)
                     except Exception as e:
                         logger.error(f"Error encoding frame: {e}")
                         socketio.sleep(0.5)  # Delay on error
@@ -570,6 +568,21 @@ def create_app(mower_resource_manager_instance):
         except Exception as e:
             logger.error(f"Failed to get languages: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
+
+    # Static file route with CORS headers
+    @app.route("/static/<path:filename>")
+    def static_files(filename):
+        """Serve static files with proper CORS headers."""
+        from flask import send_from_directory, make_response
+        try:
+            response = make_response(send_from_directory(app.static_folder, filename))
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+        except Exception as e:
+            logger.error(f"Error serving static file {filename}: {e}")
+            return jsonify({"error": "File not found"}), 404
 
     # WebSocket event handlers
     @socketio.on("connect")

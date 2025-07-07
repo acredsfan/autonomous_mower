@@ -34,6 +34,7 @@ import numpy as np
 from mower.constants import AVOIDANCE_DELAY, MIN_DISTANCE_THRESHOLD
 from mower.hardware.sensor_interface import get_sensor_interface
 from mower.navigation.path_planner import PathPlanner
+from mower.safety.autonomous_safety import SafetyChecker, SafetyValidationError
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Initialize logger
@@ -178,6 +179,18 @@ class AvoidanceAlgorithm:
         self.obstacles = []  # Added type annotation
         self.recovery_attempts = 0
         self.max_recovery_attempts = 3
+        
+        # Initialize safety checker for movement validation
+        self.safety_checker = None
+        if resource_manager:
+            try:
+                self.safety_checker = SafetyChecker(resource_manager)
+                self.logger.info("Safety checker initialized for avoidance algorithm")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize safety checker: {e}")
+                self.safety_checker = None
+        else:
+            self.logger.warning("No resource manager provided to avoidance algorithm - safety validation disabled")
 
     def reset_state(self):
         """Reset the state of the avoidance algorithm."""
@@ -284,7 +297,7 @@ class AvoidanceAlgorithm:
 
             # Initialize motor controller if not already done
             if self.motor_controller is None and self._resource_manager:
-                self.motor_controller = self._resource_manager.get_robohat_driver()
+                self.motor_controller = self._resource_manager.get_robohat()
                 logger.info("Initialized motor controller for avoidance algorithm")
         except Exception as e:
             logger.error(f"Failed to initialize avoidance algorithm components: {e}")
@@ -716,6 +729,19 @@ class AvoidanceAlgorithm:
             bool: True if turn initiated successfully, False otherwise
         """
         try:
+            # SAFETY CHECK: Validate conditions before movement
+            if self.safety_checker:
+                try:
+                    is_safe, error_message = self.safety_checker.validate_all_safety_conditions()
+                    if not is_safe:
+                        logger.error(f"SAFETY BLOCK: Cannot execute right turn - {error_message}")
+                        return False
+                except Exception as e:
+                    logger.error(f"SAFETY CHECK ERROR in right turn: {e}")
+                    return False
+            else:
+                logger.warning("SAFETY WARNING: Executing right turn without safety validation")
+
             logger.info(f"Executing right turn avoidance ({angle}°)")
 
             current_heading = self.motor_controller.get_current_heading()
@@ -741,6 +767,19 @@ class AvoidanceAlgorithm:
             bool: True if turn initiated successfully, False otherwise
         """
         try:
+            # SAFETY CHECK: Validate conditions before movement
+            if self.safety_checker:
+                try:
+                    is_safe, error_message = self.safety_checker.validate_all_safety_conditions()
+                    if not is_safe:
+                        logger.error(f"SAFETY BLOCK: Cannot execute left turn - {error_message}")
+                        return False
+                except Exception as e:
+                    logger.error(f"SAFETY CHECK ERROR in left turn: {e}")
+                    return False
+            else:
+                logger.warning("SAFETY WARNING: Executing left turn without safety validation")
+
             logger.info(f"Executing left turn avoidance ({angle}°)")
 
             current_heading = self.motor_controller.get_current_heading()
@@ -766,6 +805,19 @@ class AvoidanceAlgorithm:
             bool: True if backup initiated successfully, False otherwise
         """
         try:
+            # SAFETY CHECK: Validate conditions before movement
+            if self.safety_checker:
+                try:
+                    is_safe, error_message = self.safety_checker.validate_all_safety_conditions()
+                    if not is_safe:
+                        logger.error(f"SAFETY BLOCK: Cannot execute backup - {error_message}")
+                        return False
+                except Exception as e:
+                    logger.error(f"SAFETY CHECK ERROR in backup: {e}")
+                    return False
+            else:
+                logger.warning("SAFETY WARNING: Executing backup without safety validation")
+
             logger.info(f"Executing backup avoidance ({distance} cm)")
 
             current_heading = self.motor_controller.get_current_heading()

@@ -6,6 +6,19 @@
  */
 
 :root {
+    /* Light Theme (Default) */
+    --bg-color: #f5f5f5;
+    --text-color: #212121;
+    --header-bg: #2e5c1e;
+    --header-text: #ffffff;
+    --card-bg: #ffffff;
+    --card-header-bg: #4a8e39;
+    --card-header-text: #ffffff;
+    --button-bg: #4a8e39;
+    --button-text: #ffffff;
+    --border-color: #d7ccc8;
+    --sidebar-bg: #ffffff;  /* Light sidebar background */
+
     /* Primary colors - grass tones */
     --grass-dark: #2e5c1e;    /* Dark grass for headers, footers */
     --grass-medium: #4a8e39;  /* Medium grass for buttons, links */
@@ -49,6 +62,20 @@
     --shadow-large: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
+[data-theme="dark"] {
+    --bg-color: #212121;
+    --text-color: #f5f5f5;
+    --header-bg: #1b3a12;
+    --header-text: #f5f5f5;
+    --card-bg: #424242;
+    --card-header-bg: #2e5c1e;
+    --card-header-text: #f5f5f5;
+    --button-bg: #8bc34a;
+    --button-text: #212121;
+    --border-color: #5d4037;
+    --sidebar-bg: #2d2d2d;  /* Darker sidebar for better text contrast */
+}
+
 /* Base styles */
 * {
     box-sizing: border-box;
@@ -62,8 +89,8 @@ html {
 
 body {
     font-family: var(--font-primary);
-    color: var(--dirt-dark);
-    background-color: var(--light-gray);
+    color: var(--text-color);
+    background-color: var(--bg-color);
     line-height: 1.5;
     margin: 0;
     padding: 0;
@@ -124,8 +151,8 @@ img {
 
 /* Header styles */
 .header {
-    background-color: var(--grass-dark);
-    color: var(--white);
+    background-color: var(--header-bg);
+    color: var(--header-text);
     height: var(--header-height);
     box-shadow: var(--shadow-small);
     position: sticky;
@@ -174,7 +201,7 @@ img {
     align-items: center;
     height: 100%;
     padding: 0 1rem;
-    color: var(--white);
+    color: var(--header-text);
     transition: background-color 0.2s ease;
 }
 
@@ -188,7 +215,7 @@ img {
 }
 
 /* Language selector */
-.language-selector {
+.language-selector, .theme-selector {
     margin-right: 15px;
     position: relative;
 }
@@ -201,7 +228,7 @@ img {
 .dropdown-toggle {
     background: none;
     border: none;
-    color: var(--white);
+    color: var(--header-text);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -223,7 +250,7 @@ img {
     position: absolute;
     top: 100%;
     right: 0;
-    background-color: var(--white);
+    background-color: var(--card-bg);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-medium);
     min-width: 150px;
@@ -238,7 +265,7 @@ img {
 .dropdown-item {
     display: block;
     padding: 8px 15px;
-    color: var(--dirt-dark);
+    color: var(--text-color);
     text-decoration: none;
     transition: background-color 0.2s ease;
 }
@@ -258,14 +285,14 @@ img {
     display: none;
     background: none;
     border: none;
-    color: var(--white);
+    color: var(--header-text);
     font-size: 1.5rem;
     cursor: pointer;
 }
 
 /* Sidebar */
 .sidebar {
-    background-color: var(--white);
+    background-color: var(--sidebar-bg);
     width: var(--sidebar-width);
     box-shadow: var(--shadow-small);
     transition: transform 0.3s ease;
@@ -308,7 +335,7 @@ img {
 
 /* Cards for dashboard components */
 .card {
-    background-color: var(--white);
+    background-color: var(--card-bg);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-small);
     margin-bottom: 1.5rem;
@@ -316,8 +343,8 @@ img {
 }
 
 .card-header {
-    background-color: var(--grass-medium);
-    color: var(--white);
+    background-color: var(--card-header-bg);
+    color: var(--card-header-text);
     padding: 1rem;
     font-weight: 500;
     display: flex;
@@ -327,7 +354,7 @@ img {
 
 .card-header h3 {
     margin: 0;
-    color: var(--white);
+    color: var(--card-header-text);
 }
 
 .card-body {
@@ -335,9 +362,9 @@ img {
 }
 
 .card-footer {
-    background-color: var(--light-gray);
+    background-color: var(--bg-color);
     padding: 1rem;
-    border-top: 1px solid var(--dirt-pale);
+    border-top: 1px solid var(--border-color);
 }
 
 /* Dashboard grid layout */
@@ -470,6 +497,17 @@ img {
     background-color: var(--accent-yellow);
 }
 
+/* Status text elements should be more visible */
+.status-text, .status-value {
+    color: var(--grass-light);
+    font-weight: 500;
+}
+
+[data-theme="dark"] .status-text,
+[data-theme="dark"] .status-value {
+    color: var(--grass-light);
+}
+
 /* Alerts */
 .alert {
     padding: 1rem;
@@ -560,6 +598,11 @@ img {
     font-size: 1.5rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
+    color: var(--grass-light);  /* Use grass-light for better visibility */
+}
+
+[data-theme="dark"] .sensor-value {
+    color: var(--grass-light);  /* Keep grass-light in dark mode too */
 }
 
 .sensor-label {

@@ -144,9 +144,20 @@ class YOLOv8TFLiteDetector:
         Returns:
             Preprocessed numpy array ready for inference
         """
-        # Convert to PIL if numpy
+        # Convert to PIL if numpy, ensuring RGB format
         if isinstance(image, np.ndarray):
+            # Handle BGR (OpenCV) to RGB conversion if needed
+            if len(image.shape) == 3 and image.shape[2] == 3:
+                # Convert BGR to RGB for PIL
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            elif len(image.shape) == 3 and image.shape[2] == 4:
+                # Convert BGRA to RGB
+                image = cv2.cvtColor(image, cv2.COLOR_BGRA2RGB)
             image = Image.fromarray(image)
+        elif isinstance(image, Image.Image):
+            # Ensure PIL image is in RGB mode
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
 
         # Resize to model input size
         image_resized = image.resize((self.input_width, self.input_height))
@@ -156,6 +167,11 @@ class YOLOv8TFLiteDetector:
             image_resized,
             dtype=np.float32 if self.floating_model else np.uint8,
         )
+
+        # Ensure we have exactly 3 channels (RGB)
+        if len(image_array.shape) == 3 and image_array.shape[2] != 3:
+            logger.error(f"Image has {image_array.shape[2]} channels, expected 3 (RGB)")
+            return None
 
         # Normalization
         if self.floating_model:

@@ -8,6 +8,7 @@ import utm  # Ensure `utm` is installed in your environment
 
 from mower.hardware.hardware_registry import get_hardware_registry
 from mower.navigation.gps import GpsLatestPosition, GpsPosition
+from mower.safety.autonomous_safety import SafetyChecker, SafetyValidationError, requires_safety_validation
 from mower.utilities.logger_config import LoggerConfigInfo
 
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -34,6 +35,7 @@ class NavigationController:
         gps_latest_position: GpsLatestPosition,
         sensor_interface,
         debug: bool = False,
+        resource_manager=None,
     ):
         """
         Initialize the navigation controller.
@@ -42,12 +44,25 @@ class NavigationController:
             gps_latest_position: GPS position handler
             sensor_interface: Sensor interface
             debug: Enable debug logging
+            resource_manager: ResourceManager instance for safety validation
         """
         self.gps_latest_position = gps_latest_position
         self.robohat_driver = get_hardware_registry().get_robohat()
         self.sensor_interface = sensor_interface
         self.debug = debug
         self.manual_control_enabled = False  # ADDED: manual control flag
+
+        # Initialize safety checker if resource manager provided
+        self.safety_checker = None
+        if resource_manager:
+            try:
+                self.safety_checker = SafetyChecker(resource_manager)
+                logger.info("Safety checker initialized for navigation controller")
+            except Exception as e:
+                logger.error(f"Failed to initialize safety checker: {e}")
+                self.safety_checker = None
+        else:
+            logger.warning("No resource manager provided - safety validation disabled")
 
         # Navigation parameters
         self.control_params = {
@@ -91,13 +106,40 @@ class NavigationController:
     def navigate_to_location(self, target_location: Tuple[float, float]) -> bool:
         """
         Navigate the robot to the specified target location.
+        
+        SAFETY: This method includes critical safety validation to prevent
+        autonomous movement when running with simulated data or unsafe conditions.
 
         Args:
             target_location: Tuple of (latitude, longitude)
 
         Returns:
             bool: True if navigation was successful
+
+        Raises:
+            SafetyValidationError: If safety validation fails
         """
+        # CRITICAL SAFETY CHECK: Validate safety conditions before any movement
+        if self.safety_checker:
+            try:
+                is_safe, error_message = self.safety_checker.validate_all_safety_conditions()
+                if not is_safe:
+                    error_msg = f"SAFETY BLOCK: Cannot navigate - {error_message}"
+                    logger.error(error_msg)
+                    self._handle_safety_stop(error_msg)
+                    raise SafetyValidationError(error_msg)
+                
+                logger.info("Safety validation passed - proceeding with navigation")
+            except SafetyValidationError:
+                raise  # Re-raise safety validation errors
+            except Exception as e:
+                error_msg = f"SAFETY CHECK ERROR: {e}"
+                logger.error(error_msg, exc_info=True)
+                self._handle_safety_stop(error_msg)
+                raise SafetyValidationError(error_msg)
+        else:
+            logger.warning("SAFETY WARNING: No safety checker available - proceeding without validation")
+
         try:
             self.status.target_position = target_location
             self.status.is_moving = True
@@ -378,8 +420,12 @@ class NavigationController:
         logger.info("Navigation process stopped.")
 
 
-def initialize_navigation():
-    """Initialize navigation system components."""
+def initialize_navigation(resource_manager=None):
+    """Initialize navigation system components.
+    
+    Args:
+        resource_manager: Optional ResourceManager instance for safety validation
+    """
     try:
         # Use the GPS service singleton instead of creating a new GPS instance
         from mower.services.gps_service import GpsService
@@ -407,7 +453,7 @@ if __name__ == "__main__":
 
     if gps_latest_position and robohat_driver:
         sensor_interface = None  # Replace with actual sensor interface
-        controller = NavigationController(gps_latest_position, sensor_interface, debug=True)
+        controller = NavigationController(gps_latest_position, sensor_interface, debug=True, resource_manager=None)
 
         # Example target location (latitude, longitude)
         target = (39.123, -84.512)

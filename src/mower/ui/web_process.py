@@ -8,6 +8,103 @@ from mower.utilities.logger_config import LoggerConfigInfo
 logger = LoggerConfigInfo.get_logger(__name__)
 
 # Create a simple mock class that simulates the resource manager API
+class DummyCamera:
+    """A dummy camera that provides test pattern frames for web interface testing."""
+    
+    def __init__(self):
+        self.logger = LoggerConfigInfo.get_logger(__name__)
+        
+    def get_frame(self):
+        """Generate a test pattern frame (numpy array)."""
+        import cv2
+        import numpy as np
+        from datetime import datetime
+        import time
+        
+        # Create a 640x480 test pattern
+        frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        
+        # Add visual elements
+        cv2.rectangle(frame, (50, 50), (590, 430), (0, 255, 0), 2)
+        cv2.putText(frame, "Dummy Camera Feed", (150, 200), 
+                  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"Time: {datetime.now().strftime('%H:%M:%S')}", 
+                  (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+        cv2.putText(frame, "Web Process Camera", (200, 300), 
+                  cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+        
+        # Add moving element
+        x = int((time.time() % 10) * 50) + 50
+        cv2.circle(frame, (x, 350), 20, (255, 0, 255), -1)
+        
+        return frame
+    
+    def capture_frame(self):
+        """Generate a test pattern frame as JPEG bytes."""
+        import cv2
+        frame = self.get_frame()
+        _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        return buffer.tobytes()
+    
+    def get_last_frame(self):
+        """Return the last captured frame as JPEG bytes."""
+        return self.capture_frame()
+
+
+class SharedFrameCamera:
+    """Camera that reads frames shared by the main process."""
+    
+    def __init__(self, frame_sharer):
+        """
+        Initialize the shared frame camera.
+        
+        Args:
+            frame_sharer: CameraFrameSharer instance for reading frames
+        """
+        self.frame_sharer = frame_sharer
+        self.logger = LoggerConfigInfo.get_logger(__name__)
+        self.fallback_camera = DummyCamera()
+        self.logger.info("SharedFrameCamera initialized")
+    
+    def get_frame(self):
+        """Get the latest frame from the main process."""
+        # Try to read a shared frame
+        frame_bytes = self.frame_sharer.read_frame(timeout=0.5)
+        
+        if frame_bytes is not None:
+            # Decode JPEG to numpy array for compatibility
+            import cv2
+            import numpy as np
+            
+            try:
+                # Decode JPEG bytes to numpy array
+                frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
+                frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+                
+                if frame is not None:
+                    return frame
+            except Exception as e:
+                self.logger.debug(f"Error decoding shared frame: {e}")
+        
+        # Fallback to dummy camera if no shared frame available
+        self.logger.debug("No shared frame available, using fallback")
+        return self.fallback_camera.get_frame()
+    
+    def capture_frame(self):
+        """Capture a frame and return as JPEG bytes."""
+        # Try to read a shared frame directly as JPEG bytes
+        frame_bytes = self.frame_sharer.read_frame(timeout=0.5)
+        
+        if frame_bytes is not None:
+            return frame_bytes
+        
+        # Fallback to dummy camera
+        return self.fallback_camera.capture_frame()
+    
+    def get_last_frame(self):
+        """Return the last captured frame as JPEG bytes."""
+        return self.capture_frame()
+
 class DummyResourceManager:
     """A simple dummy resource manager for the web UI process."""
     
@@ -19,6 +116,17 @@ class DummyResourceManager:
         # Instead, use simulation mode in the web process
         self._real_sensor_interface = None
         self._real_camera = None
+        
+        # Use frame sharing instead of direct camera access to avoid hardware conflicts
+        try:
+            from mower.hardware.camera_frame_share import get_frame_sharer
+            self._frame_sharer = get_frame_sharer()
+            self._real_camera = SharedFrameCamera(self._frame_sharer)
+            self.logger.info("Successfully initialized shared frame camera for web process")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize shared frame camera: {e}")
+            self.logger.info("Using DummyCamera fallback for web process")
+            self._real_camera = DummyCamera()
     
     def get_status(self):
         return {"state": "idle", "initialized": True}
@@ -37,48 +145,120 @@ class DummyResourceManager:
         """Return None since we don't have cross-process sensor access."""
         return None
     
+    def get_camera(self):
+        """Return the camera instance (either real or dummy)."""
+        return self._real_camera
+    
     def get_sensor_data(self):
-        # Return realistic but varied sensor data for the web UI
-        import random
+        # First try to get real sensor data from shared storage
+        try:
+            from mower.hardware.shared_sensor_data import get_shared_sensor_manager
+            shared_manager = get_shared_sensor_manager()
+            real_sensor_data = shared_manager.read_sensor_data()
+            
+            if real_sensor_data is not None:
+                # We have fresh real sensor data - transform it to web UI format
+                self.logger.debug("Using real sensor data from shared storage")
+                return self._transform_sensor_data_for_web_ui(real_sensor_data)
+            else:
+                self.logger.debug("No fresh real sensor data available, using fallback")
+        except Exception as e:
+            self.logger.debug(f"Failed to read shared sensor data: {e}")
+        
+        # Fallback to dummy data if real data unavailable
+        # Return consistent fallback sensor data for the web UI
+        # Note: This web process cannot access real sensor data due to multiprocessing limitations
         import time
         
-        # Create some variation based on time to make it look more realistic
-        variation = (time.time() % 60) / 60  # 0-1 over 60 seconds
+        # Create slow variation based on time to appear less static
+        variation = (time.time() % 120) / 120  # 0-1 over 2 minutes (slower changes)
         
         return {
             "imu": {
-                "heading": round(variation * 360, 1),  # 0-360 degrees
-                "roll": round((random.random() - 0.5) * 10, 1),  # ±5 degrees
-                "pitch": round((random.random() - 0.5) * 10, 1),  # ±5 degrees
+                "heading": round(variation * 360, 1),  # Slowly rotating heading over 2 minutes
+                "roll": 0.0,  # Static values to avoid random jumping
+                "pitch": 0.0,
                 "safety_status": {"is_safe": True}
             },
             "environment": {
-                "temperature": round(20 + variation * 15, 1),  # 20-35°C
-                "humidity": round(40 + variation * 40, 1),  # 40-80%
-                "pressure": round(1013.25 + (random.random() - 0.5) * 20, 2)  # ±10 hPa
+                "temperature": round(22.0 + variation * 3, 1),  # 22-25°C slow variation
+                "humidity": round(50.0 + variation * 10, 1),  # 50-60% slow variation  
+                "pressure": round(1013.25 + variation * 2, 2)  # Small pressure variation
             },
             "tof": {
-                "left": round(50 + random.random() * 200, 1),  # 50-250 cm
-                "right": round(50 + random.random() * 200, 1),
-                "front": round(50 + random.random() * 200, 1)
+                "left": 120.0,  # Static distance values to avoid random jumping
+                "right": 120.0,
+                "front": 150.0
             },
             "power": {
-                "voltage": round(11.5 + random.random() * 1.5, 1),  # 11.5-13V
-                "current": round(0.5 + random.random() * 2, 1),  # 0.5-2.5A
-                "power": round((11.5 + random.random() * 1.5) * (0.5 + random.random() * 2), 1),
-                "percentage": round(60 + variation * 40, 0)  # 60-100%
+                "voltage": 12.0,  # Static power values
+                "current": 1.0,
+                "power": 12.0,
+                "percentage": round(75 + variation * 20, 0)  # Battery slowly varying 75-95%
             },
             "gps": {
-                "latitude": round(37.7749 + (random.random() - 0.5) * 0.0002, 6),  # Small realistic variation
-                "longitude": round(-122.4194 + (random.random() - 0.5) * 0.0002, 6),
-                "fix": True,
-                "fix_quality": "3d",
-                "satellites": random.randint(8, 14),
-                "hdop": round(random.uniform(0.8, 2.0), 1),
-                "altitude": round(50 + random.random() * 10, 1),  # 50-60m above sea level
-                "speed": round(random.random() * 2, 1)  # 0-2 m/s when stationary/slow
+                "latitude": 0.000000,  # Show actual 0,0 instead of fake San Francisco coordinates
+                "longitude": 0.000000,
+                "fix": False,  # Indicate no real GPS fix
+                "fix_quality": "no_fix",
+                "status": "no_fix",  # Clear status that this is not real GPS
+                "satellites": 0,  # Show 0 satellites since no real GPS hardware
+                "hdop": 99.9,  # High HDOP indicates poor/no fix
+                "altitude": 0.0,
+                "speed": 0.0
             }
         }
+    
+    def _transform_sensor_data_for_web_ui(self, real_sensor_data):
+        """
+        Transform real sensor data from hardware format to web UI expected format.
+        
+        Args:
+            real_sensor_data: Raw sensor data from shared storage
+            
+        Returns:
+            dict: Sensor data in web UI expected format
+        """
+        try:
+            # Start with the real sensor data
+            transformed_data = real_sensor_data.copy()
+            
+            # Transform distance sensors: hardware uses "distance" with "front_left"/"front_right"
+            # but web UI expects "tof" with "left"/"right"  
+            if "distance" in real_sensor_data:
+                distance_data = real_sensor_data["distance"]
+                transformed_data["tof"] = {
+                    "left": distance_data.get("front_left", 120.0),  # Convert from mm
+                    "right": distance_data.get("front_right", 120.0),
+                    "working": distance_data.get("left_working", True) and distance_data.get("right_working", True)
+                }
+                # Keep the original distance data as well for compatibility
+                # transformed_data["distance"] = distance_data
+            
+            # Ensure GPS has the "fix" boolean field that frontend expects
+            if "gps" in transformed_data:
+                gps_data = transformed_data["gps"]
+                # Determine fix status from fix_quality and status
+                fix_quality = gps_data.get("fix_quality", 0)
+                status = gps_data.get("status", "no_fix")
+                gps_data["fix"] = (fix_quality >= 1 and status == "valid")
+                
+            # Add power data from any available source (INA3221 data is in hardware layer)
+            if "power" not in transformed_data:
+                # Add default power info if not present
+                transformed_data["power"] = {
+                    "voltage": 12.0,
+                    "current": 1.0, 
+                    "power": 12.0,
+                    "percentage": 75
+                }
+            
+            return transformed_data
+            
+        except Exception as e:
+            self.logger.error(f"Error transforming sensor data for web UI: {e}")
+            # Return original data if transformation fails
+            return real_sensor_data
     
     def get_camera(self):
         """Return the real camera if available, otherwise None."""

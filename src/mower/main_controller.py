@@ -53,6 +53,7 @@ from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
 # from mower.hardware.hardware_registry import get_hardware_registry # MOVING THIS IMPORT
 # Added missing imports as per bug report
 from mower.hardware.sensor_interface import get_sensor_interface
+from mower.hardware.shared_sensor_data import get_shared_sensor_manager
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.serial_port import SerialPort
@@ -293,21 +294,32 @@ class ResourceManager:
 
             # Initialize NavigationController
             try:
-                localization = self._resources.get("localization")
-                motor_driver = hardware_registry.get_robohat()
-                sensor_if = hardware_registry.get_sensor_interface()
-                if localization and motor_driver and sensor_if:
-                    self._resources["navigation"] = NavigationController(localization, motor_driver, sensor_if)
-                    logger.info("Navigation controller initialized successfully")
+                # Get GPS latest position from GPS service
+                gps_service = self._resources.get("gps_service")
+                if gps_service and gps_service.gps_position:
+                    from mower.navigation.gps import GpsLatestPosition
+                    gps_latest_position = GpsLatestPosition(gps_position_instance=gps_service.gps_position)
+                    
+                    sensor_if = hardware_registry.get_sensor_interface()
+                    if gps_latest_position and sensor_if:
+                        # Pass self as resource_manager for safety validation
+                        self._resources["navigation"] = NavigationController(
+                            gps_latest_position, 
+                            sensor_if, 
+                            debug=False, 
+                            resource_manager=self
+                        )
+                        logger.info("Navigation controller initialized successfully with safety validation")
+                    else:
+                        missing_items = []
+                        if not gps_latest_position:
+                            missing_items.append("gps_latest_position")
+                        if not sensor_if:
+                            missing_items.append("sensor_interface")
+                        logger.error(f"Cannot initialize navigation controller - missing dependencies: {missing_items}")
+                        self._resources["navigation"] = None
                 else:
-                    missing_items = []
-                    if not localization:
-                        missing_items.append("localization")
-                    if not motor_driver:
-                        missing_items.append("motor_driver")
-                    if not sensor_if:
-                        missing_items.append("sensor_interface")
-                    logger.error(f"Cannot initialize navigation controller - missing dependencies: {missing_items}")
+                    logger.error("Cannot initialize navigation controller - GPS service not available")
                     self._resources["navigation"] = None
             except Exception as e:
                 logger.error(f"Failed to initialize navigation controller: {e}", exc_info=True)
@@ -315,8 +327,16 @@ class ResourceManager:
 
             # Initialize the avoidance algorithm
             try:
-                self._resources["avoidance_algorithm"] = AvoidanceAlgorithm(self)
+                avoidance_algorithm = AvoidanceAlgorithm(self)
+                self._resources["avoidance_algorithm"] = avoidance_algorithm
                 logger.info("Avoidance algorithm initialized successfully")
+                
+                # Start the avoidance algorithm background monitoring
+                try:
+                    avoidance_algorithm.start()
+                    logger.info("Avoidance algorithm started successfully")
+                except Exception as e:
+                    logger.error(f"Failed to start avoidance algorithm: {e}")
             except Exception as e:
                 logger.error(f"Failed to initialize avoidance algorithm: {e}")
                 self._resources["avoidance_algorithm"] = None
@@ -391,16 +411,40 @@ class ResourceManager:
 
     def init_all_resources(self) -> bool:
         """
-        Initialize all resources; return True if successful,
+        Initialize all resources with timeout; return True if successful,
         False otherwise.
         """
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError("ResourceManager initialization timed out after 60 seconds")
+        
         try:
+            # Set timeout for initialization to prevent hanging
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(60)  # 60 second timeout for full initialization
+            
+            logger.info("Starting ResourceManager initialization with 60s timeout...")
             self.initialize()
+            
+            # Clear the timeout if successful
+            signal.alarm(0)
+            logger.info(f"ResourceManager initialization completed successfully: {self._initialized}")
             return self._initialized  # Return the actual status
+            
+        except TimeoutError as e:
+            logger.error(f"ResourceManager initialization timed out: {e}")
+            logger.error("This usually indicates hardware sensors are not responding properly")
+            logger.error("Consider checking I2C connections, sensor power, or running in safe mode")
+            self._initialized = False
+            return False
         except Exception as e:
             logger.error(f"ResourceManager init_all_resources failed: {e}", exc_info=True)
             self._initialized = False  # Ensure this is set on failure
             return False
+        finally:
+            # Always clear the timeout
+            signal.alarm(0)
 
     def cleanup_all_resources(self):
         """Clean up all initialized resources."""
@@ -419,9 +463,11 @@ class ResourceManager:
                 try:
                     logger.info("Terminating web interface process...")
                     web_process.terminate()
-                    web_process.join(timeout=5)
+                    web_process.join(timeout=15)  # Increased from 5 to 15 seconds
                     if web_process.is_alive():
-                        logger.warning("Web interface process did not terminate in time.")
+                        logger.warning("Web interface process did not terminate in time, forcing kill...")
+                        web_process.kill()
+                        web_process.join(timeout=5)  # Give it 5 more seconds after kill
                 except Exception as e:
                     logger.error(f"Error terminating web interface process: {e}", exc_info=True)
 
@@ -441,7 +487,10 @@ class ResourceManager:
                 if callable(cleanup_method):
                     try:
                         logger.info(f"Cleaning up {name}...")
+                        start_time = time.time()
                         cleanup_method()
+                        cleanup_time = time.time() - start_time
+                        logger.info(f"Cleanup of {name} completed in {cleanup_time:.2f} seconds")
                     except Exception as e:
                         logger.error(f"Error cleaning up {name}: {e}", exc_info=True)
                 else:
@@ -481,6 +530,18 @@ class ResourceManager:
                 # Only log if initialization is complete, to avoid noise.
                 self.logger.warning(f"Resource '{name}' not found.")
             return resource
+
+    def get(self, name: str) -> Any:
+        """
+        Get a resource by name (alias for get_resource for compatibility).
+
+        Args:
+            name (str): Name of the resource to get.
+
+        Returns:
+            object: The requested resource, or None if not found or not initialized.
+        """
+        return self.get_resource(name)
 
     def get_path_planner(self) -> Optional[PathPlanner]:
         """Get the path planner instance."""
@@ -648,12 +709,136 @@ class ResourceManager:
         # Potentially log to a specific emergency log file or send alert
         # For now, relies on stop_all_operations and state change.
 
+    def get_gps_location(self):
+        """
+        Get GPS location data from the GPS service.
+        
+        Returns:
+            dict: GPS location data with latitude, longitude, and metadata
+                  or None if GPS not available
+        """
+        try:
+            gps_service = self._resources.get("gps_service")
+            if not gps_service:
+                return None
+                
+            # Get position from GPS service
+            position = gps_service.get_position()
+            if not position:
+                return None
+                
+            # Convert from UTM to lat/lng
+            try:
+                import utm
+                # position format: (timestamp, easting, northing, zone_number, zone_letter)
+                if len(position) >= 5:
+                    timestamp, easting, northing, zone_number, zone_letter = position[:5]
+                    lat, lng = utm.to_latlon(easting, northing, zone_number, zone_letter)
+                    
+                    # Get metadata if available
+                    metadata = gps_service.get_metadata() if hasattr(gps_service, 'get_metadata') else {}
+                    
+                    return {
+                        "latitude": lat,
+                        "longitude": lng,
+                        "timestamp": timestamp,
+                        "utm_easting": easting,
+                        "utm_northing": northing,
+                        "utm_zone": f"{zone_number}{zone_letter}",
+                        "metadata": metadata or {}
+                    }
+            except Exception as e:
+                logger.error(f"Error converting GPS position to lat/lng: {e}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error getting GPS location: {e}")
+            return None
+
     def get_gps_coordinates(self):
         """Get GPS coordinates, simple wrapper around get_gps_location."""
         gps_info = self.get_gps_location()
         if gps_info and gps_info.get("latitude") is not None and gps_info.get("longitude") is not None:
             return {"lat": gps_info["latitude"], "lng": gps_info["longitude"]}
         return None
+
+    def get_sensor_data(self):
+        """
+        Get comprehensive sensor data including GPS for WebUI.
+        
+        Returns:
+            dict: Combined sensor data from sensor interface and GPS service
+        """
+        try:
+            # Get base sensor data from sensor interface
+            sensor_interface = self.get_sensor_interface()
+            sensor_data = {}
+            
+            if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
+                sensor_data = sensor_interface.get_sensor_data()
+            
+            # Add GPS data
+            gps_location = self.get_gps_location()
+            if gps_location:
+                fix_quality = gps_location.get("metadata", {}).get("fix_quality", 0)
+                # Convert fix_quality to status string for WebUI compatibility
+                if fix_quality >= 1:
+                    status = "valid"
+                else:
+                    status = "no_fix"
+                    
+                sensor_data["gps"] = {
+                    "latitude": gps_location.get("latitude"),
+                    "longitude": gps_location.get("longitude"),
+                    "timestamp": gps_location.get("timestamp"),
+                    "utm_easting": gps_location.get("utm_easting"),
+                    "utm_northing": gps_location.get("utm_northing"),
+                    "utm_zone": gps_location.get("utm_zone"),
+                    "satellites": gps_location.get("metadata", {}).get("satellites", 0),
+                    "hdop": gps_location.get("metadata", {}).get("hdop", 99.9),
+                    "fix_quality": fix_quality,
+                    "status": status  # Add status field for WebUI compatibility
+                }
+            else:
+                # Provide empty GPS data structure for consistency
+                sensor_data["gps"] = {
+                    "latitude": None,
+                    "longitude": None,
+                    "timestamp": None,
+                    "utm_easting": None,
+                    "utm_northing": None,
+                    "utm_zone": None,
+                    "satellites": 0,
+                    "hdop": 99.9,
+                    "fix_quality": 0,
+                    "status": "no_fix"  # Add status field for WebUI compatibility
+                }
+            
+            # Write sensor data to shared storage for web process
+            try:
+                shared_manager = get_shared_sensor_manager()
+                shared_manager.write_sensor_data(sensor_data)
+            except Exception as e:
+                logger.debug(f"Failed to write sensor data to shared storage: {e}")
+            
+            return sensor_data
+            
+        except Exception as e:
+            logger.error(f"Error getting sensor data: {e}")
+            return {
+                "error": f"Sensor data collection failed: {e}",
+                "gps": {
+                    "latitude": None,
+                    "longitude": None,
+                    "timestamp": None,
+                    "utm_easting": None,
+                    "utm_northing": None,
+                    "utm_zone": None,
+                    "satellites": 0,
+                    "hdop": 99.9,
+                    "fix_quality": 0
+                }
+            }
 
     def set_home_location(self, location):
         """
@@ -792,11 +977,15 @@ def main():
 
     def signal_handler(signum, frame):
         logger.info(f"Signal {signum} received. Initiating shutdown...")
+        start_time = time.time()
         stop_event.set()
         if resource_manager:
             logger.info("Cleaning up resources...")
             resource_manager.cleanup_all_resources()
-            logger.info("Resources cleaned up.")
+            cleanup_time = time.time() - start_time
+            logger.info(f"Resources cleaned up in {cleanup_time:.2f} seconds.")
+        else:
+            logger.info("No resource manager to clean up.")
         logger.info("Exiting application.")
         sys.exit(0)
 
@@ -808,16 +997,29 @@ def main():
         resource_manager = ResourceManager(config_path=str(MAIN_CONFIG_FILE))
         init_ok = resource_manager.init_all_resources()
 
-        # Check for truly critical resources (navigation, motor driver, safety)
+        # Check for truly critical resources (motor driver, safety)
+        # Navigation is NOT critical for sensor data collection
         nav = resource_manager.get_navigation()
         motor = resource_manager.get_robohat() if hasattr(resource_manager, 'get_robohat') else None
         safety = resource_manager.get_sensor_interface()
 
-        if not (init_ok and nav and motor and safety):
+        if not (init_ok and motor and safety):
             logger.error("Failed to initialize one or more critical resources (navigation, motor, safety).")
+            logger.error(f"Initialization status: init_ok={init_ok}, motor={type(motor) if motor else None}, safety={type(safety) if safety else None}")
+            
+            # Check if safe mode is explicitly allowed
             safe_mode_allowed = os.getenv("SAFE_MODE_ALLOWED", "false").lower() in ("true", "1", "yes")
+            
+            # Auto-enable safe mode for hardware timeout issues to prevent service hanging
+            auto_safe_mode = not init_ok and not safe_mode_allowed
+            if auto_safe_mode:
+                logger.warning("AUTO-ENABLING SAFE MODE: Hardware initialization failed/timed out")
+                logger.warning("This prevents the service from hanging. Set SAFE_MODE_ALLOWED=true to suppress this message.")
+                safe_mode_allowed = True
+            
             if safe_mode_allowed:
-                logger.warning("SAFE_MODE_ALLOWED is true. Starting web interface only.")
+                mode_reason = "explicitly enabled" if not auto_safe_mode else "auto-enabled due to hardware timeout"
+                logger.warning(f"SAFE_MODE_ALLOWED is {mode_reason}. Starting web interface only.")
                 try:
                     logger.info("MAIN: Attempting to start the web interface in safe mode...")
                     if resource_manager.start_web_interface():
@@ -861,7 +1063,22 @@ def main():
 
 
         logger.info("Application started. Waiting for shutdown signal...")
-        stop_event.wait()  # Wait indefinitely until stop_event is set
+        
+        # Main loop with periodic sensor data sharing
+        while not stop_event.is_set():
+            try:
+                # Write sensor data to shared storage for web process
+                if resource_manager:
+                    logger.debug("Main loop: Collecting sensor data...")
+                    sensor_data = resource_manager.get_sensor_data()
+                    logger.debug(f"Main loop: Sensor data collected, keys: {list(sensor_data.keys()) if sensor_data else 'None'}")
+                    # Note: get_sensor_data() already writes to shared storage
+                
+                # Wait for shutdown signal with periodic checks (every 2 seconds)
+                stop_event.wait(timeout=2.0)
+            except Exception as e:
+                logger.error(f"Error in main sensor data loop: {e}")
+                stop_event.wait(timeout=2.0)  # Continue with error recovery
 
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)

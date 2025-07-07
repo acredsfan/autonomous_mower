@@ -144,6 +144,15 @@ class ObstacleDetector:
         # Initialize tracker
         self.tracker = Sort()
 
+        # Initialize frame sharer for web interface
+        self._frame_sharer = None
+        try:
+            from mower.hardware.camera_frame_share import CameraFrameSharer
+            self._frame_sharer = CameraFrameSharer()
+            logger.info("Frame sharer initialized for web interface")
+        except ImportError as e:
+            logger.debug(f"Frame sharing not available: {e}")
+
         # Initialize interpreters
         self._initialize_interpreter()
         self._initialize_yolov8()
@@ -232,6 +241,17 @@ class ObstacleDetector:
             frame = self.camera.get_frame()
             if frame is None:
                 return []
+            
+            # Share frame with web process if we captured it
+            if hasattr(self, '_frame_sharer') and self._frame_sharer is not None:
+                try:
+                    # Convert frame to JPEG bytes for frame sharing
+                    success, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                    if success:
+                        jpeg_bytes = buffer.tobytes()
+                        self._frame_sharer.write_frame(jpeg_bytes)
+                except Exception as e:
+                    logger.debug(f"Failed to share frame in detect_obstacles: {e}")
 
         detected_objects = []
 
@@ -454,6 +474,13 @@ class ObstacleDetector:
             frame = self.camera.get_frame()
             if frame is None:
                 return []
+            
+            # Share frame with web process if we captured it
+            if hasattr(self, '_frame_sharer') and self._frame_sharer is not None:
+                try:
+                    self._frame_sharer.write_frame(frame)
+                except Exception as e:
+                    logger.debug(f"Failed to share frame in detect_drops: {e}")
 
         try:
             # Convert to grayscale
@@ -585,6 +612,13 @@ class ObstacleDetector:
             frame = self.camera.get_frame()
             if frame is None:
                 return None, []
+            
+            # Share frame with web process if we captured it
+            if hasattr(self, '_frame_sharer') and self._frame_sharer is not None:
+                try:
+                    self._frame_sharer.write_frame(frame)
+                except Exception as e:
+                    logger.debug(f"Failed to share frame in process_frame: {e}")
 
         # Detect obstacles and drops
         obstacles = self.detect_obstacles(frame)
@@ -605,11 +639,27 @@ class ObstacleDetector:
 
     def _processing_loop(self):
         """Main processing loop for continuous detection."""
+        # Initialize frame sharer for web interface
+        frame_sharer = None
+        try:
+            from mower.hardware.camera_frame_share import CameraFrameSharer
+            frame_sharer = CameraFrameSharer()
+            logger.info("Frame sharing initialized for web interface")
+        except ImportError as e:
+            logger.debug(f"Frame sharing not available: {e}")
+        
         while True:
             try:
                 # Capture and process frame
                 frame = self.camera.get_frame()
                 if frame is not None:
+                    # Share frame with web process if available
+                    if frame_sharer is not None:
+                        try:
+                            frame_sharer.write_frame(frame)
+                        except Exception as e:
+                            logger.debug(f"Failed to share frame: {e}")
+                    
                     processed_frame, detections = self.process_frame(frame)
 
                     # Store latest results
