@@ -63,7 +63,7 @@ endblock %} {% block head_extra %}
         <div class="status-card-header">Weather</div>
         <div class="status-card-value" id="weatherCondition">Loading...</div>
         <div class="status-card-footer">
-          <span id="temperature">--°C</span>
+          <span id="temperature" data-temp-unit>--°C</span>
           <span id="humidity">--%</span>
         </div>
       </div>
@@ -140,7 +140,7 @@ endblock %} {% block head_extra %}
         <div class="sensor-readings">
           <div class="sensor-item">
             <div class="sensor-value" id="sensor_temperature">--.-</div>
-            <div class="sensor-label">Temperature (°C)</div>
+            <div class="sensor-label" data-unit="temperature">Temperature (°C)</div>
           </div>
           <div class="sensor-item">
             <div class="sensor-value" id="sensor_humidity">--.-</div>
@@ -156,11 +156,11 @@ endblock %} {% block head_extra %}
           </div>
           <div class="sensor-item">
             <div class="sensor-value" id="sensor_leftDistance">--.-</div>
-            <div class="sensor-label">Left Distance (cm)</div>
+            <div class="sensor-label" data-unit="left-distance">Left Distance (cm)</div>
           </div>
           <div class="sensor-item">
             <div class="sensor-value" id="sensor_rightDistance">--.-</div>
-            <div class="sensor-label">Right Distance (cm)</div>
+            <div class="sensor-label" data-unit="right-distance">Right Distance (cm)</div>
           </div>
         </div>
       </div>
@@ -220,7 +220,14 @@ endblock %} {% block head_extra %}
 
   // Initialize map when the page loads
   function initializeMap() {
-    map = L.map("mapPreview").setView([0, 0], 18);
+    // Check if map is already initialized
+    if (map && map._container) {
+      console.log('Map already initialized, skipping...');
+      return;
+    }
+    
+    try {
+      map = L.map("mapPreview").setView([0, 0], 18);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -253,6 +260,9 @@ endblock %} {% block head_extra %}
       weight: 3,
       opacity: 0.7,
     });
+    } catch (error) {
+      console.error('Map initialization failed:', error);
+    }
   }
 
   // Update map with new position data

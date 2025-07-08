@@ -367,6 +367,15 @@ img {
     border-top: 1px solid var(--border-color);
 }
 
+/* Brown theme for sensor reading cards in light mode */
+.card:has(.sensor-readings) {
+    background-color: var(--dirt-pale);
+}
+
+[data-theme="dark"] .card:has(.sensor-readings) {
+    background-color: var(--card-bg);  /* Keep original card background in dark mode */
+}
+
 /* Dashboard grid layout */
 .dashboard-grid {
     display: grid;
@@ -594,20 +603,41 @@ img {
     gap: 1rem;
 }
 
+/* Sensor item containers with brown theme in light mode */
+.sensor-item {
+    background-color: var(--dirt-light);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-small);
+    border: 1px solid var(--dirt-medium);
+}
+
+/* Dark mode keeps the original styling */
+[data-theme="dark"] .sensor-item {
+    background-color: var(--dark-gray);
+    border: 1px solid var(--gray);
+}
+
 .sensor-value {
     font-size: 1.5rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
-    color: var(--grass-light);  /* Use grass-light for better visibility */
+    color: var(--white);  /* White text for better contrast on brown background */
 }
 
 [data-theme="dark"] .sensor-value {
-    color: var(--grass-light);  /* Keep grass-light in dark mode too */
+    color: var(--grass-light);  /* Keep grass-light in dark mode */
 }
 
 .sensor-label {
-    color: var(--gray);
+    color: var(--dirt-pale);  /* Light brown/tan text for labels */
     font-size: 0.875rem;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .sensor-label {
+    color: var(--gray);  /* Keep original gray in dark mode */
 }
 
 /* Map container */

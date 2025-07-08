@@ -6,7 +6,7 @@
  */
 
 // Enhanced alert system with different types and auto-dismissal
-const AlertSystem = {
+window.AlertSystem = window.AlertSystem || {
     // Alert container ID
     containerId: 'alertsContainer',
 

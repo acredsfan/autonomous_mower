@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Global variables for drawing tools
 // Avoid declaring 'map' as it conflicts with mowing-patterns.js
-var drawingManager = null;
+window.mapDrawingManager = window.mapDrawingManager || null;
 var currentPolygon = null; // To keep track of the currently drawn/displayed polygon
 var mapLoaded = false; // Track if the map is loaded
 
@@ -33,7 +33,7 @@ function setupDrawingManager(mapInstance) {
         return;
     }
     
-    drawingManager = new google.maps.drawing.DrawingManager({
+    mapDrawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null, // Initially not drawing
         drawingControl: true,
         drawingControlOptions: {
@@ -52,10 +52,10 @@ function setupDrawingManager(mapInstance) {
             zIndex: 1
         }
     });
-    drawingManager.setMap(mapInstance);
+    mapDrawingManager.setMap(mapInstance);
 
     // Event listener for when a polygon is completed
-    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(event) {
+    google.maps.event.addListener(mapDrawingManager, 'polygoncomplete', function(event) {
         if (currentPolygon) {
             currentPolygon.setMap(null); // Remove previous polygon from map
         }
@@ -73,7 +73,7 @@ function setupDrawingManager(mapInstance) {
         saveBoundary(coordinates);
 
         // After completing a polygon, set mode back to navigation (null)
-        drawingManager.setDrawingMode(null);
+        mapDrawingManager.setDrawingMode(null);
     });
 }
 
@@ -154,7 +154,7 @@ function initMap() {
     setupDrawingManager(window.map);
 
     // Event listener for when a polygon is completed
-    google.maps.event.addListener(drawingManager, 'polygoncomplete', function(event) {
+    google.maps.event.addListener(mapDrawingManager, 'polygoncomplete', function(event) {
         if (currentPolygon) {
             currentPolygon.setMap(null); // Remove previous polygon from map
         }
@@ -172,7 +172,7 @@ function initMap() {
         saveBoundary(coordinates);
 
         // After completing a polygon, set mode back to navigation (null)
-        drawingManager.setDrawingMode(null);
+        mapDrawingManager.setDrawingMode(null);
     });
 
     // Load any existing boundary when the map initializes
@@ -189,12 +189,12 @@ function setupMapUIEventListeners() {
     const drawBoundaryButton = document.getElementById('draw-boundary');
     if (drawBoundaryButton) {
         drawBoundaryButton.addEventListener('click', function() {
-            if (drawingManager) {
+            if (mapDrawingManager) {
                 if (currentPolygon) {
                     currentPolygon.setMap(null); // Clear current polygon from map
                     currentPolygon = null;       // Release reference
                 }
-                drawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
+                mapDrawingManager.setDrawingMode(google.maps.drawing.OverlayType.POLYGON);
                 showAlert('Drawing mode activated. Click on the map to start drawing your yard boundary.', 'info', 5000);
             }
         });

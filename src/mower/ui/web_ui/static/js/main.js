@@ -54,13 +54,107 @@ const systemState = {
     waypoints: [],
   },
   units: {
-    temperature: 'celsius',
-    distance: 'metric'
+    temperature: localStorage.getItem('temperatureUnit') || 'celsius',
+    distance: localStorage.getItem('distanceUnit') || 'metric'
   }
 };
 
+// Unit conversion functions
+function convertTemperature(celsius, unit) {
+  if (unit === 'fahrenheit') {
+    return {
+      value: (celsius * 9/5) + 32,
+      unit: '°F'
+    };
+  }
+  return {
+    value: celsius,
+    unit: '°C'
+  };
+}
+
+function convertDistance(mm, unit) {
+  if (unit === 'imperial') {
+    return {
+      value: mm * 0.0393701, // mm to inches
+      unit: 'in'
+    };
+  }
+  return {
+    value: mm / 10, // mm to cm for metric
+    unit: 'cm'
+  };
+}
+
+// Load user preferences
+function loadUserPreferences() {
+  systemState.units.temperature = localStorage.getItem('temperatureUnit') || 'celsius';
+  systemState.units.distance = localStorage.getItem('distanceUnit') || 'metric';
+  
+  // Update UI to reflect preferences
+  const tempRadios = document.querySelectorAll('input[name="temperature_units"]');
+  tempRadios.forEach(radio => {
+    if (radio.value === systemState.units.temperature) {
+      radio.checked = true;
+    }
+  });
+  
+  const distRadios = document.querySelectorAll('input[name="distance_units"]');
+  distRadios.forEach(radio => {
+    if (radio.value === systemState.units.distance) {
+      radio.checked = true;
+    }
+  });
+  
+  // Update all unit labels
+  updateUnitLabels();
+}
+
+// Save user preferences
+function saveUserPreferences() {
+  localStorage.setItem('temperatureUnit', systemState.units.temperature);
+  localStorage.setItem('distanceUnit', systemState.units.distance);
+}
+
+// Update all unit labels throughout the interface
+function updateUnitLabels() {
+  const tempUnit = systemState.units.temperature === 'fahrenheit' ? '°F' : '°C';
+  const distUnit = systemState.units.distance === 'imperial' ? 'in' : 'cm';
+  
+  // Update main sensor reading labels
+  const tempLabel = document.querySelector('.sensor-label[data-unit="temperature"]');
+  if (tempLabel) tempLabel.textContent = `Temperature (${tempUnit})`;
+  
+  const leftDistLabel = document.querySelector('.sensor-label[data-unit="left-distance"]');
+  if (leftDistLabel) leftDistLabel.textContent = `Left Distance (${distUnit})`;
+  
+  const rightDistLabel = document.querySelector('.sensor-label[data-unit="right-distance"]');
+  if (rightDistLabel) rightDistLabel.textContent = `Right Distance (${distUnit})`;
+  
+  // Update other temperature displays
+  const elements = document.querySelectorAll('[data-temp-unit]');
+  elements.forEach(element => {
+    const currentText = element.textContent;
+    if (currentText.includes('°C') || currentText.includes('°F')) {
+      // Update existing temperature display
+      const value = currentText.replace(/[°CF]/g, '');
+      element.textContent = value + tempUnit;
+    }
+  });
+  
+  // Update chart labels if they exist
+  const chartTempLabel = document.querySelector('[data-chart-temp-label]');
+  if (chartTempLabel) chartTempLabel.textContent = `Temperature (${tempUnit})`;
+  
+  // Re-apply sensor data with new units if available
+  if (window.lastSensorData) {
+    updateSensorData(window.lastSensorData);
+  }
+}
+
 // Initialize when DOM is ready
 document.addEventListener("DOMContentLoaded", function () {
+  loadUserPreferences();
   initializeUI();
   setupEventListeners();
 });
@@ -220,6 +314,37 @@ function setupEventListeners() {
       sendCommand("return_home");
     });
   }
+
+  // Unit preference controls
+  const tempRadios = document.querySelectorAll('input[name="temperature_units"]');
+  tempRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        systemState.units.temperature = this.value;
+        saveUserPreferences();
+        updateUnitLabels(); // Update labels immediately
+        // Trigger UI refresh with new units
+        if (window.lastSensorData) {
+          updateSensorData(window.lastSensorData);
+        }
+      }
+    });
+  });
+  
+  const distRadios = document.querySelectorAll('input[name="distance_units"]');
+  distRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      if (this.checked) {
+        systemState.units.distance = this.value;
+        saveUserPreferences();
+        updateUnitLabels(); // Update labels immediately
+        // Trigger UI refresh with new units
+        if (window.lastSensorData) {
+          updateSensorData(window.lastSensorData);
+        }
+      }
+    });
+  });
 
   // Set up page-specific event listeners
   setupPageSpecificListeners();
@@ -421,6 +546,8 @@ function updateAdditionalStatusElements() {
  */
 function updateSensorData(data) {
   try {
+    // Store last sensor data for unit conversions
+    window.lastSensorData = data;
     // Update battery from sensor data
     if (data.power) {
       const power = data.power;
@@ -486,13 +613,8 @@ function updateSensorData(data) {
     if (data.environment && data.environment.temperature !== undefined) {
       const tempElement = document.getElementById("sensor_temperature");
       if (tempElement) {
-        let temp = data.environment.temperature;
-        let unit = '°C';
-        if (systemState.units.temperature === 'fahrenheit') {
-          temp = (temp * 9/5) + 32;
-          unit = '°F';
-        }
-        tempElement.textContent = `${Number(temp).toFixed(1)}${unit}`;
+        const temp = convertTemperature(data.environment.temperature, systemState.units.temperature);
+        tempElement.textContent = `${Number(temp.value).toFixed(1)}${temp.unit}`;
       }
     }
     
@@ -521,37 +643,24 @@ function updateSensorData(data) {
     if (data.tof) {
       const tof = data.tof;
 
-      const convertDistance = (cm) => {
-        if (systemState.units.distance === 'imperial') {
-          return {
-            value: cm * 0.393701,
-            unit: 'in'
-          };
-        }
-        return {
-          value: cm,
-          unit: 'cm'
-        };
-      };
-
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
       if (leftDistElement && tof.left !== undefined) {
-        const dist = convertDistance(tof.left);
+        const dist = convertDistance(tof.left, systemState.units.distance);
         leftDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
 
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
       if (rightDistElement && tof.right !== undefined) {
-        const dist = convertDistance(tof.right);
+        const dist = convertDistance(tof.right, systemState.units.distance);
         rightDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
 
       // Update front distance sensor if available
       const frontDistElement = document.getElementById("sensor_frontDistance");
       if (frontDistElement && tof.front !== undefined) {
-        const dist = convertDistance(tof.front);
+        const dist = convertDistance(tof.front, systemState.units.distance);
         frontDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
       }
     }

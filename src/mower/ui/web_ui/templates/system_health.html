@@ -166,7 +166,7 @@
                 <div class="resource-usage">
                     <div class="resource-label">
                         <span>CPU Temperature</span>
-                        <span id="cpuTempValue">---°C</span>
+                        <span id="cpuTempValue" data-temp-unit>---°C</span>
                     </div>
                     <div class="resource-bar">
                         <div class="resource-value" id="cpuTempBar" style="width: 0%"></div>
@@ -207,17 +207,17 @@
                     <h4>Motors</h4>
                     <div class="health-indicator">
                         <div class="health-indicator-label">Left Motor</div>
-                        <div class="health-indicator-value" id="leftMotorTemp">--°C</div>
+                        <div class="health-indicator-value" id="leftMotorTemp" data-temp-unit>--°C</div>
                         <div class="health-indicator-status status-good" id="leftMotorStatus"></div>
                     </div>
                     <div class="health-indicator">
                         <div class="health-indicator-label">Right Motor</div>
-                        <div class="health-indicator-value" id="rightMotorTemp">--°C</div>
+                        <div class="health-indicator-value" id="rightMotorTemp" data-temp-unit>--°C</div>
                         <div class="health-indicator-status status-good" id="rightMotorStatus"></div>
                     </div>
                     <div class="health-indicator">
                         <div class="health-indicator-label">Blade Motor</div>
-                        <div class="health-indicator-value" id="bladeMotorTemp">--°C</div>
+                        <div class="health-indicator-value" id="bladeMotorTemp" data-temp-unit>--°C</div>
                         <div class="health-indicator-status status-good" id="bladeMotorStatus"></div>
                     </div>
                 </div>
@@ -379,11 +379,11 @@
                 <div class="threshold-group">
                     <h4>Temperature</h4>
                     <div class="threshold-config">
-                        <div class="threshold-label">Warning Threshold (°C)</div>
+                        <div class="threshold-label" data-temp-unit>Warning Threshold (°C)</div>
                         <input type="number" class="form-control threshold-value" id="tempWarningThreshold" min="0" max="100" value="70">
                     </div>
                     <div class="threshold-config">
-                        <div class="threshold-label">Critical Threshold (°C)</div>
+                        <div class="threshold-label" data-temp-unit>Critical Threshold (°C)</div>
                         <input type="number" class="form-control threshold-value" id="tempCriticalThreshold" min="0" max="100" value="85">
                     </div>
                 </div>
@@ -512,7 +512,7 @@
                         tension: 0.4
                     },
                     {
-                        label: 'Temperature (°C)',
+                        label: 'Temperature (°C)', // JS will update this label dynamically
                         data: sampleData.temperature,
                         borderColor: 'rgba(244, 67, 54, 1)',
                         backgroundColor: 'rgba(244, 67, 54, 0.1)',
@@ -540,7 +540,7 @@
                         max: 100,
                         title: {
                             display: true,
-                            text: 'Temperature (°C)'
+                            text: 'Temperature (°C)' // JS will update this label dynamically
                         },
                         grid: {
                             drawOnChartArea: false
