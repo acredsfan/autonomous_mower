@@ -503,7 +503,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             # Read all available sensors
             sensor_data = {}
             
-            # Read environmental data only if BME280 is available
+            # Read environmental data with explicit N/A handling
             bme_data = {}
             if self._sensors.get("bme280") is not None:
                 bme_data = self._read_bme280()
@@ -515,24 +515,65 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                     "humidity": bme_data.get("humidity"),
                     "pressure": bme_data.get("pressure")
                 }
-            # If BME280 is not available, don't include environment data
-            # The WebUI will handle the absence gracefully
+            else:
+                # BME280 failed or not available - show N/A instead of hiding
+                sensor_data["environment"] = {
+                    "temperature": "N/A",
+                    "humidity": "N/A", 
+                    "pressure": "N/A"
+                }
             
-            # Read IMU data
+            # Read IMU data with explicit N/A handling
             imu_data = self._read_bno085()
             if imu_data:
                 sensor_data["imu"] = imu_data
+            else:
+                # IMU failed or not available - show N/A instead of hiding
+                sensor_data["imu"] = {
+                    "heading": "N/A",
+                    "roll": "N/A",
+                    "pitch": "N/A",
+                    "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                    "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                    "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                    "calibration": "N/A",
+                    "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
+                }
             
-            # Read power data only if INA3221 is available
+            # Read power data with explicit N/A handling
             if self._sensors.get("ina3221") is not None:
                 power_data = self._read_ina3221()
                 if power_data and "error" not in power_data:
                     sensor_data["power"] = power_data
+                else:
+                    # Power sensor failed - show N/A
+                    sensor_data["power"] = {
+                        "voltage": "N/A",
+                        "current": "N/A", 
+                        "power": "N/A",
+                        "percentage": "N/A"
+                    }
+            else:
+                # Power sensor not available - show N/A
+                sensor_data["power"] = {
+                    "voltage": "N/A",
+                    "current": "N/A",
+                    "power": "N/A", 
+                    "percentage": "N/A"
+                }
             
-            # Read distance sensors
+            # Read distance sensors with explicit N/A handling
             tof_data = self._read_vl53l0x()
             if tof_data:
                 sensor_data["distance"] = tof_data
+            else:
+                # ToF sensors failed or not available - show N/A
+                sensor_data["distance"] = {
+                    "front_left": "N/A",
+                    "front_right": "N/A", 
+                    "left_working": False,
+                    "right_working": False
+                }
             
             # Update internal data store
             self._data.update(sensor_data)
@@ -772,8 +813,7 @@ class MockSensorInterface(HardwareSensorInterface):
             },
             "distance": {
                 "left": 200.0,
-                "right": 200.0,
-                "front": 200.0
+                "right": 200.0
             }
         }
     

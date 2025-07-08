@@ -59,6 +59,21 @@ const systemState = {
   }
 };
 
+// Helper function to format sensor values (handles N/A)
+function formatSensorValue(value, format = 'number', unit = '') {
+  if (value === "N/A" || value === null || value === undefined || isNaN(value)) {
+    return "N/A";
+  }
+  
+  if (format === 'number') {
+    return `${Number(value).toFixed(1)}${unit}`;
+  } else if (format === 'integer') {
+    return `${Math.round(Number(value))}${unit}`;
+  }
+  
+  return `${value}${unit}`;
+}
+
 // Unit conversion functions
 function convertTemperature(celsius, unit) {
   if (unit === 'fahrenheit') {
@@ -613,8 +628,12 @@ function updateSensorData(data) {
     if (data.environment && data.environment.temperature !== undefined) {
       const tempElement = document.getElementById("sensor_temperature");
       if (tempElement) {
-        const temp = convertTemperature(data.environment.temperature, systemState.units.temperature);
-        tempElement.textContent = `${Number(temp.value).toFixed(1)}${temp.unit}`;
+        if (data.environment.temperature === "N/A") {
+          tempElement.textContent = "N/A";
+        } else {
+          const temp = convertTemperature(data.environment.temperature, systemState.units.temperature);
+          tempElement.textContent = formatSensorValue(temp.value, 'number', temp.unit);
+        }
       }
     }
     
@@ -622,7 +641,7 @@ function updateSensorData(data) {
     if (data.environment && data.environment.humidity !== undefined) {
         const humidityElement = document.getElementById("sensor_humidity");
         if (humidityElement) {
-            humidityElement.textContent = `${Number(data.environment.humidity).toFixed(1)}%`;
+            humidityElement.textContent = formatSensorValue(data.environment.humidity, 'number', '%');
         }
     }
 
@@ -630,7 +649,7 @@ function updateSensorData(data) {
     if (data.environment && data.environment.pressure !== undefined) {
         const pressureElement = document.getElementById("sensor_pressure");
         if (pressureElement) {
-            pressureElement.textContent = `${Number(data.environment.pressure).toFixed(1)} hPa`;
+            pressureElement.textContent = formatSensorValue(data.environment.pressure, 'number', ' hPa');
         }
     }
 
@@ -646,22 +665,23 @@ function updateSensorData(data) {
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
       if (leftDistElement && tof.left !== undefined) {
-        const dist = convertDistance(tof.left, systemState.units.distance);
-        leftDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
+        if (tof.left === "N/A") {
+          leftDistElement.textContent = "N/A";
+        } else {
+          const dist = convertDistance(tof.left, systemState.units.distance);
+          leftDistElement.textContent = formatSensorValue(dist.value, 'number', ` ${dist.unit}`);
+        }
       }
 
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
       if (rightDistElement && tof.right !== undefined) {
-        const dist = convertDistance(tof.right, systemState.units.distance);
-        rightDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
-      }
-
-      // Update front distance sensor if available
-      const frontDistElement = document.getElementById("sensor_frontDistance");
-      if (frontDistElement && tof.front !== undefined) {
-        const dist = convertDistance(tof.front, systemState.units.distance);
-        frontDistElement.textContent = `${Number(dist.value).toFixed(1)} ${dist.unit}`;
+        if (tof.right === "N/A") {
+          rightDistElement.textContent = "N/A";
+        } else {
+          const dist = convertDistance(tof.right, systemState.units.distance);
+          rightDistElement.textContent = formatSensorValue(dist.value, 'number', ` ${dist.unit}`);
+        }
       }
     }
   } catch (err) {

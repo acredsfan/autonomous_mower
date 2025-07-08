@@ -2,9 +2,17 @@
 """
 Independent sensor service for autonomous mower.
 
+⚠️  CRITICAL WARNING: DO NOT RUN SIMULTANEOUSLY WITH MAIN CONTROLLER ⚠️
+
 This service provides a backup mechanism for sensor data collection
 that operates independently of the main ResourceManager. It directly
 initializes sensors without the complex ResourceManager context.
+
+USAGE NOTES:
+- Only run this when the main mower service is STOPPED
+- Creates competing I2C/GPIO access with main controller if run simultaneously
+- Designed for debugging and troubleshooting sensor issues only
+- Automatically times out after 30 seconds to prevent conflicts
 
 @author: GitHub Copilot
 @date: 2025-01-07
@@ -59,6 +67,23 @@ class IndependentSensorService:
         Returns:
             bool: True if sensors initialized successfully
         """
+        # Safety check: warn if main service might be running
+        try:
+            import subprocess
+            result = subprocess.run(['pgrep', '-f', 'mower.service'], 
+                                  capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                logger.warning("⚠️  WARNING: Main mower service may be running!")
+                logger.warning("⚠️  This could cause I2C/GPIO conflicts!")
+                logger.warning("⚠️  Consider stopping main service first: sudo systemctl stop mower.service")
+                print("WARNING: Main mower service may be running - this could cause conflicts!")
+                user_input = input("Continue anyway? (y/N): ")
+                if user_input.lower() != 'y':
+                    logger.info("Aborting to prevent sensor conflicts")
+                    return False
+        except Exception as e:
+            logger.debug(f"Could not check for running services: {e}")
+        
         try:
             logger.info("Initializing sensor interface...")
             

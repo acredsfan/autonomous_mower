@@ -145,7 +145,6 @@ class SharedSensorDataManager:
             "tof": {
                 "left": 150.0,
                 "right": 150.0,
-                "front": 150.0
             },
             "power": {
                 "voltage": 12.0,

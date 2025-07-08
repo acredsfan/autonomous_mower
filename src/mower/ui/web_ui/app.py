@@ -31,13 +31,13 @@ from mower.utilities.logger_config import LoggerConfigInfo
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
 
-# Check if we should use simulation mode (on Windows or via env variable)
-
-USE_SIMULATION = platform.system() == "Windows" or os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")
+# Check if we should use simulation mode (ONLY if explicitly requested)
+# Removed automatic Windows detection - simulation should be explicit only
+USE_SIMULATION = os.environ.get("USE_SIMULATION", "").lower() in ("true", "1", "yes")
 if USE_SIMULATION:
-    logger.info("Running in simulation mode - using simulated sensor data")
+    logger.info("Running in simulation mode - using simulated sensor data (explicitly enabled)")
 else:
-    logger.info("Running in hardware mode - using real sensor data")
+    logger.info("Running in hardware mode - showing N/A for failed sensors (simulation disabled)")
 
 
 def create_app(mower_resource_manager_instance):
@@ -805,7 +805,6 @@ def create_app(mower_resource_manager_instance):
                         "tof": {
                             "left": 100.0,
                             "right": 100.0,
-                            "front": 100.0,
                             "error": str(e)
                         },
                         "power": {
@@ -824,7 +823,7 @@ def create_app(mower_resource_manager_instance):
                     sensor_data = {
                         "imu": {"heading": 0.0, "roll": 0.0, "pitch": 0.0},
                         "environment": {"temperature": 20.0, "humidity": 50.0, "pressure": 1013.25},
-                        "tof": {"left": 100.0, "right": 100.0, "front": 100.0},
+                        "tof": {"left": 100.0, "right": 100.0},
                         "power": {"voltage": 12.0, "current": 1.0, "power": 12.0, "percentage": 80.0}
                     }
 

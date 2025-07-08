@@ -165,50 +165,50 @@ class DummyResourceManager:
         except Exception as e:
             self.logger.debug(f"Failed to read shared sensor data: {e}")
         
-        # Fallback to dummy data if real data unavailable
-        # Return consistent fallback sensor data for the web UI
-        # Note: This web process cannot access real sensor data due to multiprocessing limitations
-        import time
-        
-        # Create slow variation based on time to appear less static
-        variation = (time.time() % 120) / 120  # 0-1 over 2 minutes (slower changes)
+        # Fallback to N/A values if real data unavailable - NO SIMULATION
+        # This ensures failed sensors show "N/A" instead of fake data
+        self.logger.warning("No real sensor data available - showing N/A values for failed sensors")
         
         return {
             "imu": {
-                "heading": round(variation * 360, 1),  # Slowly rotating heading over 2 minutes
-                "roll": 0.0,  # Static values to avoid random jumping
-                "pitch": 0.0,
-                "safety_status": {"is_safe": True}
+                "heading": "N/A",
+                "roll": "N/A", 
+                "pitch": "N/A",
+                "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "calibration": "N/A",
+                "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
             },
             "environment": {
-                "temperature": round(22.0 + variation * 3, 1),  # 22-25°C slow variation
-                "humidity": round(50.0 + variation * 10, 1),  # 50-60% slow variation  
-                "pressure": round(1013.25 + variation * 2, 2)  # Small pressure variation
+                "temperature": "N/A",
+                "humidity": "N/A",
+                "pressure": "N/A"
             },
             "tof": {
-                "left": 120.0,  # Static distance values to avoid random jumping
-                "right": 120.0,
-                "front": 150.0
+                "left": "N/A",
+                "right": "N/A",
+                "working": False
             },
             "power": {
-                "voltage": 12.0,  # Static power values
-                "current": 1.0,
-                "power": 12.0,
-                "percentage": round(75 + variation * 20, 0)  # Battery slowly varying 75-95%
+                "voltage": "N/A",
+                "current": "N/A",
+                "power": "N/A",
+                "percentage": "N/A"
             },
             "gps": {
-                "latitude": 0.000000,  # Show actual 0,0 instead of fake San Francisco coordinates
+                "latitude": 0.000000,  # GPS may legitimately be 0,0 when no fix
                 "longitude": 0.000000,
-                "fix": False,  # Indicate no real GPS fix
+                "fix": False,
                 "fix_quality": "no_fix",
-                "status": "no_fix",  # Clear status that this is not real GPS
-                "satellites": 0,  # Show 0 satellites since no real GPS hardware
-                "hdop": 99.9,  # High HDOP indicates poor/no fix
+                "status": "no_fix",
+                "satellites": 0,
+                "hdop": 99.9,
                 "altitude": 0.0,
                 "speed": 0.0
             }
         }
-    
+
     def _transform_sensor_data_for_web_ui(self, real_sensor_data):
         """
         Transform real sensor data from hardware format to web UI expected format.

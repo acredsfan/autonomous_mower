@@ -41,8 +41,6 @@ def print_sensor_data(sensor_data):
         tof = sensor_data["tof"]
         print(f"Left:  {tof.get('left', 'N/A'):.1f} mm")
         print(f"Right: {tof.get('right', 'N/A'):.1f} mm")
-        if "front" in tof:
-            print(f"Front: {tof['front']:.1f} mm")
     else:
         print("Distance sensor data not available")
 
