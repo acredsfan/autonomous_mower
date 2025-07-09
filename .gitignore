@@ -53,13 +53,6 @@ logs/
 .pytest_cache/
 .tox/
 
-# Model files and data
-models/*.tflite
-models/*.pth
-models/*.h5
-models/*.onnx
-models/coco_labels.txt
-
 # Project specific configuration
 config/user_polygon.json
 config/home_location.json

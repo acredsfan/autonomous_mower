@@ -268,8 +268,10 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             from mower.hardware.ina3221 import INA3221Sensor
             
             all_channels_data = {}
-            # Assuming channel 1 is for main battery, 2 for motors, 3 for electronics
-            # These channel assignments should be confirmed or made configurable
+            # Channel assignments corrected per user specification:
+            # Channel 1: Solar panel monitoring
+            # Channel 2: Motors (future use)
+            # Channel 3: Battery monitoring
             for channel_num in [1, 2, 3]:  # INA3221Sensor expects 1-indexed channels (static method)
                 # Use the static method from our INA3221Sensor class
                 channel_data = INA3221Sensor.read_ina3221(sensor, channel_num)
@@ -280,21 +282,16 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                     logging.warning(f"Failed to read data for INA3221 channel {channel_num}")
                     all_channels_data[f"channel_{channel_num}"] = {"error": f"Failed to read channel {channel_num}"}
             
-            # Aggregate or select specific channel data as needed for the rest of the system
-            # For now, returning all channels. The main battery is usually on channel 1.
-            # The `power` field in `sensor_data` expects specific keys like `bus_voltage`, `current`, `percentage`.
-            # We need to map one of the channel's data to these keys.
-            # Let's assume channel 1 is the main battery.
-            main_battery_data = all_channels_data.get("channel_1", {})
+            # Get solar panel data from channel 1 and battery data from channel 3
+            solar_data = all_channels_data.get("channel_1", {})
+            battery_data = all_channels_data.get("channel_3", {})
             
-            # Basic battery percentage calculation (example, needs refinement)
-            # This is a placeholder. A proper implementation would consider battery chemistry,
-            # discharge curves, and possibly temperature.
-            voltage = main_battery_data.get("bus_voltage")
+            # Basic battery percentage calculation from channel 3
+            voltage = battery_data.get("bus_voltage")
             percentage = None
             if voltage is not None:
-                # Example: 12V lead-acid battery (10.5V empty, 12.7V full)
-                # This needs to be adjusted for the actual battery type and voltage range.
+                # 12V lead-acid battery (10.5V empty, 12.7V full)
+                # Adjust these values for your specific battery type
                 min_volt = 10.5 
                 max_volt = 12.7
                 if voltage <= min_volt:
@@ -312,11 +309,20 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 logging.warning(f"Failed to update INA3221 sensor status: {status_error}")
 
             return {
-                "bus_voltage": main_battery_data.get("bus_voltage"),
-                "current": main_battery_data.get("current"),
-                "shunt_voltage": main_battery_data.get("shunt_voltage"),
-                "power": main_battery_data.get("power"),
+                # Battery data (channel 3)
+                "bus_voltage": battery_data.get("bus_voltage"),
+                "current": battery_data.get("current"),
+                "shunt_voltage": battery_data.get("shunt_voltage"),
+                "power": battery_data.get("power"),
                 "percentage": percentage,
+                
+                # Solar panel data (channel 1) 
+                "solar_voltage": solar_data.get("bus_voltage"),
+                "solar_current": solar_data.get("current"),
+                "solar_power": solar_data.get("power"),
+                
+                # Raw channel data for debugging
+                "all_channels": all_channels_data,
             }
         except Exception as e:
             self._handle_sensor_error("ina3221", e)

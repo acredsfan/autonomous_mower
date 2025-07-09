@@ -821,10 +821,10 @@ def create_app(mower_resource_manager_instance):
                 if not sensor_data:
                     logger.warning("Sensor data is empty, providing minimal fallback...")
                     sensor_data = {
-                        "imu": {"heading": 0.0, "roll": 0.0, "pitch": 0.0},
-                        "environment": {"temperature": 20.0, "humidity": 50.0, "pressure": 1013.25},
-                        "tof": {"left": 100.0, "right": 100.0},
-                        "power": {"voltage": 12.0, "current": 1.0, "power": 12.0, "percentage": 80.0}
+                        "imu": {"heading": 1000, "roll": 88.8, "pitch": 88.8},
+                        "environment": {"temperature": 203.0, "humidity": 150.0, "pressure": 0.25},
+                        "tof": {"left": 1080.0, "right": 1080.0},
+                        "power": {"voltage": 50.0, "current": 450.0, "power": 150.0, "percentage": 800.0}
                     }
 
                 # Always emit valid data
