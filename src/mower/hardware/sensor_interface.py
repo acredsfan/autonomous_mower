@@ -124,9 +124,48 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info(f"INA3221 optional sensor unavailable: {exc}")
             self._sensors["ina3221"] = None
         
-        # Initialize other sensors (non-optional)
-        self._sensors["bno085"] = hardware_registry.get_bno085()
-        self._sensors["vl53l0x"] = hardware_registry.get_vl53l0x()
+        # Initialize other sensors with timeout protection
+        try:
+            # BNO085 IMU with timeout protection
+            logging.info("Initializing BNO085 IMU sensor...")
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("BNO085 initialization timed out")
+            
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(10)  # 10-second timeout
+            
+            try:
+                self._sensors["bno085"] = hardware_registry.get_bno085()
+                signal.alarm(0)  # Cancel timeout
+                if self._sensors["bno085"]:
+                    self._sensor_status["bno085"].working = True
+                    logging.info("BNO085 sensor initialized successfully")
+                else:
+                    logging.warning("BNO085 sensor returned None")
+            except TimeoutError:
+                signal.alarm(0)
+                logging.error("BNO085 IMU initialization timed out - marking as unavailable")
+                self._sensors["bno085"] = None
+            except Exception as e:
+                signal.alarm(0)
+                logging.error(f"BNO085 IMU initialization failed: {e}")
+                self._sensors["bno085"] = None
+        except Exception as e:
+            logging.error(f"Failed to set up BNO085 timeout protection: {e}")
+            self._sensors["bno085"] = None
+            
+        # VL53L0X ToF sensors
+        try:
+            logging.info("Initializing VL53L0X ToF sensors...")
+            self._sensors["vl53l0x"] = hardware_registry.get_vl53l0x()
+            if self._sensors["vl53l0x"]:
+                self._sensor_status["vl53l0x"].working = True
+                logging.info("VL53L0X sensors initialized successfully")
+        except Exception as e:
+            logging.error(f"VL53L0X sensor initialization failed: {e}")
+            self._sensors["vl53l0x"] = None
 
     def start(self) -> None:
         """Start the sensor interface."""
@@ -570,15 +609,19 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             
             # Read distance sensors with explicit N/A handling
             tof_data = self._read_vl53l0x()
-            if tof_data:
-                sensor_data["distance"] = tof_data
+            if tof_data and "error" not in tof_data:
+                # Convert to WebUI expected format
+                sensor_data["tof"] = {
+                    "left": tof_data.get("front_left", "N/A"),
+                    "right": tof_data.get("front_right", "N/A"),
+                    "working": tof_data.get("left_working", False) or tof_data.get("right_working", False)
+                }
             else:
                 # ToF sensors failed or not available - show N/A
-                sensor_data["distance"] = {
-                    "front_left": "N/A",
-                    "front_right": "N/A", 
-                    "left_working": False,
-                    "right_working": False
+                sensor_data["tof"] = {
+                    "left": "N/A",
+                    "right": "N/A", 
+                    "working": False
                 }
             
             # Update internal data store

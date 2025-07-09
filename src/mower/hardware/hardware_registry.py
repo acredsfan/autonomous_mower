@@ -167,7 +167,9 @@ class HardwareRegistry:
             logger.info("Hardware registry using individual I2C connections per driver")
                 
             self._resources["gpio"] = GPIOManager()
-            self._resources["sensor_interface"] = get_sensor_interface()
+            # NOTE: sensor_interface removed from hardware registry initialization
+            # to prevent circular dependency. It will be initialized by ResourceManager
+            # after hardware registry is ready.
             self._resources["camera"] = get_camera_instance()
             self._resources["blade"] = BladeController()
             self._resources["motor_driver"] = RoboHATDriver()

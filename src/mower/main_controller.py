@@ -72,6 +72,7 @@ from mower.ui.web_process import launch as launch_web
 from mower.utilities.process_management import validate_startup_environment, is_port_available
 from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
+from mower.utilities.single_instance import ensure_single_instance
 
 # Load environment variables from .env file
 load_dotenv()
@@ -216,10 +217,13 @@ class ResourceManager:
                 logger.warning(f"Failed to get motor driver: {e}")
                 
             try:
-                self._resources["sensor_interface"] = hardware_registry.get_sensor_interface()
+                # Initialize sensor interface directly to avoid circular dependency
+                from mower.hardware.sensor_interface import get_sensor_interface
+                self._resources["sensor_interface"] = get_sensor_interface()
                 logger.info("Sensor interface added to resources")
             except Exception as e:
                 logger.warning(f"Failed to get sensor interface: {e}")
+                self._resources["sensor_interface"] = None
                 
             try:
                 self._resources["camera"] = hardware_registry.get_camera()
@@ -945,6 +949,14 @@ def main():
     Main function to initialize and run the autonomous mower application.
     """
     logger.info("Starting Autonomous Mower Application...")
+    
+    # CRITICAL: Ensure only one instance runs to prevent hardware resource conflicts
+    logger.info("Checking for existing mower instances...")
+    force_cleanup = '--force-cleanup' in sys.argv
+    if not ensure_single_instance(force_cleanup=force_cleanup):
+        logger.error("Another mower instance is already running. Exiting to prevent hardware conflicts.")
+        logger.error("Use --force-cleanup argument to forcefully terminate existing instances.")
+        sys.exit(1)
     
     # Debug environment variable loading
     logger.debug(f"USE_SIMULATION env var: {os.getenv('USE_SIMULATION', 'not set')}")
