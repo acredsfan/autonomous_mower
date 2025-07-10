@@ -64,13 +64,13 @@ function formatSensorValue(value, format = 'number', unit = '') {
   if (value === "N/A" || value === null || value === undefined || isNaN(value)) {
     return "N/A";
   }
-  
+
   if (format === 'number') {
     return `${Number(value).toFixed(1)}${unit}`;
   } else if (format === 'integer') {
     return `${Math.round(Number(value))}${unit}`;
   }
-  
+
   return `${value}${unit}`;
 }
 
@@ -105,7 +105,7 @@ function convertDistance(mm, unit) {
 function loadUserPreferences() {
   systemState.units.temperature = localStorage.getItem('temperatureUnit') || 'celsius';
   systemState.units.distance = localStorage.getItem('distanceUnit') || 'metric';
-  
+
   // Update UI to reflect preferences
   const tempRadios = document.querySelectorAll('input[name="temperature_units"]');
   tempRadios.forEach(radio => {
@@ -113,14 +113,14 @@ function loadUserPreferences() {
       radio.checked = true;
     }
   });
-  
+
   const distRadios = document.querySelectorAll('input[name="distance_units"]');
   distRadios.forEach(radio => {
     if (radio.value === systemState.units.distance) {
       radio.checked = true;
     }
   });
-  
+
   // Update all unit labels
   updateUnitLabels();
 }
@@ -135,17 +135,17 @@ function saveUserPreferences() {
 function updateUnitLabels() {
   const tempUnit = systemState.units.temperature === 'fahrenheit' ? '°F' : '°C';
   const distUnit = systemState.units.distance === 'imperial' ? 'in' : 'cm';
-  
+
   // Update main sensor reading labels
   const tempLabel = document.querySelector('.sensor-label[data-unit="temperature"]');
   if (tempLabel) tempLabel.textContent = `Temperature (${tempUnit})`;
-  
+
   const leftDistLabel = document.querySelector('.sensor-label[data-unit="left-distance"]');
   if (leftDistLabel) leftDistLabel.textContent = `Left Distance (${distUnit})`;
-  
+
   const rightDistLabel = document.querySelector('.sensor-label[data-unit="right-distance"]');
   if (rightDistLabel) rightDistLabel.textContent = `Right Distance (${distUnit})`;
-  
+
   // Update other temperature displays
   const elements = document.querySelectorAll('[data-temp-unit]');
   elements.forEach(element => {
@@ -156,11 +156,11 @@ function updateUnitLabels() {
       element.textContent = value + tempUnit;
     }
   });
-  
+
   // Update chart labels if they exist
   const chartTempLabel = document.querySelector('[data-chart-temp-label]');
   if (chartTempLabel) chartTempLabel.textContent = `Temperature (${tempUnit})`;
-  
+
   // Re-apply sensor data with new units if available
   if (window.lastSensorData) {
     updateSensorData(window.lastSensorData);
@@ -345,7 +345,7 @@ function setupEventListeners() {
       }
     });
   });
-  
+
   const distRadios = document.querySelectorAll('input[name="distance_units"]');
   distRadios.forEach(radio => {
     radio.addEventListener('change', function() {
@@ -566,35 +566,33 @@ function updateSensorData(data) {
     // Update battery and solar from sensor data
     if (data.power) {
       const power = data.power;
-      
+
       // Update battery data
       systemState.battery.voltage = power.bus_voltage || power.voltage;
       systemState.battery.percentage = power.percentage || 0;
       systemState.battery.charging = power.charging || false;
-      
+
       // Update battery UI (sidebar and dashboard)
       const dashPct = Math.round(systemState.battery.percentage);
       const bd = document.getElementById("batteryDisplay");
-      const bsv = document.getElementById("batteryStatus");
       const bv = document.getElementById("batteryVoltage");
       const bc = document.getElementById("batteryCurrent");
       const ch = document.getElementById("chargingStatus");
-      
+
       if (bd) bd.textContent = `${dashPct}%`;
-      if (bsv) bsv.textContent = `${dashPct}%`;
-      if (bv && systemState.battery.voltage != null) {
+      if (bv && typeof systemState.battery.voltage === 'number') {
         bv.textContent = `${systemState.battery.voltage.toFixed(1)} V`;
       }
       if (bc && power.current != null && power.current !== "N/A") {
         bc.textContent = `${Math.abs(power.current).toFixed(1)} A`;
       }
       if (ch) ch.innerHTML = systemState.battery.charging ? '<i class="fas fa-bolt"></i>' : '';
-      
+
       // Update solar panel data
       const svd = document.getElementById("solarVoltageDisplay");
       const sc = document.getElementById("solarCurrent");
       const sp = document.getElementById("solarPower");
-      
+
       if (svd && power.solar_voltage != null && power.solar_voltage !== "N/A") {
         svd.textContent = `${power.solar_voltage.toFixed(1)} V`;
       }
@@ -621,7 +619,7 @@ function updateSensorData(data) {
       if (dashGps) dashGps.textContent = statusText;
       if (sideGps) sideGps.textContent = statusText;
       if (sc) sc.textContent = `${systemState.gps.satellites} satellites`;
-      
+
       // Update coordinate display from GPS data
       const latElement = document.getElementById("position_latitude");
       const lngElement = document.getElementById("position_longitude");
@@ -632,7 +630,7 @@ function updateSensorData(data) {
         latElement.textContent = "0.000000";
         lngElement.textContent = "0.000000";
       }
-      
+
       // Update map with GPS coordinates if we have a valid fix
       if (systemState.gps.fix && typeof updateMap === "function") {
         const mapData = {
@@ -651,23 +649,21 @@ function updateSensorData(data) {
 
     // Update temperature from environment sensor data
     if (data.environment && data.environment.temperature !== undefined) {
-      const tempElement = document.getElementById("sensor_temperature");
-      if (tempElement) {
-        if (data.environment.temperature === "N/A") {
-          tempElement.textContent = "N/A";
+      document.querySelectorAll('#sensor_temperature').forEach(tempElement => {
+        if (data.environment.temperature === 'N/A') {
+          tempElement.textContent = 'N/A';
         } else {
           const temp = convertTemperature(data.environment.temperature, systemState.units.temperature);
           tempElement.textContent = formatSensorValue(temp.value, 'number', temp.unit);
         }
-      }
+      });
     }
-    
+
     // Update humidity from environment sensor data
     if (data.environment && data.environment.humidity !== undefined) {
-        const humidityElement = document.getElementById("sensor_humidity");
-        if (humidityElement) {
-            humidityElement.textContent = formatSensorValue(data.environment.humidity, 'number', '%');
-        }
+      document.querySelectorAll('#sensor_humidity').forEach(humidityElement => {
+        humidityElement.textContent = formatSensorValue(data.environment.humidity, 'number', '%');
+      });
     }
 
     // Update pressure from environment sensor data
@@ -859,7 +855,7 @@ function updatePositionData(data) {
   try {
     // Log the data for debugging
     console.log("Received position update:", data);
-    
+
     // Update our internal state if data is valid
     if (data && typeof data === 'object') {
       Object.assign(systemState.position, data);
