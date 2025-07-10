@@ -39,8 +39,19 @@ endblock %} {% block head_extra %}
         <div class="status-card-header">Battery</div>
         <div class="status-card-value" id="batteryDisplay">---%</div>
         <div class="status-card-footer">
-          <span id="batteryVoltage">--.- V</span>
+          <span id="batteryVoltage">--.- V</span> | 
+          <span id="batteryCurrent">--.- A</span>
           <span id="chargingStatus"></span>
+        </div>
+      </div>
+
+      <!-- Solar Panel Status -->
+      <div class="status-card">
+        <div class="status-card-header">Solar Panel</div>
+        <div class="status-card-value" id="solarVoltageDisplay">--.- V</div>
+        <div class="status-card-footer">
+          <span id="solarCurrent">--.- A</span> | 
+          <span id="solarPower">--.- W</span>
         </div>
       </div>
 
@@ -378,7 +389,6 @@ endblock %} {% block head_extra %}
   }
 
   .status-card {
-    background-color: var(--white);
     border-radius: var(--border-radius);
     padding: 1rem;
     box-shadow: var(--shadow-small);
@@ -388,7 +398,6 @@ endblock %} {% block head_extra %}
 
   .status-card-header {
     font-size: 0.875rem;
-    color: var(--gray);
     margin-bottom: 0.5rem;
   }
 
@@ -396,12 +405,10 @@ endblock %} {% block head_extra %}
     font-size: 1.5rem;
     font-weight: 500;
     margin-bottom: 0.5rem;
-    color: var(--dirt-dark);
   }
 
   .status-card-footer {
     font-size: 0.875rem;
-    color: var(--dirt-medium);
     margin-top: auto;
   }
 

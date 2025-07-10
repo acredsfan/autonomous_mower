@@ -410,7 +410,7 @@ img {
 
 .status-card-header {
     font-size: 0.875rem;
-    color: var(--dirt-dark);
+    color: var(--grass-dark);
     margin-bottom: 0.5rem;
     font-weight: 600;
 }
@@ -423,7 +423,7 @@ img {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--white);
+    color: var(--grass-pale);
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
@@ -490,7 +490,7 @@ img {
 /* Base tile styling - applies to all tile types */
 .tile-base {
     background-color: var(--dirt-light);
-    border: 1px solid var(--dirt-medium);
+    border: 1px solid var(--card-bg);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-small);
     padding: 1rem;
@@ -801,7 +801,7 @@ img {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--white);  /* White text for contrast on dirt background */
+    color: var(--grass-dark);  /* White text for contrast on dirt background */
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);  /* Subtle shadow for readability */
     line-height: 1.2;
 }

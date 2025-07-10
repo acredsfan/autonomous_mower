@@ -370,17 +370,26 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             except Exception as status_error:
                 logging.warning(f"Failed to update INA3221 sensor status: {status_error}")
 
+            # Convert current from milliamps to amps for display
+            battery_current = battery_data.get("current")
+            solar_current = solar_data.get("current")
+            
+            if battery_current is not None:
+                battery_current = round(battery_current / 1000.0, 3)  # mA to A
+            if solar_current is not None:
+                solar_current = round(solar_current / 1000.0, 3)  # mA to A
+
             return {
                 # Battery data (channel 3)
                 "bus_voltage": battery_data.get("bus_voltage"),
-                "current": battery_data.get("current"),
+                "current": battery_current,
                 "shunt_voltage": battery_data.get("shunt_voltage"),
                 "power": battery_data.get("power"),
                 "percentage": percentage,
                 
                 # Solar panel data (channel 1) 
                 "solar_voltage": solar_data.get("bus_voltage"),
-                "solar_current": solar_data.get("current"),
+                "solar_current": solar_current,
                 "solar_power": solar_data.get("power"),
                 
                 # Raw channel data for debugging

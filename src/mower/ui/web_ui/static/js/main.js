@@ -563,22 +563,47 @@ function updateSensorData(data) {
   try {
     // Store last sensor data for unit conversions
     window.lastSensorData = data;
-    // Update battery from sensor data
+    // Update battery and solar from sensor data
     if (data.power) {
       const power = data.power;
-      systemState.battery.voltage = power.voltage;
+      
+      // Update battery data
+      systemState.battery.voltage = power.bus_voltage || power.voltage;
       systemState.battery.percentage = power.percentage || 0;
       systemState.battery.charging = power.charging || false;
+      
       // Update battery UI (sidebar and dashboard)
       const dashPct = Math.round(systemState.battery.percentage);
       const bd = document.getElementById("batteryDisplay");
       const bsv = document.getElementById("batteryStatus");
       const bv = document.getElementById("batteryVoltage");
+      const bc = document.getElementById("batteryCurrent");
       const ch = document.getElementById("chargingStatus");
+      
       if (bd) bd.textContent = `${dashPct}%`;
       if (bsv) bsv.textContent = `${dashPct}%`;
-      if (bv && systemState.battery.voltage != null) bv.textContent = `${systemState.battery.voltage.toFixed(1)} V`;
+      if (bv && systemState.battery.voltage != null) {
+        bv.textContent = `${systemState.battery.voltage.toFixed(1)} V`;
+      }
+      if (bc && power.current != null && power.current !== "N/A") {
+        bc.textContent = `${Math.abs(power.current).toFixed(1)} A`;
+      }
       if (ch) ch.innerHTML = systemState.battery.charging ? '<i class="fas fa-bolt"></i>' : '';
+      
+      // Update solar panel data
+      const svd = document.getElementById("solarVoltageDisplay");
+      const sc = document.getElementById("solarCurrent");
+      const sp = document.getElementById("solarPower");
+      
+      if (svd && power.solar_voltage != null && power.solar_voltage !== "N/A") {
+        svd.textContent = `${power.solar_voltage.toFixed(1)} V`;
+      }
+      if (sc && power.solar_current != null && power.solar_current !== "N/A") {
+        sc.textContent = `${power.solar_current.toFixed(1)} A`;
+      }
+      if (sp && power.solar_power != null && power.solar_power !== "N/A") {
+        sp.textContent = `${power.solar_power.toFixed(1)} W`;
+      }
     }
     // Update GPS from sensor data
     if (data.gps) {
