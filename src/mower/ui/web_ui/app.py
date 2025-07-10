@@ -30,7 +30,9 @@ from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
 from mower.utilities.logger_config import LoggerConfigInfo
 
 # Load environment variables from .env if available
-load_dotenv()
+ROOT_DIR = Path(__file__).resolve().parents[4]
+env_path = ROOT_DIR / ".env"
+load_dotenv(env_path)
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
