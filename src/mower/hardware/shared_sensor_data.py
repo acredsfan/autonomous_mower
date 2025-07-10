@@ -51,9 +51,10 @@ class SharedSensorDataManager:
             bool: True if write was successful
         """
         try:
+            current_timestamp = time.time()
             # Add timestamp for staleness detection
             data_with_timestamp = {
-                "timestamp": time.time(),
+                "timestamp": current_timestamp,
                 "data": sensor_data
             }
             
@@ -66,11 +67,12 @@ class SharedSensorDataManager:
                 
                 # Atomic rename to final location
                 temp_path.rename(SHARED_DATA_PATH)
-                
+
+            self.logger.debug(f"SharedSensorData: Successfully wrote sensor data. Timestamp: {current_timestamp}, Data keys: {list(sensor_data.keys())}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to write shared sensor data: {e}")
+            self.logger.error(f"SharedSensorData: Failed to write shared sensor data: {e}")
             return False
     
     def read_sensor_data(self) -> Optional[Dict[str, Any]]:
@@ -82,23 +84,32 @@ class SharedSensorDataManager:
         """
         try:
             if not SHARED_DATA_PATH.exists():
+                self.logger.debug("SharedSensorData: read_sensor_data - File not found.")
                 return None
                 
             with open(SHARED_DATA_PATH, 'r') as f:
                 data_with_timestamp = json.load(f)
             
-            # Check if data is fresh
-            timestamp = data_with_timestamp.get("timestamp", 0)
-            age = time.time() - timestamp
+            file_timestamp = data_with_timestamp.get("timestamp", 0)
+            current_time = time.time()
+            age = current_time - file_timestamp
             
             if age > SHARED_DATA_MAX_AGE:
-                self.logger.warning(f"Shared sensor data is stale ({age:.1f}s old)")
+                self.logger.warning(f"SharedSensorData: read_sensor_data - Data is stale. Age: {age:.1f}s (Max age: {SHARED_DATA_MAX_AGE}s). Timestamp in file: {file_timestamp}.")
                 return None
-                
-            return data_with_timestamp.get("data")
             
+            retrieved_data = data_with_timestamp.get("data")
+            self.logger.debug(f"SharedSensorData: read_sensor_data - Successfully read fresh data. Age: {age:.1f}s. Data keys: {list(retrieved_data.keys()) if retrieved_data else 'None'}.")
+            return retrieved_data
+
+        except FileNotFoundError: # Should be caught by SHARED_DATA_PATH.exists() but good to be explicit
+            self.logger.debug("SharedSensorData: read_sensor_data - File not found (FileNotFoundError).")
+            return None
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"SharedSensorData: read_sensor_data - Failed to decode JSON from file {SHARED_DATA_PATH}: {e}")
+            return None
         except Exception as e:
-            self.logger.debug(f"Failed to read shared sensor data: {e}")
+            self.logger.warning(f"SharedSensorData: read_sensor_data - Failed to read shared sensor data due to unexpected error: {e}", exc_info=True)
             return None
     
     def is_data_fresh(self) -> bool:

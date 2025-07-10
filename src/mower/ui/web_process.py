@@ -151,25 +151,27 @@ class DummyResourceManager:
     
     def get_sensor_data(self):
         # First try to get real sensor data from shared storage
+        self.logger.debug("DummyResourceManager:get_sensor_data - Attempting to read from shared storage.")
+        final_data_for_ui = None
         try:
             from mower.hardware.shared_sensor_data import get_shared_sensor_manager
             shared_manager = get_shared_sensor_manager()
-            real_sensor_data = shared_manager.read_sensor_data()
+            real_sensor_data_from_json = shared_manager.read_sensor_data() # This now has more logging
             
-            if real_sensor_data is not None:
+            if real_sensor_data_from_json is not None:
+                self.logger.info("DummyResourceManager:get_sensor_data - Fresh data successfully read from shared storage.")
+                self.logger.debug(f"DummyResourceManager:get_sensor_data - Data from JSON: {real_sensor_data_from_json}")
                 # We have fresh real sensor data - transform it to web UI format
-                self.logger.debug("Using real sensor data from shared storage")
-                return self._transform_sensor_data_for_web_ui(real_sensor_data)
+                final_data_for_ui = self._transform_sensor_data_for_web_ui(real_sensor_data_from_json)
             else:
-                self.logger.debug("No fresh real sensor data available, using fallback")
+                self.logger.warning("DummyResourceManager:get_sensor_data - No fresh/valid data from shared_manager.read_sensor_data() (returned None). Using N/A fallback.")
         except Exception as e:
-            self.logger.debug(f"Failed to read shared sensor data: {e}")
+            self.logger.error(f"DummyResourceManager:get_sensor_data - Exception while trying to read/process shared sensor data: {e}", exc_info=True)
         
-        # Fallback to N/A values if real data unavailable - NO SIMULATION
-        # This ensures failed sensors show "N/A" instead of fake data
-        self.logger.warning("No real sensor data available - showing N/A values for failed sensors")
-        
-        return {
+        if final_data_for_ui is None:
+            # Fallback to N/A values if real data unavailable - NO SIMULATION
+            self.logger.warning("DummyResourceManager:get_sensor_data - Using explicit N/A fallback structure.")
+            final_data_for_ui = {
             "imu": {
                 "heading": "N/A",
                 "roll": "N/A", 
@@ -208,6 +210,8 @@ class DummyResourceManager:
                 "speed": 0.0
             }
         }
+        self.logger.debug(f"DummyResourceManager:get_sensor_data - Returning to UI: {final_data_for_ui}")
+        return final_data_for_ui
 
     def _transform_sensor_data_for_web_ui(self, real_sensor_data):
         """
@@ -219,6 +223,7 @@ class DummyResourceManager:
         Returns:
             dict: Sensor data in web UI expected format
         """
+        self.logger.debug(f"DummyResourceManager:_transform_sensor_data_for_web_ui - Input data: {real_sensor_data}")
         try:
             # Start with the real sensor data
             transformed_data = real_sensor_data.copy()
@@ -226,6 +231,7 @@ class DummyResourceManager:
             # Transform distance sensors: hardware uses "distance" with "front_left"/"front_right"
             # but web UI expects "tof" with "left"/"right"  
             if "distance" in real_sensor_data:
+                self.logger.debug("DummyResourceManager:_transform_sensor_data_for_web_ui - Found 'distance' key, attempting transformation.")
                 distance_data = real_sensor_data["distance"]
                 transformed_data["tof"] = {
                     "left": distance_data.get("front_left", 120.0),  # Convert from mm
@@ -242,22 +248,27 @@ class DummyResourceManager:
                 fix_quality = gps_data.get("fix_quality", 0)
                 status = gps_data.get("status", "no_fix")
                 gps_data["fix"] = (fix_quality >= 1 and status == "valid")
+                self.logger.debug(f"DummyResourceManager:_transform_sensor_data_for_web_ui - GPS 'fix' field set to {gps_data['fix']}")
                 
             # Add power data from any available source (INA3221 data is in hardware layer)
             if "power" not in transformed_data:
                 # Add default power info if not present
+                self.logger.warning("DummyResourceManager:_transform_sensor_data_for_web_ui - Power key missing in sensor_data from JSON, creating N/A fallback.") # Existing log
                 transformed_data["power"] = {
-                    "voltage": 12.0,
-                    "current": 1.0, 
-                    "power": 12.0,
-                    "percentage": 75
+                    "voltage": "N/A",    # Changed from 12.0
+                    "current": "N/A",    # Changed from 1.0
+                    "power": "N/A",      # Changed from 12.0
+                    "percentage": "N/A", # Changed from 75
+                    "status": "unavailable_structure_missing" # Added status
                 }
             
+            self.logger.debug(f"DummyResourceManager:_transform_sensor_data_for_web_ui - Output data: {transformed_data}")
             return transformed_data
             
         except Exception as e:
-            self.logger.error(f"Error transforming sensor data for web UI: {e}")
+            self.logger.error(f"DummyResourceManager:_transform_sensor_data_for_web_ui - Error transforming sensor data: {e}", exc_info=True)
             # Return original data if transformation fails
+            self.logger.warning("DummyResourceManager:_transform_sensor_data_for_web_ui - Returning original data due to transformation error.")
             return real_sensor_data
     
     def get_camera(self):

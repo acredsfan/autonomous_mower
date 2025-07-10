@@ -759,25 +759,30 @@ class ResourceManager:
             dict: Combined sensor data from sensor interface and GPS service
         """
         try:
+            logger.debug("ResourceManager:get_sensor_data - Attempting to fetch sensor data.")
             # Get base sensor data from sensor interface with timeout protection
-            sensor_data = self._get_sensor_data_with_timeout()
+            sensor_data_from_interface = self._get_sensor_data_with_timeout()
             
-            if sensor_data is None:
+            if sensor_data_from_interface is None:
+                logger.warning("ResourceManager:get_sensor_data - _get_sensor_data_with_timeout returned None. Using ResourceManager fallback.")
                 # Fallback to safe sensor data structure
                 sensor_data = self._get_fallback_sensor_data()
+            else:
+                logger.debug(f"ResourceManager:get_sensor_data - Received from interface: {sensor_data_from_interface}")
+                sensor_data = sensor_data_from_interface
             
             # Add GPS data with error protection
             try:
+                logger.debug("ResourceManager:get_sensor_data - Attempting to fetch GPS location.")
                 gps_location = self.get_gps_location()
                 if gps_location:
                     fix_quality = gps_location.get("metadata", {}).get("fix_quality", 0)
-                    # Convert fix_quality to status string for WebUI compatibility
                     if fix_quality >= 1:
                         status = "valid"
                     else:
                         status = "no_fix"
-                        
-                    sensor_data["gps"] = {
+
+                    current_gps_data = {
                         "latitude": gps_location.get("latitude"),
                         "longitude": gps_location.get("longitude"),
                         "timestamp": gps_location.get("timestamp"),
@@ -787,28 +792,34 @@ class ResourceManager:
                         "satellites": gps_location.get("metadata", {}).get("satellites", 0),
                         "hdop": gps_location.get("metadata", {}).get("hdop", 99.9),
                         "fix_quality": fix_quality,
-                        "status": status  # Add status field for WebUI compatibility
+                        "status": status
                     }
+                    sensor_data["gps"] = current_gps_data
+                    logger.debug(f"ResourceManager:get_sensor_data - GPS data added: {current_gps_data}")
                 else:
-                    # Provide empty GPS data structure for consistency
+                    logger.warning("ResourceManager:get_sensor_data - get_gps_location returned None. Using GPS fallback.")
                     sensor_data["gps"] = self._get_fallback_gps_data()
             except Exception as gps_error:
-                logger.warning(f"GPS data collection failed: {gps_error}")
+                logger.warning(f"ResourceManager:get_sensor_data - GPS data collection failed: {gps_error}. Using GPS fallback.")
                 sensor_data["gps"] = self._get_fallback_gps_data()
+
+            logger.debug(f"ResourceManager:get_sensor_data - Final sensor data before writing to shared storage: {sensor_data}")
             # Write sensor data to shared storage for web process with error protection
             try:
                 shared_manager = get_shared_sensor_manager()
                 shared_manager.write_sensor_data(sensor_data)
-                logger.debug("Successfully wrote sensor data to shared storage")
+                # logger.debug("Successfully wrote sensor data to shared storage") # Already in shared_manager
             except Exception as e:
-                logger.warning(f"Failed to write sensor data to shared storage: {e}")
+                logger.warning(f"ResourceManager:get_sensor_data - Failed to write sensor data to shared storage: {e}")
             
             return sensor_data
             
         except Exception as e:
-            logger.error(f"Critical error in sensor data collection: {e}", exc_info=True)
+            logger.error(f"ResourceManager:get_sensor_data - Critical error in sensor data collection: {e}", exc_info=True)
             # Return fallback data structure to maintain system stability
-            return self._get_complete_fallback_data()
+            fallback_data_to_return = self._get_complete_fallback_data()
+            logger.warning(f"ResourceManager:get_sensor_data - Returning complete fallback data due to critical error: {fallback_data_to_return}")
+            return fallback_data_to_return
 
     def _get_sensor_data_with_timeout(self):
         """
@@ -832,17 +843,17 @@ class ResourceManager:
             signal.alarm(timeout_duration)
             
             start_time = time.time()
-            logger.debug(f"Starting sensor collection with {timeout_duration}s timeout")
+            logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Starting sensor collection with {timeout_duration}s timeout")
             
             # Get sensor interface with additional safety checks
             sensor_interface = self.get_sensor_interface()
             if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
-                logger.debug("Calling sensor interface get_sensor_data()")
+                logger.debug("ResourceManager:_get_sensor_data_with_timeout - Calling EnhancedSensorInterface.get_sensor_data()")
                 sensor_data = sensor_interface.get_sensor_data()
-                logger.debug(f"Sensor data collection completed in {time.time() - start_time:.3f}s")
+                logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Data received from EnhancedSensorInterface (duration {time.time() - start_time:.3f}s): {sensor_data}")
             else:
-                logger.warning("Sensor interface not available or missing get_sensor_data method")
-                sensor_data = {}
+                logger.warning("ResourceManager:_get_sensor_data_with_timeout - Sensor interface not available or missing get_sensor_data method. Returning empty dict.")
+                sensor_data = {} # Should ideally be None if EnhancedSensorInterface also returns None on failure.
             
             # Clear the alarm
             signal.alarm(0)
