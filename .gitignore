@@ -162,7 +162,6 @@ node_modules/
 package-lock.json
 package.json
 mcp.json
-models/labels.txt
 log_contents.md
 tools/diagnose_tof.py
 tools/diagnose_tof.sh

@@ -335,11 +335,23 @@ img {
 
 /* Cards for dashboard components */
 .card {
-    background-color: var(--card-bg);
+    background-color: var(--dirt-light);
+    border: 1px solid var(--dirt-medium);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-small);
     margin-bottom: 1.5rem;
     overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
 }
 
 .card-header {
@@ -359,6 +371,11 @@ img {
 
 .card-body {
     padding: 1rem;
+    background-color: var(--dirt-pale);
+}
+
+[data-theme="dark"] .card-body {
+    background-color: var(--card-bg);
 }
 
 .card-footer {
@@ -367,13 +384,144 @@ img {
     border-top: 1px solid var(--border-color);
 }
 
-/* Brown theme for sensor reading cards in light mode */
-.card:has(.sensor-readings) {
-    background-color: var(--dirt-pale);
+/* Grass/Dirt Theme for All Tiles */
+
+/* Dashboard and Status Cards with Grass/Dirt Theme */
+.status-card {
+    background-color: var(--dirt-light) !important;
+    border: 1px solid var(--dirt-medium) !important;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-small);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
 }
 
-[data-theme="dark"] .card:has(.sensor-readings) {
-    background-color: var(--card-bg);  /* Keep original card background in dark mode */
+.status-card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .status-card {
+    background-color: var(--dark-gray) !important;
+    border: 1px solid var(--gray) !important;
+}
+
+.status-card-header {
+    font-size: 0.875rem;
+    color: var(--dirt-dark);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .status-card-header {
+    color: var(--gray);
+}
+
+.status-card-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--white);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .status-card-value {
+    color: var(--grass-light);
+    text-shadow: none;
+}
+
+.status-card-footer {
+    font-size: 0.875rem;
+    color: var(--dirt-dark);
+    margin-top: auto;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .status-card-footer {
+    color: var(--dirt-medium);
+}
+
+/* Info items for system information */
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background-color: var(--dirt-pale);
+    border: 1px solid var(--dirt-light);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+.info-item:hover {
+    background-color: var(--dirt-light);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .info-item {
+    background-color: var(--dark-gray);
+    border: 1px solid var(--gray);
+}
+
+[data-theme="dark"] .info-item:hover {
+    background-color: var(--card-bg);
+}
+
+.info-label {
+    font-weight: 600;
+    color: var(--dirt-dark);
+}
+
+[data-theme="dark"] .info-label {
+    color: var(--text-color);
+}
+
+.info-value {
+    font-weight: 500;
+    color: var(--grass-dark);
+}
+
+[data-theme="dark"] .info-value {
+    color: var(--grass-light);
+}
+
+/* Base tile styling - applies to all tile types */
+.tile-base {
+    background-color: var(--dirt-light);
+    border: 1px solid var(--dirt-medium);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-small);
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.tile-base:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+/* Light mode tile styling */
+.status-card,
+.info-item {
+    background-color: var(--dirt-light);
+    border: 1px solid var(--dirt-medium);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-small);
+    transition: all 0.2s ease;
+}
+
+.status-card:hover,
+.info-item:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .status-card,
+[data-theme="dark"] .info-item {
+    background-color: var(--dark-gray);
+    border: 1px solid var(--gray);
 }
 
 /* Dashboard grid layout */
@@ -506,15 +654,17 @@ img {
     background-color: var(--accent-yellow);
 }
 
-/* Status text elements should be more visible */
+/* Status text elements with grass theme for visibility */
 .status-text, .status-value {
-    color: var(--grass-light);
-    font-weight: 500;
+    color: var(--grass-dark);
+    font-weight: 600;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);  /* Light shadow for readability */
 }
 
 [data-theme="dark"] .status-text,
 [data-theme="dark"] .status-value {
     color: var(--grass-light);
+    text-shadow: none;
 }
 
 /* Alerts */
@@ -549,12 +699,18 @@ img {
     border-color: #bee5eb;
 }
 
-/* Control panel */
+/* Control panel with grass/dirt theme */
 .control-panel {
     padding: 1rem;
-    background-color: var(--white);
+    background-color: var(--dirt-light);
+    border: 1px solid var(--dirt-medium);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-small);
+}
+
+[data-theme="dark"] .control-panel {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
 }
 
 .control-buttons {
@@ -596,24 +752,36 @@ img {
     cursor: grabbing;
 }
 
-/* Sensor readings */
+/* Sensor readings with grass/dirt theme - improved grid layout */
 .sensor-readings {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1rem;
+    padding: 0;
+    margin: 0;
 }
 
-/* Sensor item containers with brown theme in light mode */
+/* Sensor item containers with grass/dirt theme - consistent with other tiles */
 .sensor-item {
     background-color: var(--dirt-light);
+    border: 1px solid var(--dirt-medium);
     border-radius: var(--border-radius);
     padding: 1rem;
     text-align: center;
     box-shadow: var(--shadow-small);
-    border: 1px solid var(--dirt-medium);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100px;
 }
 
-/* Dark mode keeps the original styling */
+.sensor-item:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-1px);
+}
+
+/* Dark mode keeps original styling for sensor items */
 [data-theme="dark"] .sensor-item {
     background-color: var(--dark-gray);
     border: 1px solid var(--gray);
@@ -621,19 +789,26 @@ img {
 
 .sensor-value {
     font-size: 1.5rem;
-    font-weight: 500;
+    font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--white);  /* White text for better contrast on brown background */
+    color: var(--white);  /* White text for contrast on dirt background */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);  /* Subtle shadow for readability */
+    line-height: 1.2;
 }
 
 [data-theme="dark"] .sensor-value {
     color: var(--grass-light);  /* Keep grass-light in dark mode */
+    text-shadow: none;
 }
 
 .sensor-label {
-    color: var(--dirt-pale);  /* Light brown/tan text for labels */
+    color: var(--dirt-dark);  /* Dark dirt color for labels */
     font-size: 0.875rem;
     font-weight: 500;
+    text-shadow: none;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 [data-theme="dark"] .sensor-label {
