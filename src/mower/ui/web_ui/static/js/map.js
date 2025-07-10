@@ -132,12 +132,15 @@ function initMap() {
         return;
     }
 
-    // Default map center (e.g., a generic location, can be updated later)
-    const defaultCenter = { lat: 40.7128, lng: -74.0060 }; // New York
+    // Default map center based on data attributes or fallback
+    const mapElement = document.getElementById('map');
+    const initialLat = parseFloat(mapElement?.dataset.initialLat) || 0;
+    const initialLng = parseFloat(mapElement?.dataset.initialLng) || 0;
+    const defaultCenter = { lat: initialLat, lng: initialLng };
 
-    window.map = new google.maps.Map(document.getElementById('map'), {
+    window.map = new google.maps.Map(mapElement, {
         center: defaultCenter,
-        zoom: 8, // Adjust zoom as needed
+        zoom: 18,
         mapTypeId: 'roadmap', // Default to roadmap, user can toggle satellite
         mapTypeControl: true,
         mapTypeControlOptions: {
