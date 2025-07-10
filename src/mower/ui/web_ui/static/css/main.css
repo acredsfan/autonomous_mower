@@ -7,17 +7,17 @@
 
 :root {
     /* Light Theme (Default) */
-    --bg-color: #f5f5f5;
+    --bg-color: #dabc94;
     --text-color: #212121;
     --header-bg: #2e5c1e;
     --header-text: #ffffff;
-    --card-bg: #ffffff;
+    --card-bg: #b4966e;
     --card-header-bg: #4a8e39;
     --card-header-text: #ffffff;
     --button-bg: #4a8e39;
     --button-text: #ffffff;
     --border-color: #d7ccc8;
-    --sidebar-bg: #ffffff;  /* Light sidebar background */
+    --sidebar-bg: #C49E78;  /* Light sidebar background */
 
     /* Primary colors - grass tones */
     --grass-dark: #2e5c1e;    /* Dark grass for headers, footers */
@@ -776,6 +776,16 @@ img {
     min-height: 100px;
 }
 
+/* Diagnostics page uses horizontal layout for sensor items */
+.sensor-group .sensor-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    min-height: auto;
+    text-align: left;
+    padding: 0.75rem;
+}
+
 .sensor-item:hover {
     box-shadow: var(--shadow-medium);
     transform: translateY(-1px);
@@ -796,6 +806,20 @@ img {
     line-height: 1.2;
 }
 
+/* Diagnostics page sensor values need different styling */
+.sensor-group .sensor-item .sensor-value {
+    font-size: 1rem;
+    margin-bottom: 0;
+    font-family: monospace;
+    background-color: var(--dirt-pale);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    min-width: 70px;
+    text-align: right;
+    color: var(--dirt-dark);
+    text-shadow: none;
+}
+
 [data-theme="dark"] .sensor-value {
     color: var(--grass-light);  /* Keep grass-light in dark mode */
     text-shadow: none;
@@ -809,6 +833,14 @@ img {
     margin: 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Diagnostics page sensor labels */
+.sensor-group .sensor-item .sensor-label {
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.9rem;
 }
 
 [data-theme="dark"] .sensor-label {
