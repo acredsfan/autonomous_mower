@@ -35,15 +35,13 @@ fi
 print_info "Ubuntu 24.04 detected."
 
 # 2. Update and install system dependencies
-print_info "Updating apt and installing system dependencies..."
-sudo DEBIAN_FRONTEND=noninteractive apt-get -qq update
-sudo DEBIAN_FRONTEND=noninteractive apt-get -qq --no-install-recommends install -y \
-    python3-pip python3-venv python3-dev build-essential git \
-    libffi-dev libssl-dev libjpeg-dev zlib1g-dev libopenblas-dev liblapack-dev \
-    libhdf5-dev libatlas-base-dev libpq-dev libfreetype6-dev pkg-config
+# 2. Update apt and install minimal system dependencies (fast install)
+print_info "Updating apt and installing minimal system dependencies..."
+sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    python3-pip python3-venv git curl unzip
 
-# 3. (Optional) Install additional system packages for test/dev
-sudo apt-get install -y net-tools curl unzip
+# Note: Development headers and heavy math libraries are skipped for test env.
 
 # 4. Set up Python virtual environment
 VENV_DIR=".venv"
