@@ -111,18 +111,41 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info(f"BME280 optional sensor unavailable: {exc}")
             self._sensors["bme280"] = None
         
-        # Initialize INA3221 with optional handling
-        try:
-            self._sensors["ina3221"] = hardware_registry.get_ina3221()
-            if self._sensors["ina3221"] is None:
-                logging.info("INA3221 optional sensor not available")
-            else:
-                # Mark as working if initialization succeeded
-                self._sensor_status["ina3221"].working = True
-                logging.info("INA3221 sensor initialized successfully")
-        except Exception as exc:
-            logging.info(f"INA3221 optional sensor unavailable: {exc}")
-            self._sensors["ina3221"] = None
+        # Initialize INA3221 with direct initialization bypass for hardware registry issues
+        ina3221_retries = 3
+        ina3221_retry_delay = 0.5  # 500ms between retries
+        
+        for attempt in range(ina3221_retries):
+            try:
+                # First try hardware registry
+                self._sensors["ina3221"] = hardware_registry.get_ina3221()
+                
+                # If hardware registry fails, try direct initialization
+                if self._sensors["ina3221"] is None:
+                    logging.warning(f"Hardware registry INA3221 returned None (attempt {attempt + 1}), trying direct initialization...")
+                    from mower.hardware.ina3221 import INA3221Sensor
+                    self._sensors["ina3221"] = INA3221Sensor.init_ina3221()
+                
+                if self._sensors["ina3221"] is not None:
+                    # Mark as working if initialization succeeded
+                    self._sensor_status["ina3221"].working = True
+                    logging.info(f"INA3221 sensor initialized successfully (attempt {attempt + 1}, direct init)")
+                    break
+                else:
+                    if attempt < ina3221_retries - 1:
+                        logging.warning(f"INA3221 direct initialization also returned None (attempt {attempt + 1}/{ina3221_retries}), retrying...")
+                        import time
+                        time.sleep(ina3221_retry_delay)
+                    else:
+                        logging.warning("INA3221 optional sensor not available after all retries")
+            except Exception as exc:
+                if attempt < ina3221_retries - 1:
+                    logging.warning(f"INA3221 initialization failed (attempt {attempt + 1}/{ina3221_retries}): {exc}, retrying...")
+                    import time
+                    time.sleep(ina3221_retry_delay)
+                else:
+                    logging.warning(f"INA3221 optional sensor unavailable after retries: {exc}")
+                    self._sensors["ina3221"] = None
         
         # Initialize other sensors with timeout protection
         try:
@@ -585,7 +608,19 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                     "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
                 }
             
-            # Read power data with explicit N/A handling
+            # Read power data with explicit N/A handling and direct re-initialization fallback
+            # Try direct initialization if INA3221 was not initialized during startup
+            if self._sensors.get("ina3221") is None:
+                try:
+                    logging.info("Attempting INA3221 direct re-initialization during sensor read...")
+                    from mower.hardware.ina3221 import INA3221Sensor
+                    self._sensors["ina3221"] = INA3221Sensor.init_ina3221()
+                    if self._sensors["ina3221"] is not None:
+                        self._sensor_status["ina3221"].working = True
+                        logging.info("INA3221 sensor direct re-initialization successful")
+                except Exception as exc:
+                    logging.debug(f"INA3221 direct re-initialization failed: {exc}")
+            
             if self._sensors.get("ina3221") is not None:
                 power_data = self._read_ina3221()
                 if power_data and "error" not in power_data:

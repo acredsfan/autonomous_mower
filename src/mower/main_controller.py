@@ -550,8 +550,7 @@ class ResourceManager:
 
     def get_sensor_interface(self) -> Optional[Any]:
         """Get the sensor interface instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_sensor_interface()
+        return self._resources.get("sensor_interface")
 
     def get_gps(self):
         """Get the GPS instance."""
