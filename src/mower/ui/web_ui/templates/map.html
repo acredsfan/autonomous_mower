@@ -3,7 +3,7 @@
 {% block title %}Mowing Patterns - Autonomous Mower{% endblock %}
 
 {% block head_extra %}
-<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=drawing,geometry"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing,geometry" async defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 <style>
     .pattern-selector {

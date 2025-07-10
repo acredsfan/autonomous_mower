@@ -27,12 +27,12 @@ var mapLoaded = false; // Track if the map is loaded
 function setupDrawingManager(mapInstance) {
     // If no map instance provided, use window.map as fallback
     mapInstance = mapInstance || window.map;
-    
+
     if (!mapInstance) {
         console.error('No map instance available for drawing manager');
         return;
     }
-    
+
     mapDrawingManager = new google.maps.drawing.DrawingManager({
         drawingMode: null, // Initially not drawing
         drawingControl: true,
@@ -87,7 +87,7 @@ function initMap() {
         console.log('Map already initialized, skipping duplicate initialization');
         return;
     }
-    
+
     if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
         console.error('Google Maps API not loaded.');
         const mapDiv = document.getElementById('map');
@@ -116,10 +116,10 @@ function initMap() {
         }
         return;
     }
-    
+
     // Set flag that we're initializing
     mapLoaded = true;
-    
+
     // Check if map is already initialized by mowing-patterns.js
     if (window.map) {
         console.log('Using existing map from window.map');
@@ -238,7 +238,7 @@ function setupMapUIEventListeners() {
                 const currentTypeId = window.map.getMapTypeId();
                 const newTypeId = currentTypeId === 'roadmap' ? 'satellite' : 'roadmap';
                 window.map.setMapTypeId(newTypeId);
-                
+
                 // Update button text
                 const icon = currentTypeId === 'roadmap' ? 'fa-map' : 'fa-satellite';
                 const text = currentTypeId === 'roadmap' ? 'Toggle Street' : 'Toggle Satellite';
@@ -276,8 +276,11 @@ function geocodeAddress(address) {
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ 'address': address }, function(results, status) {
         if (status === 'OK') {
-            mapInstance.setCenter(results[0].geometry.location);
-            mapInstance.setZoom(17); // Zoom in closer for addresses
+            const mapObj = window.map;
+            if (mapObj) {
+                mapObj.setCenter(results[0].geometry.location);
+                mapObj.setZoom(17); // Zoom in closer for addresses
+            }
             // Optionally, place a marker
             // new google.maps.Marker({
             //     map: map,
@@ -302,12 +305,12 @@ function geocodeAddress(address) {
 function loadAndDrawBoundary(mapInstance) {
     // If no map instance provided, use window.map as fallback
     mapInstance = mapInstance || window.map;
-    
+
     if (!mapInstance) {
         console.error('No map instance available for boundary drawing');
         return;
     }
-    
+
     fetch('/api/get-area') // Uses existing endpoint from app.py
         .then(response => {
             if (!response.ok) {
@@ -349,7 +352,7 @@ function loadAndDrawBoundary(mapInstance) {
                         // Called when a vertex is added.
                         console.log('Polygon vertex added (insert_at)');
                     });
-                    
+
                     console.log('Successfully loaded and drew boundary with', coordinates.length, 'points');
                 }
 
@@ -435,7 +438,7 @@ if (typeof sendCommand !== 'function') {
         console.log(`Sending command: ${command}`, params);
         // Show a temporary loading message
         showAlert(`Processing command: ${command}...`, 'info', 1000);
-        
+
         fetch('/api/' + command, {
             method: 'POST',
             headers: {
@@ -459,7 +462,7 @@ if (typeof sendCommand !== 'function') {
                 console.error(`Command ${command} failed:`, data);
                 showAlert(`Command failed: ${data.error || 'Unknown error'}`, 'danger');
             }
-            
+
             if (callback) {
                 callback(data);
             }
@@ -476,10 +479,10 @@ if (typeof sendCommand !== 'function') {
 
 // Ensure setupMapUIEventListeners is called if initMap was already called by Google API
 // before this script fully parsed (less likely with defer, but good practice).
-if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && mapInstance) {
+if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && window.map) {
     // If map is already initialized, but perhaps event listeners weren't set up
     // because this script loaded after initMap ran.
     // This situation needs careful handling if initMap itself has async parts.
     console.log('Map already initialized, setting up UI event listeners');
-    setupMapUIEventListeners();
+    setupMapUIEventListeners(window.map);
 }
