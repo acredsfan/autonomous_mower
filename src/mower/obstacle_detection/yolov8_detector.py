@@ -28,7 +28,7 @@ class YOLOv8TFLiteDetector:
     format, making them suitable for running on Raspberry Pi and edge devices.
     """
 
-    def __init__(self, model_path: str, label_path: str, conf_threshold: float = 0.5):
+    def __init__(self, model_path: str, label_path: str, conf_threshold: float = 0.5, use_coral: bool = False):
         """
         Initialize the YOLOv8 TFLite detector.
 
@@ -36,10 +36,12 @@ class YOLOv8TFLiteDetector:
             model_path: Path to the YOLOv8 TFLite model
             label_path: Path to the label map file
             conf_threshold: Confidence threshold for detections
+            use_coral: Whether to use Coral Edge TPU if available
         """
         self.model_path = model_path
         self.label_path = label_path
         self.conf_threshold = conf_threshold
+        self.use_coral = use_coral
 
         # Interpreter
         self.interpreter = None
@@ -74,16 +76,18 @@ class YOLOv8TFLiteDetector:
     def _initialize_interpreter(self) -> bool:
         """Initialize the TensorFlow Lite interpreter."""
         try:
-            # Import TFLite interpreter
-            # type: ignore            # Check if model exists
-            from tflite_runtime.interpreter import Interpreter  # type: ignore
+            # Import coral utils for interpreter creation
+            from mower.obstacle_detection.coral_utils import get_interpreter_creator
 
             if not os.path.exists(self.model_path):
                 logger.error("Model file not found at %s", self.model_path)
                 return False
 
-            # Load interpreter
-            self.interpreter = Interpreter(model_path=self.model_path)
+            # Get appropriate interpreter creator function
+            interpreter_creator = get_interpreter_creator(use_coral=self.use_coral)
+            
+            # Load interpreter using coral utils
+            self.interpreter = interpreter_creator(model_path=self.model_path)
             self.interpreter.allocate_tensors()
 
             # Get input and output details
@@ -229,17 +233,37 @@ class YOLOv8TFLiteDetector:
     def _process_yolov8_output(self) -> List[Dict]:
         """
         Process YOLOv8 detection output format.
+        Handles different possible output tensor layouts.
         """
         # Get output tensor - format depends on the model
-        # Shape [num_boxes, num_classes+5] or [num_classes+5, num_boxes]
         if self.interpreter is None or self.output_details is None:
             return []
         output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
 
-        # Check if we need to transpose
-        if output_data.shape[0] == len(self.labels) + 5:
-            # Transpose to [num_boxes, num_classes+5]
-            output_data = output_data.T
+        # Handle different output shapes
+        # YOLOv8 can output either [1, num_boxes, num_features] or [1, num_features, num_boxes]
+        if len(output_data.shape) == 2:
+            # Output shape is [num_boxes, num_features] or [num_features, num_boxes]
+            num_classes = len(self.labels)
+            expected_features = num_classes + 5  # x, y, w, h, confidence + class probabilities
+            
+            # Check which dimension matches expected features
+            if output_data.shape[1] == expected_features:
+                # Shape is [num_boxes, num_features] - correct format
+                pass
+            elif output_data.shape[0] == expected_features:
+                # Shape is [num_features, num_boxes] - need to transpose
+                output_data = output_data.T
+                logger.debug("Transposed YOLOv8 output from [%d, %d] to [%d, %d]", 
+                           output_data.shape[1], output_data.shape[0], 
+                           output_data.shape[0], output_data.shape[1])
+            else:
+                logger.warning("Unexpected YOLOv8 output shape: %s, expected features: %d", 
+                             output_data.shape, expected_features)
+                # Try to continue with current shape
+        else:
+            logger.warning("Unexpected YOLOv8 output tensor rank: %d", len(output_data.shape))
+            return []
 
         # Get original image dimensions (use input size as reference)
         original_height, original_width = self.input_height, self.input_width
@@ -248,58 +272,68 @@ class YOLOv8TFLiteDetector:
         num_boxes = output_data.shape[0]
 
         for i in range(num_boxes):
-            # Extract values [x, y, w, h, confidence, class_probs...]
+            # Extract values from each detection
             box_data = output_data[i]
-            confidence = box_data[4]
+            
+            # Handle different YOLOv8 output formats:
+            # Format 1: [x, y, w, h, objectness_confidence, class_prob1, class_prob2, ...]
+            # Format 2: [x, y, w, h, class_prob1, class_prob2, ...] (no separate objectness)
+            
+            if len(box_data) >= 5:
+                # Extract bounding box coordinates
+                x, y, w, h = box_data[0:4]
+                
+                # Determine confidence and class scores based on format
+                if len(box_data) == len(self.labels) + 5:
+                    # Format 1: has objectness confidence
+                    objectness = box_data[4] 
+                    class_scores = box_data[5:]
+                    class_id = np.argmax(class_scores)
+                    class_confidence = class_scores[class_id]
+                    # Final confidence is objectness * class confidence
+                    final_confidence = objectness * class_confidence
+                elif len(box_data) == len(self.labels) + 4:
+                    # Format 2: no separate objectness, just class scores
+                    class_scores = box_data[4:]
+                    class_id = np.argmax(class_scores)
+                    class_confidence = class_scores[class_id]
+                    final_confidence = class_confidence
+                else:
+                    logger.warning("Unexpected box data length: %d", len(box_data))
+                    continue
+                
+                # Skip low confidence detections
+                if final_confidence < self.conf_threshold:
+                    continue
 
-            # Skip low confidence detections
-            if confidence < self.conf_threshold:
-                continue
+                # Convert from center coords to [xmin, ymin, xmax, ymax] relative to input size
+                xmin = int((x - w / 2) * original_width)
+                ymin = int((y - h / 2) * original_height)
+                xmax = int((x + w / 2) * original_width)
+                ymax = int((y + h / 2) * original_height)
 
-            # Calculate class scores
-            class_scores = box_data[5:]
-            class_id = np.argmax(class_scores)
-            class_score = class_scores[class_id] * confidence
+                # Clamp coordinates to image bounds
+                xmin = max(0, xmin)
+                ymin = max(0, ymin)
+                xmax = min(original_width - 1, xmax)
+                ymax = min(original_height - 1, ymax)
 
-            # Skip low class confidence
-            if class_score < self.conf_threshold:
-                continue
+                # Get class name
+                if class_id < len(self.labels):
+                    class_name = self.labels[class_id]
+                else:
+                    class_name = f"Class {class_id}"
 
-            # Calculate bounding box (center_x, center_y, width, height)
-            x, y, w, h = box_data[0:4]
-
-            # Convert from center coords to [xmin, ymin, xmax, ymax] relative
-            # to input size
-            xmin = int((x - w / 2) * original_width)
-            ymin = int((y - h / 2) * original_height)
-            xmax = int((x + w / 2) * original_width)
-            ymax = int((y + h / 2) * original_height)
-
-            # Clamp coordinates to image bounds
-            xmin = max(0, xmin)
-            ymin = max(0, ymin)
-            xmax = min(original_width - 1, xmax)
-            ymax = min(original_height - 1, ymax)
-
-            # Get class name
-            if class_id < len(self.labels):
-                class_name = self.labels[class_id]
-            else:
-                class_name = f"Class {class_id}"
-
-            # Create detection dict
-            detections.append(
-                {
-                    "class_name": class_name,
-                    "confidence": float(class_score),
-                    # Use xmin, ymin, xmax, ymax format
-                    "box": [xmin, ymin, xmax, ymax],
-                    "type": "yolov8_tflite",
-                }
-            )
-
-        # Apply Non-Max Suppression (NMS) to filter overlapping detections.
-        detections = non_max_suppression(detections)
+                # Create detection dict
+                detections.append(
+                    {
+                        "class_name": class_name,
+                        "confidence": float(final_confidence),
+                        # Use xmin, ymin, xmax, ymax format
+                        "box": [xmin, ymin, xmax, ymax],
+                        "type": "yolov8_tflite",
+                    }
+                )
 
         return detections
 

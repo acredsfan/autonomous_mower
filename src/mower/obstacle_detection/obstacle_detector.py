@@ -215,13 +215,19 @@ class ObstacleDetector:
                 logger.warning("YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH)
                 return
 
+            # Determine if we should use Coral based on model filename
+            use_coral = "_edgetpu" in os.path.basename(YOLOV8_MODEL_PATH).lower()
+            logger.info("YOLOv8 model path: %s, use_coral: %s", YOLOV8_MODEL_PATH, use_coral)
+
             # Initialize detector
             self.yolov8_detector = YOLOv8TFLiteDetector(
                 model_path=YOLOV8_MODEL_PATH,
                 label_path=LABEL_MAP_PATH,
                 conf_threshold=MIN_CONF_THRESHOLD,
+                use_coral=use_coral,
             )
-            logger.info("YOLOv8 detector initialized successfully")
+            logger.info("YOLOv8 detector initialized successfully with %s", 
+                       "Coral Edge TPU" if use_coral else "CPU")
         except ImportError:
             logger.error("Failed to import YOLOv8TFLiteDetector class")
         except (IOError, ValueError, RuntimeError) as e:
