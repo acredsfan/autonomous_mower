@@ -3,6 +3,7 @@
 {% block title %}Mowing Patterns - Autonomous Mower{% endblock %}
 
 {% block head_extra %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&callback=initMap&libraries=drawing,geometry" async defer></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 <style>
@@ -337,7 +338,6 @@
 <!-- Helper script must be loaded first as it contains core utilities -->
 
 <script src="{{ url_for('static', filename='js/mowing-patterns.js') }}"></script>
-<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
     // Initialize connection status
     function updateMapConnectionStatus() {
