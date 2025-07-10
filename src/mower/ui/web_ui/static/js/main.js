@@ -75,15 +75,26 @@ function formatSensorValue(value, format = 'number', unit = '') {
 }
 
 // Unit conversion functions
+function normalizeToCelsius(temp) {
+  let value = parseFloat(temp);
+  if (typeof temp === 'string' && temp.toUpperCase().includes('F')) {
+    value = (parseFloat(temp) - 32) * 5/9;
+  } else if (value > 60) {
+    value = (value - 32) * 5/9;
+  }
+  return value;
+}
+
 function convertTemperature(celsius, unit) {
+  const base = normalizeToCelsius(celsius);
   if (unit === 'fahrenheit') {
     return {
-      value: (celsius * 9/5) + 32,
+      value: (base * 9/5) + 32,
       unit: '°F'
     };
   }
   return {
-    value: celsius,
+    value: base,
     unit: '°C'
   };
 }

@@ -41,14 +41,17 @@ document.addEventListener("DOMContentLoaded", function () {
  * Initialize the map with Google Maps
  */
 function initMap() {
-  // Default center (will be updated with boundary data)
-  const defaultCenter = { lat: 37.7749, lng: -122.4194 }; // San Francisco as default
+  // Determine initial center from data attributes or fallback
+  const mapElement = document.getElementById("map");
+  const initialLat = parseFloat(mapElement?.dataset.initialLat) || 0;
+  const initialLng = parseFloat(mapElement?.dataset.initialLng) || 0;
+  const defaultCenter = { lat: initialLat, lng: initialLng };
 
   // Initialize geocoder for address searches
   geocoder = new google.maps.Geocoder();
 
   // Initialize the map - default to satellite view
-  map = new google.maps.Map(document.getElementById("map"), {
+  map = new google.maps.Map(mapElement, {
     zoom: 18,
     center: defaultCenter,
     mapTypeId: google.maps.MapTypeId.SATELLITE, // Default to satellite view

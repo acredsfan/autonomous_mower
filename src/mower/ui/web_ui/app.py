@@ -4,6 +4,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Critical imports with error handling
 try:
@@ -27,6 +28,9 @@ from mower.navigation.path_planner import PatternType
 from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
 from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
 from mower.utilities.logger_config import LoggerConfigInfo
+
+# Load environment variables from .env if available
+load_dotenv()
 
 # Initialize logger
 logger = LoggerConfigInfo.get_logger(__name__)
@@ -127,9 +131,9 @@ def create_app(mower_resource_manager_instance):
         """Render the map view page."""
         # Use API key from environment or configuration
         google_maps_api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-        
+
         print(f"DEBUG: map_view() - Using Google Maps API key: {google_maps_api_key}")
-        
+
         if not google_maps_api_key:
             logger.warning("GOOGLE_MAPS_API_KEY not set in environment. Map functionality will be limited.")
             # Check if a .env file exists but hasn't been loaded
@@ -137,8 +141,24 @@ def create_app(mower_resource_manager_instance):
             if env_file.exists():
                 logger.warning(f".env file exists at {env_file} but may not be loaded. Consider restarting the service.")
                 print(f"WARNING: .env file exists but may not be loaded. Please restart the service.")
-                
-        return render_template("map.html", google_maps_api_key=google_maps_api_key)
+
+        map_center_lat = 0.0
+        map_center_lng = 0.0
+        try:
+            sensor_data = mower.get_sensor_data()
+            if sensor_data and "gps" in sensor_data:
+                gps_data = sensor_data["gps"]
+                map_center_lat = gps_data.get("latitude", 0.0)
+                map_center_lng = gps_data.get("longitude", 0.0)
+        except Exception as e:
+            logger.warning(f"Failed to get GPS coordinates for map center: {e}")
+
+        return render_template(
+            "map.html",
+            google_maps_api_key=google_maps_api_key,
+            map_center_lat=map_center_lat,
+            map_center_lng=map_center_lng,
+        )
 
     @app.route("/diagnostics")
     def diagnostics():
