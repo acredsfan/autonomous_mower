@@ -268,7 +268,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             # only escalate after N consecutive failures
             if consecutive >= max_failures:
                 self._handle_sensor_error("bme280", exc)
-
+            logging.debug(f"EnhancedSensorInterface._read_bme280: Read failed (consecutive: {consecutive}), returning empty dict. Exception: {exc}")
             return {}
 
     def _read_bno085(self):
@@ -308,6 +308,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             }
         except Exception as e:
             self._handle_sensor_error("bno085", e)
+            logging.debug(f"EnhancedSensorInterface._read_bno085: Read failed, returning empty dict. Exception: {e}")
             return {}
 
     def _read_ina3221(self) -> Dict[str, Any]:
@@ -316,9 +317,11 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         if not sensor:  # Check if sensor was initialized
             # For optional sensors, return empty dict instead of error
             if SENSOR_DEFS.get("ina3221", {}).get("optional", False):
+                logging.debug("EnhancedSensorInterface._read_ina3221: Optional INA3221 sensor not initialized, returning empty dict.")
                 return {}
             else:
                 self._handle_sensor_error("ina3221", Exception("INA3221 sensor not initialized or failed to initialize."))
+                logging.warning("EnhancedSensorInterface._read_ina3221: Non-optional INA3221 sensor not initialized, returning error.")
                 return {"error": "INA3221 sensor not available"}
 
         try:
@@ -399,6 +402,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             }
         except Exception as e:
             self._handle_sensor_error("ina3221", e)
+            logging.warning(f"EnhancedSensorInterface._read_ina3221: Read failed, returning error. Exception: {e}")
             return {"error": str(e)}
 
     def _read_vl53l0x(self) -> Dict[str, Any]:
@@ -406,6 +410,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         sensor_wrapper = self._sensors.get("vl53l0x")
         if not sensor_wrapper or not sensor_wrapper.is_hardware_available:
             self._handle_sensor_error("vl53l0x", Exception("VL53L0X sensors not available"))
+            logging.warning("EnhancedSensorInterface._read_vl53l0x: VL53L0X sensors not available or hardware issue, returning error.")
             return {"error": "VL53L0X sensors not available"}
 
         try:
@@ -434,6 +439,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
         except Exception as e:
             self._handle_sensor_error("vl53l0x", e)
+            logging.warning(f"EnhancedSensorInterface._read_vl53l0x: Read failed, returning error. Exception: {e}")
             return {"error": str(e)}
 
     def _handle_sensor_error(self, sensor_name: str, error: Exception):
@@ -582,18 +588,23 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         
         start_time = time.time()
         sensor_data = {}
+        # For logging individual sensor outputs before aggregation or fallback
+        raw_sensor_outputs = {}
         
         try:
             # Use lock with timeout to prevent deadlocks
             if not self._locks["data"].acquire(timeout=5.0):
-                logging.error("Failed to acquire sensor data lock within 5 seconds")
-                return self._get_emergency_fallback_data()
+                logging.error("EnhancedSensorInterface: Failed to acquire sensor data lock within 5 seconds")
+                emergency_data = self._get_emergency_fallback_data()
+                logging.warning(f"EnhancedSensorInterface: Returning emergency fallback data due to lock acquisition failure: {emergency_data}")
+                return emergency_data
             
             try:
                 # Read environmental data with individual error handling
                 try:
                     if self._sensors.get("bme280") is not None:
                         bme_data = self._read_bme280()
+                        raw_sensor_outputs["bme280"] = bme_data if bme_data else {"status": "read_failed_empty"}
                         if bme_data:
                             sensor_data["environment"] = {
                                 "temperature": bme_data.get("temperature"),
@@ -601,57 +612,71 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                                 "pressure": bme_data.get("pressure")
                             }
                         else:
+                            logging.info("EnhancedSensorInterface: BME280 read returned empty, using fallback.")
                             sensor_data["environment"] = self._get_fallback_environment()
                     else:
+                        raw_sensor_outputs["bme280"] = {"status": "not_available"}
+                        logging.info("EnhancedSensorInterface: BME280 sensor not available, using fallback.")
                         sensor_data["environment"] = self._get_fallback_environment()
                 except Exception as bme_error:
-                    logging.warning(f"BME280 sensor read failed: {bme_error}")
+                    raw_sensor_outputs["bme280"] = {"status": f"read_exception: {bme_error}"}
+                    logging.warning(f"EnhancedSensorInterface: BME280 sensor read exception: {bme_error}")
                     sensor_data["environment"] = self._get_fallback_environment()
                 
                 # Read IMU data with individual error handling  
                 try:
                     imu_data = self._read_bno085()
+                    raw_sensor_outputs["bno085"] = imu_data if imu_data else {"status": "read_failed_empty"}
                     if imu_data:
                         sensor_data["imu"] = imu_data
                     else:
+                        logging.info("EnhancedSensorInterface: BNO085 IMU read returned empty, using fallback.")
                         sensor_data["imu"] = self._get_fallback_imu()
                 except Exception as imu_error:
-                    logging.warning(f"IMU sensor read failed: {imu_error}")
+                    raw_sensor_outputs["bno085"] = {"status": f"read_exception: {imu_error}"}
+                    logging.warning(f"EnhancedSensorInterface: IMU sensor read exception: {imu_error}")
                     sensor_data["imu"] = self._get_fallback_imu()
                 
                 # Read power data with individual error handling (cached for less frequent reads)
                 try:
                     current_time = time.time()
-                    
-                    # Check if we need to read INA3221 or use cached data
-                    if (self._sensors.get("ina3221") is not None and 
-                        (self._ina3221_cache["data"] is None or 
-                         current_time - self._ina3221_cache["last_read"] > self._ina3221_cache["cache_duration"])):
-                        
-                        # Time to read fresh INA3221 data
-                        power_data = self._read_ina3221()
-                        if power_data and "error" not in power_data:
-                            self._ina3221_cache["data"] = power_data
-                            self._ina3221_cache["last_read"] = current_time
-                            sensor_data["power"] = power_data
-                            logging.debug(f"INA3221 fresh read completed, cached for {self._ina3221_cache['cache_duration']}s")
+                    cache_hit = False
+                    if self._sensors.get("ina3221") is not None:
+                        if not (self._ina3221_cache["data"] is None or \
+                                current_time - self._ina3221_cache["last_read"] > self._ina3221_cache["cache_duration"]):
+                            sensor_data["power"] = self._ina3221_cache["data"]
+                            raw_sensor_outputs["ina3221"] = {"status": "from_cache"}
+                            logging.debug("EnhancedSensorInterface: Using cached INA3221 data")
+                            cache_hit = True
                         else:
-                            sensor_data["power"] = self._get_fallback_power()
-                    elif self._ina3221_cache["data"] is not None:
-                        # Use cached data
-                        sensor_data["power"] = self._ina3221_cache["data"]
-                        logging.debug("Using cached INA3221 data")
-                    else:
-                        # No sensor and no cache
+                            power_data = self._read_ina3221()
+                            raw_sensor_outputs["ina3221"] = power_data if power_data else {"status": "read_failed_empty"}
+                            if power_data and "error" not in power_data:
+                                self._ina3221_cache["data"] = power_data
+                                self._ina3221_cache["last_read"] = current_time
+                                sensor_data["power"] = power_data
+                                logging.debug(f"EnhancedSensorInterface: INA3221 fresh read completed, cached for {self._ina3221_cache['cache_duration']}s")
+                            else:
+                                logging.info(f"EnhancedSensorInterface: INA3221 read error/empty ('{power_data.get('error', 'N/A') if power_data else 'empty'}'), using fallback.")
+                                sensor_data["power"] = self._get_fallback_power()
+                    else: # Sensor not available
+                        raw_sensor_outputs["ina3221"] = {"status": "not_available"}
+                        logging.info("EnhancedSensorInterface: INA3221 sensor not available, using fallback.")
                         sensor_data["power"] = self._get_fallback_power()
-                        
+
+                    if not cache_hit and "power" not in sensor_data: # Ensure power key exists if not from cache and not set by read
+                         logging.info("EnhancedSensorInterface: INA3221 no sensor and no cache, using fallback.")
+                         sensor_data["power"] = self._get_fallback_power()
+
                 except Exception as power_error:
-                    logging.warning(f"INA3221 power sensor read failed: {power_error}")
+                    raw_sensor_outputs["ina3221"] = {"status": f"read_exception: {power_error}"}
+                    logging.warning(f"EnhancedSensorInterface: INA3221 power sensor read exception: {power_error}")
                     sensor_data["power"] = self._get_fallback_power()
                 
                 # Read distance sensors with individual error handling
                 try:
                     tof_data = self._read_vl53l0x()
+                    raw_sensor_outputs["vl53l0x"] = tof_data if tof_data else {"status": "read_failed_empty"}
                     if tof_data and "error" not in tof_data:
                         # Convert to WebUI expected format
                         sensor_data["tof"] = {
@@ -659,24 +684,30 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                             "right": tof_data.get("front_right", "N/A"),
                             "working": tof_data.get("left_working", False) or tof_data.get("right_working", False)
                         }
+                        # Propagate status if present from _read_vl53l0x, which might include its own "unavailable"
+                        if "status" in tof_data:
+                             sensor_data["tof"]["status"] = tof_data["status"]
                     else:
+                        logging.info(f"EnhancedSensorInterface: VL53L0X ToF read error/empty ('{tof_data.get('error', 'N/A') if tof_data else 'empty'}'), using fallback.")
                         sensor_data["tof"] = self._get_fallback_tof()
                 except Exception as tof_error:
-                    logging.warning(f"ToF distance sensors read failed: {tof_error}")
+                    raw_sensor_outputs["vl53l0x"] = {"status": f"read_exception: {tof_error}"}
+                    logging.warning(f"EnhancedSensorInterface: ToF distance sensors read exception: {tof_error}")
                     sensor_data["tof"] = self._get_fallback_tof()
                 
+                logging.debug(f"EnhancedSensorInterface: Raw sensor outputs before final assembly: {raw_sensor_outputs}")
                 # Update internal data store safely
                 try:
                     self._data.update(sensor_data)
                 except Exception as update_error:
-                    logging.warning(f"Failed to update internal sensor data: {update_error}")
+                    logging.warning(f"EnhancedSensorInterface: Failed to update internal sensor data: {update_error}")
                 
-                # Log collection performance
                 collection_time = time.time() - start_time
-                if collection_time > 2.0:  # Warn if collection takes more than 2 seconds
-                    logging.warning(f"Sensor collection took {collection_time:.3f}s (slow performance)")
+                final_data_log_msg = f"EnhancedSensorInterface: Sensor collection completed in {collection_time:.3f}s. Returning data: {sensor_data}"
+                if collection_time > 2.0:
+                    logging.warning(final_data_log_msg + " (slow performance)")
                 else:
-                    logging.debug(f"Sensor collection completed in {collection_time:.3f}s")
+                    logging.debug(final_data_log_msg)
                 
                 return sensor_data
                 
@@ -685,8 +716,10 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 self._locks["data"].release()
                 
         except Exception as critical_error:
-            logging.error(f"Critical error in sensor data collection: {critical_error}", exc_info=True)
-            return self._get_emergency_fallback_data()
+            logging.error(f"EnhancedSensorInterface: Critical error in sensor data collection: {critical_error}", exc_info=True)
+            emergency_data = self._get_emergency_fallback_data()
+            logging.warning(f"EnhancedSensorInterface: Returning emergency fallback data: {emergency_data}")
+            return emergency_data
 
     def _get_fallback_environment(self) -> Dict[str, str]:
         """Get fallback environment sensor data."""

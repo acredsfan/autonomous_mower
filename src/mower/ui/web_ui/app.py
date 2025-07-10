@@ -775,13 +775,13 @@ def create_app(mower_resource_manager_instance):
                             safety_status = sensor_interface.get_safety_status()
                             sensor_data = sensor_interface.get_sensor_data()
                         else:
-                            logger.debug("Using mower methods for data collection...")
-                            safety_status = mower.get_safety_status()
-                            sensor_data = mower.get_sensor_data()
-                        logger.info(f"APP.PY send_updates: Received sensor_data from mower: {sensor_data}")
+                            logger.debug("App.py:send_updates - Using mower (DummyResourceManager) methods for data collection.")
+                            safety_status = mower.get_safety_status() # This calls DummyRM.get_safety_status
+                            sensor_data = mower.get_sensor_data()     # This calls DummyRM.get_sensor_data which reads JSON
+                        logger.info(f"App.py:send_updates - Data fetched by DummyResourceManager: {sensor_data}")
                 except Exception as e:
-                    logger.error(f"Error getting safety or sensor data: {e}")
-                    safety_status = {"is_safe": True, "error": str(e)}
+                    logger.error(f"App.py:send_updates - Error getting safety or sensor data via DummyResourceManager: {e}", exc_info=True)
+                    safety_status = {"is_safe": True, "error": str(e), "source": "app.py_exception_fallback"}
                     # Provide fallback sensor data instead of empty dict
                     sensor_data = {
                         "imu": {
@@ -837,14 +837,14 @@ def create_app(mower_resource_manager_instance):
                 except Exception as e:
                     logger.error(f"Error emitting safety_status: {e}")
                 try:
-                    logger.info(f"APP.PY send_updates: Emitting sensor_data: {sensor_data}")
+                    logger.info(f"App.py:send_updates - Emitting sensor_data via SocketIO: {sensor_data}")
                     socketio.emit("sensor_data", sensor_data)
-                    logger.debug(f"Emitted sensor_data: {sensor_data}")
+                    # logger.debug(f"Emitted sensor_data: {sensor_data}") # Redundant with info log
                 except Exception as e:
-                    logger.error(f"Error emitting sensor_data: {e}")
+                    logger.error(f"App.py:send_updates - Error emitting sensor_data via SocketIO: {e}", exc_info=True)
 
             except Exception as e:
-                logger.error(f"Error in update loop: {e}")
+                logger.error(f"App.py:send_updates - Error in update loop: {e}", exc_info=True)
                 socketio.sleep(1)  # Wait longer on error
 
     if not hasattr(app, 'update_thread_started') or not app.update_thread_started:
