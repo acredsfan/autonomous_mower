@@ -753,81 +753,188 @@ class ResourceManager:
 
     def get_sensor_data(self):
         """
-        Get comprehensive sensor data including GPS for WebUI.
+        Get comprehensive sensor data including GPS for WebUI with robust error handling.
         
         Returns:
             dict: Combined sensor data from sensor interface and GPS service
         """
         try:
-            # Get base sensor data from sensor interface
-            sensor_interface = self.get_sensor_interface()
-            sensor_data = {}
+            # Get base sensor data from sensor interface with timeout protection
+            sensor_data = self._get_sensor_data_with_timeout()
             
-            if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
-                sensor_data = sensor_interface.get_sensor_data()
+            if sensor_data is None:
+                # Fallback to safe sensor data structure
+                sensor_data = self._get_fallback_sensor_data()
             
-            # Add GPS data
-            gps_location = self.get_gps_location()
-            if gps_location:
-                fix_quality = gps_location.get("metadata", {}).get("fix_quality", 0)
-                # Convert fix_quality to status string for WebUI compatibility
-                if fix_quality >= 1:
-                    status = "valid"
+            # Add GPS data with error protection
+            try:
+                gps_location = self.get_gps_location()
+                if gps_location:
+                    fix_quality = gps_location.get("metadata", {}).get("fix_quality", 0)
+                    # Convert fix_quality to status string for WebUI compatibility
+                    if fix_quality >= 1:
+                        status = "valid"
+                    else:
+                        status = "no_fix"
+                        
+                    sensor_data["gps"] = {
+                        "latitude": gps_location.get("latitude"),
+                        "longitude": gps_location.get("longitude"),
+                        "timestamp": gps_location.get("timestamp"),
+                        "utm_easting": gps_location.get("utm_easting"),
+                        "utm_northing": gps_location.get("utm_northing"),
+                        "utm_zone": gps_location.get("utm_zone"),
+                        "satellites": gps_location.get("metadata", {}).get("satellites", 0),
+                        "hdop": gps_location.get("metadata", {}).get("hdop", 99.9),
+                        "fix_quality": fix_quality,
+                        "status": status  # Add status field for WebUI compatibility
+                    }
                 else:
-                    status = "no_fix"
-                    
-                sensor_data["gps"] = {
-                    "latitude": gps_location.get("latitude"),
-                    "longitude": gps_location.get("longitude"),
-                    "timestamp": gps_location.get("timestamp"),
-                    "utm_easting": gps_location.get("utm_easting"),
-                    "utm_northing": gps_location.get("utm_northing"),
-                    "utm_zone": gps_location.get("utm_zone"),
-                    "satellites": gps_location.get("metadata", {}).get("satellites", 0),
-                    "hdop": gps_location.get("metadata", {}).get("hdop", 99.9),
-                    "fix_quality": fix_quality,
-                    "status": status  # Add status field for WebUI compatibility
-                }
-            else:
-                # Provide empty GPS data structure for consistency
-                sensor_data["gps"] = {
-                    "latitude": None,
-                    "longitude": None,
-                    "timestamp": None,
-                    "utm_easting": None,
-                    "utm_northing": None,
-                    "utm_zone": None,
-                    "satellites": 0,
-                    "hdop": 99.9,
-                    "fix_quality": 0,
-                    "status": "no_fix"  # Add status field for WebUI compatibility
-                }
-            
-            # Write sensor data to shared storage for web process
+                    # Provide empty GPS data structure for consistency
+                    sensor_data["gps"] = self._get_fallback_gps_data()
+            except Exception as gps_error:
+                logger.warning(f"GPS data collection failed: {gps_error}")
+                sensor_data["gps"] = self._get_fallback_gps_data()
+            # Write sensor data to shared storage for web process with error protection
             try:
                 shared_manager = get_shared_sensor_manager()
                 shared_manager.write_sensor_data(sensor_data)
+                logger.debug("Successfully wrote sensor data to shared storage")
             except Exception as e:
-                logger.debug(f"Failed to write sensor data to shared storage: {e}")
+                logger.warning(f"Failed to write sensor data to shared storage: {e}")
             
             return sensor_data
             
         except Exception as e:
-            logger.error(f"Error getting sensor data: {e}")
-            return {
-                "error": f"Sensor data collection failed: {e}",
-                "gps": {
-                    "latitude": None,
-                    "longitude": None,
-                    "timestamp": None,
-                    "utm_easting": None,
-                    "utm_northing": None,
-                    "utm_zone": None,
-                    "satellites": 0,
-                    "hdop": 99.9,
-                    "fix_quality": 0
-                }
+            logger.error(f"Critical error in sensor data collection: {e}", exc_info=True)
+            # Return fallback data structure to maintain system stability
+            return self._get_complete_fallback_data()
+
+    def _get_sensor_data_with_timeout(self):
+        """
+        Get sensor data with timeout protection to prevent hanging.
+        
+        Returns:
+            dict or None: Sensor data or None if timeout/error occurred
+        """
+        import signal
+        import time
+        
+        timeout_duration = 8  # 8 second timeout for sensor collection
+        sensor_data = None
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Sensor data collection timed out after {timeout_duration} seconds")
+        
+        try:
+            # Set up timeout alarm
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout_duration)
+            
+            start_time = time.time()
+            logger.debug(f"Starting sensor collection with {timeout_duration}s timeout")
+            
+            # Get sensor interface with additional safety checks
+            sensor_interface = self.get_sensor_interface()
+            if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
+                logger.debug("Calling sensor interface get_sensor_data()")
+                sensor_data = sensor_interface.get_sensor_data()
+                logger.debug(f"Sensor data collection completed in {time.time() - start_time:.3f}s")
+            else:
+                logger.warning("Sensor interface not available or missing get_sensor_data method")
+                sensor_data = {}
+            
+            # Clear the alarm
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+            
+            return sensor_data
+            
+        except TimeoutError as timeout_error:
+            logger.error(f"Sensor collection timeout: {timeout_error}")
+            signal.alarm(0)  # Clear alarm
+            if 'old_handler' in locals():
+                signal.signal(signal.SIGALRM, old_handler)
+            return None
+            
+        except Exception as sensor_error:
+            logger.error(f"Sensor interface error: {sensor_error}", exc_info=True)
+            signal.alarm(0)  # Clear alarm
+            if 'old_handler' in locals():
+                signal.signal(signal.SIGALRM, old_handler)
+            return None
+
+    def _get_fallback_sensor_data(self):
+        """
+        Get fallback sensor data when primary collection fails.
+        
+        Returns:
+            dict: Safe fallback sensor data structure
+        """
+        logger.info("Using fallback sensor data due to collection failure")
+        return {
+            "environment": {
+                "temperature": "N/A",
+                "humidity": "N/A", 
+                "pressure": "N/A"
+            },
+            "imu": {
+                "heading": "N/A",
+                "roll": "N/A",
+                "pitch": "N/A",
+                "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},
+                "calibration": "N/A",
+                "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
+            },
+            "power": {
+                "voltage": "N/A",
+                "current": "N/A",
+                "power": "N/A",
+                "percentage": "N/A",
+                "solar_voltage": "N/A",
+                "solar_current": "N/A",
+                "solar_power": "N/A"
+            },
+            "tof": {
+                "left": "N/A",
+                "right": "N/A",
+                "working": False
             }
+        }
+
+    def _get_fallback_gps_data(self):
+        """
+        Get fallback GPS data structure.
+        
+        Returns:
+            dict: Safe fallback GPS data
+        """
+        return {
+            "latitude": None,
+            "longitude": None,
+            "timestamp": None,
+            "utm_easting": None,
+            "utm_northing": None,
+            "utm_zone": None,
+            "satellites": 0,
+            "hdop": 99.9,
+            "fix_quality": 0,
+            "status": "no_fix"
+        }
+
+    def _get_complete_fallback_data(self):
+        """
+        Get complete fallback data structure for critical errors.
+        
+        Returns:
+            dict: Complete safe fallback data
+        """
+        fallback_data = self._get_fallback_sensor_data()
+        fallback_data["gps"] = self._get_fallback_gps_data()
+        fallback_data["error"] = "Sensor data collection failed - using fallback data"
+        return fallback_data
 
     def set_home_location(self, location):
         """
@@ -1062,20 +1169,74 @@ def main():
         logger.info("Application started. Waiting for shutdown signal...")
         
         # Main loop with periodic sensor data sharing
+        # Main sensor data collection loop with enhanced error handling
+        consecutive_errors = 0
+        max_consecutive_errors = 10
+        base_delay = 2.0  # Base delay between collections (seconds)
+        
+        logger.info("Starting enhanced sensor data collection loop")
         while not stop_event.is_set():
             try:
-                # Write sensor data to shared storage for web process
-                if resource_manager:
-                    logger.debug("Main loop: Collecting sensor data...")
-                    sensor_data = resource_manager.get_sensor_data()
-                    logger.debug(f"Main loop: Sensor data collected, keys: {list(sensor_data.keys()) if sensor_data else 'None'}")
-                    # Note: get_sensor_data() already writes to shared storage
+                collection_start_time = time.time()
                 
-                # Wait for shutdown signal with periodic checks (every 2 seconds)
-                stop_event.wait(timeout=2.0)
-            except Exception as e:
-                logger.error(f"Error in main sensor data loop: {e}")
-                stop_event.wait(timeout=2.0)  # Continue with error recovery
+                # Collect sensor data with comprehensive error handling
+                if resource_manager:
+                    logger.debug("Main loop: Starting sensor data collection...")
+                    
+                    try:
+                        sensor_data = resource_manager.get_sensor_data()
+                        
+                        if sensor_data and "error" not in sensor_data:
+                            # Successful collection - reset error counter
+                            if consecutive_errors > 0:
+                                logger.info(f"Sensor collection recovered after {consecutive_errors} consecutive errors")
+                                consecutive_errors = 0
+                            
+                            collection_time = time.time() - collection_start_time
+                            logger.debug(f"Sensor data collected successfully in {collection_time:.3f}s")
+                            
+                        else:
+                            # Collection returned error data
+                            consecutive_errors += 1
+                            logger.warning(f"Sensor collection returned error data (consecutive: {consecutive_errors})")
+                            
+                    except Exception as sensor_error:
+                        consecutive_errors += 1
+                        logger.error(f"Sensor collection exception (consecutive: {consecutive_errors}): {sensor_error}", exc_info=True)
+                        
+                        # Implement exponential backoff for persistent failures
+                        if consecutive_errors >= max_consecutive_errors:
+                            logger.critical(f"Maximum consecutive sensor errors reached ({max_consecutive_errors}). Implementing extended backoff.")
+                            stop_event.wait(timeout=30.0)  # Extended delay for critical failures
+                            consecutive_errors = 0  # Reset counter after extended delay
+                        
+                else:
+                    logger.warning("ResourceManager not available for sensor collection")
+                    consecutive_errors += 1
+                
+                # Calculate dynamic delay based on error count
+                delay = base_delay
+                if consecutive_errors > 0:
+                    # Exponential backoff: 2s, 4s, 8s, max 16s
+                    delay = min(base_delay * (2 ** min(consecutive_errors - 1, 3)), 16.0)
+                    logger.debug(f"Using extended delay of {delay}s due to {consecutive_errors} consecutive errors")
+                
+                # Wait for shutdown signal with dynamic timeout
+                logger.debug(f"Waiting {delay}s before next sensor collection cycle")
+                stop_event.wait(timeout=delay)
+                
+            except Exception as loop_error:
+                # Catch-all for any unhandled exceptions in the main loop
+                consecutive_errors += 1
+                logger.critical(f"Unhandled exception in sensor collection loop (consecutive: {consecutive_errors}): {loop_error}", exc_info=True)
+                
+                # Prevent infinite error loops
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.critical("Too many consecutive loop errors. Implementing emergency delay.")
+                    stop_event.wait(timeout=60.0)  # Emergency delay
+                    consecutive_errors = 0
+                else:
+                    stop_event.wait(timeout=base_delay)
 
     except Exception as e:
         logger.critical(f"Unhandled exception in main: {e}", exc_info=True)

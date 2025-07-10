@@ -15,6 +15,7 @@ from mower.hardware.bme280 import BME280Sensor
 from mower.hardware.ina3221 import INA3221Sensor
 from mower.interfaces.hardware import SensorInterface as HardwareSensorInterface
 from mower.utilities.logger_config import LoggerConfigInfo
+import dotenv
 
 logging = LoggerConfigInfo.get_logger(__name__)
 
@@ -69,6 +70,13 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             "data": threading.Lock(),
             "status": threading.Lock(),
         }
+        
+        # INA3221 caching for less frequent reads (non-critical sensor)
+        self._ina3221_cache = {
+            "data": None,
+            "last_read": 0,
+            "cache_duration": 5.0  # Read INA3221 only every 5 seconds
+        }
 
         # Initialize sensor status for all sensors
         for sensor_name in ["bme280", "bno085", "ina3221", "vl53l0x"]:
@@ -111,41 +119,29 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info(f"BME280 optional sensor unavailable: {exc}")
             self._sensors["bme280"] = None
         
-        # Initialize INA3221 with direct initialization bypass for hardware registry issues
-        ina3221_retries = 3
-        ina3221_retry_delay = 0.5  # 500ms between retries
-        
-        for attempt in range(ina3221_retries):
-            try:
-                # First try hardware registry
+        # Initialize INA3221 with proper I2C coordination (direct init works, hardware registry fails)
+        try:
+            logging.info("Initializing INA3221 power sensor...")
+            # Use I2C lock to prevent bus contention during initialization
+            with self._locks["i2c"]:
+                # Try hardware registry first, but fall back to direct init which works
                 self._sensors["ina3221"] = hardware_registry.get_ina3221()
                 
-                # If hardware registry fails, try direct initialization
                 if self._sensors["ina3221"] is None:
-                    logging.warning(f"Hardware registry INA3221 returned None (attempt {attempt + 1}), trying direct initialization...")
+                    logging.info("Hardware registry returned None, trying direct initialization...")
+                    # Use direct initialization method (same as diagnostic tool)
                     from mower.hardware.ina3221 import INA3221Sensor
                     self._sensors["ina3221"] = INA3221Sensor.init_ina3221()
                 
                 if self._sensors["ina3221"] is not None:
-                    # Mark as working if initialization succeeded
                     self._sensor_status["ina3221"].working = True
-                    logging.info(f"INA3221 sensor initialized successfully (attempt {attempt + 1}, direct init)")
-                    break
+                    logging.info("INA3221 sensor initialized successfully")
                 else:
-                    if attempt < ina3221_retries - 1:
-                        logging.warning(f"INA3221 direct initialization also returned None (attempt {attempt + 1}/{ina3221_retries}), retrying...")
-                        import time
-                        time.sleep(ina3221_retry_delay)
-                    else:
-                        logging.warning("INA3221 optional sensor not available after all retries")
-            except Exception as exc:
-                if attempt < ina3221_retries - 1:
-                    logging.warning(f"INA3221 initialization failed (attempt {attempt + 1}/{ina3221_retries}): {exc}, retrying...")
-                    import time
-                    time.sleep(ina3221_retry_delay)
-                else:
-                    logging.warning(f"INA3221 optional sensor unavailable after retries: {exc}")
-                    self._sensors["ina3221"] = None
+                    logging.info("INA3221 optional sensor not available after all attempts")
+                    
+        except Exception as exc:
+            logging.info(f"INA3221 optional sensor unavailable: {exc}")
+            self._sensors["ina3221"] = None
         
         # Initialize other sensors with timeout protection
         try:
@@ -315,7 +311,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             return {}
 
     def _read_ina3221(self) -> Dict[str, Any]:
-        """Read INA3221 power data."""
+        """Read INA3221 power data with I2C coordination."""
         sensor = self._sensors.get("ina3221")
         if not sensor:  # Check if sensor was initialized
             # For optional sensors, return empty dict instead of error
@@ -326,18 +322,25 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 return {"error": "INA3221 sensor not available"}
 
         try:
-            # Import the INA3221Sensor class
-            from mower.hardware.ina3221 import INA3221Sensor
-            
-            all_channels_data = {}
-            # Channel assignments corrected per user specification:
-            # Channel 1: Solar panel monitoring
-            # Channel 2: Motors (future use)
-            # Channel 3: Battery monitoring
-            for channel_num in [1, 2, 3]:  # INA3221Sensor expects 1-indexed channels (static method)
-                # Use the static method from our INA3221Sensor class
-                channel_data = INA3221Sensor.read_ina3221(sensor, channel_num)
-                if channel_data: # If data was read successfully
+            # Use I2C lock to prevent bus contention
+            with self._locks["i2c"]:
+                # Import the INA3221Sensor class
+                from mower.hardware.ina3221 import INA3221Sensor
+                
+                all_channels_data = {}
+                # Channel assignments corrected per user specification:
+                # Channel 1: Solar panel monitoring
+                # Channel 2: Motors (future use)
+                # Channel 3: Battery monitoring
+                for channel_num in [1, 2, 3]:  # INA3221Sensor expects 1-indexed channels (static method)
+                    # Use the static method from our INA3221Sensor class
+                    channel_data = INA3221Sensor.read_ina3221(sensor, channel_num)
+                    if channel_data: # If data was read successfully
+                        all_channels_data[f"channel_{channel_num}"] = channel_data
+                    else:
+                        # Log specific channel read error, but continue to try other channels
+                        logging.debug(f"No data from INA3221 channel {channel_num}")
+                        all_channels_data[f"channel_{channel_num}"] = {"error": f"Failed to read channel {channel_num}"}
                     all_channels_data[f"channel_{channel_num}"] = channel_data
                 else:
                     # Log specific channel read error, but continue to try other channels
@@ -352,10 +355,9 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             voltage = battery_data.get("bus_voltage")
             percentage = None
             if voltage is not None:
-                # 12V lead-acid battery (10.5V empty, 12.7V full)
-                # Adjust these values for your specific battery type
-                min_volt = 10.5 
-                max_volt = 12.7
+                # Retrieved from .env values for BATTERY_MIN_VOLTAGE and BATTERY_MAX_VOLTAGE
+                min_volt = float(dotenv.get_key('.env', 'BATTERY_MIN_VOLTAGE', default='10.5'))
+                max_volt = float(dotenv.get_key('.env', 'BATTERY_MAX_VOLTAGE', default='14.6'))
                 if voltage <= min_volt:
                     percentage = 0.0
                 elif voltage >= max_volt:
@@ -571,107 +573,171 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
     def get_sensor_data(self) -> Dict[str, Any]:
         """
-        Get the current sensor readings.
+        Get the current sensor readings with comprehensive error handling.
 
         Returns:
             Dict[str, Any]: Dictionary containing sensor readings
         """
-        with self._locks["data"]:
-            # Read all available sensors
-            sensor_data = {}
+        import time
+        
+        start_time = time.time()
+        sensor_data = {}
+        
+        try:
+            # Use lock with timeout to prevent deadlocks
+            if not self._locks["data"].acquire(timeout=5.0):
+                logging.error("Failed to acquire sensor data lock within 5 seconds")
+                return self._get_emergency_fallback_data()
             
-            # Read environmental data with explicit N/A handling
-            bme_data = {}
-            if self._sensors.get("bme280") is not None:
-                bme_data = self._read_bme280()
-                
-            if bme_data:
-                # BME280 is working and has data
-                sensor_data["environment"] = {
-                    "temperature": bme_data.get("temperature"),  # BME280 returns temperature in Fahrenheit
-                    "humidity": bme_data.get("humidity"),
-                    "pressure": bme_data.get("pressure")
-                }
-            else:
-                # BME280 failed or not available - show N/A instead of hiding
-                sensor_data["environment"] = {
-                    "temperature": "N/A",
-                    "humidity": "N/A", 
-                    "pressure": "N/A"
-                }
-            
-            # Read IMU data with explicit N/A handling
-            imu_data = self._read_bno085()
-            if imu_data:
-                sensor_data["imu"] = imu_data
-            else:
-                # IMU failed or not available - show N/A instead of hiding
-                sensor_data["imu"] = {
-                    "heading": "N/A",
-                    "roll": "N/A",
-                    "pitch": "N/A",
-                    "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
-                    "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
-                    "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},
-                    "calibration": "N/A",
-                    "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
-                }
-            
-            # Read power data with explicit N/A handling and direct re-initialization fallback
-            # Try direct initialization if INA3221 was not initialized during startup
-            if self._sensors.get("ina3221") is None:
+            try:
+                # Read environmental data with individual error handling
                 try:
-                    logging.info("Attempting INA3221 direct re-initialization during sensor read...")
-                    from mower.hardware.ina3221 import INA3221Sensor
-                    self._sensors["ina3221"] = INA3221Sensor.init_ina3221()
-                    if self._sensors["ina3221"] is not None:
-                        self._sensor_status["ina3221"].working = True
-                        logging.info("INA3221 sensor direct re-initialization successful")
-                except Exception as exc:
-                    logging.debug(f"INA3221 direct re-initialization failed: {exc}")
-            
-            if self._sensors.get("ina3221") is not None:
-                power_data = self._read_ina3221()
-                if power_data and "error" not in power_data:
-                    sensor_data["power"] = power_data
+                    if self._sensors.get("bme280") is not None:
+                        bme_data = self._read_bme280()
+                        if bme_data:
+                            sensor_data["environment"] = {
+                                "temperature": bme_data.get("temperature"),
+                                "humidity": bme_data.get("humidity"),
+                                "pressure": bme_data.get("pressure")
+                            }
+                        else:
+                            sensor_data["environment"] = self._get_fallback_environment()
+                    else:
+                        sensor_data["environment"] = self._get_fallback_environment()
+                except Exception as bme_error:
+                    logging.warning(f"BME280 sensor read failed: {bme_error}")
+                    sensor_data["environment"] = self._get_fallback_environment()
+                
+                # Read IMU data with individual error handling  
+                try:
+                    imu_data = self._read_bno085()
+                    if imu_data:
+                        sensor_data["imu"] = imu_data
+                    else:
+                        sensor_data["imu"] = self._get_fallback_imu()
+                except Exception as imu_error:
+                    logging.warning(f"IMU sensor read failed: {imu_error}")
+                    sensor_data["imu"] = self._get_fallback_imu()
+                
+                # Read power data with individual error handling (cached for less frequent reads)
+                try:
+                    current_time = time.time()
+                    
+                    # Check if we need to read INA3221 or use cached data
+                    if (self._sensors.get("ina3221") is not None and 
+                        (self._ina3221_cache["data"] is None or 
+                         current_time - self._ina3221_cache["last_read"] > self._ina3221_cache["cache_duration"])):
+                        
+                        # Time to read fresh INA3221 data
+                        power_data = self._read_ina3221()
+                        if power_data and "error" not in power_data:
+                            self._ina3221_cache["data"] = power_data
+                            self._ina3221_cache["last_read"] = current_time
+                            sensor_data["power"] = power_data
+                            logging.debug(f"INA3221 fresh read completed, cached for {self._ina3221_cache['cache_duration']}s")
+                        else:
+                            sensor_data["power"] = self._get_fallback_power()
+                    elif self._ina3221_cache["data"] is not None:
+                        # Use cached data
+                        sensor_data["power"] = self._ina3221_cache["data"]
+                        logging.debug("Using cached INA3221 data")
+                    else:
+                        # No sensor and no cache
+                        sensor_data["power"] = self._get_fallback_power()
+                        
+                except Exception as power_error:
+                    logging.warning(f"INA3221 power sensor read failed: {power_error}")
+                    sensor_data["power"] = self._get_fallback_power()
+                
+                # Read distance sensors with individual error handling
+                try:
+                    tof_data = self._read_vl53l0x()
+                    if tof_data and "error" not in tof_data:
+                        # Convert to WebUI expected format
+                        sensor_data["tof"] = {
+                            "left": tof_data.get("front_left", "N/A"),
+                            "right": tof_data.get("front_right", "N/A"),
+                            "working": tof_data.get("left_working", False) or tof_data.get("right_working", False)
+                        }
+                    else:
+                        sensor_data["tof"] = self._get_fallback_tof()
+                except Exception as tof_error:
+                    logging.warning(f"ToF distance sensors read failed: {tof_error}")
+                    sensor_data["tof"] = self._get_fallback_tof()
+                
+                # Update internal data store safely
+                try:
+                    self._data.update(sensor_data)
+                except Exception as update_error:
+                    logging.warning(f"Failed to update internal sensor data: {update_error}")
+                
+                # Log collection performance
+                collection_time = time.time() - start_time
+                if collection_time > 2.0:  # Warn if collection takes more than 2 seconds
+                    logging.warning(f"Sensor collection took {collection_time:.3f}s (slow performance)")
                 else:
-                    # Power sensor failed - show N/A
-                    sensor_data["power"] = {
-                        "voltage": "N/A",
-                        "current": "N/A", 
-                        "power": "N/A",
-                        "percentage": "N/A"
-                    }
-            else:
-                # Power sensor not available - show N/A
-                sensor_data["power"] = {
-                    "voltage": "N/A",
-                    "current": "N/A",
-                    "power": "N/A", 
-                    "percentage": "N/A"
-                }
-            
-            # Read distance sensors with explicit N/A handling
-            tof_data = self._read_vl53l0x()
-            if tof_data and "error" not in tof_data:
-                # Convert to WebUI expected format
-                sensor_data["tof"] = {
-                    "left": tof_data.get("front_left", "N/A"),
-                    "right": tof_data.get("front_right", "N/A"),
-                    "working": tof_data.get("left_working", False) or tof_data.get("right_working", False)
-                }
-            else:
-                # ToF sensors failed or not available - show N/A
-                sensor_data["tof"] = {
-                    "left": "N/A",
-                    "right": "N/A", 
-                    "working": False
-                }
-            
-            # Update internal data store
-            self._data.update(sensor_data)
-            
-            return sensor_data
+                    logging.debug(f"Sensor collection completed in {collection_time:.3f}s")
+                
+                return sensor_data
+                
+            finally:
+                # Always release the lock
+                self._locks["data"].release()
+                
+        except Exception as critical_error:
+            logging.error(f"Critical error in sensor data collection: {critical_error}", exc_info=True)
+            return self._get_emergency_fallback_data()
+
+    def _get_fallback_environment(self) -> Dict[str, str]:
+        """Get fallback environment sensor data."""
+        return {
+            "temperature": "N/A",
+            "humidity": "N/A", 
+            "pressure": "N/A"
+        }
+
+    def _get_fallback_imu(self) -> Dict[str, Any]:
+        """Get fallback IMU sensor data."""
+        return {
+            "heading": "N/A",
+            "roll": "N/A",
+            "pitch": "N/A",
+            "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
+            "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
+            "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},
+            "calibration": "N/A",
+            "safety_status": {"is_safe": False, "status": "sensor_unavailable"}
+        }
+
+    def _get_fallback_power(self) -> Dict[str, float]:
+        """Get fallback power sensor data with numeric zeros to prevent frontend crashes."""
+        return {
+            "voltage": 0.0,
+            "current": 0.0,
+            "power": 0.0,
+            "percentage": 0.0,
+            "solar_voltage": 0.0,
+            "solar_current": 0.0,
+            "solar_power": 0.0
+        }
+
+    def _get_fallback_tof(self) -> Dict[str, Any]:
+        """Get fallback ToF sensor data with numeric zeros to prevent frontend crashes."""
+        return {
+            "left": 0,
+            "right": 0, 
+            "working": False
+        }
+
+    def _get_emergency_fallback_data(self) -> Dict[str, Any]:
+        """Get complete emergency fallback data for critical failures."""
+        return {
+            "environment": self._get_fallback_environment(),
+            "imu": self._get_fallback_imu(),
+            "power": self._get_fallback_power(),
+            "tof": self._get_fallback_tof(),
+            "error": "Emergency fallback - sensor collection failed critically"
+        }
 
     def get_sensor_status(self) -> Dict[str, Any]:
         """

@@ -242,15 +242,33 @@ class AvoidanceAlgorithm:
 
             if detected_objects:
                 for obj in detected_objects:
-                    if obj["class_name"] in self._objects_to_avoid():
-                        score = obj["score"]
+                    # Add safety checks for object structure
+                    if not isinstance(obj, dict):
+                        self.logger.warning(f"Invalid object type in detection: {type(obj)}")
+                        continue
+                        
+                    if "class_name" not in obj:
+                        # Handle different naming conventions
+                        class_name = obj.get("name", "unknown")
+                    else:
+                        class_name = obj["class_name"]
+                    
+                    if class_name in self._objects_to_avoid():
+                        score = obj.get("score", 0.0)
                         # Format is [ymin, xmin, ymax, xmax]
-                        box = obj["box"]
+                        box = obj.get("box", [0, 0, 0, 0])
 
-                        box_area = (box[2] - box[0]) * (box[3] - box[1])
+                        # Ensure box is a valid list/array with 4 elements
+                        if box is None or len(box) < 4:
+                            box = [0, 0, 1, 1]  # Default box to prevent calculation errors
+                            
+                        try:
+                            box_area = (box[2] - box[0]) * (box[3] - box[1])
+                        except (IndexError, TypeError, ValueError):
+                            box_area = 0.1  # Default small area
+                            
                         if score > 0.5 and box_area > 0.1:
                             has_obstacle = True
-                            class_name = obj["class_name"]
                             msg = f"Camera detected obstacle: {class_name} " f"(conf: {score:.2f})"
                             self.logger.info(msg)
                             break

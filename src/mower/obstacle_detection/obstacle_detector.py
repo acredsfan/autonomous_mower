@@ -341,32 +341,59 @@ class ObstacleDetector:
             # Process results
             detected_objects = []
             top_k = 3  # Get top 3 predictions
-            top_indices = np.argsort(-output_data)[:top_k]
+            
+            # Safety check: ensure output_data is valid
+            if len(output_data) == 0:
+                logger.warning("ML model produced empty output_data")
+                return []
+            
+            # Only consider indices that are valid for the output_data array
+            valid_indices = np.arange(len(output_data))
+            top_indices = np.argsort(-output_data)[:min(top_k, len(output_data))]
+            
+            # Additional safety check: ensure indices are within bounds
+            top_indices = top_indices[top_indices < len(output_data)]
 
             for idx in top_indices:
-                if idx < len(labels):
-                    class_name = labels[idx]
-                else:
-                    class_name = f"Class {idx}"
+                try:
+                    # Double-check bounds before accessing array
+                    if idx >= len(output_data):
+                        logger.warning(f"Skipping out-of-bounds index {idx} (output_data size: {len(output_data)})")
+                        continue
+                        
+                    score = float(output_data[idx])
+                    
+                    # Only proceed if score meets threshold
+                    if score >= MIN_CONF_THRESHOLD:
+                        # Determine class name with bounds checking
+                        if idx < len(labels):
+                            class_name = labels[idx]
+                        else:
+                            # Log model/label mismatch for debugging
+                            logger.debug(f"Model index {idx} exceeds labels size {len(labels)}, using generic name")
+                            class_name = f"Class {idx}"
 
-                score = float(output_data[idx])
-                if score >= MIN_CONF_THRESHOLD:
-                    detected_objects.append(
-                        {
-                            "name": class_name,
-                            "score": score,
-                            "type": "ml",
-                            "box": None,  # Add bounding box if available
-                        }
-                    )
+                        detected_objects.append(
+                            {
+                                "name": class_name,
+                                "score": score,
+                                "type": "ml",
+                                "box": None,  # Add bounding box if available
+                            }
+                        )
+                except (IndexError, ValueError) as e:
+                    logger.error(f"Error processing ML detection index {idx}: {e}")
+                    continue
 
             # Log performance
             logger.debug("ML inference: %.2fs (%.1f FPS)", inference_time, 1 / inference_time)
 
             return detected_objects
 
-        except (ValueError, RuntimeError, TypeError) as e:
+        except (ValueError, RuntimeError, TypeError, IndexError, AttributeError) as e:
             logger.error("Error in ML detection: %s", e)
+            logger.error(f"Model output shape: {output_data.shape if 'output_data' in locals() else 'unknown'}")
+            logger.error(f"Labels count: {len(labels) if 'labels' in locals() else 'unknown'}")
             return []
 
     def _detect_obstacles_opencv(self, frame) -> List[dict]:
