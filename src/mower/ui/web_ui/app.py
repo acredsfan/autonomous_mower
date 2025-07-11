@@ -1,14 +1,14 @@
 """Flask web interface for the autonomous mower."""
 
 import os
-import platform
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
+
+from dotenv import load_dotenv, set_key
 
 # Critical imports with error handling
 try:
-    from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory
+    from flask import Flask, Response, jsonify, render_template, request, send_file
     from flask_cors import CORS
     from flask_socketio import SocketIO, emit
 except ImportError as e:
@@ -58,7 +58,7 @@ def create_app(mower_resource_manager_instance):
     logger.info("Creating Flask app - v2")
     mower = mower_resource_manager_instance
     logger.info(f"create_app called with mower type: {type(mower)}")
-    
+
     # Configure template folder from environment or use default
     template_folder = os.environ.get("TEMPLATE_FOLDER", str(Path(__file__).parent / "templates"))
     app = Flask(__name__, template_folder=template_folder)
@@ -83,7 +83,7 @@ def create_app(mower_resource_manager_instance):
         logger.info("Initialized Babel from i18n module")
     except Exception as e:
         logger.warning(f"Could not initialize Babel from i18n module: {e}")
-        
+
         # Only try direct initialization if Babel is available
         if Babel is not None:
             try:
@@ -91,10 +91,10 @@ def create_app(mower_resource_manager_instance):
                 def get_locale():
                     """Select the best match for supported languages."""
                     return request.accept_languages.best_match(["en", "es", "fr"])
-                
+
                 # Create Babel instance
                 babel_instance = Babel(app)
-                
+
                 # Try different Flask-Babel versions' initialization methods
                 try:
                     # Flask-Babel >= 2.0
@@ -111,7 +111,7 @@ def create_app(mower_resource_manager_instance):
                 logger.error(f"Failed to initialize Babel directly: {e3}")
         else:
             logger.warning("Babel not installed - translations disabled")
-    
+
     # Route handlers
     @app.route("/")
     def index():
@@ -141,8 +141,10 @@ def create_app(mower_resource_manager_instance):
             # Check if a .env file exists but hasn't been loaded
             env_file = Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../.env"))
             if env_file.exists():
-                logger.warning(f".env file exists at {env_file} but may not be loaded. Consider restarting the service.")
-                print(f"WARNING: .env file exists but may not be loaded. Please restart the service.")
+                logger.warning(
+                    f".env file exists at {env_file} but may not be loaded. Consider restarting the service."
+                )
+                print("WARNING: .env file exists but may not be loaded. Please restart the service.")
 
         map_center_lat = 0.0
         map_center_lng = 0.0
@@ -197,48 +199,53 @@ def create_app(mower_resource_manager_instance):
         """Stream camera feed as multipart response."""
         try:
             camera = mower.get_camera()
-            
+
             if camera is None:
                 # Generate a test pattern when no camera is available
                 def generate_test_pattern():
                     """Generate a test pattern with timestamp."""
+                    from datetime import datetime
+
                     import cv2
                     import numpy as np
-                    from datetime import datetime
-                    
+
                     while True:
                         # Create a 640x480 test pattern
                         frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                        
+
                         # Add some visual elements
                         cv2.rectangle(frame, (50, 50), (590, 430), (0, 255, 0), 2)
-                        cv2.putText(frame, "Camera Not Available", (150, 200), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                        cv2.putText(frame, f"Time: {datetime.now().strftime('%H:%M:%S')}", 
-                                  (200, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-                        cv2.putText(frame, "Test Pattern", (250, 300), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-                        
+                        cv2.putText(
+                            frame, "Camera Not Available", (150, 200), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2
+                        )
+                        cv2.putText(
+                            frame,
+                            f"Time: {datetime.now().strftime('%H:%M:%S')}",
+                            (200, 250),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            (255, 255, 0),
+                            2,
+                        )
+                        cv2.putText(frame, "Test Pattern", (250, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+
                         # Add some moving elements
                         import time
+
                         x = int((time.time() % 10) * 50) + 50
                         cv2.circle(frame, (x, 350), 20, (255, 0, 255), -1)
-                        
+
                         # Convert to JPEG
-                        _, buffer = cv2.imencode('.jpg', frame)
+                        _, buffer = cv2.imencode(".jpg", frame)
                         frame_bytes = buffer.tobytes()
-                        
+
                         # Yield the frame in multipart response
-                        yield (b'--frame\r\n'
-                               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-                        
+                        yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
+
                         # 30 FPS timing - 1/30 = 0.033 seconds
                         socketio.sleep(0.033)
-                
-                return Response(
-                    generate_test_pattern(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame'
-                )
+
+                return Response(generate_test_pattern(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
             def generate_frames():
                 """Generate camera frames."""
@@ -357,6 +364,29 @@ def create_app(mower_resource_manager_instance):
             logger.error(f"Failed to save settings: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
+    @app.route("/api/calibrate_tof", methods=["POST"])
+    def calibrate_tof():
+        """Calibrate ToF sensors by recording current ground distances."""
+        try:
+            sensor_data = mower.get_sensor_data()
+            tof = sensor_data.get("tof", {}) if sensor_data else {}
+            left = tof.get("front_left") or tof.get("left")
+            right = tof.get("front_right") or tof.get("right")
+
+            if left is None or right is None:
+                return jsonify({"success": False, "error": "ToF readings unavailable"}), 400
+
+            env_file = ROOT_DIR / ".env"
+            set_key(str(env_file), "TOF_GROUND_CUTOFF_LEFT", str(left))
+            set_key(str(env_file), "TOF_GROUND_CUTOFF_RIGHT", str(right))
+            os.environ["TOF_GROUND_CUTOFF_LEFT"] = str(left)
+            os.environ["TOF_GROUND_CUTOFF_RIGHT"] = str(right)
+
+            return jsonify({"success": True, "left": left, "right": right})
+        except Exception as e:
+            logger.error(f"Failed to calibrate ToF sensors: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+
     @app.route("/api/get-area", methods=["GET"])
     def get_area():
         """Get the current mowing area configuration."""
@@ -383,12 +413,12 @@ def create_app(mower_resource_manager_instance):
             # First try to use the pattern_config approach
             try:
                 path_planner = mower.get_path_planner()
-                if hasattr(path_planner, 'pattern_config'):
+                if hasattr(path_planner, "pattern_config"):
                     path_planner.pattern_config.boundary_points = coordinates
                     logger.info(f"Successfully saved boundary with {len(coordinates)} points using pattern_config")
                     return jsonify({"success": True, "message": "Boundary saved successfully (pattern_config)"})
                 # If pattern_config doesn't exist, try with set_boundary_points
-                elif hasattr(path_planner, 'set_boundary_points'):
+                elif hasattr(path_planner, "set_boundary_points"):
                     path_planner.set_boundary_points(coordinates)
                     logger.info(f"Successfully saved boundary with {len(coordinates)} points using set_boundary_points")
                     return jsonify({"success": True, "message": "Boundary saved successfully (set_boundary_points)"})
@@ -595,12 +625,13 @@ def create_app(mower_resource_manager_instance):
     @app.route("/static/<path:filename>")
     def static_files(filename):
         """Serve static files with proper CORS headers."""
-        from flask import send_from_directory, make_response
+        from flask import make_response, send_from_directory
+
         try:
             response = make_response(send_from_directory(app.static_folder, filename))
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
             return response
         except Exception as e:
             logger.error(f"Error serving static file {filename}: {e}")
@@ -792,17 +823,26 @@ def create_app(mower_resource_manager_instance):
                         logger.debug("Not in simulation mode, getting real sensor data...")
                         sensor_interface = mower.get_sensor_interface()
                         logger.debug(f"APP.PY send_updates: Retrieved sensor_interface: {sensor_interface}")
-                        if sensor_interface and hasattr(sensor_interface, 'get_safety_status') and hasattr(sensor_interface, 'get_sensor_data'):
+                        if (
+                            sensor_interface
+                            and hasattr(sensor_interface, "get_safety_status")
+                            and hasattr(sensor_interface, "get_sensor_data")
+                        ):
                             logger.debug("Using sensor_interface for data collection...")
                             safety_status = sensor_interface.get_safety_status()
                             sensor_data = sensor_interface.get_sensor_data()
                         else:
-                            logger.debug("App.py:send_updates - Using mower (DummyResourceManager) methods for data collection.")
-                            safety_status = mower.get_safety_status() # This calls DummyRM.get_safety_status
-                            sensor_data = mower.get_sensor_data()     # This calls DummyRM.get_sensor_data which reads JSON
+                            logger.debug(
+                                "App.py:send_updates - Using mower (DummyResourceManager) methods for data collection."
+                            )
+                            safety_status = mower.get_safety_status()  # This calls DummyRM.get_safety_status
+                            sensor_data = mower.get_sensor_data()  # This calls DummyRM.get_sensor_data which reads JSON
                         logger.info(f"App.py:send_updates - Data fetched by DummyResourceManager: {sensor_data}")
                 except Exception as e:
-                    logger.error(f"App.py:send_updates - Error getting safety or sensor data via DummyResourceManager: {e}", exc_info=True)
+                    logger.error(
+                        f"App.py:send_updates - Error getting safety or sensor data via DummyResourceManager: {e}",
+                        exc_info=True,
+                    )
                     safety_status = {"is_safe": True, "error": str(e), "source": "app.py_exception_fallback"}
                     # Provide fallback sensor data instead of empty dict
                     sensor_data = {
@@ -816,27 +856,18 @@ def create_app(mower_resource_manager_instance):
                                 "low_battery_warning": False,
                                 "system_error": True,
                             },
-                            "error": str(e)
+                            "error": str(e),
                         },
-                        "environment": {
-                            "temperature": 20.0,
-                            "humidity": 50.0,
-                            "pressure": 1013.25,
-                            "error": str(e)
-                        },
-                        "tof": {
-                            "left": 100.0,
-                            "right": 100.0,
-                            "error": str(e)
-                        },
+                        "environment": {"temperature": 20.0, "humidity": 50.0, "pressure": 1013.25, "error": str(e)},
+                        "tof": {"left": 100.0, "right": 100.0, "error": str(e)},
                         "power": {
                             "voltage": 12.0,
                             "current": 1.0,
                             "power": 12.0,
                             "percentage": 80.0,
                             "status": "Error - using fallback data",
-                            "error": str(e)
-                        }
+                            "error": str(e),
+                        },
                     }
 
                 # Ensure sensor_data is never empty
@@ -846,7 +877,7 @@ def create_app(mower_resource_manager_instance):
                         "imu": {"heading": 1000, "roll": 88.8, "pitch": 88.8},
                         "environment": {"temperature": 203.0, "humidity": 150.0, "pressure": 0.25},
                         "tof": {"left": 1080.0, "right": 1080.0},
-                        "power": {"voltage": 50.0, "current": 450.0, "power": 150.0, "percentage": 800.0}
+                        "power": {"voltage": 50.0, "current": 450.0, "power": 150.0, "percentage": 800.0},
                     }
 
                 # Always emit valid data
@@ -869,7 +900,7 @@ def create_app(mower_resource_manager_instance):
                 logger.error(f"App.py:send_updates - Error in update loop: {e}", exc_info=True)
                 socketio.sleep(1)  # Wait longer on error
 
-    if not hasattr(app, 'update_thread_started') or not app.update_thread_started:
+    if not hasattr(app, "update_thread_started") or not app.update_thread_started:
         socketio.start_background_task(send_updates)
         app.update_thread_started = True
 
@@ -877,40 +908,40 @@ def create_app(mower_resource_manager_instance):
 
 
 def save_area_command_handler(params, mower):
-    """Helper function to handle the save_area command with robust fallbacks."""
+    """Handle the save_area command with robust fallbacks."""
     coordinates = params.get("coordinates", [])
     logger.info(f"Handling save_area command with {len(coordinates)} points")
-    
+
     if not coordinates:
         logger.warning("No coordinates provided in save_area command")
         return {"success": False, "error": "No coordinates provided"}
-    
+
     # Try all possible methods to save the boundary
     try:
         # Method 1: Using path_planner.set_boundary_points
         path_planner = mower.get_path_planner()
-        if hasattr(path_planner, 'set_boundary_points'):
+        if hasattr(path_planner, "set_boundary_points"):
             result = path_planner.set_boundary_points(coordinates)
             if result:
                 logger.info("Successfully saved boundary using set_boundary_points")
                 return {"success": True, "message": "Boundary saved successfully (set_boundary_points)"}
-        
+
         # Method 2: Using pattern_config directly
-        if hasattr(path_planner, 'pattern_config'):
+        if hasattr(path_planner, "pattern_config"):
             path_planner.pattern_config.boundary_points = coordinates
             logger.info("Successfully saved boundary using pattern_config")
             return {"success": True, "message": "Boundary saved successfully (pattern_config)"}
-        
+
         # Method 3: Using mower.save_boundary
-        if hasattr(mower, 'save_boundary'):
+        if hasattr(mower, "save_boundary"):
             mower.save_boundary(coordinates)
             logger.info("Successfully saved boundary using mower.save_boundary")
             return {"success": True, "message": "Boundary saved successfully (mower.save_boundary)"}
-        
+
         # If we get here, none of the methods worked
         logger.error("No suitable method found to save boundary")
         return {"success": False, "error": "No suitable method found to save boundary"}
-        
+
     except Exception as e:
         logger.error(f"Error saving boundary: {e}")
         return {"success": False, "error": f"Error saving boundary: {str(e)}"}
@@ -924,7 +955,7 @@ if __name__ == "__main__":
     app, socketio = create_app(mower)
 
     # Start the background task only if it's not already running
-    if not hasattr(app, 'update_thread_started') or not app.update_thread_started:
+    if not hasattr(app, "update_thread_started") or not app.update_thread_started:
         socketio.start_background_task(send_updates)
         app.update_thread_started = True
 
