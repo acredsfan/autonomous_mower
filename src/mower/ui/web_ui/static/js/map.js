@@ -489,3 +489,10 @@ if (typeof google !== 'undefined' && typeof google.maps !== 'undefined' && windo
     console.log('Map already initialized, setting up UI event listeners');
     setupMapUIEventListeners(window.map);
 }
+
+// Attach listeners once the DOM is ready if map already exists
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.map && typeof setupMapUIEventListeners === 'function') {
+        setupMapUIEventListeners(window.map);
+    }
+});
