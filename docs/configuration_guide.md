@@ -132,6 +132,8 @@ TOF_GROUND_CUTOFF_RIGHT=<calibrated right sensor cutoff cm>
 
 These values are used by the drop‑off detector to distinguish real cliffs from angled ground readings.
 
+Use the **Calibrate ToF** button on the WebUI Diagnostics page to automatically measure and store these values when the mower is on a flat surface.
+
 ## Changing Configuration
 
 ### During Installation

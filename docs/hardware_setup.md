@@ -189,13 +189,12 @@ The Autonomous Mower requires several hardware components to function properly. 
 
 ### ToF Ground‑Plane Calibration
 
-To avoid false drop‑off detections when these angled sensors look ahead and down, calibrate each front ToF with this procedure:
+To avoid false drop‑off detections when these angled sensors look ahead and down, calibrate both front ToF sensors in software:
 
-1. Place a solid vertical board (≥1 cm thick) perpendicular to the beam of the front‑left VL53L0X.
-2. Slowly move the board away until the system no longer reports a valid distance (reading becomes infinite or missing).
-3. Measure that distance in centimeters and note it as the left ground‑plane cutoff.
-4. Repeat steps 1‑3 for the front‑right VL53L0X to obtain the right ground‑plane cutoff.
-5. You will enter both distances into your `.env` as `TOF_GROUND_CUTOFF_LEFT` and `TOF_GROUND_CUTOFF_RIGHT`.
+1. Angle the sensors so they can see the ground a short distance in front of the mower while still detecting drop‑offs.
+2. Place the mower on a flat, smooth surface.
+3. In the WebUI open the **Diagnostics** page and press **Calibrate ToF**.
+4. The mower records the current left and right distances as `TOF_GROUND_CUTOFF_LEFT` and `TOF_GROUND_CUTOFF_RIGHT` in the `.env` file.
 
 ![ToF Sensors Installation](images/tof_installation.jpg)
 

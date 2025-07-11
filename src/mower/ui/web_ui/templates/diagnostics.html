@@ -304,14 +304,28 @@ endblock %} {% block content %}
                   >Not Set</span
                 >
               </div>
-              <button class="btn btn-primary" id="calibrateGPSBtn">
-                <i class="fas fa-satellite"></i> Set GPS Baseline
-              </button>
-            </div>
-          </div>
+          <button class="btn btn-primary" id="calibrateGPSBtn">
+            <i class="fas fa-satellite"></i> Set GPS Baseline
+          </button>
+        </div>
+      </div>
+
+      <div class="calibration-item">
+        <div class="calibration-header">
+          <h4>ToF Ground Calibration</h4>
+        </div>
+        <div class="calibration-content">
+          <p>
+            Ensure the mower is on a flat surface with the front ToF sensors angled toward the ground, then press Calibrate.
+          </p>
+          <button class="btn btn-primary" id="calibrateToFBtn">
+            <i class="fas fa-ruler"></i> Calibrate ToF
+          </button>
         </div>
       </div>
     </div>
+  </div>
+</div>
   </div>
 </div>
 
@@ -405,6 +419,27 @@ endblock %} {% block content %}
           "GPS Baseline Calibration",
           "This will set the GPS baseline for improved positioning. Place the mower in an open area with a clear view of the sky and keep it stationary during calibration."
         );
+      });
+
+    document
+      .getElementById("calibrateToFBtn")
+      .addEventListener("click", function () {
+        if (
+          confirm(
+            "Place the mower on a flat surface with the ToF sensors angled toward the ground, then press OK to calibrate."
+          )
+        ) {
+          fetch("/api/calibrate_tof", { method: "POST" })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.success) {
+                alert(`Calibration saved (L: ${d.left}cm, R: ${d.right}cm)`);
+              } else {
+                alert("Calibration failed: " + d.error);
+              }
+            })
+            .catch((e) => alert("Calibration failed: " + e));
+        }
       });
 
     // Modal control
