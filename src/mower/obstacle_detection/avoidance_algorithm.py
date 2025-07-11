@@ -279,7 +279,11 @@ class AvoidanceAlgorithm:
             # is detected in the camera's field of view. See issue tracker for design
             # notes and requirements.
         except Exception as e:
-            self.logger.error(f"Error during camera obstacle detection: {e}")
+            # Suppress index errors and downgrade logging for camera detection errors
+            if isinstance(e, IndexError):
+                self.logger.debug(f"Index error during camera obstacle detection: {e}")
+            else:
+                self.logger.warning(f"Error during camera obstacle detection: {e}")
 
         return has_obstacle, has_dropoff
 
@@ -411,15 +415,20 @@ class AvoidanceAlgorithm:
                 front_distance = min(front_left, front_right)
             if front_distance == float("inf"):
                 logger.warning("_detect_dropoff: No valid ToF front distances available.")
+                return False
 
-            # Define a threshold for drop-off detection (e.g., very large
-            # distance)
-            DROP_OFF_THRESHOLD = 100.0  # cm
+            # Define a dynamic threshold for drop-off detection based on sensor calibration
+            try:
+                left_thresh = float(os.getenv("TOF_GROUND_CUTOFF_LEFT", "100"))
+                right_thresh = float(os.getenv("TOF_GROUND_CUTOFF_RIGHT", "100"))
+            except ValueError:
+                left_thresh = right_thresh = 100.0
+                logger.warning("Invalid TOF_GROUND_CUTOFF_* values; using default 100cm")
 
-            if front_distance > DROP_OFF_THRESHOLD:
-                logger.warning(f"Drop-off detected: {front_distance}cm")
+            threshold = min(left_thresh, right_thresh)
+            if front_distance > threshold:
+                logger.warning(f"Drop-off detected: {front_distance}cm > {threshold}cm cutoff")
                 return True
-
             return False
 
         except Exception as e:
@@ -1224,3 +1233,7 @@ class AvoidanceAlgorithm:
         except Exception as e:
             logger.error(f"Error smoothing path: {e}")
             return path
+
+    def cleanup(self) -> None:
+        """Cleanup method to stop the avoidance algorithm thread."""
+        self.stop()

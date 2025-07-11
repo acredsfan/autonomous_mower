@@ -187,6 +187,16 @@ The Autonomous Mower requires several hardware components to function properly. 
    - Right sensor: Facing right for obstacle detection
 3. Ensure the sensors have a clear view without obstructions
 
+### ToF Ground‑Plane Calibration
+
+To avoid false drop‑off detections when these angled sensors look ahead and down, calibrate each front ToF with this procedure:
+
+1. Place a solid vertical board (≥1 cm thick) perpendicular to the beam of the front‑left VL53L0X.
+2. Slowly move the board away until the system no longer reports a valid distance (reading becomes infinite or missing).
+3. Measure that distance in centimeters and note it as the left ground‑plane cutoff.
+4. Repeat steps 1‑3 for the front‑right VL53L0X to obtain the right ground‑plane cutoff.
+5. You will enter both distances into your `.env` as `TOF_GROUND_CUTOFF_LEFT` and `TOF_GROUND_CUTOFF_RIGHT`.
+
 ![ToF Sensors Installation](images/tof_installation.jpg)
 
 ## Optional Sensors

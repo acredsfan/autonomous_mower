@@ -121,6 +121,17 @@ Once you have your API key, you need to set it in the mower's environment.
 }
 ```
 
+## ToF Ground‑Plane Cutoff
+
+To prevent false drop‑off alarms with angled front ToF sensors, define per‑sensor ground‑plane cutoff distances (cm) in your `.env`:
+
+```ini
+TOF_GROUND_CUTOFF_LEFT=<calibrated left sensor cutoff cm>
+TOF_GROUND_CUTOFF_RIGHT=<calibrated right sensor cutoff cm>
+```
+
+These values are used by the drop‑off detector to distinguish real cliffs from angled ground readings.
+
 ## Changing Configuration
 
 ### During Installation

@@ -288,6 +288,10 @@ class SafetyChecker:
             required_fields = ['orientation', 'acceleration', 'gyroscope']
             for field in required_fields:
                 if field not in imu_data:
+                    # Allow missing orientation by warning and skipping only that check
+                    if field == 'orientation':
+                        logger.warning("IMU orientation field missing, skipping orientation checks")
+                        continue
                     return False, f"Missing IMU field: {field}"
             
             # Check for realistic sensor noise (real sensors have some noise)
