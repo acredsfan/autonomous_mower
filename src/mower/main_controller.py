@@ -232,7 +232,10 @@ class ResourceManager:
                 logger.warning(f"Failed to get camera: {e}")
                 
             try:
-                self._resources["blade_controller"] = hardware_registry.get_blade_controller()
+                blade_ctrl = hardware_registry.get_blade_controller()
+                self._resources["blade_controller"] = blade_ctrl
+                # Provide backward compatible key
+                self._resources["blade"] = blade_ctrl
                 logger.info("Blade controller added to resources")
             except Exception as e:
                 logger.warning(f"Failed to get blade controller: {e}")
@@ -572,6 +575,51 @@ class ResourceManager:
         from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
         return get_hardware_registry().get_gps_serial()
 
+    def execute_command(self, command: str, params: Optional[dict] = None) -> dict:
+        """Execute a command from the Web UI."""
+        params = params or {}
+        try:
+            if command == "manual_drive":
+                forward = float(params.get("forward", 0))
+                turn = float(params.get("turn", 0))
+                motor = self.get_resource("motor_driver")
+                if motor and hasattr(motor, "set_pulse"):
+                    motor.set_pulse(turn, forward)
+                    return {"success": True}
+                return {"success": False, "error": "Motor driver unavailable"}
+
+            if command == "blade_on":
+                blade = self.get_resource("blade_controller") or self.get_resource("blade")
+                if blade and hasattr(blade, "enable"):
+                    blade.enable()
+                    if hasattr(blade, "set_speed"):
+                        blade.set_speed(1.0)
+                    return {"success": True}
+                return {"success": False, "error": "Blade controller unavailable"}
+
+            if command == "blade_off":
+                blade = self.get_resource("blade_controller") or self.get_resource("blade")
+                if blade and hasattr(blade, "disable"):
+                    if hasattr(blade, "set_speed"):
+                        blade.set_speed(0)
+                    blade.disable()
+                    return {"success": True}
+                return {"success": False, "error": "Blade controller unavailable"}
+
+            if command == "set_blade_speed":
+                blade = self.get_resource("blade_controller") or self.get_resource("blade")
+                speed = float(params.get("speed", 0))
+                if blade and hasattr(blade, "set_speed"):
+                    blade.set_speed(speed)
+                    return {"success": True}
+                return {"success": False, "error": "Blade controller unavailable"}
+
+            # Unknown command
+            return {"success": False, "error": f"Unknown command: {command}"}
+        except Exception as e:
+            self.logger.error(f"Error executing command {command}: {e}")
+            return {"success": False, "error": str(e)}
+
     def start_web_interface(self):
         """
         Initializes and starts the web interface in a separate process.
@@ -672,7 +720,7 @@ class ResourceManager:
                 success = False
 
             # Stop blades
-            blade_controller = self.get_resource("blade")
+            blade_controller = self.get_resource("blade_controller") or self.get_resource("blade")
             if blade_controller and hasattr(blade_controller, "stop_blade"):
                 blade_controller.stop_blade()
                 logger.info("Blades stopped.")
