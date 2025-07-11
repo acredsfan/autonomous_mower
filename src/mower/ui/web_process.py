@@ -332,6 +332,19 @@ class DummyResourceManager:
         pass
     
     def execute_command(self, command, params):
+        params = params or {}
+        if command == "manual_drive":
+            self.logger.info(f"Dummy manual drive: {params}")
+            return {"success": True}
+        if command == "blade_on":
+            self.logger.info("Dummy blade on")
+            return {"success": True}
+        if command == "blade_off":
+            self.logger.info("Dummy blade off")
+            return {"success": True}
+        if command == "set_blade_speed":
+            self.logger.info(f"Dummy blade speed {params.get('speed')}")
+            return {"success": True}
         return {"success": True, "result": f"Command {command} executed"}
 
 def start_web():
