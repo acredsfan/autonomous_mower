@@ -217,21 +217,34 @@ class ResourceManager:
                 logger.warning(f"Failed to get motor driver: {e}")
                 
             try:
-                # Initialize async sensor interface for improved reliability
-                async_sensor_interface = AsyncSensorInterface()
-                async_sensor_interface.start()
-                self._resources["sensor_interface"] = async_sensor_interface
-                logger.info("AsyncSensorInterface added to resources")
-            except Exception as e:
-                logger.warning(f"Failed to get async sensor interface, falling back to legacy: {e}")
-                try:
-                    # Fallback to legacy sensor interface
-                    from mower.hardware.sensor_interface import get_sensor_interface
-                    self._resources["sensor_interface"] = get_sensor_interface()
-                    logger.info("Legacy sensor interface added to resources")
-                except Exception as fallback_error:
-                    logger.error(f"Failed to get any sensor interface: {fallback_error}")
+                # Enhanced sensor interface initialization with timeouts and graceful degradation
+                from mower.hardware.sensor_stack_fix import sensor_stack_fix
+                
+                def safe_sensor_init():
+                    """Initialize sensor interface with enhanced error handling"""
+                    try:
+                        from mower.hardware.sensor_interface import get_sensor_interface
+                        return get_sensor_interface()
+                    except Exception as e:
+                        logger.error(f"Sensor interface initialization failed: {e}")
+                        return None
+                
+                # Use the sensor stack fix to initialize with timeout protection
+                success, sensor_interface, error_msg = sensor_stack_fix.initialize_sensor_with_retry(
+                    "sensor_interface", safe_sensor_init, max_retries=2, timeout_per_attempt=30.0
+                )
+                
+                if success and sensor_interface:
+                    self._resources["sensor_interface"] = sensor_interface
+                    logger.info("Enhanced sensor interface initialized successfully")
+                else:
+                    logger.error(f"Sensor interface initialization failed: {error_msg}")
+                    logger.warning("Continuing without sensor interface - sensor data will show N/A values")
                     self._resources["sensor_interface"] = None
+                    
+            except Exception as e:
+                logger.error(f"Critical error in sensor interface setup: {e}")
+                self._resources["sensor_interface"] = None
                 
             try:
                 self._resources["camera"] = hardware_registry.get_camera()
@@ -946,67 +959,48 @@ class ResourceManager:
 
     def _get_sensor_data_with_timeout(self):
         """
-        Get sensor data with timeout protection to prevent hanging.
-        Uses threading-safe approach with worker thread and queue.
+        Get sensor data with enhanced timeout protection and graceful degradation.
+        Uses sensor stack fix for comprehensive error handling.
         
         Returns:
-            dict or None: Sensor data or None if timeout/error occurred
+            dict: Sensor data with fallback values if sensors fail
         """
         import time
-        import threading
-        import queue
-        
-        timeout_duration = 8.0  # 8 second timeout for sensor collection
-        sensor_data = None
-        
-        def sensor_data_worker(result_queue):
-            """Worker function to get sensor data in separate thread"""
-            try:
-                # Get sensor interface with additional safety checks
-                sensor_interface = self.get_sensor_interface()
-                if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
-                    logger.debug("ResourceManager:_get_sensor_data_with_timeout - Calling EnhancedSensorInterface.get_sensor_data()")
-                    data = sensor_interface.get_sensor_data()
-                    result_queue.put(('success', data))
-                else:
-                    logger.warning("ResourceManager:_get_sensor_data_with_timeout - Sensor interface not available or missing get_sensor_data method. Returning empty dict.")
-                    result_queue.put(('success', {}))
-            except Exception as e:
-                result_queue.put(('error', e))
         
         try:
-            start_time = time.time()
-            logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Starting sensor collection with {timeout_duration}s timeout")
+            # Import the enhanced sensor stack fix
+            from mower.hardware.sensor_stack_fix import emergency_sensor_data_collection
             
-            # Create queue for thread communication
-            result_queue = queue.Queue()
+            # Get sensor interface
+            sensor_interface = self.get_sensor_interface()
             
-            # Start worker thread
-            worker_thread = threading.Thread(target=sensor_data_worker, args=(result_queue,))
-            worker_thread.daemon = True
-            worker_thread.start()
+            # Use enhanced sensor data collection with comprehensive error handling
+            sensor_data = emergency_sensor_data_collection(sensor_interface)
             
-            # Wait for result with timeout
-            try:
-                result_type, result_data = result_queue.get(timeout=timeout_duration)
+            if sensor_data and isinstance(sensor_data, dict):
+                logger.debug(f"Sensor data collected successfully: {sensor_data.get('status', 'unknown')}")
+                return sensor_data
+            else:
+                logger.warning("Invalid sensor data received, using emergency fallback")
+                return {
+                    "environment": {"temperature": "N/A", "humidity": "N/A", "pressure": "N/A"},
+                    "imu": {"heading": "N/A", "roll": "N/A", "pitch": "N/A", "calibration": "N/A"},
+                    "power": {"voltage": "N/A", "current": "N/A", "power": "N/A", "percentage": "N/A"},
+                    "tof": {"left": -1, "right": -1, "working": False},
+                    "timestamp": time.time(),
+                    "status": "emergency_fallback"
+                }
                 
-                if result_type == 'success':
-                    sensor_data = result_data
-                    duration = time.time() - start_time
-                    logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Data received from EnhancedSensorInterface (duration {duration:.3f}s): {sensor_data}")
-                elif result_type == 'error':
-                    logger.error(f"Sensor interface error in worker thread: {result_data}", exc_info=True)
-                    return None
-                    
-            except queue.Empty:
-                logger.error(f"Sensor collection timeout after {timeout_duration} seconds")
-                return None
-            
-            return sensor_data
-            
-        except Exception as outer_error:
-            logger.error(f"Sensor timeout wrapper error: {outer_error}", exc_info=True)
-            return None
+        except Exception as e:
+            logger.error(f"Critical error in sensor data collection: {e}")
+            return {
+                "environment": {"temperature": "N/A", "humidity": "N/A", "pressure": "N/A"},
+                "imu": {"heading": "N/A", "roll": "N/A", "pitch": "N/A", "calibration": "N/A"}, 
+                "power": {"voltage": "N/A", "current": "N/A", "power": "N/A", "percentage": "N/A"},
+                "tof": {"left": -1, "right": -1, "working": False},
+                "timestamp": time.time(),
+                "status": "critical_error_fallback"
+            }
 
     def _get_fallback_sensor_data(self):
         """

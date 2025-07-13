@@ -411,8 +411,11 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             percentage = None
             if voltage is not None:
                 # Retrieved from .env values for BATTERY_MIN_VOLTAGE and BATTERY_MAX_VOLTAGE
-                min_volt = float(dotenv.get_key(".env", "BATTERY_MIN_VOLTAGE", default="10.5"))
-                max_volt = float(dotenv.get_key(".env", "BATTERY_MAX_VOLTAGE", default="14.6"))
+                # Strip comments and whitespace to prevent parse errors
+                min_volt_str = dotenv.get_key(".env", "BATTERY_MIN_VOLTAGE", default="10.5")
+                max_volt_str = dotenv.get_key(".env", "BATTERY_MAX_VOLTAGE", default="14.6")
+                min_volt = float(min_volt_str.split('#')[0].strip())
+                max_volt = float(max_volt_str.split('#')[0].strip())
                 if voltage <= min_volt:
                     percentage = 0.0
                 elif voltage >= max_volt:
