@@ -424,7 +424,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             return {"error": str(e)}
 
     def _read_vl53l0x(self) -> Dict[str, Any]:
-        """Read VL53L0X ToF sensor data."""
+        """Read VL53L0X ToF sensor data with enhanced reliability."""
         sensor_wrapper = self._sensors.get("vl53l0x")
         if not sensor_wrapper or not sensor_wrapper.is_hardware_available:
             self._handle_sensor_error("vl53l0x", Exception("VL53L0X sensors not available"))
@@ -434,8 +434,17 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             return {"error": "VL53L0X sensors not available"}
 
         try:
-            # Get distance readings from both sensors
-            distances = sensor_wrapper.get_distances()
+            # Get distance readings from both sensors with enhanced error handling
+            distances = self._read_vl53l0x_with_retry(sensor_wrapper)
+            
+            # Add debug logging for raw readings to track -1 occurrences
+            logging.debug(f"ToF raw readings - Left: {distances['left']}mm, Right: {distances['right']}mm")
+            
+            # Log successful long-range readings to confirm >2m range fix is working
+            if distances["left"] > 2000 and distances["left"] != -1:
+                logging.debug(f"ToF long-range success - Left sensor: {distances['left']}mm (>2m)")
+            if distances["right"] > 2000 and distances["right"] != -1:
+                logging.debug(f"ToF long-range success - Right sensor: {distances['right']}mm (>2m)")
 
             # Update sensor status based on readings
             left_working = distances["left"] != -1
@@ -451,8 +460,8 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 logging.warning("Right ToF sensor returning error readings")
 
             return {
-                "front_left": distances["left"] if left_working else None,
-                "front_right": distances["right"] if right_working else None,
+                "front_left": None if distances["left"] in (-1, 0) else distances["left"],
+                "front_right": None if distances["right"] in (-1, 0) else distances["right"],
                 "left_working": left_working,
                 "right_working": right_working,
             }
@@ -461,6 +470,88 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             self._handle_sensor_error("vl53l0x", e)
             logging.warning(f"EnhancedSensorInterface._read_vl53l0x: Read failed, returning error. Exception: {e}")
             return {"error": str(e)}
+
+    def _read_vl53l0x_with_retry(self, sensor_wrapper) -> Dict[str, Any]:
+        """
+        Read VL53L0X sensors with enhanced retry logic and error recovery.
+        
+        Args:
+            sensor_wrapper: VL53L0X sensor wrapper instance
+            
+        Returns:
+            dict: Distance readings for left and right sensors
+        """
+        import os
+        import time
+        
+        # Get retry configuration from environment variables
+        max_retries = int(os.getenv("TOF_READ_RETRY_COUNT", 5))  # Increased from 3
+        retry_delay = float(os.getenv("TOF_READ_RETRY_DELAY", 0.02))
+        bus_recovery_enabled = os.getenv("TOF_BUS_RECOVERY_ENABLED", "True").lower() == "true"
+        
+        best_distances = {"left": -1, "right": -1}
+        consecutive_failures = 0
+        
+        for attempt in range(max_retries):
+            try:
+                # Add small delay before reading to reduce I2C bus stress
+                if attempt > 0:
+                    # Exponential backoff for retries
+                    delay = retry_delay * (2 ** (attempt - 1))
+                    time.sleep(min(delay, 0.2))  # Cap at 200ms
+                
+                # Get distances from sensor wrapper
+                distances = sensor_wrapper.get_distances()
+                
+                # Check if we got valid readings
+                left_valid = distances["left"] != -1
+                right_valid = distances["right"] != -1
+                
+                # Update best readings if we got better ones
+                if left_valid and best_distances["left"] == -1:
+                    best_distances["left"] = distances["left"]
+                if right_valid and best_distances["right"] == -1:
+                    best_distances["right"] = distances["right"]
+                
+                # If both sensors are working, return immediately
+                if left_valid and right_valid:
+                    logging.debug(f"ToF sensors successful on attempt {attempt + 1}")
+                    return distances
+                
+                # If we have at least one valid reading and this is not the first attempt,
+                # continue with partial success
+                if (left_valid or right_valid) and attempt > 0:
+                    consecutive_failures = 0
+                else:
+                    consecutive_failures += 1
+                    
+            except (OSError, IOError) as e:
+                consecutive_failures += 1
+                logging.debug(f"ToF I/O error on attempt {attempt + 1}: {e}")
+                
+                # Attempt I2C bus recovery after multiple consecutive failures
+                if bus_recovery_enabled and consecutive_failures >= 3 and attempt < max_retries - 1:
+                    logging.info("Attempting ToF sensor recovery due to consecutive I/O errors")
+                    try:
+                        sensor_wrapper.attempt_sensor_recovery()
+                        time.sleep(0.1)  # Give sensors time to recover
+                    except Exception as recovery_error:
+                        logging.warning(f"ToF sensor recovery failed: {recovery_error}")
+                        
+            except Exception as e:
+                consecutive_failures += 1
+                logging.warning(f"Unexpected ToF error on attempt {attempt + 1}: {e}")
+        
+        # Log retry statistics
+        if best_distances["left"] == -1 and best_distances["right"] == -1:
+            logging.warning(f"All ToF sensor reads failed after {max_retries} attempts")
+        elif best_distances["left"] == -1 or best_distances["right"] == -1:
+            failed_sensor = "left" if best_distances["left"] == -1 else "right"
+            logging.info(f"ToF {failed_sensor} sensor failed after {max_retries} attempts, other sensor OK")
+        else:
+            logging.debug(f"ToF sensors recovered with retry logic after {max_retries} attempts")
+            
+        return best_distances
 
     def _handle_sensor_error(self, sensor_name: str, error: Exception):
         """Handle sensor errors with enhanced logging and recovery options."""
@@ -787,8 +878,8 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         }
 
     def _get_fallback_tof(self) -> Dict[str, Any]:
-        """Get fallback ToF sensor data with numeric zeros to prevent frontend crashes."""
-        return {"left": 0, "right": 0, "working": False}
+        """Get fallback ToF sensor data with null values to indicate sensor unavailable."""
+        return {"left": None, "right": None, "working": False}
 
     def _get_emergency_fallback_data(self) -> Dict[str, Any]:
         """Get complete emergency fallback data for critical failures."""

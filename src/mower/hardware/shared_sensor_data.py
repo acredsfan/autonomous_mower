@@ -154,8 +154,8 @@ class SharedSensorDataManager:
                 "pressure": 1013.25
             },
             "tof": {
-                "left": 150.0,
-                "right": 150.0,
+                "left": None,
+                "right": None,
             },
             "power": {
                 "voltage": 12.0,

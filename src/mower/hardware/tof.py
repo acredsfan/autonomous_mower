@@ -47,6 +47,10 @@ class VL53L0XSensors:
         self.right_xshut_pin = int(os.getenv("RIGHT_TOF_XSHUT", 23))
         self.left_interrupt_pin = int(os.getenv("LEFT_TOF_INTERRUPT", 6))
         self.right_interrupt_pin = int(os.getenv("RIGHT_TOF_INTERRUPT", 12))
+        
+        # Fetch configurable range limits from .env
+        self.max_range = int(os.getenv("TOF_MAX_RANGE", 4000))  # 4m default, within VL53L0X spec
+        self.min_range = int(os.getenv("TOF_MIN_RANGE", 10))   # 1cm minimum
 
         if platform.system() == "Linux":
             try:
@@ -153,8 +157,16 @@ class VL53L0XSensors:
         time.sleep(0.05)  # Reduced delay
 
     @staticmethod
-    def read_vl53l0x(sensor, sensor_name="Unknown", max_range=2000, min_range=10):
-        """Read VL53L0X ToF sensor data with improved error handling and filtering."""
+    def read_vl53l0x(sensor, sensor_name="Unknown", max_range=4000, min_range=10):
+        """
+        Read VL53L0X ToF sensor data with improved error handling and filtering.
+        
+        Args:
+            sensor: VL53L0X sensor object
+            sensor_name: Name for logging purposes
+            max_range: Maximum valid range in mm (default 4000mm = 4m)
+            min_range: Minimum valid range in mm (default 10mm)
+        """
         if sensor is None:
             return -1  # Return error value if sensor is None
 
@@ -213,6 +225,10 @@ class VL53L0XSensors:
             if distance < min_range:
                 logging.debug(f"{sensor_name} reading {distance}mm below min range {min_range}mm")
                 return -1
+
+            # Log successful long-range readings (for debugging previous 2m limit issues)
+            if distance > 2000:
+                logging.debug(f"{sensor_name} long-range reading: {distance}mm (within {max_range}mm limit)")
 
             return round(distance)  # Return rounded integer value
             
@@ -349,10 +365,14 @@ class VL53L0XSensors:
         if self.is_hardware_available:
             # Read from real sensors if available
             if self.left_sensor:
-                distances["left"] = self.read_vl53l0x(self.left_sensor, "Left ToF")
+                distances["left"] = self.read_vl53l0x(
+                    self.left_sensor, "Left ToF", self.max_range, self.min_range
+                )
 
             if self.right_sensor:
-                distances["right"] = self.read_vl53l0x(self.right_sensor, "Right ToF")
+                distances["right"] = self.read_vl53l0x(
+                    self.right_sensor, "Right ToF", self.max_range, self.min_range
+                )
                 
             # Log occasional debug info for troubleshooting
             if hasattr(self, '_debug_counter'):

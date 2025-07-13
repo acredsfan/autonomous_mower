@@ -59,10 +59,10 @@ const systemState = {
   }
 };
 
-// Helper function to format sensor values (handles N/A)
+// Helper function to format sensor values (handles N/A and null)
 function formatSensorValue(value, format = 'number', unit = '') {
-  if (value === "N/A" || value === null || value === undefined || isNaN(value)) {
-    return "N/A";
+  if (value === "N/A" || value === null || value === undefined || value === 0 || isNaN(value)) {
+    return "––";
   }
 
   if (format === 'number') {
@@ -760,8 +760,8 @@ function updateSensorData(data) {
       // Update left distance sensor
       const leftDistElement = document.getElementById("sensor_leftDistance");
       if (leftDistElement && tof.left !== undefined) {
-        if (tof.left === "N/A") {
-          leftDistElement.textContent = "N/A";
+        if (tof.left === "N/A" || tof.left === null || tof.left === 0) {
+          leftDistElement.textContent = "––";
         } else {
           const dist = convertDistance(tof.left, systemState.units.distance);
           leftDistElement.textContent = formatSensorValue(dist.value, 'number', ` ${dist.unit}`);
@@ -771,8 +771,8 @@ function updateSensorData(data) {
       // Update right distance sensor
       const rightDistElement = document.getElementById("sensor_rightDistance");
       if (rightDistElement && tof.right !== undefined) {
-        if (tof.right === "N/A") {
-          rightDistElement.textContent = "N/A";
+        if (tof.right === "N/A" || tof.right === null || tof.right === 0) {
+          rightDistElement.textContent = "––";
         } else {
           const dist = convertDistance(tof.right, systemState.units.distance);
           rightDistElement.textContent = formatSensorValue(dist.value, 'number', ` ${dist.unit}`);
