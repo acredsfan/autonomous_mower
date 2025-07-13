@@ -3,7 +3,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
-import signal
 
 try:
     import board

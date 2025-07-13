@@ -8,14 +8,9 @@ requiring physical hardware.
 
 import math
 
-# import time # Unused
-# import threading # Unused
-# import random # Unused
-# from enum import Enum # Unused
-# Removed unused: Optional, List, Union, Type
+# Removed unused imports: time, threading, random, Enum, Optional, List, Union, Type, IMUStatus
 from typing import Any, Callable, Dict, Tuple
 
-# from mower.hardware.imu import IMUStatus # Unused
 from mower.simulation.hardware_sim import SimulatedSensor
 from mower.simulation.world_model import get_world_instance  # Removed unused: Vector2D
 from mower.utilities.logger_config import LoggerConfigInfo

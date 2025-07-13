@@ -660,12 +660,10 @@ def setup_hardware_detection() -> Dict[str, bool]:
     except Exception:
         print_warning("Failed to check for GPS")
 
-    # Check for I2C devices (IMU, ToF sensors)
+    # Check for I2C devices (ToF sensors, BME280, INA3221)
     try:
         i2c_devices = os.popen("i2cdetect -y 1").read()
-        if "68" in i2c_devices:  # Common IMU address
-            hardware["imu"] = True
-            print_success("IMU detected on I2C bus")
+        # Note: IMU (BNO085) is on UART4, not I2C - checked separately via serial port detection
         if "29" in i2c_devices:  # Common ToF sensor address
             hardware["tof_sensors"] = True
             print_success("ToF sensors detected on I2C bus")

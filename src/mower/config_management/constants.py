@@ -30,7 +30,6 @@ DEFAULT_CONFIG = {
     # Hardware settings
     "hardware": {
         "use_simulation": False,
-        "imu_address": "0x68",
         "gps_serial_port": "/dev/ttyAMA0",
         "gps_baud_rate": 115200,
         "gps_timeout": 1,

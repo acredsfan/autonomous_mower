@@ -62,12 +62,9 @@ class HardwareRegistry:
             # Try to get from resources if already initialized
             if hasattr(self, '_resources') and 'bno085' in self._resources:
                 return self._resources['bno085']
-            # Otherwise, try to initialize
-            from adafruit_bno08x import BNO08X_I2C
-            import board
-            import busio
-            i2c = busio.I2C(board.SCL, board.SDA)
-            bno085 = BNO08X_I2C(i2c, address=0x4B)
+            # BNO085 uses UART4, not I2C - use the frozen driver's initialization
+            from mower.hardware.imu import BNO085Sensor
+            bno085 = BNO085Sensor.init_bno085()
             if hasattr(self, '_resources'):
                 self._resources['bno085'] = bno085
             return bno085

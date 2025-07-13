@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mower.hardware.sensor_interface import EnhancedSensorInterface  # SensorStatus, # Unused
+from mower.hardware.sensor_interface import EnhancedSensorInterface
 from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
-from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm  # AvoidanceState, # Unused
+from mower.obstacle_detection.avoidance_algorithm import AvoidanceAlgorithm
 
 
 class TestSensorDecisionMaking:
