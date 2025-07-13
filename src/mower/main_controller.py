@@ -52,7 +52,7 @@ from mower.config_management.config_manager import get_config
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
 # from mower.hardware.hardware_registry import get_hardware_registry # MOVING THIS IMPORT
 # Added missing imports as per bug report
-from mower.hardware.sensor_interface import get_sensor_interface
+from mower.hardware.async_sensor_manager import AsyncSensorInterface
 from mower.hardware.shared_sensor_data import get_shared_sensor_manager
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.hardware.ina3221 import INA3221Sensor
@@ -217,13 +217,21 @@ class ResourceManager:
                 logger.warning(f"Failed to get motor driver: {e}")
                 
             try:
-                # Initialize sensor interface directly to avoid circular dependency
-                from mower.hardware.sensor_interface import get_sensor_interface
-                self._resources["sensor_interface"] = get_sensor_interface()
-                logger.info("Sensor interface added to resources")
+                # Initialize async sensor interface for improved reliability
+                async_sensor_interface = AsyncSensorInterface()
+                async_sensor_interface.start()
+                self._resources["sensor_interface"] = async_sensor_interface
+                logger.info("AsyncSensorInterface added to resources")
             except Exception as e:
-                logger.warning(f"Failed to get sensor interface: {e}")
-                self._resources["sensor_interface"] = None
+                logger.warning(f"Failed to get async sensor interface, falling back to legacy: {e}")
+                try:
+                    # Fallback to legacy sensor interface
+                    from mower.hardware.sensor_interface import get_sensor_interface
+                    self._resources["sensor_interface"] = get_sensor_interface()
+                    logger.info("Legacy sensor interface added to resources")
+                except Exception as fallback_error:
+                    logger.error(f"Failed to get any sensor interface: {fallback_error}")
+                    self._resources["sensor_interface"] = None
                 
             try:
                 self._resources["camera"] = hardware_registry.get_camera()
@@ -481,6 +489,18 @@ class ResourceManager:
             for name, resource in reversed(list(self._resources.items())):
                 if resource is None or name == "web_interface":  # Web interface already handled
                     continue
+
+                # Special handling for AsyncSensorInterface
+                if name == "sensor_interface" and hasattr(resource, 'stop'):
+                    try:
+                        logger.info(f"Stopping {name}...")
+                        start_time = time.time()
+                        resource.stop()
+                        cleanup_time = time.time() - start_time
+                        logger.info(f"Stop of {name} completed in {cleanup_time:.2f} seconds")
+                        continue
+                    except Exception as e:
+                        logger.error(f"Error stopping {name}: {e}", exc_info=True)
 
                 cleanup_method = getattr(resource, "cleanup", None)
                 if cleanup_method is None:
@@ -927,55 +947,65 @@ class ResourceManager:
     def _get_sensor_data_with_timeout(self):
         """
         Get sensor data with timeout protection to prevent hanging.
+        Uses threading-safe approach with worker thread and queue.
         
         Returns:
             dict or None: Sensor data or None if timeout/error occurred
         """
-        import signal
         import time
+        import threading
+        import queue
         
-        timeout_duration = 8  # 8 second timeout for sensor collection
+        timeout_duration = 8.0  # 8 second timeout for sensor collection
         sensor_data = None
         
-        def timeout_handler(signum, frame):
-            raise TimeoutError(f"Sensor data collection timed out after {timeout_duration} seconds")
+        def sensor_data_worker(result_queue):
+            """Worker function to get sensor data in separate thread"""
+            try:
+                # Get sensor interface with additional safety checks
+                sensor_interface = self.get_sensor_interface()
+                if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
+                    logger.debug("ResourceManager:_get_sensor_data_with_timeout - Calling EnhancedSensorInterface.get_sensor_data()")
+                    data = sensor_interface.get_sensor_data()
+                    result_queue.put(('success', data))
+                else:
+                    logger.warning("ResourceManager:_get_sensor_data_with_timeout - Sensor interface not available or missing get_sensor_data method. Returning empty dict.")
+                    result_queue.put(('success', {}))
+            except Exception as e:
+                result_queue.put(('error', e))
         
         try:
-            # Set up timeout alarm
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout_duration)
-            
             start_time = time.time()
             logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Starting sensor collection with {timeout_duration}s timeout")
             
-            # Get sensor interface with additional safety checks
-            sensor_interface = self.get_sensor_interface()
-            if sensor_interface and hasattr(sensor_interface, 'get_sensor_data'):
-                logger.debug("ResourceManager:_get_sensor_data_with_timeout - Calling EnhancedSensorInterface.get_sensor_data()")
-                sensor_data = sensor_interface.get_sensor_data()
-                logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Data received from EnhancedSensorInterface (duration {time.time() - start_time:.3f}s): {sensor_data}")
-            else:
-                logger.warning("ResourceManager:_get_sensor_data_with_timeout - Sensor interface not available or missing get_sensor_data method. Returning empty dict.")
-                sensor_data = {} # Should ideally be None if EnhancedSensorInterface also returns None on failure.
+            # Create queue for thread communication
+            result_queue = queue.Queue()
             
-            # Clear the alarm
-            signal.alarm(0)
-            signal.signal(signal.SIGALRM, old_handler)
+            # Start worker thread
+            worker_thread = threading.Thread(target=sensor_data_worker, args=(result_queue,))
+            worker_thread.daemon = True
+            worker_thread.start()
+            
+            # Wait for result with timeout
+            try:
+                result_type, result_data = result_queue.get(timeout=timeout_duration)
+                
+                if result_type == 'success':
+                    sensor_data = result_data
+                    duration = time.time() - start_time
+                    logger.debug(f"ResourceManager:_get_sensor_data_with_timeout - Data received from EnhancedSensorInterface (duration {duration:.3f}s): {sensor_data}")
+                elif result_type == 'error':
+                    logger.error(f"Sensor interface error in worker thread: {result_data}", exc_info=True)
+                    return None
+                    
+            except queue.Empty:
+                logger.error(f"Sensor collection timeout after {timeout_duration} seconds")
+                return None
             
             return sensor_data
             
-        except TimeoutError as timeout_error:
-            logger.error(f"Sensor collection timeout: {timeout_error}")
-            signal.alarm(0)  # Clear alarm
-            if 'old_handler' in locals():
-                signal.signal(signal.SIGALRM, old_handler)
-            return None
-            
-        except Exception as sensor_error:
-            logger.error(f"Sensor interface error: {sensor_error}", exc_info=True)
-            signal.alarm(0)  # Clear alarm
-            if 'old_handler' in locals():
-                signal.signal(signal.SIGALRM, old_handler)
+        except Exception as outer_error:
+            logger.error(f"Sensor timeout wrapper error: {outer_error}", exc_info=True)
             return None
 
     def _get_fallback_sensor_data(self):

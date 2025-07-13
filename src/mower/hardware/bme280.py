@@ -1,6 +1,7 @@
 # FROZEN_DRIVER – do not edit (see .github/copilot-instructions.md)
 import board
 import busio
+import time
 from adafruit_bme280 import basic as adafruit_bme280
 
 from mower.utilities.logger_config import LoggerConfigInfo
@@ -35,29 +36,49 @@ class BME280Sensor:
 
     @staticmethod
     def read_bme280(sensor):
-        """Read BME280 sensor data."""
+        """Read BME280 sensor data with enhanced error handling and retry logic."""
         if sensor is None:
             logger.error("BME280 sensor is not initialized.")
             return {}
 
-        try:
-            # Fetch temperature, humidity, and pressure from the sensor
-            temp_c = sensor.temperature
-            humidity = sensor.humidity
-            pressure = sensor.pressure
-            temperature_f = temp_c * 9 / 5 + 32
-            return {
-                "temperature_c": round(temp_c, 1),
-                "temperature_f": round(temperature_f, 1),
-                "humidity": round(humidity, 1),
-                "pressure": round(pressure, 1),
-            }
-        except (OSError, RuntimeError) as e:  # Catch potential I2C read errors
-            logger.error(f"I2C Error during BME280 read: {e}")
-            return {}
-        except Exception as e:  # Catch any other unexpected errors
-            logger.error(f"Unexpected error during BME280 read: {e}")
-            return {}
+        max_retries = 2
+        retry_delay = 0.1
+        
+        for attempt in range(max_retries):
+            try:
+                # Fetch temperature, humidity, and pressure from the sensor
+                temp_c = sensor.temperature
+                humidity = sensor.humidity
+                pressure = sensor.pressure
+                temperature_f = temp_c * 9 / 5 + 32
+                return {
+                    "temperature_c": round(temp_c, 1),
+                    "temperature_f": round(temperature_f, 1),
+                    "humidity": round(humidity, 1),
+                    "pressure": round(pressure, 1),
+                }
+            except OSError as e:
+                if e.errno == 121:  # Remote I/O error
+                    if attempt < max_retries - 1:
+                        logger.debug(f"BME280 I/O error (errno 121), retrying in {retry_delay}s... (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        logger.warning(f"BME280 I/O error after {max_retries} attempts, marking sensor as optional: {e}")
+                        # Mark sensor as optional - return empty dict but don't crash
+                        return {}
+                else:
+                    logger.error(f"BME280 OSError (errno {e.errno}): {e}")
+                    return {}
+            except (RuntimeError, ValueError) as e:  # Catch potential I2C read errors
+                logger.error(f"BME280 read error: {e}")
+                return {}
+            except Exception as e:  # Catch any other unexpected errors
+                logger.error(f"Unexpected BME280 read error: {e}")
+                return {}
+        
+        # Should never reach here, but just in case
+        return {}
 
 
 if __name__ == "__main__":

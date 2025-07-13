@@ -36,7 +36,7 @@ graph TD
 
     %% Hardware to HAL
     GPS_HW -->|Serial Data| GPS
-    IMU_HW -->|I2C Data| IMU
+    IMU_HW -->|Serial Data| IMU
     ToF_HW -->|I2C Data| ToF
     INA3221_HW -->|I2C Data| INA3221
     BME280_HW -->|I2C Data| BME280

@@ -43,10 +43,11 @@ class VL53L0XSensors:
         self.is_hardware_available = False
 
         # Fetch XSHUT and interrupt pin assignments from .env
-        self.left_xshut_pin = int(os.getenv("LEFT_TOF_XSHUT", 22))
-        self.right_xshut_pin = int(os.getenv("RIGHT_TOF_XSHUT", 23))
-        self.left_interrupt_pin = int(os.getenv("LEFT_TOF_INTERRUPT", 6))
-        self.right_interrupt_pin = int(os.getenv("RIGHT_TOF_INTERRUPT", 12))
+        # Strip comments and whitespace to prevent parse errors
+        self.left_xshut_pin = int(os.getenv("LEFT_TOF_XSHUT", "22").split('#')[0].strip())
+        self.right_xshut_pin = int(os.getenv("RIGHT_TOF_XSHUT", "23").split('#')[0].strip())
+        self.left_interrupt_pin = int(os.getenv("LEFT_TOF_INTERRUPT", "6").split('#')[0].strip())
+        self.right_interrupt_pin = int(os.getenv("RIGHT_TOF_INTERRUPT", "12").split('#')[0].strip())
         
         # Fetch configurable range limits from .env
         self.max_range = int(os.getenv("TOF_MAX_RANGE", 4000))  # 4m default, within VL53L0X spec
@@ -252,8 +253,8 @@ class VL53L0XSensors:
         right_target_addr,
     ):
         """
-        Initializes both VL53L0X sensors, setting their addresses robustly.
-        Manages XSHUT lines to initialize sensors one by one.
+        Initializes both VL53L0X sensors with improved error handling and sequencing.
+        Manages XSHUT lines to initialize sensors one by one with better timing.
         """
         left_sensor_obj = None
         right_sensor_obj = None
@@ -268,90 +269,96 @@ class VL53L0XSensors:
         if xshut_right_pin.direction != digitalio.Direction.OUTPUT:
             xshut_right_pin.direction = digitalio.Direction.OUTPUT
 
-        # --- Initialize Right Sensor (typically the one that changes address) ---
-        logging.info("Initializing Right ToF sensor...")
-        
-        # --- Reliable sensor power-up and addressing order ---
-        # 1) Power down both sensors
-        xshut_left_pin.value = False
-        xshut_right_pin.value = False
-        time.sleep(0.05)
+        try:
+            # --- Improved sensor power-up and addressing sequence ---
+            logging.info("Starting ToF sensor initialization sequence...")
+            
+            # 1) Power down both sensors and wait for complete shutdown
+            logging.debug("Powering down all ToF sensors...")
+            xshut_left_pin.value = False
+            xshut_right_pin.value = False
+            time.sleep(0.1)  # Longer delay for complete shutdown
 
-        # 2) Power up left sensor at default address
-        xshut_left_pin.value = True
-        time.sleep(0.1)
-        left_temp = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Left Sensor")
-        if left_temp:
-            left_sensor_obj = left_temp
-            logging.info(f"Left sensor init OK at {hex(_DEFAULT_I2C_ADDRESS)}")
-        else:
-            logging.warning("Left sensor failed to init at default address.")
-
-        # 3) Power up right sensor and reassign address if needed
-        xshut_right_pin.value = True
-        time.sleep(0.1)
-        right_temp = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Right Sensor")
-        if right_temp:
-            if right_target_addr != _DEFAULT_I2C_ADDRESS:
-                try:
-                    right_temp.set_address(right_target_addr)
-                    time.sleep(0.05)
-                    verify = VL53L0XSensors.init_vl53l0x(i2c, right_target_addr, "Right Sensor (new addr)")
-                    if verify:
-                        right_sensor_obj = verify
-                        logging.info(f"Right sensor addr changed to {hex(right_target_addr)}")
-                    else:
-                        logging.error(f"Right sensor not responding at new address {hex(right_target_addr)}")
-                        xshut_right_pin.value = False
-                except Exception as e:
-                    logging.error(f"Failed to re-address Right sensor: {e}")
-                    xshut_right_pin.value = False
+            # 2) Power up and initialize left sensor first (stays at default address)
+            logging.info("Initializing left ToF sensor at default address...")
+            xshut_left_pin.value = True
+            time.sleep(0.15)  # Longer delay for sensor boot
+            
+            left_sensor_obj = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Left Sensor")
+            if left_sensor_obj:
+                logging.info(f"Left sensor initialized successfully at {hex(_DEFAULT_I2C_ADDRESS)}")
             else:
-                right_sensor_obj = right_temp
-                logging.info(f"Right sensor init OK at {hex(_DEFAULT_I2C_ADDRESS)}")
-        else:
-            logging.warning("Right sensor failed to init at default address.")
+                logging.warning("Left sensor initialization failed")
 
-        # --- Initialize Left Sensor ---
-        logging.info("Initializing Left ToF sensor...")
-        if right_sensor_obj and right_sensor_obj._device.device_address == _DEFAULT_I2C_ADDRESS:
-            # This case implies right_target_addr was default.
-            # Or, address change failed and it's still at default.
-            # We must reset the right sensor to free up the default address.
-            logging.info(f"Right sensor at {hex(_DEFAULT_I2C_ADDRESS)}. Resetting for Left sensor.")
-            xshut_right_pin.value = False
-            time.sleep(0.05)
+            # 3) Power up right sensor and change its address
+            logging.info("Initializing right ToF sensor...")
+            xshut_right_pin.value = True
+            time.sleep(0.15)  # Longer delay for sensor boot
+            
+            if right_target_addr != _DEFAULT_I2C_ADDRESS:
+                # Right sensor needs address change
+                right_temp = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Right Sensor (temp)")
+                if right_temp:
+                    try:
+                        logging.debug(f"Changing right sensor address to {hex(right_target_addr)}")
+                        right_temp.set_address(right_target_addr)
+                        time.sleep(0.1)  # Wait for address change
+                        
+                        # Verify new address
+                        right_sensor_obj = VL53L0XSensors.init_vl53l0x(i2c, right_target_addr, "Right Sensor")
+                        if right_sensor_obj:
+                            logging.info(f"Right sensor address changed successfully to {hex(right_target_addr)}")
+                        else:
+                            logging.error(f"Right sensor not responding at new address {hex(right_target_addr)}")
+                            # Power down failed sensor
+                            xshut_right_pin.value = False
+                            
+                    except Exception as e:
+                        logging.error(f"Failed to change right sensor address: {e}")
+                        xshut_right_pin.value = False
+                        right_sensor_obj = None
+                else:
+                    logging.warning("Right sensor failed to initialize at default address")
+            else:
+                # Right sensor stays at default - this should not happen with current config
+                right_sensor_obj = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Right Sensor")
+                if right_sensor_obj:
+                    logging.info(f"Right sensor initialized at default address {hex(_DEFAULT_I2C_ADDRESS)}")
 
-        VL53L0XSensors.reset_sensor(xshut_left_pin)  # Reset left sensor
-        time.sleep(0.1)  # Allow boot time
+            # 4) Verify final state
+            working_sensors = []
+            if left_sensor_obj:
+                working_sensors.append(f"Left (0x{left_sensor_obj._device.device_address:02x})")
+            if right_sensor_obj:
+                working_sensors.append(f"Right (0x{right_sensor_obj._device.device_address:02x})")
+            
+            if working_sensors:
+                logging.info(f"ToF initialization complete. Working sensors: {', '.join(working_sensors)}")
+            else:
+                logging.error("ToF initialization failed - no sensors operational")
 
-        temp_sensor = VL53L0XSensors.init_vl53l0x(i2c, _DEFAULT_I2C_ADDRESS, "Left Sensor (default addr)")
-        if temp_sensor:
-            # Assuming left sensor stays at default address as per constants
-            if left_target_addr == _DEFAULT_I2C_ADDRESS:
-                left_sensor_obj = temp_sensor
-                logging.info(f"Left sensor init at default addr {hex(_DEFAULT_I2C_ADDRESS)}.")
-            else:  # Should not happen with current constants
-                logging.error(f"Left sensor target addr " f"{hex(left_target_addr)} is not default!")
-                try:
-                    temp_sensor.set_address(left_target_addr)
-                    logging.info(f"Left sensor addr changed to {hex(left_target_addr)}.")
-                    left_sensor_obj = temp_sensor
-                except Exception as e:
-                    logging.error(f"Failed to change Left sensor addr: {e}.")
-                    xshut_left_pin.value = False
-                    temp_sensor = None
-        else:
-            logging.warning("Left sensor failed to init at default address.")
-            xshut_left_pin.value = False
+        except Exception as e:
+            logging.error(f"ToF sensor initialization failed with exception: {e}")
+            # Clean up on error
+            try:
+                xshut_left_pin.value = False
+                xshut_right_pin.value = False
+            except:
+                pass
+            left_sensor_obj = None
+            right_sensor_obj = None
 
-        # --- Finalize XSHUT states ---
-        # Ensure XSHUT is low if sensor object is None.
-        # reset_sensor leaves XSHUT high if successful.
-        if not left_sensor_obj and xshut_left_pin.value:
-            xshut_left_pin.value = False
-        if not right_sensor_obj and xshut_right_pin.value:
-            xshut_right_pin.value = False
+        # --- Finalize XSHUT states based on sensor status ---
+        if not left_sensor_obj:
+            try:
+                xshut_left_pin.value = False
+            except:
+                pass
+        if not right_sensor_obj:
+            try:
+                xshut_right_pin.value = False
+            except:
+                pass
 
         return left_sensor_obj, right_sensor_obj
 

@@ -50,17 +50,44 @@ class TimeoutException(Exception):
 
 
 def timeout(seconds=2):
+    """
+    Thread-safe timeout decorator using threading.Timer instead of signal.alarm.
+    """
     def decorator(func):
-        def _handle_timeout(signum, frame):
-            raise TimeoutException(f"Function {func.__name__} timed out after {seconds}s")
-
         def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
-            try:
-                return func(*args, **kwargs)
-            finally:
-                signal.alarm(0)
+            import threading
+            import queue
+            
+            result_queue = queue.Queue()
+            exception_queue = queue.Queue()
+            
+            def target():
+                try:
+                    result = func(*args, **kwargs)
+                    result_queue.put(result)
+                except Exception as e:
+                    exception_queue.put(e)
+            
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout=seconds)
+            
+            if thread.is_alive():
+                # Thread is still running, it timed out
+                raise TimeoutException(f"Function {func.__name__} timed out after {seconds}s")
+            
+            # Check if there was an exception
+            if not exception_queue.empty():
+                raise exception_queue.get()
+            
+            # Check if we have a result
+            if not result_queue.empty():
+                return result_queue.get()
+            
+            # This shouldn't happen, but just in case
+            raise TimeoutException(f"Function {func.__name__} completed but no result available")
+                
         return wrapper
     return decorator
 
@@ -165,28 +192,34 @@ class EnhancedSensorInterface(HardwareSensorInterface):
         try:
             # BNO085 IMU with timeout protection
             logging.info("Initializing BNO085 IMU sensor...")
-            import signal
-
-            def timeout_handler(signum, frame):
-                raise TimeoutError("BNO085 initialization timed out")
-
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(10)  # 10-second timeout
+            
+            def init_bno085_with_timeout():
+                start_time = time.monotonic()
+                timeout_duration = 10.0  # 10-second timeout
+                
+                try:
+                    sensor = hardware_registry.get_bno085()
+                    elapsed = time.monotonic() - start_time
+                    if elapsed > timeout_duration:
+                        raise TimeoutError(f"BNO085 initialization timed out after {elapsed:.1f}s")
+                    return sensor
+                except Exception as e:
+                    elapsed = time.monotonic() - start_time
+                    if elapsed > timeout_duration:
+                        raise TimeoutError(f"BNO085 initialization timed out after {elapsed:.1f}s")
+                    raise e
 
             try:
-                self._sensors["bno085"] = hardware_registry.get_bno085()
-                signal.alarm(0)  # Cancel timeout
+                self._sensors["bno085"] = init_bno085_with_timeout()
                 if self._sensors["bno085"]:
                     self._sensor_status["bno085"].working = True
                     logging.info("BNO085 sensor initialized successfully")
                 else:
                     logging.warning("BNO085 sensor returned None")
-            except TimeoutError:
-                signal.alarm(0)
-                logging.error("BNO085 IMU initialization timed out - marking as unavailable")
+            except TimeoutError as te:
+                logging.error(f"BNO085 IMU initialization timed out - marking as unavailable: {te}")
                 self._sensors["bno085"] = None
             except Exception as e:
-                signal.alarm(0)
                 logging.error(f"BNO085 IMU initialization failed: {e}")
                 self._sensors["bno085"] = None
         except Exception as e:

@@ -67,8 +67,9 @@ logger = LoggerConfigInfo.get_logger(__name__)
 
 # Load environment variables
 load_dotenv()
-# Get the UART port from the environment variables
-IMU_SERIAL_PORT = os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA4")
+# Get the UART port from the environment variables - support both UART_PORT and IMU_SERIAL_PORT for compatibility
+UART_PORT = os.getenv("UART_PORT", os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA4"))
+IMU_SERIAL_PORT = UART_PORT  # Maintain backward compatibility
 IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
 RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial comms.
 IMU_INIT_TIMEOUT_S = 15.0  # Timeout for IMU hardware initialization in seconds
@@ -155,32 +156,31 @@ class BNO085Sensor(IMUSensorInterface):
         self.safety_callbacks = []
 
         if platform.system() == "Linux" and HARDWARE_AVAILABLE:
-            imu_init_thread = threading.Thread(target=self._perform_imu_hardware_init_attempt)
-            imu_init_thread.daemon = True
-            imu_init_thread.start()
-
-            imu_init_thread.join(timeout=IMU_INIT_TIMEOUT_S)
-
-            if imu_init_thread.is_alive():
-                logger.error(
-                    f"IMU hardware initialization timed out after {IMU_INIT_TIMEOUT_S}s. IMU will be unavailable."
-                )
+            # Use direct initialization with timeout instead of problematic threading
+            start_time = time.monotonic()
+            try:
+                logger.debug(f"IMU: Attempting to initialize IMU on port {IMU_SERIAL_PORT} at {IMU_BAUDRATE} baud.")
+                
+                # Initialize with timeout check
+                while time.monotonic() - start_time < IMU_INIT_TIMEOUT_S:
+                    try:
+                        self._perform_imu_hardware_init_attempt()
+                        break  # Success - exit retry loop
+                    except Exception as e:
+                        if time.monotonic() - start_time >= IMU_INIT_TIMEOUT_S:
+                            logger.error(f"IMU hardware initialization timed out after {IMU_INIT_TIMEOUT_S}s: {e}")
+                            self.is_hardware_available = False
+                            self.sensor = None
+                            break
+                        time.sleep(0.1)  # Brief pause before retry
+                        
+                if not self.is_hardware_available:
+                    logger.error("IMU hardware initialization failed. IMU will be unavailable.")
+                    
+            except Exception as e:
+                logger.error(f"IMU initialization failed with exception: {e}")
                 self.is_hardware_available = False
                 self.sensor = None
-                # If self.serial_port_wrapper was instantiated within the (now stuck) thread,
-                # avoid trying to interact with it directly from here.
-                if self.serial_port_wrapper:
-                    logger.warning(
-                        "IMU init thread is stuck; serial port wrapper might be in an inconsistent state."
-                    )
-                    self.serial_port_wrapper = None # Nullify our reference
-            else:
-                # Thread completed. self.is_hardware_available should be set by the thread.
-                if not self.is_hardware_available:
-                    logger.error(
-                        "IMU hardware initialization thread completed but reported failure. IMU unavailable."
-                    )
-                # else: IMU initialized successfully (logged in thread)
 
         else:  # Non-Linux platform or HARDWARE_AVAILABLE is False
             if platform.system() != "Linux":
@@ -196,8 +196,10 @@ class BNO085Sensor(IMUSensorInterface):
 
     def _perform_imu_hardware_init_attempt(self):
         """
-        Attempts to initialize the IMU hardware. This method is run in a separate thread.
-        It sets self.is_hardware_available, self.sensor, and self.serial_port_wrapper.
+        Attempts to initialize the IMU hardware with improved error handling.
+        
+        Addresses the TypeError: 'NoneType' object cannot be interpreted as an integer
+        that occurs in the adafruit library when the serial port file descriptor is None.
         """
         # Ensure these are reset for the current attempt
         self.is_hardware_available = False
@@ -211,6 +213,24 @@ class BNO085Sensor(IMUSensorInterface):
                 f"at {IMU_BAUDRATE} baud."
             )
 
+            # First, try to open the serial port directly to validate it
+            try:
+                import serial
+                test_serial = serial.Serial(IMU_SERIAL_PORT, IMU_BAUDRATE, timeout=0.1)
+                
+                # Validate that the file descriptor is valid
+                if test_serial.fd is None or test_serial.fd < 0:
+                    test_serial.close()
+                    raise serial.SerialException(f"Invalid file descriptor for port {IMU_SERIAL_PORT}")
+                
+                test_serial.close()
+                logger.debug(f"IMU: Serial port {IMU_SERIAL_PORT} validated successfully")
+                
+            except Exception as e:
+                logger.error(f"IMU: Serial port validation failed: {e}")
+                raise
+            
+            # Now use the SerialPort wrapper
             current_attempt_serial_wrapper = SerialPort(
                 port=IMU_SERIAL_PORT,
                 baudrate=IMU_BAUDRATE,
@@ -219,23 +239,27 @@ class BNO085Sensor(IMUSensorInterface):
             )
             current_attempt_serial_wrapper.start()
 
+            # Validate the wrapper state
             if not (current_attempt_serial_wrapper.ser and current_attempt_serial_wrapper.ser.is_open):
                 logger.error(
                     f"IMU Init Thread: SerialPort.start() completed but port {IMU_SERIAL_PORT} "
                     f"is not open. IMU unavailable."
                 )
-                # Check if 'serial' module was successfully imported before raising serial.SerialException
-                if serial:
-                    raise serial.SerialException(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
-                else:
-                    raise Exception(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+                raise serial.SerialException(f"Port {IMU_SERIAL_PORT} not open after SerialPort.start()")
+            
+            # Additional validation of file descriptor
+            if current_attempt_serial_wrapper.ser.fd is None or current_attempt_serial_wrapper.ser.fd < 0:
+                logger.error(f"IMU: Invalid file descriptor ({current_attempt_serial_wrapper.ser.fd}) for serial port")
+                raise serial.SerialException(f"Invalid file descriptor for {IMU_SERIAL_PORT}")
 
             logger.info(f"IMU Init Thread: Serial port {IMU_SERIAL_PORT} opened successfully for IMU.")
             # Assign to self.serial_port_wrapper only after successful open and start
             self.serial_port_wrapper = current_attempt_serial_wrapper
 
             if BNO08X_UART:
+                logger.debug("IMU: Creating BNO08X_UART instance...")
                 self.sensor = BNO08X_UART(self.serial_port_wrapper.ser, debug=False)
+                logger.debug("IMU: BNO08X_UART instance created successfully")
             else:
                 logger.error("IMU Init Thread: BNO08X_UART library not available.")
                 raise ImportError("BNO08X_UART not available")
@@ -246,7 +270,7 @@ class BNO085Sensor(IMUSensorInterface):
                 self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
                 self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
                 self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
-                # Set report intervals
+                # Set report intervals - commented out as they may cause issues
                 # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_ACCELEROMETER, 100000)  # 100ms
                 # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_GYROSCOPE, 100000)  # 100ms
                 # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_MAGNETOMETER, 100000)  # 100ms
@@ -434,6 +458,34 @@ class BNO085Sensor(IMUSensorInterface):
             "impact_detected": False,  # Could be implemented with real data
         }
 
+    def get_quaternion(self) -> Tuple[float, float, float, float]:
+        """
+        Get the current quaternion from the IMU.
+
+        Returns:
+            Tuple[float, float, float, float]: Quaternion (w, x, y, z)
+        """
+        if self.is_hardware_available and self.sensor:
+            try:
+                quaternion = self.sensor.quaternion
+                if quaternion is None or len(quaternion) < 4:
+                    logger.warning("Invalid quaternion data from sensor")
+                    return (1.0, 0.0, 0.0, 0.0)  # Default quaternion
+                return tuple(quaternion)
+            except Exception as e:
+                logger.warning(f"Error reading IMU quaternion: {e}")
+                return (1.0, 0.0, 0.0, 0.0)
+        else:
+            # Return simulated quaternion based on heading
+            heading_rad = math.radians(self.get_heading())
+            # Simple quaternion for rotation around Z axis
+            return (
+                math.cos(heading_rad / 2),  # w
+                0.0,  # x
+                0.0,  # y
+                math.sin(heading_rad / 2)   # z
+            )
+
     def get_sensor_data(self) -> Dict[str, Any]:
         """
         Get all IMU sensor data in one call.
@@ -444,6 +496,7 @@ class BNO085Sensor(IMUSensorInterface):
         heading = self.get_heading()
         roll = self.get_roll()
         pitch = self.get_pitch()
+        quaternion = self.get_quaternion()
         speed = 0  # TODO: Implement speed calculation based on acceleration data
         compass = 0  # TODO: Implement compass data based on heading
 
@@ -452,6 +505,7 @@ class BNO085Sensor(IMUSensorInterface):
             "heading": heading,
             "roll": roll,
             "pitch": pitch,
+            "quaternion": {"w": quaternion[0], "x": quaternion[1], "y": quaternion[2], "z": quaternion[3]},
             "acceleration": {
                 "x": random.uniform(-2, 2) if not self.is_hardware_available else 0,
                 "y": random.uniform(-2, 2) if not self.is_hardware_available else 0,
