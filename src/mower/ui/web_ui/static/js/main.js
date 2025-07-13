@@ -235,8 +235,19 @@ function setupSocketConnection() {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const socketUrl = `${protocol}//${window.location.host}`;
 
-  // Initialize socket connection using HTTP polling transport to avoid WebSocket frame errors
-  socket = io({ transports: ['polling'] });
+  // Initialize socket connection with enhanced configuration for Cloudflare tunnels
+  socket = io({ 
+    transports: ['polling', 'websocket'],
+    upgrade: true,
+    rememberUpgrade: false,
+    timeout: 10000,
+    forceNew: true,
+    withCredentials: true,
+    extraHeaders: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Credentials': 'true'
+    }
+  });
 
   // Connection established
   socket.on("connect", function () {
@@ -258,13 +269,23 @@ function setupSocketConnection() {
     attemptReconnect();
   });
 
-  // Handle errors
+  // Handle errors with enhanced logging for Cloudflare tunnel issues
   socket.on("connect_error", function (error) {
     isConnected = false;
     updateConnectionStatus(false);
     console.error("Connection error:", error);
-    showAlert("Connection error: " + error.message, "danger");
-
+    console.error("Error type:", error.type);
+    console.error("Error description:", error.description);
+    
+    // Enhanced error messages for common Cloudflare tunnel issues
+    let errorMessage = "Connection error: " + error.message;
+    if (error.type === 'TransportError' && window.location.hostname.includes('cloudflareaccess.com')) {
+      errorMessage = "Cloudflare Access authentication issue. Please refresh the page.";
+    } else if (error.description && error.description.includes('CORS')) {
+      errorMessage = "CORS error through tunnel. Connection may be blocked by authentication.";
+    }
+    
+    showAlert(errorMessage, "danger");
     attemptReconnect();
   });
 
@@ -425,16 +446,39 @@ function setupPageSpecificListeners() {
  */
 function sendCommand(command, params = {}) {
   if (!isConnected) {
+    console.error("Cannot send command - not connected:", command, params);
     showAlert("Cannot send command: Not connected to the server", "danger");
     return;
   }
 
+  console.log("Sending command through SocketIO:", command, params);
+  console.log("Current connection transport:", socket.io.engine.transport.name);
+  console.log("Socket connected:", socket.connected);
   showAlert(`Sending command: ${command}`, "info", 2000);
 
-  socket.emit("control_command", {
-    command: command,
-    params: params,
-  });
+  try {
+    socket.emit("control_command", {
+      command: command,
+      params: params,
+    });
+    console.log("Command emitted successfully:", command);
+    
+    // Add response listener for debugging
+    socket.off('command_response'); // Remove previous listener
+    socket.on('command_response', function(response) {
+      console.log("Command response received:", response);
+      if (response.success) {
+        showAlert(`Command ${response.command} succeeded: ${response.message || 'OK'}`, "success", 3000);
+      } else {
+        console.error("Command failed:", response);
+        showAlert(`Command ${response.command} failed: ${response.error}`, "danger", 5000);
+      }
+    });
+    
+  } catch (error) {
+    console.error("Error emitting command:", error);
+    showAlert("Error sending command: " + error.message, "danger");
+  }
 }
 
 /**
@@ -606,7 +650,7 @@ function updateSensorData(data) {
       if (bd) bd.textContent = `${dashPct}%`;
       if (bs) bs.textContent = `${dashPct}%`;
       if (bv) {
-        const bvNum = parseNumber(systemState.battery.voltage);
+        const bvNum = parseNumber(power);
         if (bvNum != null) bv.textContent = `${bvNum.toFixed(1)} V`;
       }
       if (bc && power.current != null && power.current !== "N/A") {
@@ -921,9 +965,13 @@ function updatePositionData(data) {
  * @param {Object} data - Response data from the server
  */
 function handleCommandResponse(data) {
+  console.log("Received command response:", data);
+  
   if (data.success) {
+    console.log("Command executed successfully:", data.command);
     showAlert(data.message || "Command executed successfully", "success", 3000);
   } else {
+    console.error("Command failed:", data.command, data.error || data.message);
     showAlert(data.message || "Command failed", "danger");
   }
 

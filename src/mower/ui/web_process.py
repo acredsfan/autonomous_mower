@@ -332,20 +332,31 @@ class DummyResourceManager:
         pass
     
     def execute_command(self, command, params):
+        """
+        Forward command execution to main controller via IPC.
+        
+        Args:
+            command: The command to execute
+            params: Command parameters
+            
+        Returns:
+            Response from main controller or error
+        """
         params = params or {}
-        if command == "manual_drive":
-            self.logger.info(f"Dummy manual drive: {params}")
-            return {"success": True}
-        if command == "blade_on":
-            self.logger.info("Dummy blade on")
-            return {"success": True}
-        if command == "blade_off":
-            self.logger.info("Dummy blade off")
-            return {"success": True}
-        if command == "set_blade_speed":
-            self.logger.info(f"Dummy blade speed {params.get('speed')}")
-            return {"success": True}
-        return {"success": True, "result": f"Command {command} executed"}
+        self.logger.info(f"Forwarding command via IPC: {command} with params: {params}")
+        
+        try:
+            # Import here to avoid circular imports
+            from mower.ipc import get_command_queue
+            command_queue = get_command_queue()
+            
+            # Send command through IPC queue
+            result = command_queue.send_command(command, params)
+            self.logger.info(f"IPC command result: {result}")
+            return result
+        except Exception as e:
+            self.logger.error(f"IPC command error: {e}")
+            return {"success": False, "error": f"IPC communication failed: {str(e)}"}
 
 def start_web():
     """

@@ -53,6 +53,30 @@ setup_state = {
 }
 
 
+def create_webui_data_symlink() -> None:
+    """
+    Ensures the Web UI static data symlink exists and points to the collected images directory.
+    @hardware_interface: symbolic link
+    @gpio_pin_usage: N/A
+    """
+    import os
+    src = os.path.abspath("data/collected_images")
+    dst = os.path.abspath("src/mower/ui/web_ui/static/data")
+    try:
+        # Remove existing symlink if it exists and is incorrect
+        if os.path.islink(dst) and os.readlink(dst) != src:
+            os.unlink(dst)
+        # Create symlink if missing
+        if not os.path.exists(dst):
+            os.symlink(src, dst)
+            print(f"Created symlink: {dst} -> {src}")
+        else:
+            print(f"Symlink already exists: {dst}")
+    except Exception as e:
+        print(f"Error creating symlink: {e}")
+
+
+
 def color_text(text: str, color: str) -> str:
     """Add color to terminal text."""
     return f"{COLORS.get(color, '')}{text}{COLORS['RESET']}"

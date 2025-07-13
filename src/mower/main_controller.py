@@ -410,6 +410,16 @@ class ResourceManager:
             # Now initialize software components
             self._initialize_software()
             logger.info("Software components initialization attempt complete.")
+            
+            # Initialize IPC command processor for web UI communication
+            try:
+                from mower.ipc import get_command_processor
+                self._command_processor = get_command_processor(self.execute_command)
+                self._command_processor.start()
+                logger.info("IPC command processor initialized and started")
+            except Exception as e:
+                logger.warning(f"Failed to initialize IPC command processor: {e}")
+                self._command_processor = None
 
             # If we reached here, both hardware and software initialization phases were attempted.
             logger.info("All resource initialization phases complete with fallbacks for any individual failures.")
@@ -443,6 +453,14 @@ class ResourceManager:
 
             # Stop watchdog first
             self._stop_watchdog()
+            
+            # Stop IPC command processor
+            if hasattr(self, '_command_processor') and self._command_processor:
+                try:
+                    logger.info("Stopping IPC command processor...")
+                    self._command_processor.stop()
+                except Exception as e:
+                    logger.error(f"Error stopping IPC command processor: {e}")
 
             # Stop web process
             web_process = self._resources.get("web_process")
@@ -580,13 +598,34 @@ class ResourceManager:
         params = params or {}
         try:
             if command == "manual_drive":
+                # Extract forward and turn values from web UI
                 forward = float(params.get("forward", 0))
                 turn = float(params.get("turn", 0))
+                logger.info(f"Manual drive command: forward={forward}, turn={turn}")
+                
+                # Get the RoboHAT motor driver
                 motor = self.get_resource("motor_driver")
+                if not motor:
+                    # Fallback to direct hardware registry access
+                    motor = self.get_robohat()
+                    
+                logger.info(f"Motor driver resource: {motor}, type: {type(motor)}")
+                
                 if motor and hasattr(motor, "set_pulse"):
-                    motor.set_pulse(turn, forward)
-                    return {"success": True}
-                return {"success": False, "error": "Motor driver unavailable"}
+                    # RoboHAT expects set_pulse(steering, throttle)
+                    # Map our parameters: steering=turn, throttle=forward
+                    logger.info(f"Calling motor.set_pulse(steering={turn}, throttle={forward})")
+                    motor.set_pulse(steering=turn, throttle=forward)
+                    return {"success": True, "message": f"Motors set: throttle={forward}, steering={turn}"}
+                elif motor and hasattr(motor, "run"):
+                    # Alternative method if set_pulse not available
+                    logger.info(f"Calling motor.run(steering={turn}, throttle={forward})")
+                    motor.run(steering=turn, throttle=forward)
+                    return {"success": True, "message": f"Motors run: throttle={forward}, steering={turn}"}
+                else:
+                    error_msg = f"Motor driver unavailable or missing control methods. Motor: {motor}, has_set_pulse: {hasattr(motor, 'set_pulse') if motor else False}, has_run: {hasattr(motor, 'run') if motor else False}"
+                    logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
 
             if command == "blade_on":
                 blade = self.get_resource("blade_controller") or self.get_resource("blade")
@@ -613,6 +652,22 @@ class ResourceManager:
                     blade.set_speed(speed)
                     return {"success": True}
                 return {"success": False, "error": "Blade controller unavailable"}
+
+            if command == "emergency_stop":
+                self.emergency_stop()
+                return {"success": True}
+
+            if command == "stop":
+                self.stop_all_operations()
+                return {"success": True}
+
+            if command == "start_mowing":
+                # TODO: Implement start_mowing logic when autonomous navigation is ready
+                return {"success": False, "error": "Autonomous mowing not yet implemented"}
+
+            if command == "return_home":
+                # TODO: Implement return_home logic when autonomous navigation is ready  
+                return {"success": False, "error": "Return home not yet implemented"}
 
             # Unknown command
             return {"success": False, "error": f"Unknown command: {command}"}

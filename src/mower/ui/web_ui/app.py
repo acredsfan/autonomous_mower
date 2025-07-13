@@ -8,7 +8,7 @@ from dotenv import load_dotenv, set_key
 
 # Critical imports with error handling
 try:
-    from flask import Flask, Response, jsonify, render_template, request, send_file
+    from flask import Flask, Response, jsonify, render_template, request, send_file, make_response
     from flask_cors import CORS
     from flask_socketio import SocketIO, emit
 except ImportError as e:
@@ -28,6 +28,14 @@ from mower.navigation.path_planner import PatternType
 from mower.ui.web_ui.i18n import init_babel  # Import the babel init function
 from mower.ui.web_ui.simulation_helper import get_simulated_sensor_data
 from mower.utilities.logger_config import LoggerConfigInfo
+
+# Load environment variables for camera streaming
+load_dotenv()
+
+# Camera streaming configuration from environment
+STREAMING_FPS = int(os.getenv("STREAMING_FPS", 30))
+FRAME_TIME = 1.0 / STREAMING_FPS  # Calculate sleep time based on FPS
+JPEG_QUALITY = int(os.getenv("JPEG_QUALITY", 95))  # Higher quality for better image
 
 # Load environment variables from .env if available
 ROOT_DIR = Path(__file__).resolve().parents[4]
@@ -62,9 +70,21 @@ def create_app(mower_resource_manager_instance):
     # Configure template folder from environment or use default
     template_folder = os.environ.get("TEMPLATE_FOLDER", str(Path(__file__).parent / "templates"))
     app = Flask(__name__, template_folder=template_folder)
-    CORS(app)
+    # Enable CORS for all routes with enhanced headers for Cloudflare Access
+    CORS(app, 
+         resources={r"/*": {"origins": "*"}},
+         supports_credentials=True,
+         allow_headers=["Content-Type", "Authorization", "Access-Control-Allow-Credentials", "CF-Access-Client-Id", "CF-Access-Client-Secret"])
+    
     socketio = SocketIO(
-        app, cors_allowed_origins="*", ping_timeout=20, ping_interval=25, logger=True, engineio_logger=True
+        app, 
+        cors_allowed_origins="*", 
+        cors_credentials=True,
+        ping_timeout=20, 
+        ping_interval=25, 
+        logger=True, 
+        engineio_logger=True,
+        transports=['polling', 'websocket']  # Ensure both transports available for Cloudflare
     )
 
     # Integrate data collection functionality
@@ -249,6 +269,14 @@ def create_app(mower_resource_manager_instance):
 
             def generate_frames():
                 """Generate camera frames."""
+                # Initialize camera if not already done - prevents double-visit issue
+                if hasattr(camera, 'initialize') and callable(camera.initialize):
+                    try:
+                        if not camera.initialize():
+                            logger.warning("Camera initialization failed, using fallback")
+                    except Exception as e:
+                        logger.error(f"Camera initialization error: {e}")
+                
                 while True:
                     # Get frame from camera
                     try:
@@ -264,8 +292,8 @@ def create_app(mower_resource_manager_instance):
                             # If we got JPEG bytes directly, yield them
                             yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
-                            # 30 FPS timing for JPEG stream
-                            socketio.sleep(0.033)
+                            # Use configured FPS timing for JPEG stream
+                            socketio.sleep(FRAME_TIME)
                             continue
                         except Exception:
                             # If both methods fail, try get_last_frame()
@@ -277,8 +305,8 @@ def create_app(mower_resource_manager_instance):
                                 # If we got JPEG bytes directly, yield them
                                 yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + jpeg_bytes + b"\r\n")
 
-                                # 30 FPS timing for fallback JPEG stream
-                                socketio.sleep(0.033)
+                                # Use configured FPS timing for fallback JPEG stream
+                                socketio.sleep(FRAME_TIME)
                                 continue
                             except Exception:
                                 logger.error("All camera frame methods failed")
@@ -293,16 +321,16 @@ def create_app(mower_resource_manager_instance):
                     try:
                         import cv2
 
-                        # Encode directly to JPEG without color conversion for streaming performance
-                        # Note: Most cameras provide BGR format which works fine for MJPEG streaming
-                        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                        # Encode to JPEG with configurable quality for better image clarity
+                        # Higher JPEG quality reduces pixelation at the cost of bandwidth
+                        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
                         frame_bytes = buffer.tobytes()
 
                         # Yield the frame in multipart response
                         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
 
-                        # 30 FPS timing - 1/30 = 0.033 seconds
-                        socketio.sleep(0.033)
+                        # Use configured FPS timing from environment
+                        socketio.sleep(FRAME_TIME)
                     except Exception as e:
                         logger.error(f"Error encoding frame: {e}")
                         socketio.sleep(0.5)  # Delay on error
@@ -621,21 +649,34 @@ def create_app(mower_resource_manager_instance):
             logger.error(f"Failed to get languages: {e}")
             return jsonify({"success": False, "error": str(e)}), 500
 
-    # Static file route with CORS headers
+    # Static file route with enhanced CORS headers for Cloudflare Access
     @app.route("/static/<path:filename>")
     def static_files(filename):
-        """Serve static files with proper CORS headers."""
+        """Serve static files with proper CORS headers for Cloudflare Access."""
         from flask import make_response, send_from_directory
 
         try:
             response = make_response(send_from_directory(app.static_folder, filename))
             response.headers["Access-Control-Allow-Origin"] = "*"
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, CF-Access-Client-Id, CF-Access-Client-Secret"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Vary"] = "Origin"
             return response
         except Exception as e:
             logger.error(f"Error serving static file {filename}: {e}")
             return jsonify({"error": "File not found"}), 404
+
+    # OPTIONS route for preflight CORS requests
+    @app.route("/static/<path:filename>", methods=["OPTIONS"])
+    def static_files_options(filename):
+        """Handle preflight OPTIONS requests for static files."""
+        response = make_response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, CF-Access-Client-Id, CF-Access-Client-Secret"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
 
     # WebSocket event handlers
     @socketio.on("connect")

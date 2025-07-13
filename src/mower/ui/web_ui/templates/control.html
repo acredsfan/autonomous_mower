@@ -314,6 +314,40 @@
             });
         }
 
+        // Set up event listeners for all control buttons with data-command attributes
+        const controlButtons = document.querySelectorAll('.control-btn[data-command]');
+        controlButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const command = this.getAttribute('data-command');
+                if (command) {
+                    sendCommand(command);
+                    
+                    // Show appropriate feedback based on command
+                    let message = `Command sent: ${command}`;
+                    let type = 'info';
+                    
+                    if (command === 'blade_on') {
+                        message = 'Blade motor started';
+                        type = 'success';
+                    } else if (command === 'blade_off') {
+                        message = 'Blade motor stopped';
+                        type = 'success';
+                    } else if (command === 'start_mowing') {
+                        message = 'Starting autonomous mowing';
+                        type = 'success';
+                    } else if (command === 'stop') {
+                        message = 'Stopping mower';
+                        type = 'warning';
+                    } else if (command === 'return_home') {
+                        message = 'Returning to home position';
+                        type = 'info';
+                    }
+                    
+                    showAlert(message, type, 3000);
+                }
+            });
+        });
+
         // Update control connection status to match main connection
         updateControlConnectionStatus();
     });
