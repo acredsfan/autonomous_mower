@@ -341,6 +341,9 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             # Get calibration and safety status
             calibration = imu.get_calibration()
             safety_status = imu.get_safety_status()
+            
+            # Get quaternion data as requested by expert feedback
+            quaternion = imu.get_quaternion()
 
             return {
                 "acceleration": {"x": accel[0], "y": accel[1], "z": accel[2]},
@@ -349,6 +352,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 "heading": heading,
                 "roll": roll,
                 "pitch": pitch,
+                "quaternion": {"w": quaternion[0], "x": quaternion[1], "y": quaternion[2], "z": quaternion[3]},
                 "calibration": calibration,
                 "safety_status": safety_status,
             }
@@ -414,8 +418,9 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 # Strip comments and whitespace to prevent parse errors
                 min_volt_str = dotenv.get_key(".env", "BATTERY_MIN_VOLTAGE", default="10.5")
                 max_volt_str = dotenv.get_key(".env", "BATTERY_MAX_VOLTAGE", default="14.6")
-                min_volt = float(min_volt_str.split('#')[0].strip())
-                max_volt = float(max_volt_str.split('#')[0].strip())
+                # Critical fix: ensure comment stripping handles None values and strips properly
+                min_volt = float((min_volt_str or "10.5").split('#')[0].strip())
+                max_volt = float((max_volt_str or "14.6").split('#')[0].strip())
                 if voltage <= min_volt:
                     percentage = 0.0
                 elif voltage >= max_volt:
@@ -893,6 +898,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             "heading": "N/A",
             "roll": "N/A",
             "pitch": "N/A",
+            "quaternion": {"w": "N/A", "x": "N/A", "y": "N/A", "z": "N/A"},
             "acceleration": {"x": "N/A", "y": "N/A", "z": "N/A"},
             "gyroscope": {"x": "N/A", "y": "N/A", "z": "N/A"},
             "magnetometer": {"x": "N/A", "y": "N/A", "z": "N/A"},

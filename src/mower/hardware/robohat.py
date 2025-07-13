@@ -268,8 +268,12 @@ class RoboHATController:
             logger.warning("Controller serial port is not open.")
             return
 
-        # read a frame terminated by carriage‑return (CR = 13)
-        frame = self.serial.read_until(b'\r').decode(errors="ignore").strip()
+        # read a frame terminated by carriage‑return (CR = 13) with timeout
+        try:
+            frame = self.serial.read_until(b'\r', size=50, timeout=1.0).decode(errors="ignore").strip()
+        except Exception as e:
+            logger.warning(f"Failed to read serial frame: {e}")
+            return
         parts = frame.split(',', 1)          # no space after comma
 
         if len(parts) == 2 and all(p.isnumeric() for p in parts):
@@ -435,40 +439,94 @@ class RoboHATDriver:
             }
 
     def _initialize_connection(self):
-        """Initialize the connection with the RP2040."""
+        """Initialize the connection with the RP2040 with robust non-blocking approach."""
         if not self.pwm or not self.pwm.is_open:
             return
+        
+        def _timeout_wrapper(func, timeout_seconds=3.0):
+            """Wrapper to timeout any potentially blocking operation"""
+            import threading
+            import queue
+            result_queue = queue.Queue()
+            exception_queue = queue.Queue()
+            
+            def worker():
+                try:
+                    result = func()
+                    result_queue.put(result)
+                except Exception as e:
+                    exception_queue.put(e)
+            
+            worker_thread = threading.Thread(target=worker)
+            worker_thread.daemon = True
+            worker_thread.start()
+            worker_thread.join(timeout=timeout_seconds)
+            
+            if worker_thread.is_alive():
+                logger.warning(f"RoboHAT operation timed out after {timeout_seconds}s")
+                return None
+            
+            if not exception_queue.empty():
+                raise exception_queue.get()
+            
+            if not result_queue.empty():
+                return result_queue.get()
+            return None
+        
         try:
-            # Clear any pending data
-            self.pwm.reset_input_buffer()
-            self.pwm.reset_output_buffer()
+            # Clear any pending data with timeout protection
+            def clear_buffers():
+                self.pwm.reset_input_buffer()
+                self.pwm.reset_output_buffer()
+                return True
+            
+            _timeout_wrapper(clear_buffers, 1.0)
 
-            # Send RC disable command to enable serial control
+            # Send RC disable command to enable serial control with non-blocking retry logic
             logger.info("Disabling RC mode on RP2040...")
-            self.pwm.write(b"rc=disable\r")
-            if self.debug:
-                try:
-                    echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
-                    if echo.strip(b'\r') != b"rc=disable":
-                        logger.warning(f"Mismatch echo: {echo}")
-                except Exception as e:
-                    logger.debug(f"No echo or error: {e}")
-            print("Command sent to RP2040 to disable RC mode.")
-            time.sleep(0.2)  # Give RP2040 time to process
-            # Send initial neutral position
-            self.pwm.write(b"1500,1500\r")
-            if self.debug:
-                try:
-                    echo = self.pwm.read_until(b'\r', timeout=SERIAL_TIMEOUT)
-                    if echo.strip(b'\r')  != b"1500,1500":
-                        logger.warning(f"Mismatch echo: {echo}")
-                except Exception as e:
-                    logger.debug(f"No echo or error: {e}")
-            time.sleep(0.1)
+            ACK_CMD = b"rc=disable\r"
+            ACK_TIMEOUT_S = 0.2
+            MAX_RETRIES = 3  # Reduced retries to avoid long delays
+            
+            def send_rc_disable():
+                self.pwm.write(ACK_CMD)
+                ack_received = False
+                
+                for retry in range(MAX_RETRIES):
+                    try:
+                        if self.pwm.in_waiting:
+                            line = self.pwm.readline().strip()
+                            if line == b"OK" or b"rc=disable" in line:
+                                ack_received = True
+                                break
+                    except Exception as e:
+                        logger.debug(f"RC disable read attempt {retry + 1} failed: {e}")
+                    time.sleep(ACK_TIMEOUT_S)
+                
+                return ack_received
+            
+            ack_received = _timeout_wrapper(send_rc_disable, 2.0)
+            
+            if not ack_received:
+                logger.warning("RP2040 did not acknowledge rc=disable – continuing anyway")
+            
+            logger.info("RC mode disable completed, sending neutral position...")
+            
+            # Send initial neutral position with timeout protection
+            def send_neutral():
+                NEUTRAL_CMD = b"1500,1500\r"
+                self.pwm.write(NEUTRAL_CMD)
+                return True
+            
+            _timeout_wrapper(send_neutral, 1.0)
+            
+            logger.info("✓ RP2040 initialization completed")
             self._rc_disabled = True
-            logger.info("✓ RP2040 initialized for serial control")
+            
         except Exception as e:
             logger.error(f"Failed to initialize RP2040 connection: {e}")
+            # Continue operation even if initialization has issues
+            self._rc_disabled = True
 
     def trim_out_of_bound_value(self, value):
         """Trim steering and throttle values to be within -1.0 and 1.0"""
