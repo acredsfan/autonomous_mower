@@ -74,22 +74,19 @@ class YOLOv8TFLiteDetector:
         return labels
 
     def _initialize_interpreter(self) -> bool:
-        """Initialize the TensorFlow Lite interpreter."""
+        """Initialize the TensorFlow Lite interpreter, using the Coral delegate if specified."""
+        if not self.model_path or not os.path.exists(self.model_path):
+            logger.error("Model file not found at path: %s", self.model_path)
+            return False
+        
         try:
-            # Import coral utils for interpreter creation
+            # CORRECT: Use the utility to get the right interpreter function
             from mower.obstacle_detection.coral_utils import get_interpreter_creator
-
-            if not os.path.exists(self.model_path):
-                logger.error("Model file not found at %s", self.model_path)
-                return False
-
-            # Get appropriate interpreter creator function
-            interpreter_creator = get_interpreter_creator(use_coral=self.use_coral)
             
-            # Load interpreter using coral utils
+            interpreter_creator = get_interpreter_creator(self.use_coral)
             self.interpreter = interpreter_creator(model_path=self.model_path)
             self.interpreter.allocate_tensors()
-
+            
             # Get input and output details
             self.input_details = self.interpreter.get_input_details()
             self.output_details = self.interpreter.get_output_details()
@@ -123,19 +120,21 @@ class YOLOv8TFLiteDetector:
                         "Falling back to classification processing."
                     )
                     self.has_detect_output = False
-                    logger.info(
-                        "YOLOv8 TFLite detector initialized: " "input shape=%dx%d, " "floating_model=%s",
-                        self.input_width,
-                        self.input_height,
-                        self.floating_model,
-                    )
-                return True
+                    
+            logger.info("TFLite interpreter initialized successfully for model: %s", self.model_path)
+            logger.info(
+                "YOLOv8 TFLite detector initialized: " "input shape=%dx%d, " "floating_model=%s",
+                self.input_width,
+                self.input_height,
+                self.floating_model,
+            )
+            return True
 
         except ImportError:
             logger.error("TFLite runtime not available. " "Install with 'pip install tflite-runtime'")
             return False
         except Exception as e:
-            logger.error("Error initializing interpreter: %s", e)
+            logger.error("Failed to initialize TFLite interpreter: %s", e, exc_info=True)
             return False
 
     def preprocess_image(self, image) -> np.ndarray:
@@ -233,13 +232,14 @@ class YOLOv8TFLiteDetector:
     def _process_yolov8_output(self) -> List[Dict]:
         """
         Process YOLOv8 detection output format.
-        Handles different possible output tensor layouts.
+        Handles different possible output tensor layouts robustly.
         """
         # Get output tensor - format depends on the model
         if self.interpreter is None or self.output_details is None:
             return []
         output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
 
+        # CORRECT: Transpose the output to a consistent shape [num_boxes, num_details]
         # Handle different output shapes
         # YOLOv8 can output either [1, num_boxes, num_features] or [1, num_features, num_boxes]
         if len(output_data.shape) == 2:
@@ -250,7 +250,7 @@ class YOLOv8TFLiteDetector:
             # Check which dimension matches expected features
             if output_data.shape[1] == expected_features:
                 # Shape is [num_boxes, num_features] - correct format
-                pass
+                logger.debug("YOLOv8 output in correct format [%d, %d]", output_data.shape[0], output_data.shape[1])
             elif output_data.shape[0] == expected_features:
                 # Shape is [num_features, num_boxes] - need to transpose
                 output_data = output_data.T
@@ -266,74 +266,48 @@ class YOLOv8TFLiteDetector:
             return []
 
         # Get original image dimensions (use input size as reference)
-        original_height, original_width = self.input_height, self.input_width
+        img_width, img_height = self.input_width, self.input_height
 
         detections = []
-        num_boxes = output_data.shape[0]
-
-        for i in range(num_boxes):
-            # Extract values from each detection
-            box_data = output_data[i]
+        
+        for row in output_data:
+            # Extract class scores (everything after the first 4 bbox coordinates)
+            class_scores = row[4:]
+            class_id = np.argmax(class_scores)
+            confidence = class_scores[class_id]
             
-            # Handle different YOLOv8 output formats:
-            # Format 1: [x, y, w, h, objectness_confidence, class_prob1, class_prob2, ...]
-            # Format 2: [x, y, w, h, class_prob1, class_prob2, ...] (no separate objectness)
+            # Skip low confidence detections
+            if confidence < self.conf_threshold:
+                continue
             
-            if len(box_data) >= 5:
-                # Extract bounding box coordinates
-                x, y, w, h = box_data[0:4]
-                
-                # Determine confidence and class scores based on format
-                if len(box_data) == len(self.labels) + 5:
-                    # Format 1: has objectness confidence
-                    objectness = box_data[4] 
-                    class_scores = box_data[5:]
-                    class_id = np.argmax(class_scores)
-                    class_confidence = class_scores[class_id]
-                    # Final confidence is objectness * class confidence
-                    final_confidence = objectness * class_confidence
-                elif len(box_data) == len(self.labels) + 4:
-                    # Format 2: no separate objectness, just class scores
-                    class_scores = box_data[4:]
-                    class_id = np.argmax(class_scores)
-                    class_confidence = class_scores[class_id]
-                    final_confidence = class_confidence
-                else:
-                    logger.warning("Unexpected box data length: %d", len(box_data))
-                    continue
-                
-                # Skip low confidence detections
-                if final_confidence < self.conf_threshold:
-                    continue
+            # Extract bounding box coordinates (first 4 values)
+            cx, cy, w, h = row[:4]
+            
+            # Scale box coordinates to original image size
+            x1 = int((cx - w / 2) * img_width)
+            y1 = int((cy - h / 2) * img_height)
+            x2 = int((cx + w / 2) * img_width)
+            y2 = int((cy + h / 2) * img_height)
+            
+            # Clamp coordinates to image bounds
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(img_width - 1, x2)
+            y2 = min(img_height - 1, y2)
+            
+            # Get class name
+            if class_id < len(self.labels):
+                class_name = self.labels[class_id]
+            else:
+                class_name = f"Class {class_id}"
 
-                # Convert from center coords to [xmin, ymin, xmax, ymax] relative to input size
-                xmin = int((x - w / 2) * original_width)
-                ymin = int((y - h / 2) * original_height)
-                xmax = int((x + w / 2) * original_width)
-                ymax = int((y + h / 2) * original_height)
-
-                # Clamp coordinates to image bounds
-                xmin = max(0, xmin)
-                ymin = max(0, ymin)
-                xmax = min(original_width - 1, xmax)
-                ymax = min(original_height - 1, ymax)
-
-                # Get class name
-                if class_id < len(self.labels):
-                    class_name = self.labels[class_id]
-                else:
-                    class_name = f"Class {class_id}"
-
-                # Create detection dict
-                detections.append(
-                    {
-                        "class_name": class_name,
-                        "confidence": float(final_confidence),
-                        # Use xmin, ymin, xmax, ymax format
-                        "box": [xmin, ymin, xmax, ymax],
-                        "type": "yolov8_tflite",
-                    }
-                )
+            # Create detection dict
+            detections.append({
+                "class_name": class_name,
+                "confidence": float(confidence),
+                "box": [x1, y1, x2, y2],
+                "type": "yolov8"
+            })
 
         return detections
 

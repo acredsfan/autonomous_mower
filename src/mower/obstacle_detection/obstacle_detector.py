@@ -33,22 +33,10 @@ logger = LoggerConfigInfo.get_logger(__name__)
 load_dotenv()
 
 # Define default paths relative to the project root
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))  # Adjust based on actual structure
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 DEFAULT_MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
-DEFAULT_LABEL_MAP_FILE = os.path.join(DEFAULT_MODEL_DIR, "labels.txt")  # coco_labels.txt or labels.txt
-DEFAULT_TFLITE_MODEL = os.path.join(DEFAULT_MODEL_DIR, "pimower_model-edge.tflite")  # or pimower_model.tflite
-DEFAULT_YOLOV8_MODEL = os.path.join(DEFAULT_MODEL_DIR, "yolov8n_float32.tflite")  # or yolov8n.pt, yolov8n.onnx
-
-PATH_TO_OBJECT_DETECTION_MODEL = os.getenv("OBSTACLE_MODEL_PATH")
-if not PATH_TO_OBJECT_DETECTION_MODEL or not os.path.exists(PATH_TO_OBJECT_DETECTION_MODEL):
-    logger.warning(
-        f"OBSTACLE_MODEL_PATH env var not set or path invalid: {PATH_TO_OBJECT_DETECTION_MODEL}. "
-        f"Falling back to default: {DEFAULT_TFLITE_MODEL}"
-    )
-    PATH_TO_OBJECT_DETECTION_MODEL = DEFAULT_TFLITE_MODEL
-    if not os.path.exists(PATH_TO_OBJECT_DETECTION_MODEL):
-        logger.error(f"Default TFLite model not found: {DEFAULT_TFLITE_MODEL}")
-        # Potentially disable TFLite detection or raise an error
+DEFAULT_LABEL_MAP_FILE = os.path.join(DEFAULT_MODEL_DIR, "labels.txt")
+DEFAULT_YOLOV8_MODEL = os.path.join(DEFAULT_MODEL_DIR, "yolov8n_float32.tflite")
 
 PI5_IP = os.getenv("OBJECT_DETECTION_IP")
 
@@ -113,26 +101,13 @@ class ObstacleDetector:
         """Initialize the obstacle detector."""
         self.resource_manager = resource_manager
 
-        # Initialize ML components
-        self.interpreter = None
-        self.interpreter_type = None
-        self.input_details = None
-        self.output_details = None
-        self.input_height = 0
-        self.input_width = 0
-        self.floating_model = False
-
-        # Constants for preprocessing
-        self.input_mean = 127.5
-        self.input_std = 127.5
-
         # Get camera instance
         self.camera = get_hardware_registry().get_camera()
 
         # Remote detection settings
         self.use_remote_detection = USE_REMOTE_DETECTION
 
-        # YOLOv8 detector
+        # YOLOv8 detector (primary ML detection method)
         self.yolov8_detector = None
         self.use_yolov8 = USE_YOLOV8
 
@@ -153,88 +128,72 @@ class ObstacleDetector:
         except ImportError as e:
             logger.debug(f"Frame sharing not available: {e}")
 
-        # Initialize interpreters
-        self._initialize_interpreter()
-        self._initialize_yolov8()
+        # Initialize YOLOv8 detector (only ML detector needed)
+        self.yolov8_detector = self._initialize_yolov8()
 
         logger.info(
-            "ObstacleDetector initialized with %s interpreter%s",
-            self.interpreter_type,
-            ", YOLOv8 enabled" if self.yolov8_detector else "",
+            "ObstacleDetector initialized with %s",
+            "YOLOv8 enabled" if self.yolov8_detector else "YOLOv8 disabled - using OpenCV only",
         )
 
-    def _initialize_interpreter(self):
-        """Initialize the TensorFlow Lite interpreter."""
-        try:
-            from tflite_runtime.interpreter import Interpreter  # type: ignore
-
-            model_path = PATH_TO_OBJECT_DETECTION_MODEL
-            if not model_path or not os.path.exists(model_path):
-                logger.warning("Model not found at %s.", model_path)
-                logger.warning("Standard TFLite interpreter will be disabled.")
-                self.interpreter = None
-                return
-            # Validate TFLite file header (should start with b'TFL3')
-            with open(model_path, "rb") as f:
-                magic = f.read(4)
-            if magic != b"TFL3":
-                logger.error("Model at %s is not a valid TFLite file.", model_path)
-                logger.error("Header: %s.", magic)
-                logger.error("Standard TFLite interpreter will be disabled.")
-                self.interpreter = None
-                return
-            self.interpreter = Interpreter(model_path=model_path)
-            self.input_details = self.interpreter.get_input_details()
-            self.output_details = self.interpreter.get_output_details()
-            self.input_height = self.input_details[0]["shape"][1]
-            self.input_width = self.input_details[0]["shape"][2]
-            self.floating_model = self.input_details[0]["dtype"] == np.float32
-            self.interpreter.allocate_tensors()
-            self.interpreter_type = "tflite"
-        except (ImportError, IOError) as e:
-            logger.error("Failed to import TFLite interpreter: %s", e)
-            logger.error("Standard TFLite interpreter will be disabled.")
-            self.interpreter = None
-        except (ValueError, RuntimeError) as e:
-            logger.error("Failed to initialize interpreter: %s", e)
-            logger.error("Standard TFLite interpreter will be disabled.")
-            self.interpreter = None
-
     def _initialize_yolov8(self):
-        """Initialize the YOLOv8 detector if enabled."""
+        """
+        Initialize the YOLOv8 detector, dynamically selecting CPU or Coral Edge TPU
+        based on environment variables.
+        """
         if not self.use_yolov8:
             logger.info("YOLOv8 detector disabled")
-            return
+            return None
 
         try:
             # Import YOLOv8 detector class
             from mower.obstacle_detection.yolov8_detector import YOLOv8TFLiteDetector
 
-            # Check if model exists
-            if not os.path.exists(YOLOV8_MODEL_PATH):
-                logger.warning("YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH)
-                return
+            model_path_to_use = ""
+            use_coral_flag = False
 
-            # Determine if we should use Coral based on USE_CORAL_ACCELERATOR and EDGE_TPU_MODEL_PATH
-            use_coral = os.getenv("USE_CORAL_ACCELERATOR", "True").lower() == "true" and os.getenv("EDGE_TPU_MODEL_PATH")
-            if not use_coral or not os.path.exists(os.getenv("EDGE_TPU_MODEL_PATH")):
-                logger.warning("Coral accelerator disabled due to configuration or invalid EDGE_TPU_MODEL_PATH")
-                use_coral = False
-            logger.info("YOLOv8 model path: %s, use_coral: %s", YOLOV8_MODEL_PATH, use_coral)
+            # Get environment variables
+            USE_CORAL_ACCELERATOR = os.getenv("USE_CORAL_ACCELERATOR", "True").lower() == "true"
+            EDGE_TPU_MODEL_PATH = os.getenv("EDGE_TPU_MODEL_PATH")
+            YOLOV8_CPU_MODEL_PATH = YOLOV8_MODEL_PATH
+
+            if USE_CORAL_ACCELERATOR:
+                if EDGE_TPU_MODEL_PATH and os.path.exists(EDGE_TPU_MODEL_PATH):
+                    model_path_to_use = EDGE_TPU_MODEL_PATH
+                    use_coral_flag = True
+                    logger.info("Coral accelerator is enabled. Attempting to use Edge TPU model: %s", model_path_to_use)
+                else:
+                    logger.warning(f"USE_CORAL_ACCELERATOR is True, but model not found at EDGE_TPU_MODEL_PATH: {EDGE_TPU_MODEL_PATH}")
+                    logger.warning(f"Falling back to CPU model at: {YOLOV8_CPU_MODEL_PATH}")
+                    model_path_to_use = YOLOV8_CPU_MODEL_PATH
+            else:
+                logger.info(f"Using CPU for inference with model: {YOLOV8_CPU_MODEL_PATH}")
+                model_path_to_use = YOLOV8_CPU_MODEL_PATH
+
+            # Check if model exists
+            if not os.path.exists(model_path_to_use):
+                logger.warning("YOLOv8 model not found at %s, skipping", model_path_to_use)
+                return None
+
+            logger.info("YOLOv8 model path: %s, use_coral: %s", model_path_to_use, use_coral_flag)
 
             # Initialize detector
-            self.yolov8_detector = YOLOv8TFLiteDetector(
-                model_path=YOLOV8_MODEL_PATH,
+            detector = YOLOv8TFLiteDetector(
+                model_path=model_path_to_use,
                 label_path=LABEL_MAP_PATH,
                 conf_threshold=MIN_CONF_THRESHOLD,
-                use_coral=use_coral,
+                use_coral=use_coral_flag,
             )
             logger.info("YOLOv8 detector initialized successfully with %s", 
-                       "Coral Edge TPU" if use_coral else "CPU")
+                       "Coral Edge TPU" if use_coral_flag else "CPU")
+            return detector
+            
         except ImportError:
             logger.error("Failed to import YOLOv8TFLiteDetector class")
+            return None
         except (IOError, ValueError, RuntimeError) as e:
             logger.error("Failed to initialize YOLOv8 detector: %s", e)
+            return None
 
     def detect_obstacles(self, frame=None) -> List[dict]:
         """
@@ -304,106 +263,11 @@ class ObstacleDetector:
             except (ValueError, RuntimeError, IOError) as e:
                 logger.warning("YOLOv8 detection failed, falling back: %s", e)
 
-        # Local ML-based detection (fallback)
-        if self.interpreter:
-            ml_objects = self._detect_obstacles_ml(frame)
-            detected_objects.extend(ml_objects)
-
         # OpenCV-based detection (always run as backup/supplement)
         cv_objects = self._detect_obstacles_opencv(frame)
         detected_objects.extend(cv_objects)
 
         return detected_objects
-
-    def _detect_obstacles_ml(self, frame) -> List[dict]:
-        """Perform ML-based object detection."""
-        try:
-            # Convert frame to PIL Image
-            if isinstance(frame, np.ndarray):
-                image = Image.fromarray(frame)
-            else:
-                image = frame
-
-            # Preprocess image
-            image_resized = image.resize((self.input_width, self.input_height))
-            input_data = np.expand_dims(image_resized, axis=0)
-
-            # Handle different channel formats
-            if len(input_data.shape) == 4 and input_data.shape[-1] != 3:
-                input_data = input_data[:, :, :, :3]
-
-            # Normalize pixel values
-            if self.floating_model:
-                input_data = (np.float32(input_data) - self.input_mean) / self.input_std
-            else:
-                input_data = np.uint8(input_data)
-
-            # Run inference
-            self.interpreter.set_tensor(self.input_details[0]["index"], input_data)
-            start_time = time.time()
-            self.interpreter.invoke()
-            inference_time = time.time() - start_time
-
-            # Get prediction results
-            output_data = self.interpreter.get_tensor(self.output_details[0]["index"])[0]
-
-            # Process results
-            detected_objects = []
-            top_k = 3  # Get top 3 predictions
-            
-            # Safety check: ensure output_data is valid
-            if len(output_data) == 0:
-                logger.warning("ML model produced empty output_data")
-                return []
-            
-            # Only consider indices that are valid for the output_data array
-            valid_indices = np.arange(len(output_data))
-            top_indices = np.argsort(-output_data)[:min(top_k, len(output_data))]
-            
-            # Additional safety check: ensure indices are within bounds
-            top_indices = top_indices[top_indices < len(output_data)]
-
-            for idx in top_indices:
-                try:
-                    # Double-check bounds before accessing array
-                    if idx >= len(output_data):
-                        logger.warning(f"Skipping out-of-bounds index {idx} (output_data size: {len(output_data)})")
-                        continue
-                        
-                    score = float(output_data[idx])
-                    
-                    # Only proceed if score meets threshold
-                    if score >= MIN_CONF_THRESHOLD:
-                        # Determine class name with bounds checking
-                        if idx < len(labels):
-                            class_name = labels[idx]
-                        else:
-                            # Log model/label mismatch for debugging
-                            logger.debug(f"Model index {idx} exceeds labels size {len(labels)}, using generic name")
-                            class_name = f"Class {idx}"
-
-                        detected_objects.append(
-                            {
-                                "name": class_name,
-                                "score": score,
-                                "type": "ml",
-                                "box": None,  # Add bounding box if available
-                            }
-                        )
-                except (IndexError, ValueError) as e:
-                    logger.error(f"Error processing ML detection index {idx}: {e}")
-                    continue
-
-            # Log performance
-            logger.debug("ML inference: %.2fs (%.1f FPS)", inference_time, 1 / inference_time)
-
-            return detected_objects
-
-        except (ValueError, RuntimeError, TypeError, IndexError, AttributeError) as e:
-            logger.error("Error in ML detection: %s", e)
-            logger.error(f"Model output shape: {output_data.shape if 'output_data' in locals() else 'unknown'}")
-            logger.error(f"Labels count: {len(labels) if 'labels' in locals() else 'unknown'}")
-            return []
 
     def _detect_obstacles_opencv(self, frame) -> List[dict]:
         """Perform basic obstacle detection using OpenCV."""
