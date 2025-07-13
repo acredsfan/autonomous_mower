@@ -215,8 +215,11 @@ class ObstacleDetector:
                 logger.warning("YOLOv8 model not found at %s, skipping", YOLOV8_MODEL_PATH)
                 return
 
-            # Determine if we should use Coral based on model filename
-            use_coral = "_edgetpu" in os.path.basename(YOLOV8_MODEL_PATH).lower()
+            # Determine if we should use Coral based on USE_CORAL_ACCELERATOR and EDGE_TPU_MODEL_PATH
+            use_coral = os.getenv("USE_CORAL_ACCELERATOR", "True").lower() == "true" and os.getenv("EDGE_TPU_MODEL_PATH")
+            if not use_coral or not os.path.exists(os.getenv("EDGE_TPU_MODEL_PATH")):
+                logger.warning("Coral accelerator disabled due to configuration or invalid EDGE_TPU_MODEL_PATH")
+                use_coral = False
             logger.info("YOLOv8 model path: %s, use_coral: %s", YOLOV8_MODEL_PATH, use_coral)
 
             # Initialize detector

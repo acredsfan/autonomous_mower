@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
+import signal
 
 try:
     import board
@@ -42,6 +43,26 @@ SENSOR_DEFS = {
     # ToF sensors may transiently fail; treat as optional to avoid critical fallback
     "vl53l0x": {"cls": "VL53L0XSensors", "optional": True},
 }
+
+
+class TimeoutException(Exception):
+    pass
+
+
+def timeout(seconds=2):
+    def decorator(func):
+        def _handle_timeout(signum, frame):
+            raise TimeoutException(f"Function {func.__name__} timed out after {seconds}s")
+
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM, _handle_timeout)
+            signal.alarm(seconds)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+        return wrapper
+    return decorator
 
 
 class EnhancedSensorInterface(HardwareSensorInterface):
@@ -602,7 +623,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
                 # Read environmental data with individual error handling
                 try:
                     if self._sensors.get("bme280") is not None:
-                        bme_data = self._read_bme280()
+                        bme_data = timeout(seconds=1)(self._read_bme280)()
                         raw_sensor_outputs["bme280"] = bme_data if bme_data else {"status": "read_failed_empty"}
                         if bme_data:
                             sensor_data["environment"] = {
@@ -624,7 +645,7 @@ class EnhancedSensorInterface(HardwareSensorInterface):
 
                 # Read IMU data with individual error handling
                 try:
-                    imu_data = self._read_bno085()
+                    imu_data = timeout(seconds=1)(self._read_bno085)()
                     raw_sensor_outputs["bno085"] = imu_data if imu_data else {"status": "read_failed_empty"}
                     if imu_data:
                         sensor_data["imu"] = imu_data
