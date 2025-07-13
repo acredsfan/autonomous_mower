@@ -146,8 +146,9 @@ class ObstacleDetector:
             return None
 
         try:
-            # Import YOLOv8 detector class
+            # Import YOLOv8 detector class and check Coral availability
             from mower.obstacle_detection.yolov8_detector import YOLOv8TFLiteDetector
+            from mower.obstacle_detection.coral_utils import is_coral_detected
 
             model_path_to_use = ""
             use_coral_flag = False
@@ -157,25 +158,37 @@ class ObstacleDetector:
             EDGE_TPU_MODEL_PATH = os.getenv("EDGE_TPU_MODEL_PATH")
             YOLOV8_CPU_MODEL_PATH = YOLOV8_MODEL_PATH
 
-            if USE_CORAL_ACCELERATOR:
+            # Check if Coral is actually available before attempting to use it
+            coral_available = is_coral_detected() if USE_CORAL_ACCELERATOR else False
+
+
+
+            if USE_CORAL_ACCELERATOR and coral_available:
                 if EDGE_TPU_MODEL_PATH and os.path.exists(EDGE_TPU_MODEL_PATH):
                     model_path_to_use = EDGE_TPU_MODEL_PATH
                     use_coral_flag = True
-                    logger.info("Coral accelerator is enabled. Attempting to use Edge TPU model: %s", model_path_to_use)
+                    logger.info("🟢 Coral accelerator is available. Using Edge TPU model: %s", model_path_to_use)
                 else:
-                    logger.warning(f"USE_CORAL_ACCELERATOR is True, but model not found at EDGE_TPU_MODEL_PATH: {EDGE_TPU_MODEL_PATH}")
-                    logger.warning(f"Falling back to CPU model at: {YOLOV8_CPU_MODEL_PATH}")
+                    logger.warning("USE_CORAL_ACCELERATOR is True and Coral detected, but Edge TPU model not found at: %s", EDGE_TPU_MODEL_PATH)
+                    logger.warning("Falling back to CPU model at: %s", YOLOV8_CPU_MODEL_PATH)
                     model_path_to_use = YOLOV8_CPU_MODEL_PATH
-            else:
-                logger.info(f"Using CPU for inference with model: {YOLOV8_CPU_MODEL_PATH}")
+                    use_coral_flag = False
+            elif USE_CORAL_ACCELERATOR and not coral_available:
+                logger.warning("🟡 USE_CORAL_ACCELERATOR is True, but Coral TPU not detected or libraries unavailable")
+                logger.warning("Falling back to CPU model at: %s", YOLOV8_CPU_MODEL_PATH)
                 model_path_to_use = YOLOV8_CPU_MODEL_PATH
+                use_coral_flag = False
+            else:
+                logger.info("🔵 Using CPU for inference with model: %s", YOLOV8_CPU_MODEL_PATH)
+                model_path_to_use = YOLOV8_CPU_MODEL_PATH
+                use_coral_flag = False
 
             # Check if model exists
             if not os.path.exists(model_path_to_use):
                 logger.warning("YOLOv8 model not found at %s, skipping", model_path_to_use)
                 return None
 
-            logger.info("YOLOv8 model path: %s, use_coral: %s", model_path_to_use, use_coral_flag)
+            logger.info("🎯 FINAL DECISION - YOLOv8 model path: %s, use_coral: %s", model_path_to_use, use_coral_flag)
 
             # Initialize detector
             detector = YOLOv8TFLiteDetector(
