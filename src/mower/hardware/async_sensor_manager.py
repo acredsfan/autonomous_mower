@@ -565,9 +565,11 @@ class AsyncSensorManager:
                     voltage = battery_data.get("bus_voltage", 0.0)
                     current = battery_data.get("current", 0.0)
                     
-                    # Calculate percentage
-                    min_volt = float(os.getenv("BATTERY_MIN_VOLTAGE", "10.5"))
-                    max_volt = float(os.getenv("BATTERY_MAX_VOLTAGE", "14.6"))
+                    # Calculate percentage with comment stripping for .env values
+                    min_volt_str = os.getenv("BATTERY_MIN_VOLTAGE", "10.5")
+                    max_volt_str = os.getenv("BATTERY_MAX_VOLTAGE", "14.6")
+                    min_volt = float((min_volt_str or "10.5").split('#')[0].strip())
+                    max_volt = float((max_volt_str or "14.6").split('#')[0].strip())
                     
                     if voltage <= min_volt:
                         percentage = 0.0

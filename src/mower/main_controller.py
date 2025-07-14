@@ -229,28 +229,27 @@ class ResourceManager:
                 else:
                     logger.warning("Sensor interface initialization returned None")
                     self._resources["sensor_interface"] = None
-                    
             except Exception as e:
                 logger.error(f"Critical error in sensor interface setup: {e}")
                 self._resources["sensor_interface"] = None
                 
-            try:
-                self._resources["camera"] = hardware_registry.get_camera()
-                logger.info("Camera added to resources")
-            except Exception as e:
-                logger.warning(f"Failed to get camera: {e}")
+                try:
+                    self._resources["camera"] = hardware_registry.get_camera()
+                    logger.info("Camera added to resources")
+                except Exception as e:
+                    logger.warning(f"Failed to get camera: {e}")
                 
-            try:
-                blade_ctrl = hardware_registry.get_blade_controller()
-                self._resources["blade_controller"] = blade_ctrl
-                # Provide backward compatible key
-                self._resources["blade"] = blade_ctrl
-                logger.info("Blade controller added to resources")
-            except Exception as e:
-                logger.warning(f"Failed to get blade controller: {e}")
-            
-            logger.info("Hardware initialization complete with fallbacks for missing components")
-            return True
+                try:
+                    blade_ctrl = hardware_registry.get_blade_controller()
+                    self._resources["blade_controller"] = blade_ctrl
+                    # Provide backward compatible key
+                    self._resources["blade"] = blade_ctrl
+                    logger.info("Blade controller added to resources")
+                except Exception as e:
+                    logger.warning(f"Failed to get blade controller: {e}")
+                
+                logger.info("Hardware initialization complete with fallbacks for missing components")
+                return True
         except Exception as e:
             logger.error(f"Critical error during hardware initialization: {e}", exc_info=True)
             return False

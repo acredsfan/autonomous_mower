@@ -187,54 +187,87 @@ class EnhancedSensorInterface(HardwareSensorInterface):
             logging.info(f"INA3221 optional sensor unavailable: {exc}")
             self._sensors["ina3221"] = None
 
-        # Initialize other sensors with timeout protection
+        # Initialize BNO085 IMU with aggressive timeout to prevent service hanging
         try:
-            # BNO085 IMU with timeout protection
-            logging.info("Initializing BNO085 IMU sensor...")
+            import threading
+            import time
+            from mower.hardware.imu import BNO085Sensor
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError
             
-            def init_bno085_with_timeout():
-                start_time = time.monotonic()
-                timeout_duration = 10.0  # 10-second timeout
-                
+            logging.info("Initializing BNO085 IMU sensor with timeout protection...")
+            
+            def init_bno085():
+                """Initialize BNO085 in a separate thread for timeout control."""
+                return BNO085Sensor()
+            
+            # Use ThreadPoolExecutor with aggressive timeout to prevent hanging
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(init_bno085)
                 try:
-                    sensor = hardware_registry.get_bno085()
-                    elapsed = time.monotonic() - start_time
-                    if elapsed > timeout_duration:
-                        raise TimeoutError(f"BNO085 initialization timed out after {elapsed:.1f}s")
-                    return sensor
-                except Exception as e:
-                    elapsed = time.monotonic() - start_time
-                    if elapsed > timeout_duration:
-                        raise TimeoutError(f"BNO085 initialization timed out after {elapsed:.1f}s")
-                    raise e
-
-            try:
-                self._sensors["bno085"] = init_bno085_with_timeout()
-                if self._sensors["bno085"]:
+                    # 30-second timeout for BNO085 initialization
+                    self._sensors["bno085"] = future.result(timeout=30.0)
                     self._sensor_status["bno085"].working = True
-                    logging.info("BNO085 sensor initialized successfully")
-                else:
-                    logging.warning("BNO085 sensor returned None")
-            except TimeoutError as te:
-                logging.error(f"BNO085 IMU initialization timed out - marking as unavailable: {te}")
-                self._sensors["bno085"] = None
-            except Exception as e:
-                logging.error(f"BNO085 IMU initialization failed: {e}")
-                self._sensors["bno085"] = None
-        except Exception as e:
-            logging.error(f"Failed to set up BNO085 timeout protection: {e}")
+                    logging.info("BNO085 IMU initialized successfully")
+                except TimeoutError:
+                    logging.error("BNO085 IMU initialization timed out after 30 seconds")
+                    logging.warning("BNO085: Known issue with Adafruit library reset sequence hanging")
+                    logging.info("BNO085: IMU sensor will be unavailable - service can run without IMU data")
+                    
+                    # CRITICAL: Aggressive cleanup to prevent hanging threads from blocking subsequent initialization
+                    logging.info("BNO085: Performing aggressive thread cleanup to ensure VL53L0X initialization proceeds...")
+                    future.cancel()  # Cancel the future
+                    
+                    # Force cleanup any lingering background threads from BNO085 initialization
+                    active_threads_before = threading.active_count()
+                    time.sleep(2.0)  # Brief pause to allow normal cleanup
+                    active_threads_after = threading.active_count()
+                    
+                    if active_threads_after >= active_threads_before:
+                        logging.warning(f"BNO085: {active_threads_after} threads still active after timeout - forcing cleanup")
+                        # Additional cleanup time for stubborn threads
+                        time.sleep(3.0)
+                    
+                    self._sensors["bno085"] = None
+                    self._sensor_status["bno085"].working = False
+                    logging.info("BNO085: Thread cleanup completed, proceeding to next sensor...")
+        except Exception as exc:
+            logging.warning(f"BNO085 IMU sensor initialization failed: {exc}")
+            logging.info("BNO085: IMU sensor will be unavailable - service can run without IMU data")
             self._sensors["bno085"] = None
+            self._sensor_status["bno085"].working = False
 
-        # VL53L0X ToF sensors
+        # VL53L0X ToF sensors with timeout protection
         try:
+            logging.info("=== BNO085 CLEANUP COMPLETE - STARTING VL53L0X INITIALIZATION ===")
             logging.info("Initializing VL53L0X ToF sensors...")
-            self._sensors["vl53l0x"] = hardware_registry.get_vl53l0x()
-            if self._sensors["vl53l0x"]:
-                self._sensor_status["vl53l0x"].working = True
-                logging.info("VL53L0X sensors initialized successfully")
+            
+            def init_vl53l0x():
+                """Initialize VL53L0X in a separate thread for timeout control."""
+                return hardware_registry.get_vl53l0x()
+            
+            # Use ThreadPoolExecutor with timeout to prevent hanging
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(init_vl53l0x)
+                try:
+                    # 15-second timeout for VL53L0X initialization
+                    self._sensors["vl53l0x"] = future.result(timeout=15.0)
+                    if self._sensors["vl53l0x"]:
+                        self._sensor_status["vl53l0x"].working = True
+                        logging.info("VL53L0X sensors initialized successfully")
+                    else:
+                        logging.info("VL53L0X sensors returned None - not available")
+                        self._sensor_status["vl53l0x"].working = False
+                except TimeoutError:
+                    logging.error("VL53L0X sensor initialization timed out after 15 seconds")
+                    logging.warning("VL53L0X: I2C communication may be hanging")
+                    logging.info("VL53L0X: ToF sensors will be unavailable - service can run without ToF data")
+                    self._sensors["vl53l0x"] = None
+                    self._sensor_status["vl53l0x"].working = False
         except Exception as e:
             logging.error(f"VL53L0X sensor initialization failed: {e}")
+            logging.info("VL53L0X: ToF sensors will be unavailable - service can run without ToF data")
             self._sensors["vl53l0x"] = None
+            self._sensor_status["vl53l0x"].working = False
 
     def start(self) -> None:
         """Start the sensor interface."""

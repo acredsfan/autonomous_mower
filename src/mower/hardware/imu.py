@@ -25,6 +25,7 @@ import platform
 import random
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from enum import Enum
 from typing import Any, Dict, Tuple
 
@@ -70,7 +71,7 @@ load_dotenv()
 # Get the UART port from the environment variables - support both UART_PORT and IMU_SERIAL_PORT for compatibility
 UART_PORT = os.getenv("UART_PORT", os.getenv("IMU_SERIAL_PORT", "/dev/ttyAMA4"))
 IMU_SERIAL_PORT = UART_PORT  # Maintain backward compatibility
-IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "3000000"))
+IMU_BAUDRATE = int(os.getenv("IMU_BAUD_RATE", "115200"))
 RECEIVER_BUFFER_SIZE = 2048  # Size of the receiver buffer for serial comms.
 IMU_INIT_TIMEOUT_S = 15.0  # Timeout for IMU hardware initialization in seconds
 
@@ -158,24 +159,36 @@ class BNO085Sensor(IMUSensorInterface):
         if platform.system() == "Linux" and HARDWARE_AVAILABLE:
             # Use direct initialization with timeout instead of problematic threading
             start_time = time.monotonic()
+            max_init_time = IMU_INIT_TIMEOUT_S
+            
             try:
                 logger.debug(f"IMU: Attempting to initialize IMU on port {IMU_SERIAL_PORT} at {IMU_BAUDRATE} baud.")
                 
-                # Initialize with timeout check
-                while time.monotonic() - start_time < IMU_INIT_TIMEOUT_S:
+                # Initialize with timeout check and faster retry cycle
+                while time.monotonic() - start_time < max_init_time:
                     try:
+                        # Add timeout check within initialization attempt
                         self._perform_imu_hardware_init_attempt()
-                        break  # Success - exit retry loop
+                        
+                        # If we get here, initialization succeeded
+                        if self.is_hardware_available:
+                            logger.info(f"IMU: Hardware initialization completed successfully in {time.monotonic() - start_time:.2f}s")
+                            break
+                        else:
+                            logger.warning("IMU: Hardware initialization attempt completed but hardware not available")
+                            
                     except Exception as e:
-                        if time.monotonic() - start_time >= IMU_INIT_TIMEOUT_S:
-                            logger.error(f"IMU hardware initialization timed out after {IMU_INIT_TIMEOUT_S}s: {e}")
+                        elapsed = time.monotonic() - start_time
+                        if elapsed >= max_init_time:
+                            logger.error(f"IMU hardware initialization timed out after {elapsed:.2f}s: {e}")
                             self.is_hardware_available = False
                             self.sensor = None
                             break
-                        time.sleep(0.1)  # Brief pause before retry
+                        logger.debug(f"IMU init attempt failed ({elapsed:.1f}s elapsed), retrying: {e}")
+                        time.sleep(0.5)  # Brief pause before retry
                         
                 if not self.is_hardware_available:
-                    logger.error("IMU hardware initialization failed. IMU will be unavailable.")
+                    logger.error(f"IMU hardware initialization failed after {max_init_time}s timeout. IMU will be unavailable.")
                     
             except Exception as e:
                 logger.error(f"IMU initialization failed with exception: {e}")
@@ -256,34 +269,122 @@ class BNO085Sensor(IMUSensorInterface):
             # Assign to self.serial_port_wrapper only after successful open and start
             self.serial_port_wrapper = current_attempt_serial_wrapper
 
-            if BNO08X_UART:
-                logger.debug("IMU: Creating BNO08X_UART instance...")
-                self.sensor = BNO08X_UART(self.serial_port_wrapper.ser, debug=False)
-                logger.debug("IMU: BNO08X_UART instance created successfully")
-            else:
-                logger.error("IMU Init Thread: BNO08X_UART library not available.")
-                raise ImportError("BNO08X_UART not available")
+            # Initialize the BNO08X_UART sensor now that the serial port is successfully opened and started
+            try:
+                if BNO08X_UART is None:
+                    logger.error("IMU Init Thread: BNO08X_UART class not available (adafruit_bno08x.uart import failed)")
+                    raise ImportError("BNO08X_UART not available")
 
-            logger.debug("IMU Init Thread: Enabling BNO reports for IMU.")
-            if adafruit_bno08x:
-                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ACCELEROMETER)
-                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_GYROSCOPE)
-                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_MAGNETOMETER)
-                self.sensor.enable_feature(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR)
-                # Set report intervals - commented out as they may cause issues
-                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_ACCELEROMETER, 100000)  # 100ms
-                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_GYROSCOPE, 100000)  # 100ms
-                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_MAGNETOMETER, 100000)  # 100ms
-                # self.sensor.set_report_interval(adafruit_bno08x.BNO_REPORT_ROTATION_VECTOR, 100000)  # 100ms
-            else:
-                logger.warning(
-                    "IMU Init Thread: Could not enable reports "
-                    "(adafruit_bno08x missing)."
-                )
-                # Depending on how critical this feature is, you might want to raise an error here.
+                logger.debug("IMU Init Thread: Creating BNO08X_UART instance...")
+                
+                # Clear serial buffers before BNO08X_UART initialization to help with reset issues
+                try:
+                    self.serial_port_wrapper.ser.reset_input_buffer()
+                    self.serial_port_wrapper.ser.reset_output_buffer()
+                    logger.debug("IMU Init Thread: Serial buffers cleared before BNO08X_UART init")
+                except Exception as buffer_e:
+                    logger.warning(f"IMU Init Thread: Could not clear serial buffers: {buffer_e}")
+                
+                # Try multiple approaches for BNO08X_UART initialization
+                # Approach 1: Standard initialization with shorter timeout  
+                logger.debug("IMU Init Thread: Attempt 1 - Standard BNO08X_UART initialization...")
+                
+                def create_bno08x_sensor_standard():
+                    """Standard BNO08X_UART creation."""
+                    return BNO08X_UART(uart=self.serial_port_wrapper.ser, debug=False)
+                
+                # Use ThreadPoolExecutor with shorter timeout for first attempt
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(create_bno08x_sensor_standard)
+                    try:
+                        # Short timeout for first attempt
+                        self.sensor = future.result(timeout=5.0)
+                        
+                        if self.sensor is None:
+                            logger.error("IMU Init Thread: BNO08X_UART constructor returned None!")
+                            raise RuntimeError("BNO08X_UART constructor returned None")
+                        
+                        logger.info("IMU Init Thread: BNO08X_UART instance created successfully (standard approach)")
+                        
+                    except TimeoutError:
+                        logger.warning("IMU Init Thread: Standard approach timed out after 5 seconds")
+                        logger.info("IMU Init Thread: Attempting recovery approach...")
+                        
+                        # Approach 2: Close and reopen serial port before retry
+                        try:
+                            logger.debug("IMU Init Thread: Closing serial port for reset...")
+                            self.serial_port_wrapper.ser.close()
+                            time.sleep(0.5)  # Brief pause
+                            
+                            # Reopen serial port
+                            logger.debug("IMU Init Thread: Reopening serial port...")
+                            self.serial_port_wrapper.ser.open()
+                            self.serial_port_wrapper.ser.reset_input_buffer()
+                            self.serial_port_wrapper.ser.reset_output_buffer()
+                            time.sleep(0.2)
+                            
+                            # Try BNO08X_UART again with fresh serial connection
+                            def create_bno08x_sensor_retry():
+                                """Retry BNO08X_UART creation with fresh serial port."""
+                                return BNO08X_UART(uart=self.serial_port_wrapper.ser, debug=False)
+                            
+                            with ThreadPoolExecutor(max_workers=1) as retry_executor:
+                                retry_future = retry_executor.submit(create_bno08x_sensor_retry)
+                                try:
+                                    # Longer timeout for retry attempt
+                                    self.sensor = retry_future.result(timeout=8.0)
+                                    
+                                    if self.sensor is None:
+                                        logger.error("IMU Init Thread: BNO08X_UART retry returned None!")
+                                        raise RuntimeError("BNO08X_UART retry returned None")
+                                    
+                                    logger.info("IMU Init Thread: BNO08X_UART instance created successfully (retry approach)")
+                                    
+                                except TimeoutError:
+                                    logger.error("IMU Init Thread: Both BNO08X_UART attempts timed out")
+                                    logger.error("This indicates a persistent issue with the BNO085 reset sequence")
+                                    logger.error("Possible causes:")
+                                    logger.error("  - Hardware reset pin not properly managed")
+                                    logger.error("  - Power supply issues during reset")
+                                    logger.error("  - UART timing issues")
+                                    logger.error("  - BNO085 firmware corruption")
+                                    raise RuntimeError("BNO08X_UART initialization failed - reset sequence hanging")
+                                    
+                        except Exception as retry_e:
+                            logger.error(f"IMU Init Thread: Serial port recovery failed: {retry_e}")
+                            raise RuntimeError(f"BNO08X_UART initialization failed: {retry_e}")
+                self.is_hardware_available = True
+                
+                # Enable the features we're interested in
+                logger.debug("IMU Init Thread: Enabling rotation vector and calibration features...")
+                
+                # Enhanced feature enabling with timeout protection
+                try:
+                    executor = ThreadPoolExecutor(max_workers=1)
+                    
+                    def enable_features():
+                        self.sensor.enable_feature(BNO_REPORT_ROTATION_VECTOR)
+                        self.sensor.enable_feature(BNO_REPORT_CALIBRATION_STATUS)
+                        logger.debug("IMU Init Thread: Enabled rotation vector and calibration features")
 
-            self.is_hardware_available = True
-            logger.info("IMU Init Thread: BNO085 IMU sensor initialized successfully using BNO08X_UART.")
+                    # Execute with timeout
+                    future = executor.submit(enable_features)
+                    future.result(timeout=3.0)  # 3-second timeout for feature enabling
+                    
+                except TimeoutError:
+                    logger.warning("IMU Init Thread: Feature enabling timed out after 3s - continuing anyway")
+                except Exception as e:
+                    logger.warning(f"IMU Init Thread: Feature enabling failed: {e} - continuing anyway")
+                finally:
+                    executor.shutdown(wait=False)
+
+                logger.info("IMU Init Thread: BNO085 IMU sensor initialization completed successfully")
+
+            except Exception as e_sensor:
+                logger.error(f"IMU Init Thread: Failed to create BNO08X_UART instance: {type(e_sensor).__name__}: {e_sensor}", exc_info=True)
+                self.sensor = None
+                self.is_hardware_available = False
+                # Don't raise here, just mark as unavailable and continue
 
         except Exception as e_init:
             error_type = type(e_init).__name__
