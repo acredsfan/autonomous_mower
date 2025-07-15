@@ -50,12 +50,9 @@ from dotenv import load_dotenv
 from mower.config_management import initialize_config_manager
 from mower.config_management.config_manager import get_config
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
-# from mower.hardware.hardware_registry import get_hardware_registry # MOVING THIS IMPORT
-# Added missing imports as per bug report
 from mower.hardware.async_sensor_manager import AsyncSensorInterface
-from mower.hardware.shared_sensor_data import get_shared_sensor_manager
+#  from mower.hardware.shared_sensor_data import get_shared_sensor_manager
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
-from mower.hardware.ina3221 import INA3221Sensor
 from mower.hardware.serial_port import SerialPort
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController

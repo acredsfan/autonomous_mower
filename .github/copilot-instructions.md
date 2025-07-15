@@ -50,11 +50,11 @@
 - **Deployment:** Runs as systemd service, uses `copy_logs.py` for log access (never raw journalctl)
 
 ### Hardware Communication:
-- **GPIO:** gpiozero (preferred), RPi.GPIO (fine control), BCM pin numbering default
+- **GPIO:** digitalio library only.  RPi.GPIO and pigpio are deprecated, rpi-lgpio is preferred for simple GPIO tasks.
 - **I2C:** smbus2, typically bus 1, define address constants, wrap in IOError handling  
 - **Serial:** pyserial, check correct port (/dev/ttyS0, /dev/ttyAMA0, /dev/ttyUSB0)
 - **Camera:** picamera2 (RPi modules), cv2.VideoCapture (USB webcams)
-- **PWM:** gpiozero PWMOutputDevice, RPi.GPIO PWM, or pigpio for precision
+- **PWM:** gpiozero.PWMOutputDevice for PWM control, use set_duty_cycle() method
 
 ### Logging & Errors:
 - Use Python logging module with hardware context (operation, pin/bus, device address, parameters)
