@@ -563,6 +563,15 @@ sudo journalctl -u autonomous-mower -n 50 --no-pager
 python3 -m mower.diagnostics.hardware_test --non-interactive --verbose
 ```
 
+4. Test sensor reliability:
+
+```bash
+# Run comprehensive sensor reliability test
+python3 test_sensor_reliability.py
+```
+
+This test evaluates sensor consistency over 30 seconds and provides detailed statistics on sensor performance, including success rates and operational status.
+
 ### Camera Issues
 
 1. Check camera connection and enable:

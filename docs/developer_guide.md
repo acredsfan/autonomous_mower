@@ -217,6 +217,27 @@ pytest --cov=mower
 pytest -v
 ```
 
+### Hardware Reliability Testing
+
+For testing sensor reliability and hardware performance:
+
+```bash
+# Run comprehensive sensor reliability test
+python3 test_sensor_reliability.py
+```
+
+This test provides:
+- Real-time sensor performance monitoring
+- Success rate calculations for each sensor
+- Detailed statistics and reliability assessment
+- Automatic 30-second test duration with timeout handling
+
+The test is particularly useful for:
+- Validating sensor improvements and fixes
+- Diagnosing intermittent sensor issues
+- Establishing baseline performance metrics
+- Verifying hardware setup after installation
+
 ### Writing Tests
 
 - Place tests in the appropriate directory based on the type of test
@@ -308,8 +329,10 @@ All pull requests will be reviewed by at least one maintainer. The review proces
 
 ## Resources
 
-- [API Documentation](api/index.md)
-- [User Guides](user_guides/index.md)
-- [Troubleshooting Guides](troubleshooting/index.md)
+- [Testing Documentation](testing.md) - Comprehensive testing strategies and tools
+- [Sensor Testing Guide](sensor_testing.md) - Detailed sensor diagnostics and reliability testing
+- [System Architecture](system_architecture.md) - High-level system overview
+- [User Guides](user_guides/index.md) - End-user documentation
+- [Troubleshooting Guides](troubleshooting/index.md) - Problem resolution guides
 - [GitHub Repository](https://github.com/yourusername/autonomous_mower)
 - [Issue Tracker](https://github.com/yourusername/autonomous_mower/issues)

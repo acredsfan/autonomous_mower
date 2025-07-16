@@ -10,9 +10,11 @@ import logging
 import time
 import os
 import platform
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, Any, Optional
+from enum import Enum
 
 # Hardware imports - conditional on platform
 if platform.system() == "Linux":
@@ -169,11 +171,14 @@ class AsyncSensorManager:
         status.state = SensorState.INITIALIZING
         try:
             logger.info("Initializing BME280...")
-            sensor = await self._run_in_executor(BME280Sensor, i2c_bus)
-            self._sensors["bme280"] = sensor
-            status.state = SensorState.OPERATIONAL
-            status.is_hardware_available = True
-            logger.info("BME280 initialized successfully.")
+            sensor = await self._run_in_executor(BME280Sensor._initialize, i2c_bus)
+            if sensor:
+                self._sensors["bme280"] = sensor
+                status.state = SensorState.OPERATIONAL
+                status.is_hardware_available = True
+                logger.info("BME280 initialized successfully.")
+            else:
+                raise RuntimeError("BME280 initialization returned None")
         except Exception as e:
             status.state = SensorState.FAILED
             status.last_error = str(e)
@@ -186,11 +191,14 @@ class AsyncSensorManager:
         status.state = SensorState.INITIALIZING
         try:
             logger.info("Initializing INA3221...")
-            sensor = await self._run_in_executor(INA3221Sensor.init_ina3221, i2c_bus)
-            self._sensors["ina3221"] = sensor
-            status.state = SensorState.OPERATIONAL
-            status.is_hardware_available = True
-            logger.info("INA3221 (Power) initialized successfully.")
+            sensor = await self._run_in_executor(INA3221Sensor.init_ina3221)
+            if sensor:
+                self._sensors["ina3221"] = sensor
+                status.state = SensorState.OPERATIONAL
+                status.is_hardware_available = True
+                logger.info("INA3221 (Power) initialized successfully.")
+            else:
+                raise RuntimeError("INA3221 initialization returned None")
         except Exception as e:
             status.state = SensorState.FAILED
             status.last_error = str(e)
@@ -198,12 +206,15 @@ class AsyncSensorManager:
 
     async def _initialize_tof(self, i2c_bus):
         """Initialize the VL53L0X Time-of-Flight sensors."""
-        if not i2c_bus: return
+        if not i2c_bus: 
+            logger.warning("No I2C bus available for ToF sensors")
+            return
         status = self._sensor_status["tof"]
         status.state = SensorState.INITIALIZING
         try:
             logger.info("Initializing ToF...")
-            sensor = await self._run_in_executor(VL53L0XSensors, i2c_bus)
+            # Pass the I2C bus to the ToF sensor constructor
+            sensor = await self._run_in_executor(lambda: VL53L0XSensors(i2c_bus=i2c_bus, simulate=self.simulate))
             if sensor.is_hardware_available:
                 self._sensors["tof"] = sensor
                 status.state = SensorState.OPERATIONAL

@@ -51,7 +51,7 @@ from mower.config_management import initialize_config_manager
 from mower.config_management.config_manager import get_config
 from mower.config_management.constants import CONFIG_DIR as APP_CONFIG_DIR
 from mower.hardware.async_sensor_manager import AsyncSensorInterface
-#  from mower.hardware.shared_sensor_data import get_shared_sensor_manager
+from mower.hardware.shared_sensor_data import get_shared_sensor_manager
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.hardware.serial_port import SerialPort
 from mower.navigation.localization import Localization
@@ -157,6 +157,13 @@ class ResourceManager:
         self.current_state = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config - UPDATED to use APP_CONFIG_DIR
         self.user_polygon_path = APP_CONFIG_DIR / "user_polygon.json"
+        
+        # Set simulation mode based on environment/config
+        use_simulation_env = os.environ.get("USE_SIMULATION", "").lower()
+        use_simulation_config = get_config("hardware.use_simulation", False)
+        self.simulate = (platform.system() == "Windows" or 
+                        use_simulation_env in ("true", "1", "yes") or 
+                        use_simulation_config)
 
         # Watchdog attributes
         self._watchdog_thread: Optional[threading.Thread] = None
@@ -214,20 +221,21 @@ class ResourceManager:
                 logger.warning(f"Failed to get motor driver: {e}")
                 
             try:
-                # Initialize sensor interface with enhanced error handling
-                logger.info("Initializing sensor interface...")
+                # Initialize async sensor interface with enhanced error handling
+                logger.info("Initializing async sensor interface...")
                 
-                from mower.hardware.sensor_interface import get_sensor_interface
-                sensor_interface = get_sensor_interface()
+                from mower.hardware.async_sensor_manager import AsyncSensorInterface
+                sensor_interface = AsyncSensorInterface(simulate=self.simulate if hasattr(self, 'simulate') else False)
+                sensor_interface.start()
                 
                 if sensor_interface:
                     self._resources["sensor_interface"] = sensor_interface
-                    logger.info("Sensor interface initialized successfully")
+                    logger.info("Async sensor interface initialized successfully")
                 else:
-                    logger.warning("Sensor interface initialization returned None")
+                    logger.warning("Async sensor interface initialization returned None")
                     self._resources["sensor_interface"] = None
             except Exception as e:
-                logger.error(f"Critical error in sensor interface setup: {e}")
+                logger.error(f"Critical error in async sensor interface setup: {e}")
                 self._resources["sensor_interface"] = None
                 
                 try:
@@ -313,7 +321,8 @@ class ResourceManager:
                     from mower.navigation.gps import GpsLatestPosition
                     gps_latest_position = GpsLatestPosition(gps_position_instance=gps_service.gps_position)
                     
-                    sensor_if = hardware_registry.get_sensor_interface()
+                    # Use the new async sensor interface
+                    sensor_if = self._resources.get("sensor_interface")
                     if gps_latest_position and sensor_if:
                         # Pass self as resource_manager for safety validation
                         self._resources["navigation"] = NavigationController(
@@ -322,7 +331,7 @@ class ResourceManager:
                             debug=False, 
                             resource_manager=self
                         )
-                        logger.info("Navigation controller initialized successfully with safety validation")
+                        logger.info("Navigation controller initialized successfully with async sensor interface")
                     else:
                         missing_items = []
                         if not gps_latest_position:
