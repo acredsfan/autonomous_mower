@@ -10,6 +10,7 @@ import logging
 import sys
 import traceback
 from contextlib import contextmanager
+from types import TracebackType
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, cast
 
 from mower.error_handling.error_codes import ErrorCode
@@ -197,7 +198,7 @@ def install_global_exception_handler():
     def global_exception_handler(
         exc_type: Type[BaseException],
         exc_value: BaseException,
-        exc_traceback: Optional[traceback.TracebackType],
+        exc_traceback: Optional[TracebackType],
     ):
         # Skip if it's a KeyboardInterrupt
         if issubclass(exc_type, KeyboardInterrupt):

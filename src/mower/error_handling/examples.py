@@ -1,318 +1,417 @@
 """
-Examples of using the error handling system.
+Examples of using circuit breaker patterns with hardware interfaces.
 
-This module provides examples of how to use the error handling system
-in various scenarios. These examples can be used as templates for
-implementing consistent error handling patterns throughout the codebase.
+This module demonstrates how to apply circuit breaker decorators to hardware
+operations to improve system reliability and fault tolerance. It showcases
+different specialized circuit breaker decorators for various hardware components.
 """
 
+import asyncio
 import logging
+import random
 import time
 from typing import Any, Dict, List, Optional
 
-from mower.error_handling import (
-    ErrorCode,
-    HardwareError,
-    MowerError,
-    NavigationError,
-    error_context,
-    get_error_reporter,
-    report_error,
-    safe_call,
-    with_error_handling,
+from mower.error_handling.circuit_breaker import (
+    CircuitBreakerOpenError,
+    circuit_breaker,
+    get_circuit_breaker_manager,
+    hardware_circuit_breaker,
+    i2c_circuit_breaker,
+    motor_circuit_breaker,
+    sensor_circuit_breaker,
 )
+from mower.error_handling.exceptions import HardwareError
+
+logger = logging.getLogger(__name__)
 
 
-# Example 1: Basic error handling
-def example_basic_error_handling():
-    """Example of basic error handling."""
-    try:
-        # Some code that might raise an exception
-        result = 1 / 0  # This will raise a ZeroDivisionError
-    except Exception as e:
-        # Convert to a MowerError with an appropriate error code
-        error = MowerError.from_exception(
-            e,
-            ErrorCode.SOFTWARE_ALGORITHM_ERROR,
-            context={"operation": "division"},
-        )
-        # Report the error
-        report_error(error)
-        # Handle the error appropriately
-        print(f"Error occurred: {error}")
-
-
-# Example 2: Using decorators
-@with_error_handling(error_code=ErrorCode.HARDWARE_SENSOR_FAILURE)
-def read_sensor(sensor_id: str) -> float:
+class ExampleSensorInterface:
     """
-    Example of using the with_error_handling decorator.
-
-    Args:
-        sensor_id: ID of the sensor to read
-
-    Returns:
-        float: Sensor reading
+    Example sensor interface demonstrating circuit breaker usage.
+    
+    This class shows how to apply circuit breaker decorators to hardware
+    operations that may fail due to I2C communication issues, sensor
+    malfunctions, or other hardware-related problems.
     """
-    # Simulate a sensor reading
-    if sensor_id == "temperature":
-        return 25.0
-    elif sensor_id == "humidity":
-        return 50.0
-    else:
-        # This will be caught by the decorator
-        raise ValueError(f"Unknown sensor: {sensor_id}")
-
-
-# Example 3: Using context managers
-def example_context_manager():
-    """Example of using the error_context context manager."""
-    try:
-        with error_context(
-            error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST,
-            context={"source": "example"},
-        ):
-            # Simulate a GPS error
-            raise TimeoutError("GPS timeout")
-    except MowerError as e:
-        # This will catch the converted error
-        print(f"Caught error: {e}")
-
-
-# Example 4: Safe function calls
-def example_safe_call():
-    """Example of using the safe_call function."""
-
-    # Define a function that might raise an exception
-    def might_fail(x: int) -> int:
-        if x == 0:
-            raise ValueError("Cannot process zero")
-        return 100 // x
-
-    # Call the function safely
-    result = safe_call(
-        might_fail,
-        0,  # This will cause an error
-        error_code=ErrorCode.SOFTWARE_ALGORITHM_ERROR,
-        default_value=-1,
+    
+    def __init__(self, sensor_name: str = "example_sensor"):
+        self.sensor_name = sensor_name
+        self.is_initialized = False
+        self._last_reading = None
+        self._failure_count = 0
+    
+    @sensor_circuit_breaker(
+        name="sensor_initialization",
+        failure_threshold=2,
+        timeout=30.0
     )
-
-    print(f"Result: {result}")  # Will print -1
-
-
-# Example 5: Custom error handlers
-def example_custom_error_handler():
-    """Example of using custom error handlers."""
-
-    # Define a custom error handler
-    def custom_handler(error: MowerError):
-        print(f"Custom handler received error: {error}")
-        if error.error_code and error.error_code.is_critical:
-            print("This is a critical error!")
-
-    # Register the error handler
-    reporter = get_error_reporter()
-    reporter.register_error_handler("custom", custom_handler)
-
-    # Raise an error that will be handled by the custom handler
-    try:
-        raise HardwareError(
-            "Battery critically low",
-            error_code=ErrorCode.HARDWARE_BATTERY_CRITICAL,
-        )
-    except MowerError as e:
-        report_error(e)
-
-    # Unregister the handler when done
-    reporter.unregister_error_handler("custom")
-
-
-# Example 6: Hardware component with error handling
-class SensorComponent:
-    """Example of a hardware component with error handling."""
-
-    def __init__(self, sensor_id: str):
-        """
-        Initialize the sensor component.
-
-        Args:
-            sensor_id: ID of the sensor
-        """
-        self.sensor_id = sensor_id
-        self.last_reading: Optional[float] = None
-        self.error_count = 0
-        self.max_errors = 3
-
-    @with_error_handling(error_code=ErrorCode.HARDWARE_SENSOR_FAILURE)
     def initialize(self) -> bool:
         """
-        Initialize the sensor.
-
+        Initialize the sensor with circuit breaker protection.
+        
         Returns:
-            bool: True if initialization was successful
+            bool: True if initialization successful
+            
+        Raises:
+            HardwareError: If sensor initialization fails
         """
-        print(f"Initializing sensor {self.sensor_id}")
-        # Simulate initialization
-        if self.sensor_id == "broken":
-            raise HardwareError(
-                f"Failed to initialize sensor {self.sensor_id}",
-                error_code=ErrorCode.HARDWARE_INITIALIZATION_FAILED,
-            )
+        logger.info(f"Initializing {self.sensor_name}")
+        
+        # Simulate potential I2C communication failure
+        if self._failure_count < 2:
+            self._failure_count += 1
+            raise HardwareError(f"Failed to initialize {self.sensor_name}")
+        
+        self.is_initialized = True
+        logger.info(f"{self.sensor_name} initialized successfully")
+        return True   
+ 
+    @sensor_circuit_breaker(
+        name="sensor_reading",
+        failure_threshold=3,
+        timeout=15.0,
+        fallback=lambda: {"timestamp": time.time(), "value": None, "status": "fallback", "sensor": "fallback_sensor"}
+    )
+    def read_sensor(self) -> Dict[str, Any]:
+        """
+        Read sensor data with circuit breaker protection.
+        
+        Returns:
+            Dict[str, Any]: Sensor reading data
+            
+        Raises:
+            HardwareError: If sensor reading fails
+        """
+        if not self.is_initialized:
+            raise HardwareError(f"{self.sensor_name} not initialized")
+        
+        # Simulate intermittent sensor reading failures
+        if random.random() < 0.3:  # 30% failure rate for demonstration
+            raise HardwareError(f"Failed to read from {self.sensor_name}")
+        
+        # Simulate successful reading
+        reading = {
+            "timestamp": time.time(),
+            "value": random.uniform(0, 100),
+            "status": "ok",
+            "sensor": self.sensor_name
+        }
+        
+        self._last_reading = reading
+        return reading
+        
+    @i2c_circuit_breaker(
+        name="sensor_calibration",
+        failure_threshold=2,
+        timeout=45.0
+    )
+    def calibrate(self) -> bool:
+        """
+        Calibrate the sensor with I2C circuit breaker protection.
+        
+        Returns:
+            bool: True if calibration successful
+            
+        Raises:
+            HardwareError: If sensor calibration fails
+        """
+        logger.info(f"Calibrating {self.sensor_name}")
+        
+        # Simulate I2C bus contention or timing issues
+        if random.random() < 0.4:  # 40% failure rate
+            raise HardwareError(f"I2C bus error during calibration of {self.sensor_name}")
+        
+        logger.info(f"{self.sensor_name} calibrated successfully")
         return True
-
-    def read(self) -> Optional[float]:
+        
+    async def async_read_sensor(self) -> Dict[str, Any]:
         """
-        Read the sensor value.
-
+        Asynchronous sensor reading with circuit breaker protection.
+        
         Returns:
-            Optional[float]: Sensor reading or None if error
+            Dict[str, Any]: Sensor reading data
         """
+        # Get the circuit breaker manager and create a breaker for this method
+        manager = get_circuit_breaker_manager()
+        breaker = manager.create_breaker(
+            name=f"{self.sensor_name}_async_read",
+            failure_threshold=3,
+            timeout=10.0,
+            expected_exception=(HardwareError, OSError, IOError),
+            failure_window=30.0
+        )
+        
         try:
-            with error_context(
-                error_code=ErrorCode.HARDWARE_SENSOR_FAILURE,
-                context={"sensor_id": self.sensor_id},
-            ):
-                # Simulate reading
-                if self.sensor_id == "broken":
-                    self.error_count += 1
-                    if self.error_count > self.max_errors:
-                        raise HardwareError(
-                            f"Sensor {self.sensor_id} failed too many times",
-                            error_code=ErrorCode.HARDWARE_SENSOR_FAILURE,
-                        )
-                    raise ValueError("Sensor reading failed")
-
-                # Simulate successful reading
-                reading = 25.0 + (time.time() % 10)
-                self.last_reading = reading
-                return reading
-        except MowerError:
-            # Already handled by error_context
-            return None
-
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Get the sensor status.
-
-        Returns:
-            Dict[str, Any]: Sensor status
-        """
+            # Use the circuit breaker to protect the async operation
+            return await breaker.call_async(self._async_read_impl)
+        except CircuitBreakerOpenError:
+            logger.warning(f"Circuit open for {self.sensor_name} async read, returning default value")
+            return {
+                "timestamp": time.time(),
+                "value": None,
+                "status": "circuit_open",
+                "sensor": self.sensor_name
+            }
+    
+    async def _async_read_impl(self) -> Dict[str, Any]:
+        """Implementation of async sensor reading."""
+        await asyncio.sleep(0.1)  # Simulate I/O operation
+        
+        if not self.is_initialized:
+            raise HardwareError(f"{self.sensor_name} not initialized")
+        
+        # Simulate intermittent failures
+        if random.random() < 0.3:
+            raise HardwareError(f"Async read failed for {self.sensor_name}")
+        
         return {
-            "sensor_id": self.sensor_id,
-            "last_reading": self.last_reading,
-            "error_count": self.error_count,
-            "status": "error" if self.error_count > 0 else "ok",
+            "timestamp": time.time(),
+            "value": random.uniform(0, 100),
+            "status": "ok",
+            "sensor": self.sensor_name
         }
 
 
-# Example 7: Navigation component with error handling
-class NavigationComponent:
-    """Example of a navigation component with error handling."""
-
-    def __init__(self):
-        """Initialize the navigation component."""
-        self.position = (0.0, 0.0)
-        self.heading = 0.0
-        self.waypoints: List[tuple] = []
-
-    @with_error_handling(error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST)
-    def get_position(self) -> tuple:
+class ExampleMotorController:
+    """
+    Example motor controller demonstrating circuit breaker usage for actuators.
+    
+    This class shows how to apply specialized motor circuit breaker decorators
+    to protect motor control operations and prevent damage to motors.
+    """
+    
+    def __init__(self, motor_name: str = "example_motor"):
+        self.motor_name = motor_name
+        self.is_enabled = False
+        self.current_speed = 0.0
+        self.error_count = 0
+        self.last_error_time = None
+    
+    @motor_circuit_breaker(
+        name="motor_control",
+        failure_threshold=2,
+        timeout=20.0,
+        fallback=lambda speed: False  # Safe fallback that doesn't change motor state
+    )
+    def set_speed(self, speed: float) -> bool:
         """
-        Get the current position.
-
-        Returns:
-            tuple: Current position (lat, lng)
-        """
-        # Simulate GPS reading
-        if time.time() % 30 < 5:  # Simulate occasional GPS loss
-            raise NavigationError(
-                "GPS signal lost",
-                error_code=ErrorCode.NAVIGATION_GPS_SIGNAL_LOST,
-            )
-        return self.position
-
-    def navigate_to(self, target: tuple) -> bool:
-        """
-        Navigate to a target position.
-
+        Set motor speed with circuit breaker protection.
+        
         Args:
-            target: Target position (lat, lng)
-
+            speed: Motor speed (-1.0 to 1.0)
+            
         Returns:
-            bool: True if navigation was successful
+            bool: True if speed set successfully
+            
+        Raises:
+            HardwareError: If motor control fails
+        """
+        if not self.is_enabled:
+            raise HardwareError(f"{self.motor_name} not enabled")
+        
+        if abs(speed) > 1.0:
+            raise ValueError("Speed must be between -1.0 and 1.0")
+        
+        # Simulate potential motor control failure
+        if random.random() < 0.2:  # 20% failure rate
+            self.error_count += 1
+            self.last_error_time = time.time()
+            raise HardwareError(f"Failed to set speed for {self.motor_name}")
+        
+        self.current_speed = speed
+        logger.info(f"{self.motor_name} speed set to {speed}")
+        return True
+    
+    @motor_circuit_breaker(
+        name="motor_enable",
+        failure_threshold=1,
+        timeout=60.0
+    )
+    def enable(self) -> bool:
+        """
+        Enable motor with circuit breaker protection.
+        
+        Returns:
+            bool: True if motor enabled successfully
+            
+        Raises:
+            HardwareError: If motor enable fails
+        """
+        # Simulate enable operation that might fail
+        if random.random() < 0.1:  # 10% failure rate
+            raise HardwareError(f"Failed to enable {self.motor_name}")
+            
+        self.is_enabled = True
+        logger.info(f"{self.motor_name} enabled")
+        return True
+        
+    @motor_circuit_breaker(
+        name="motor_disable",
+        failure_threshold=1,
+        timeout=30.0
+    )
+    def disable(self) -> bool:
+        """
+        Disable motor with circuit breaker protection.
+        
+        Returns:
+            bool: True if motor disabled successfully
+            
+        Raises:
+            HardwareError: If motor disable fails
+        """
+        # Safety-critical operation - should rarely fail
+        if random.random() < 0.05:  # 5% failure rate
+            raise HardwareError(f"Failed to disable {self.motor_name}")
+            
+        self.is_enabled = False
+        self.current_speed = 0.0
+        logger.info(f"{self.motor_name} disabled")
+        return True
+        
+    def emergency_stop(self) -> bool:
+        """
+        Emergency stop without circuit breaker.
+        
+        This method bypasses the circuit breaker since it's a critical
+        safety operation that must always be attempted.
+        
+        Returns:
+            bool: True if emergency stop successful
         """
         try:
-            with error_context(
-                error_code=ErrorCode.NAVIGATION_PATH_BLOCKED,
-                context={"target": target},
-            ):
-                # Get current position
-                current = self.get_position()
-
-                # Calculate path
-                self.waypoints = [current, target]
-
-                # Simulate navigation
-                if target[0] < 0 or target[1] < 0:
-                    raise NavigationError(
-                        "Path blocked by obstacle",
-                        error_code=ErrorCode.NAVIGATION_PATH_BLOCKED,
-                    )
-
-                # Update position
-                self.position = target
-                return True
-        except MowerError as e:
-            print(f"Navigation error: {e}")
+            self.is_enabled = False
+            self.current_speed = 0.0
+            logger.info(f"{self.motor_name} emergency stopped")
+            return True
+        except Exception as e:
+            logger.critical(f"EMERGENCY STOP FAILED for {self.motor_name}: {e}")
             return False
 
 
-# Run the examples
+def demonstrate_circuit_breaker_usage():
+    """
+    Demonstrate circuit breaker usage with example hardware components.
+    
+    This function shows how circuit breakers protect against failures and
+    provide graceful degradation when hardware components fail.
+    """
+    logger.info("Starting circuit breaker demonstration")
+    
+    # Example 1: Sensor with circuit breaker protection
+    sensor = ExampleSensorInterface("temperature_sensor")
+    
+    try:
+        # This will fail initially but eventually succeed due to circuit breaker retry
+        logger.info("=== Demonstrating sensor initialization with circuit breaker ===")
+        try:
+            sensor.initialize()
+        except Exception as e:
+            logger.error(f"First initialization attempt failed as expected: {e}")
+            logger.info("Retrying initialization...")
+            sensor.initialize()  # Should succeed on second attempt
+        
+        # Demonstrate sensor calibration with I2C circuit breaker
+        logger.info("\n=== Demonstrating I2C circuit breaker for sensor calibration ===")
+        try:
+            sensor.calibrate()
+            logger.info("Sensor calibration successful")
+        except Exception as e:
+            logger.error(f"Sensor calibration failed: {e}")
+        
+        # Read sensor multiple times - some will fail but fallback will be used
+        logger.info("\n=== Demonstrating sensor reading with fallback ===")
+        for i in range(5):
+            try:
+                reading = sensor.read_sensor()
+                if reading["status"] == "fallback":
+                    logger.warning(f"Reading {i+1} used fallback: {reading}")
+                else:
+                    logger.info(f"Reading {i+1} successful: {reading}")
+            except Exception as e:
+                logger.error(f"Reading {i+1} failed unexpectedly: {e}")
+            
+            time.sleep(0.5)
+        
+        # Demonstrate async sensor reading with circuit breaker
+        logger.info("\n=== Demonstrating async sensor reading with circuit breaker ===")
+        
+        async def run_async_demo():
+            for i in range(3):
+                reading = await sensor.async_read_sensor()
+                logger.info(f"Async reading {i+1}: {reading}")
+                await asyncio.sleep(0.5)
+        
+        # Run the async demo
+        asyncio.run(run_async_demo())
+    
+    except Exception as e:
+        logger.error(f"Sensor demonstration failed: {e}")
+    
+    # Example 2: Motor controller with circuit breaker protection
+    logger.info("\n=== Demonstrating motor controller with circuit breaker ===")
+    motor = ExampleMotorController("drive_motor")
+    
+    try:
+        # Enable the motor
+        try:
+            motor.enable()
+            logger.info("Motor enabled successfully")
+        except Exception as e:
+            logger.error(f"Motor enable failed: {e}")
+            return  # Can't continue if motor isn't enabled
+        
+        # Try to set various speeds - failures will trigger circuit breaker
+        speeds = [0.5, 0.8, -0.3, 0.2, 0.0]
+        for i, speed in enumerate(speeds):
+            try:
+                result = motor.set_speed(speed)
+                if result:
+                    logger.info(f"Speed {i+1}: Set to {speed}")
+                else:
+                    logger.warning(f"Speed {i+1}: Fallback used for {speed}")
+            except CircuitBreakerOpenError as e:
+                logger.warning(f"Speed {i+1}: Circuit breaker open: {e}")
+            except Exception as e:
+                logger.error(f"Speed {i+1}: Failed: {e}")
+            
+            time.sleep(0.5)
+        
+        # Demonstrate circuit breaker state inspection
+        logger.info("\n=== Demonstrating circuit breaker state inspection ===")
+        manager = get_circuit_breaker_manager()
+        states = manager.get_all_states()
+        
+        for name, state in states.items():
+            logger.info(f"Circuit breaker '{name}':")
+            logger.info(f"  - State: {state['state']}")
+            logger.info(f"  - Failures: {state['failure_count']}/{state['failure_threshold']}")
+            logger.info(f"  - Timeout remaining: {state['timeout_remaining']:.1f}s")
+        
+        # Demonstrate emergency stop (bypasses circuit breaker)
+        logger.info("\n=== Demonstrating emergency stop (bypasses circuit breaker) ===")
+        motor.emergency_stop()
+        
+        # Demonstrate circuit breaker reset
+        logger.info("\n=== Demonstrating manual circuit breaker reset ===")
+        for name in states:
+            breaker = manager.get_breaker(name)
+            if breaker and breaker.state != CircuitState.CLOSED:
+                logger.info(f"Resetting circuit breaker '{name}'")
+                breaker.reset()
+    
+    except Exception as e:
+        logger.error(f"Motor demonstration failed: {e}")
+    
+    logger.info("\nCircuit breaker demonstration completed")
+
+
 if __name__ == "__main__":
-    print("Running error handling examples...")
-
-    print("\nExample 1: Basic error handling")
-    example_basic_error_handling()
-
-    print("\nExample 2: Using decorators")
-    try:
-        temp = read_sensor("temperature")
-        print(f"Temperature: {temp}°C")
-
-        # This will raise an error
-        unknown = read_sensor("unknown")
-    except MowerError as e:
-        print(f"Caught error: {e}")
-
-    print("\nExample 3: Using context managers")
-    example_context_manager()
-
-    print("\nExample 4: Safe function calls")
-    example_safe_call()
-
-    print("\nExample 5: Custom error handlers")
-    example_custom_error_handler()
-
-    print("\nExample 6: Hardware component with error handling")
-    sensor = SensorComponent("temperature")
-    sensor.initialize()
-    reading = sensor.read()
-    print(f"Sensor reading: {reading}")
-    print(f"Sensor status: {sensor.get_status()}")
-
-    broken_sensor = SensorComponent("broken")
-    try:
-        broken_sensor.initialize()
-    except MowerError as e:
-        print(f"Caught error: {e}")
-
-    print("\nExample 7: Navigation component with error handling")
-    nav = NavigationComponent()
-    success = nav.navigate_to((1.0, 1.0))
-    print(f"Navigation success: {success}")
-
-    # This will fail
-    success = nav.navigate_to((-1.0, -1.0))
-    print(f"Navigation success: {success}")
-
-    print("\nDone!")
+    # Configure logging for demonstration
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)d)'
+    )
+    
+    demonstrate_circuit_breaker_usage()
