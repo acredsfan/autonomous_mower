@@ -199,66 +199,47 @@ class ResourceManager:
         return None
         
     def _initialize_hardware(self) -> bool:
-        """Initialize hardware components.
+        """Initialize hardware components through the hardware registry.
         
-        This method initializes hardware components using the hardware_registry.
-        It handles GPIO, motor drivers, sensors, and other hardware interfaces.
+        This method initializes the hardware registry which manages all hardware
+        components. ResourceManager delegates to HardwareRegistry for hardware access.
         """
         try:
             from mower.hardware.hardware_registry import get_hardware_registry
             
-            # Get hardware registry and initialize it
+            # Initialize hardware registry - this handles all hardware initialization
             hardware_registry = get_hardware_registry()
-            hardware_registry.initialize()
-            logger.info("Hardware registry initialized successfully")
-                
-            # Store hardware components in resources dict
-            self._resources["hardware_registry"] = hardware_registry
+            success = hardware_registry.initialize()
             
-            # Add reference to critical hardware components for easy access
-            try:
-                self._resources["motor_driver"] = hardware_registry.get_robohat()
-                logger.info("Motor driver added to resources")
-            except Exception as e:
-                logger.warning(f"Failed to get motor driver: {e}")
+            if success:
+                # Store hardware registry reference for delegation
+                self._resources["hardware_registry"] = hardware_registry
+                self.logger.info("Hardware registry initialized successfully")
                 
-            try:
-                # Initialize async sensor interface with enhanced error handling
-                logger.info("Initializing async sensor interface...")
-                
-                from mower.hardware.async_sensor_manager import AsyncSensorInterface
-                sensor_interface = AsyncSensorInterface(simulate=self.simulate if hasattr(self, 'simulate') else False)
-                sensor_interface.start()
-                
-                if sensor_interface:
-                    self._resources["sensor_interface"] = sensor_interface
-                    logger.info("Async sensor interface initialized successfully")
-                else:
-                    logger.warning("Async sensor interface initialization returned None")
+                # Initialize sensor interface for data collection
+                try:
+                    from mower.hardware.async_sensor_manager import AsyncSensorInterface
+                    sensor_interface = AsyncSensorInterface(simulate=self.simulate if hasattr(self, 'simulate') else False)
+                    sensor_interface.start()
+                    
+                    if sensor_interface:
+                        self._resources["sensor_interface"] = sensor_interface
+                        self.logger.info("Async sensor interface initialized successfully")
+                    else:
+                        self.logger.warning("Async sensor interface initialization returned None")
+                        self._resources["sensor_interface"] = None
+                        
+                except Exception as e:
+                    self.logger.error(f"Failed to initialize sensor interface: {e}")
                     self._resources["sensor_interface"] = None
-            except Exception as e:
-                logger.error(f"Critical error in async sensor interface setup: {e}")
-                self._resources["sensor_interface"] = None
+                    
+                return success
+            else:
+                self.logger.error("Hardware registry initialization failed")
+                return False
                 
-                try:
-                    self._resources["camera"] = hardware_registry.get_camera()
-                    logger.info("Camera added to resources")
-                except Exception as e:
-                    logger.warning(f"Failed to get camera: {e}")
-                
-                try:
-                    blade_ctrl = hardware_registry.get_blade_controller()
-                    self._resources["blade_controller"] = blade_ctrl
-                    # Provide backward compatible key
-                    self._resources["blade"] = blade_ctrl
-                    logger.info("Blade controller added to resources")
-                except Exception as e:
-                    logger.warning(f"Failed to get blade controller: {e}")
-                
-                logger.info("Hardware initialization complete with fallbacks for missing components")
-            return True
         except Exception as e:
-            logger.error(f"Critical error during hardware initialization: {e}", exc_info=True)
+            self.logger.error(f"Critical error during hardware initialization: {e}", exc_info=True)
             return False
             
     
@@ -593,33 +574,43 @@ class ResourceManager:
         return self.get_resource("web_interface")
 
     def get_camera(self) -> Optional[Any]:
-        """Get the camera instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_camera()
+        """Get the camera instance from hardware registry."""
+        hardware_registry = self._resources.get("hardware_registry")
+        if hardware_registry:
+            return hardware_registry.get_camera()
+        return None
 
     def get_sensor_interface(self) -> Optional[Any]:
         """Get the sensor interface instance."""
         return self._resources.get("sensor_interface")
 
     def get_gps(self) -> Optional[Any]:
-        """Get the GPS instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_gps_serial()
+        """Get the GPS instance from hardware registry."""
+        hardware_registry = self._resources.get("hardware_registry") 
+        if hardware_registry:
+            return hardware_registry.get_serial_port()
+        return None
 
     def get_robohat(self) -> Optional[Any]:
-        """Get the RoboHAT motor driver instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_robohat()
+        """Get the RoboHAT motor driver instance from hardware registry."""
+        hardware_registry = self._resources.get("hardware_registry")
+        if hardware_registry:
+            return hardware_registry.get_robohat()
+        return None
 
     def get_ina3221(self) -> Optional[INA3221Sensor]:
-        """Get the INA3221 power monitor instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_ina3221()
+        """Get the INA3221 power monitor instance from hardware registry."""
+        hardware_registry = self._resources.get("hardware_registry")
+        if hardware_registry:
+            return hardware_registry.get_component("ina3221")
+        return None
 
     def get_gps_serial(self) -> Optional[SerialPort]:
-        """Get the GPS serial port instance."""
-        from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
-        return get_hardware_registry().get_gps_serial()
+        """Get the GPS serial port instance from hardware registry."""
+        hardware_registry = self._resources.get("hardware_registry")
+        if hardware_registry:
+            return hardware_registry.get_serial_port()
+        return None
 
     def execute_command(self, command: str, params: Optional[dict] = None) -> dict:
         """Execute a command from the Web UI."""
