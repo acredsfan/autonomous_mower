@@ -511,7 +511,10 @@ def with_retry(
                     max_delay=max_delay or 60.0,
                     expected_exceptions=expected_exceptions or Exception,
                     jitter=jitter if jitter is not None else True
-               return policy.execute(func, *args, **kwargs).           # Use default policy
+                )
+                return policy.execute(func, *args, **kwargs)
+            
+            # Use default policy
             return _retry_policy_engine.execute(func, *args, **kwargs)
         
         @functools.wraps(func)

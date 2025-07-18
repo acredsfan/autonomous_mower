@@ -13,7 +13,7 @@ This tool helps diagnose INA3221 power monitoring issues by:
 import sys
 import os
 import time
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def test_i2c_devices():
     """Test I2C devices on the bus"""

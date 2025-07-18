@@ -990,9 +990,9 @@ def save_area_command_handler(params, mower):
 
 if __name__ == "__main__":
     # This is just for testing the web interface directly
-    from mower.mower import Mower
+    from mower.main_controller import ResourceManager
 
-    mower = Mower()
+    mower = ResourceManager()
     app, socketio = create_app(mower)
 
     # Start the background task only if it's not already running

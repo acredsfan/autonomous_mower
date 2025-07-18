@@ -9,7 +9,7 @@ import pytest
 # from unittest.mock import MagicMock, patch
 # from flask import Flask
 # from mower.ui.web_ui.app import create_app # Assuming create_app setup
-# from mower.mower import Mower # Or ResourceManager, depending on what
+# from mower.main_controller import ResourceManager
 # emits events
 
 

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from mower.mower import Mower  # Assuming Mower and MowerMode are importable
+from mower.main_controller import ResourceManager
 from mower.state_management.states import MowerMode  # Assuming MowerMode path
 
 # If EnhancedSensorInterface is used directly, it should be imported
@@ -15,7 +15,7 @@ from mower.state_management.states import MowerMode  # Assuming MowerMode path
 
 @pytest.fixture
 def setup_error_recovery_components():
-    mower = MagicMock(spec=Mower)  # Use spec for better mocking
+    mower = MagicMock(spec=ResourceManager)  # Use spec for better mocking
     mower.mode = MowerMode.IDLE  # Initialize mode
     blade_controller = MagicMock()
     motor_driver = MagicMock()

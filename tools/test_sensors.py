@@ -12,11 +12,11 @@ import platform
 import sys
 import time
 
-from src.mower.hardware.imu import BNO085Sensor
-from src.mower.hardware.tof import VL53L0XSensors
-
 # Add the project directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from mower.hardware.imu import BNO085Sensor
+from mower.hardware.tof import VL53L0XSensors
 
 
 def print_sensor_data(sensor_data):

@@ -1,15 +1,46 @@
-"""
-GPIO Manager module.
+"""GPIO Manager module for hardware control.
 
-This module has been hardened and refactored to use the Adafruit Blinka
-(digitalio, pwmio) libraries for precise, low-level hardware control, ensuring
-maximum compatibility with Adafruit sensors and PWM components. This replaces the
-previous, less stable gpiozero implementation.
-@hardware_interface
+This module provides a robust GPIO management interface using Adafruit Blinka
+(digitalio, pwmio) libraries for precise, low-level hardware control. It ensures
+maximum compatibility with Adafruit sensors and PWM components while providing
+simulation capabilities for development and testing.
+
+The module automatically detects the platform and switches between hardware mode
+on Raspberry Pi and simulation mode on other platforms or when explicitly requested.
+
+Example:
+    Basic GPIO usage:
+        
+        gpio = GPIOManager()
+        
+        # Setup digital output pin
+        gpio.setup_pin(22, "out")
+        gpio.set_pin(22, True)
+        
+        # Setup PWM output pin
+        gpio.setup_pin(17, "pwm", frequency=1000)
+        gpio.set_pin_duty_cycle(17, 0.5)  # 50% duty cycle
+        
+        # Setup digital input pin with pull-up
+        gpio.setup_pin(7, "in", pull_up_down=PULL_UP)
+        value = gpio.get_pin(7)
+        
+        # Cleanup when done
+        gpio.cleanup_all()
+
+Note:
+    This module replaces the previous gpiozero implementation for improved
+    stability and compatibility with the Adafruit ecosystem.
+
+Attributes:
+    HARDWARE_AVAILABLE (bool): True if hardware GPIO libraries are available.
+    PULL_UP: Constant for pull-up resistor configuration.
+    PULL_DOWN: Constant for pull-down resistor configuration.
 """
 
 import platform
-from typing import Any, Dict, Optional
+import time
+from typing import Any, Dict, Optional, Union
 
 # Attempt to import the necessary libraries for a Raspberry Pi
 if platform.system() == "Linux":
@@ -33,18 +64,35 @@ if HARDWARE_AVAILABLE:
     PULL_UP = Pull.UP
     PULL_DOWN = Pull.DOWN
 else: # Define fallbacks for simulation
-    class Pull:
+    class _SimulatedPull:
         UP = "UP"
         DOWN = "DOWN"
+    Pull = _SimulatedPull
     PULL_UP = Pull.UP
     PULL_DOWN = Pull.DOWN
 
 class GPIOManager:
-    """
-    GPIO Manager class using the `digitalio` and `pwmio` libraries for precise control.
+    """GPIO Manager class using digitalio and pwmio libraries for precise control.
+    
+    This class provides a unified interface for GPIO operations including digital I/O
+    and PWM control. It automatically handles platform detection and provides simulation
+    capabilities for development environments.
+    
+    Attributes:
+        _devices (Dict[int, Any]): Dictionary mapping pin numbers to device objects.
+        _simulation_mode (bool): True if running in simulation mode.
+        
+    Args:
+        simulate (bool, optional): Force simulation mode. Defaults to False.
+        
+    Example:
+        >>> gpio = GPIOManager()
+        >>> gpio.setup_pin(22, "out")
+        >>> gpio.set_pin(22, True)
+        >>> gpio.cleanup_all()
     """
 
-    def __init__(self, simulate: bool = False):
+    def __init__(self, simulate: bool = False) -> None:
         """Initialize the GPIO manager."""
         self._devices: Dict[int, Any] = {}
         self._simulation_mode: bool = simulate or not HARDWARE_AVAILABLE
@@ -61,10 +109,25 @@ class GPIOManager:
             return None
         return self._devices[pin]
 
-    def setup_pin(self, pin: int, direction: str, pull_up_down: Optional[str] = None, frequency: int = 1000):
-        """
-        Set up a GPIO pin for use.
-        `direction` can be 'out', 'in', or 'pwm'.
+    def setup_pin(self, pin: int, direction: str, pull_up_down: Optional[str] = None, frequency: int = 1000) -> None:
+        """Set up a GPIO pin for use.
+        
+        Configures a GPIO pin for digital input, digital output, or PWM output.
+        In simulation mode, creates a mock device for testing purposes.
+        
+        Args:
+            pin: GPIO pin number to configure.
+            direction: Pin direction - 'out' for output, 'in' for input, 'pwm' for PWM.
+            pull_up_down: Pull resistor configuration for input pins - PULL_UP or PULL_DOWN.
+            frequency: PWM frequency in Hz for PWM pins. Defaults to 1000.
+            
+        Raises:
+            Exception: If pin setup fails or invalid direction is specified.
+            
+        Example:
+            >>> gpio.setup_pin(22, "out")  # Digital output
+            >>> gpio.setup_pin(7, "in", pull_up_down=PULL_UP)  # Input with pull-up
+            >>> gpio.setup_pin(17, "pwm", frequency=2000)  # PWM at 2kHz
         """
         if pin in self._devices:
             self.cleanup_pin(pin)
@@ -101,8 +164,23 @@ class GPIOManager:
         except Exception as e:
             logger.error(f"Failed to setup pin {pin} as '{direction}': {e}")
 
-    def set_pin(self, pin: int, value: bool):
-        """Set the value of a digital output pin."""
+    def set_pin(self, pin: int, value: bool) -> None:
+        """Set the value of a digital output pin.
+        
+        Sets the digital output state of a previously configured output pin.
+        
+        Args:
+            pin: GPIO pin number to set.
+            value: Digital value to set - True for high, False for low.
+            
+        Note:
+            Pin must be configured as 'out' before calling this method.
+            
+        Example:
+            >>> gpio.setup_pin(22, "out")
+            >>> gpio.set_pin(22, True)   # Set pin high
+            >>> gpio.set_pin(22, False)  # Set pin low
+        """
         device = self._get_pin_obj(pin)
         if not device: return
 
@@ -119,8 +197,25 @@ class GPIOManager:
         else:
             logger.warning(f"Cannot set digital value on pin {pin}; it's not a digital output.")
 
-    def set_pin_duty_cycle(self, pin: int, duty_cycle: float):
-        """Set the duty cycle of a PWM pin. `duty_cycle` is 0.0 to 1.0."""
+    def set_pin_duty_cycle(self, pin: int, duty_cycle: float) -> None:
+        """Set the duty cycle of a PWM pin.
+        
+        Controls the PWM duty cycle for a previously configured PWM pin.
+        The duty cycle value is automatically clamped to the valid range.
+        
+        Args:
+            pin: GPIO pin number configured for PWM.
+            duty_cycle: Duty cycle as a float from 0.0 (0%) to 1.0 (100%).
+            
+        Note:
+            Pin must be configured as 'pwm' before calling this method.
+            Values outside 0.0-1.0 range are automatically clamped.
+            
+        Example:
+            >>> gpio.setup_pin(17, "pwm")
+            >>> gpio.set_pin_duty_cycle(17, 0.5)   # 50% duty cycle
+            >>> gpio.set_pin_duty_cycle(17, 0.75)  # 75% duty cycle
+        """
         device = self._get_pin_obj(pin)
         if not device: return
 
@@ -143,16 +238,35 @@ class GPIOManager:
             logger.warning(f"Cannot set duty cycle on pin {pin}; it's not a PWM output.")
 
     def get_pin(self, pin: int) -> Optional[bool]:
-        """Get the value of a digital input pin."""
+        """Get the value of a digital input pin.
+        
+        Reads the current digital state of a previously configured input pin.
+        
+        Args:
+            pin: GPIO pin number to read.
+            
+        Returns:
+            Digital state of the pin - True for high, False for low, 
+            None if pin is not configured or read fails.
+            
+        Note:
+            Pin must be configured as 'in' before calling this method.
+            
+        Example:
+            >>> gpio.setup_pin(7, "in", pull_up_down=PULL_UP)
+            >>> state = gpio.get_pin(7)
+            >>> if state is True:
+            ...     print("Button pressed")
+        """
         device = self._get_pin_obj(pin)
         if not device: return None
 
         if self._simulation_mode:
-            return device.get("value", False)
+            return bool(device.get("value", False))
 
         if isinstance(device, DigitalInOut):
             try:
-                return device.value
+                return bool(device.value)
             except Exception as e:
                 logger.error(f"Failed to get value from pin {pin}: {e}")
                 return None
@@ -160,7 +274,7 @@ class GPIOManager:
              logger.warning(f"Cannot get digital value from pin {pin}; it's not a digital I/O pin.")
              return None
 
-    def cleanup_pin(self, pin: int):
+    def cleanup_pin(self, pin: int) -> None:
         """Clean up a single GPIO pin."""
         device = self._devices.pop(pin, None)
         if device and not self._simulation_mode:
@@ -170,7 +284,7 @@ class GPIOManager:
             except Exception as e:
                 logger.error(f"Error cleaning up pin {pin}: {e}")
 
-    def cleanup_all(self):
+    def cleanup_all(self) -> None:
         """Clean up all registered GPIO pins."""
         for pin in list(self._devices.keys()):
             self.cleanup_pin(pin)

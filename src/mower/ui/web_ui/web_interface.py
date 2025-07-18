@@ -11,17 +11,17 @@ from mower.ui.web_ui.app import create_app
 from mower.utilities import LoggerConfigInfo
 
 if TYPE_CHECKING:
-    from mower.mower import Mower
+    from mower.main_controller import ResourceManager
 
 
 class WebInterface:
     """Web interface for controlling the mower."""
 
-    def __init__(self, mower: "Mower"): # mower is actually ResourceManager instance
+    def __init__(self, mower: "ResourceManager"):
         """Initialize the web interface.
 
         Args:
-            mower: The mower instance (actually ResourceManager) to control.
+            mower: The ResourceManager instance to control.
         """
         self.logger = LoggerConfigInfo.get_logger(__name__)
         self.mower = mower
@@ -30,6 +30,7 @@ class WebInterface:
         self._thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self._is_running = False
+        self._lock = threading.Lock()  # Add thread safety
 
     def start(self) -> None:
         """Start the web interface.
@@ -39,33 +40,34 @@ class WebInterface:
         2. Starts the web server in a separate thread
         3. Sets up WebSocket communication
         """
-        self.logger.info("WebInterface.start() called.")
+        with self._lock:
+            self.logger.info("WebInterface.start() called.")
 
-        if self._is_running:
-            self.logger.warning("Web interface is already running")
-            return
+            if self._is_running:
+                self.logger.warning("Web interface is already running")
+                return
 
-        try:
-            # Create Flask app and SocketIO instance
-            self.logger.info(f"WebInterface: self.mower type is {type(self.mower)}")
+            try:
+                # Create Flask app and SocketIO instance
+                self.logger.info(f"WebInterface: self.mower type is {type(self.mower)}")
 
-            # Pass self.mower (which is ResourceManager) to create_app
-            app_instance, socketio_instance = create_app(self.mower)
-            self.app = app_instance
-            self.socketio = socketio_instance
-            self.logger.info("WebInterface: create_app returned successfully.")
+                # Pass self.mower (which is ResourceManager) to create_app
+                app_instance, socketio_instance = create_app(self.mower)
+                self.app = app_instance
+                self.socketio = socketio_instance
+                self.logger.info("WebInterface: create_app returned successfully.")
 
-            # Start the web server in a separate thread
-            self._thread = threading.Thread(target=self._run_server, daemon=True)
-            self._thread.start()
-            print(f"DEBUG: WebInterface.start() - Thread started: {self._thread.ident}") # ADDED
-            self.logger.info(f"WebInterface: Server thread {self._thread.ident} started.")
+                # Start the web server in a separate thread
+                self._thread = threading.Thread(target=self._run_server, daemon=True)
+                self._thread.start()
+                self.logger.info(f"WebInterface: Server thread {self._thread.ident} started.")
 
-            self._is_running = True
-            self.logger.info("Web interface started successfully")
-        except Exception as e:
-            self.logger.error(f"Failed to start web interface: {e}", exc_info=True)
-            raise
+                self._is_running = True
+                self.logger.info("Web interface started successfully")
+            except Exception as e:
+                self.logger.error(f"Failed to start web interface: {e}", exc_info=True)
+                self._is_running = False  # Ensure state is consistent on failure
+                raise
 
     def run(self) -> None:
         """Run the web interface (calls start)."""
@@ -80,53 +82,47 @@ class WebInterface:
         2. Waits for the server thread to complete
         3. Cleans up resources
         """
-        if not self._is_running:
-            self.logger.warning("Web interface is not running")
-            return
+        with self._lock:
+            if not self._is_running:
+                self.logger.warning("Web interface is not running")
+                return
 
-        try:
-            self.logger.info("Attempting to stop web interface...")
-            # Signal the server to stop
-            if self.socketio:
-                self.logger.info("Requesting SocketIO server to stop...")
-                try:
-                    # This is a common way to ask Flask-SocketIO to shutdown
-                    # It might not be available in all versions or configurations
-                    # If this doesn't work, the thread join timeout is the fallback
-                    self.socketio.server.shutdown()
-                    self.logger.info("SocketIO server shutdown requested.")
-                except Exception as e:
-                    self.logger.warning(f"Could not explicitly call socketio.server.shutdown(): {e}. Relying on thread join.")
+            try:
+                self.logger.info("Attempting to stop web interface...")
+                self._stop_event.set()  # Signal stop first
+                
+                # Clean up SocketIO server
+                if self.socketio:
+                    self.logger.info("Requesting SocketIO server to stop...")
+                    try:
+                        self.socketio.server.shutdown()
+                        self.logger.info("SocketIO server shutdown requested.")
+                    except Exception as e:
+                        self.logger.warning(f"Could not explicitly call socketio.server.shutdown(): {e}")
 
-            self._stop_event.set() # Ensure our internal stop event is also set
+                # Wait for the server thread to complete
+                if self._thread and self._thread.is_alive():
+                    self.logger.info(f"Waiting for web server thread (id: {self._thread.ident}) to join...")
+                    self._thread.join(timeout=10.0)
+                    if self._thread.is_alive():
+                        self.logger.warning(f"Web server thread (id: {self._thread.ident}) did not join in time.")
+                    else:
+                        self.logger.info(f"Web server thread (id: {self._thread.ident}) joined successfully.")
 
-            # Wait for the server thread to complete
-            if self._thread and self._thread.is_alive():
-                self.logger.info(f"Waiting for web server thread (id: {self._thread.ident}) to join...")
-                self._thread.join(timeout=10.0) # Increased timeout
-                if self._thread.is_alive():
-                    self.logger.warning(f"Web server thread (id: {self._thread.ident}) did not join in time.")
-                else:
-                    self.logger.info(f"Web server thread (id: {self._thread.ident}) joined successfully.")
+                # Final cleanup
+                if self.socketio:
+                    try:
+                        self.socketio.stop()
+                        self.logger.info("SocketIO cleanup completed.")
+                    except Exception as e:
+                        self.logger.error(f"Error during socketio.stop(): {e}")
 
-
-            # Clean up resources - socketio.stop() might be redundant if shutdown worked
-            # but it's good for cleanup.
-            if self.socketio:
-                try:
-                    self.logger.info("Calling socketio.stop() for final cleanup...")
-                    self.socketio.stop() # Ensure this is called for cleanup
-                    self.logger.info("Socketio.stop() called.")
-                except Exception as e:
-                    self.logger.error(f"Error during socketio.stop(): {e}")
-
-
-            self._is_running = False
-            self.logger.info("Web interface stopped successfully")
-        except Exception as e:
-            self.logger.error(f"Error stopping web interface: {e}", exc_info=True)
-            # Do not re-raise here if we want the main cleanup to continue
-            # raise
+                self._is_running = False
+                self.logger.info("Web interface stopped successfully")
+                
+            except Exception as e:
+                self.logger.error(f"Error stopping web interface: {e}", exc_info=True)
+                self._is_running = False  # Ensure state is consistent even on error
 
     def _run_server(self) -> None:
         """Run the web server.

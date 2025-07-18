@@ -8,7 +8,7 @@ import pytest
 # from unittest.mock import MagicMock, patch
 # from mower.hardware.sensor_interface import EnhancedSensorInterface
 # from mower.hardware.sensor_interface import SensorStatus
-# from mower.mower import ResourceManager
+# from mower.main_controller import ResourceManager
 # from tests.hardware_fixtures import (
 #     sim_world,
 #     # Potentially new or modified fixtures for I2C error simulation

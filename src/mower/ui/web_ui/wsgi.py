@@ -2,7 +2,7 @@
 WSGI entry point for the autonomous mower web interface.
 
 This module provides the WSGI application entry point for running the web
-    interface in a production environment. It handles:
+interface in a production environment. It handles:
 - Web interface initialization
 - Path configuration
 - Logging setup
@@ -11,8 +11,10 @@ This module provides the WSGI application entry point for running the web
 
 import os
 import sys
+import threading
 from typing import Optional
 
+from mower.main_controller import ResourceManager
 from mower.ui.web_ui.web_interface import WebInterface
 from mower.utilities.logger_config import LoggerConfigInfo
 
@@ -22,8 +24,49 @@ logging = LoggerConfigInfo.get_logger(__name__)
 # Add project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Global instance
-_web_interface: Optional[WebInterface] = None
+
+class WSGIManager:
+    """Thread-safe WSGI application manager."""
+    
+    def __init__(self):
+        self._web_interface: Optional[WebInterface] = None
+        self._lock = threading.Lock()
+    
+    def get_application(self):
+        """Get the WSGI application instance with thread safety."""
+        with self._lock:
+            if not self._web_interface or not self._web_interface.is_running:
+                self._start_web_interface()
+            return self._web_interface.app
+    
+    def _start_web_interface(self) -> None:
+        """Start the web interface with proper error handling."""
+        try:
+            if self._web_interface and self._web_interface.is_running:
+                logging.warning("Web interface is already running")
+                return
+
+            mower = ResourceManager()
+            self._web_interface = WebInterface(mower)
+            self._web_interface.start()
+            logging.info("Web interface started successfully")
+        except Exception as e:
+            logging.error(f"Failed to start web interface: {e}")
+            raise RuntimeError(f"Web interface startup failed: {e}")
+    
+    def stop_web_interface(self) -> None:
+        """Stop the web interface if it's running."""
+        with self._lock:
+            try:
+                if self._web_interface and self._web_interface.is_running:
+                    self._web_interface.stop()
+                    logging.info("Web interface stopped successfully")
+            except Exception as e:
+                logging.error(f"Error stopping web interface: {e}")
+
+
+# Global WSGI manager instance
+_wsgi_manager = WSGIManager()
 
 
 def start_web_interface() -> None:
@@ -41,25 +84,7 @@ def start_web_interface() -> None:
     Raises:
         RuntimeError: If the web interface fails to start
     """
-    global _web_interface
-
-    try:
-        # Check if already running
-        if _web_interface and _web_interface.is_running:
-            logging.warning("Web interface is already running")
-            return
-
-        # Create and start new instance
-        from mower.mower import Mower
-
-        mower = Mower()
-        _web_interface = WebInterface(mower)
-        _web_interface.start()
-
-        logging.info("Web interface started successfully")
-    except Exception as e:
-        logging.error(f"Failed to start web interface: {e}")
-        raise RuntimeError(f"Web interface startup failed: {e}")
+    _wsgi_manager._start_web_interface()
 
 
 def stop_web_interface() -> None:
@@ -74,14 +99,7 @@ def stop_web_interface() -> None:
     Returns:
         None
     """
-    global _web_interface
-
-    try:
-        if _web_interface and _web_interface.is_running:
-            _web_interface.stop()
-            logging.info("Web interface stopped successfully")
-    except Exception as e:
-        logging.error(f"Error stopping web interface: {e}")
+    _wsgi_manager.stop_web_interface()
 
 
 def get_application():
@@ -94,9 +112,11 @@ def get_application():
     Returns:
         flask.Flask: The Flask application instance
     """
-    if not _web_interface or not _web_interface.is_running:
-        start_web_interface()
-    return _web_interface.app
+    return _wsgi_manager.get_application()
+
+
+# WSGI application entry point
+application = get_application
 
 
 if __name__ == "__main__":

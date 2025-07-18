@@ -38,9 +38,10 @@ import sys  # Added for sys.exit
 import threading  # Added for threading.Lock
 import time
 import utm
+import queue
 from enum import Enum
 
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
 # Fix: Import load_dotenv for .env support
@@ -54,6 +55,7 @@ from mower.hardware.async_sensor_manager import AsyncSensorInterface
 from mower.hardware.shared_sensor_data import get_shared_sensor_manager
 from mower.obstacle_detection.obstacle_detector import ObstacleDetector
 from mower.hardware.serial_port import SerialPort
+from mower.hardware.ina3221 import INA3221Sensor
 from mower.navigation.localization import Localization
 from mower.navigation.navigation import NavigationController
 from mower.navigation.path_planner import LearningConfig, PathPlanner, PatternConfig, PatternType
@@ -146,24 +148,22 @@ class ResourceManager:
     accessing resources and ensures proper initialization order and cleanup.
     """
 
-    def __init__(self, config_path=None):
+    def __init__(self, config_path: Optional[str] = None) -> None:
+        """Initialize the resource manager."""
         self.logger = LoggerConfigInfo.get_logger(__name__)
-        """
-        Initialize the resource manager.
-        """
-        self._initialized = False
-        self._resources = {}
-        self._lock = threading.Lock()
-        self.current_state = SystemState.IDLE  # Initialize current_state
+        self._initialized: bool = False
+        self._resources: Dict[str, Any] = {}
+        self._lock: threading.Lock = threading.Lock()
+        self.current_state: SystemState = SystemState.IDLE  # Initialize current_state
         # Path to user polygon config - UPDATED to use APP_CONFIG_DIR
-        self.user_polygon_path = APP_CONFIG_DIR / "user_polygon.json"
+        self.user_polygon_path: Path = APP_CONFIG_DIR / "user_polygon.json"
         
         # Set simulation mode based on environment/config
-        use_simulation_env = os.environ.get("USE_SIMULATION", "").lower()
-        use_simulation_config = get_config("hardware.use_simulation", False)
-        self.simulate = (platform.system() == "Windows" or 
-                        use_simulation_env in ("true", "1", "yes") or 
-                        use_simulation_config)
+        use_simulation_env: str = os.environ.get("USE_SIMULATION", "").lower()
+        use_simulation_config: bool = get_config("hardware.use_simulation", False)
+        self.simulate: bool = (platform.system() == "Windows" or 
+                              use_simulation_env in ("true", "1", "yes") or 
+                              use_simulation_config)
 
         # Watchdog attributes
         self._watchdog_thread: Optional[threading.Thread] = None
@@ -173,7 +173,7 @@ class ResourceManager:
         self._web_interface_thread: Optional[threading.Thread] = None
 
         # Initialize safety status tracking variables
-        self._safety_status_vars = {
+        self._safety_status_vars: Dict[str, Union[bool, int, float]] = {
             "warning_logged": False,
             "last_warning_time": 0,
             "warning_interval": 30,  # seconds, configurable
@@ -184,19 +184,21 @@ class ResourceManager:
         if config_path:
             self._load_config(config_path)
 
-    def _load_config(self, filename):
+    def _load_config(self, filename: str) -> Optional[Dict[str, Any]]:
         """Load a specific configuration file from the standard config location."""
         # UPDATED to use APP_CONFIG_DIR
-        config_file_path = APP_CONFIG_DIR / filename
+        config_file_path: Path = APP_CONFIG_DIR / filename
         if config_file_path.exists():
             try:
                 with open(config_file_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    config_data: Dict[str, Any] = json.load(f)
+                    return config_data
             except Exception as e:
                 logger.error(f"Error loading config file {filename}: {e}")
+                return None
         return None
         
-    def _initialize_hardware(self):
+    def _initialize_hardware(self) -> bool:
         """Initialize hardware components.
         
         This method initializes hardware components using the hardware_registry.
@@ -254,14 +256,14 @@ class ResourceManager:
                     logger.warning(f"Failed to get blade controller: {e}")
                 
                 logger.info("Hardware initialization complete with fallbacks for missing components")
-                return True
+            return True
         except Exception as e:
             logger.error(f"Critical error during hardware initialization: {e}", exc_info=True)
             return False
             
     
 
-    def _initialize_software(self):
+    def _initialize_software(self) -> None:
         """Initialize all software components."""
         try:
             from mower.hardware.hardware_registry import get_hardware_registry
@@ -392,7 +394,7 @@ class ResourceManager:
             self._resources["gps_service"] = None
             self._resources["gps_position_reader"] = None
 
-    def initialize(self):
+    def initialize(self) -> None:
         """Initialize all resources."""
         if self._initialized:
             logger.warning("Resources already initialized")
@@ -457,7 +459,7 @@ class ResourceManager:
             self._initialized = False  # Ensure this is set on failure
             return False
 
-    def cleanup_all_resources(self):
+    def cleanup_all_resources(self) -> None:
         """Clean up all initialized resources."""
         logger.info("Starting cleanup of all resources...")
         with self._lock:
@@ -599,12 +601,12 @@ class ResourceManager:
         """Get the sensor interface instance."""
         return self._resources.get("sensor_interface")
 
-    def get_gps(self):
+    def get_gps(self) -> Optional[Any]:
         """Get the GPS instance."""
         from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
         return get_hardware_registry().get_gps_serial()
 
-    def get_robohat(self):
+    def get_robohat(self) -> Optional[Any]:
         """Get the RoboHAT motor driver instance."""
         from mower.hardware.hardware_registry import get_hardware_registry # MOVED HERE
         return get_hardware_registry().get_robohat()
@@ -701,7 +703,7 @@ class ResourceManager:
             self.logger.error(f"Error executing command {command}: {e}")
             return {"success": False, "error": str(e)}
 
-    def start_web_interface(self):
+    def start_web_interface(self) -> bool:
         """
         Initializes and starts the web interface in a separate process.
         
@@ -741,7 +743,7 @@ class ResourceManager:
             logger.error(f"Failed to start web interface: {e}")
             return False
     
-    def start(self):
+    def start(self) -> None:
         """Start the main controller operations (placeholder)."""
         logger.info("Main controller 'start' method called (currently a placeholder).")
         # This is where you would typically start the main operational logic,
@@ -819,15 +821,16 @@ class ResourceManager:
             self.current_state = SystemState.ERROR
             return False
 
-    def emergency_stop(self):
+    def emergency_stop(self) -> None:
         """Trigger an emergency stop."""
         logger.critical("EMERGENCY STOP ACTIVATED!")
         self.stop_all_operations()  # Utilize the common stop logic
         self.current_state = SystemState.EMERGENCY_STOP
         # Potentially log to a specific emergency log file or send alert
         # For now, relies on stop_all_operations and state change.
+        return
 
-    def get_gps_location(self):
+    def get_gps_location(self) -> Optional[Dict[str, Any]]:
         """
         Get GPS location data from the GPS service.
         
@@ -872,15 +875,17 @@ class ResourceManager:
         except Exception as e:
             logger.error(f"Error getting GPS location: {e}")
             return None
+        
+        return None
 
-    def get_gps_coordinates(self):
+    def get_gps_coordinates(self) -> Optional[Tuple[float, float]]:
         """Get GPS coordinates, simple wrapper around get_gps_location."""
         gps_info = self.get_gps_location()
         if gps_info and gps_info.get("latitude") is not None and gps_info.get("longitude") is not None:
-            return {"lat": gps_info["latitude"], "lng": gps_info["longitude"]}
+            return (gps_info["latitude"], gps_info["longitude"])
         return None
 
-    def get_sensor_data(self):
+    def get_sensor_data(self) -> Dict[str, Any]:
         """
         Get comprehensive sensor data including GPS for WebUI with robust error handling.
         
@@ -890,15 +895,8 @@ class ResourceManager:
         try:
             logger.debug("ResourceManager:get_sensor_data - Attempting to fetch sensor data.")
             # Get base sensor data from sensor interface with timeout protection
-            sensor_data_from_interface = self._get_sensor_data_with_timeout()
-            
-            if sensor_data_from_interface is None:
-                logger.warning("ResourceManager:get_sensor_data - _get_sensor_data_with_timeout returned None. Using ResourceManager fallback.")
-                # Fallback to safe sensor data structure
-                sensor_data = self._get_fallback_sensor_data()
-            else:
-                logger.debug(f"ResourceManager:get_sensor_data - Received from interface: {sensor_data_from_interface}")
-                sensor_data = sensor_data_from_interface
+            sensor_data = self._get_sensor_data_with_timeout()
+            logger.debug(f"ResourceManager:get_sensor_data - Received from interface: {sensor_data}")
             
             # Add GPS data with error protection
             try:
@@ -950,7 +948,7 @@ class ResourceManager:
             logger.warning(f"ResourceManager:get_sensor_data - Returning complete fallback data due to critical error: {fallback_data_to_return}")
             return fallback_data_to_return
 
-    def _get_sensor_data_with_timeout(self):
+    def _get_sensor_data_with_timeout(self) -> Dict[str, Any]:
         """
         Get sensor data with thread-safe timeout protection without signal.alarm.
         Uses threading approach compatible with Python 3.11+
@@ -967,13 +965,13 @@ class ResourceManager:
             sensor_interface = self.get_sensor_interface()
             if not sensor_interface:
                 logger.warning("Sensor interface not available")
-                return None
+                return self._get_fallback_sensor_data()
             
             # Use threading + queue approach instead of signal.alarm
-            result_queue = queue.Queue()
-            exception_queue = queue.Queue()
+            result_queue: queue.Queue[Dict[str, Any]] = queue.Queue()
+            exception_queue: queue.Queue[Exception] = queue.Queue()
             
-            def sensor_read_worker():
+            def sensor_read_worker() -> None:
                 try:
                     sensor_data = sensor_interface.get_sensor_data()
                     result_queue.put(sensor_data)
@@ -990,13 +988,13 @@ class ResourceManager:
             
             if worker_thread.is_alive():
                 logger.error("Sensor data collection timed out after 8 seconds")
-                return None
+                return self._get_fallback_sensor_data()
             
             # Check for exceptions
             if not exception_queue.empty():
                 sensor_error = exception_queue.get()
                 logger.error(f"Sensor data collection failed: {sensor_error}")
-                return None
+                return self._get_fallback_sensor_data()
             
             # Get result
             if not result_queue.empty():
@@ -1006,10 +1004,10 @@ class ResourceManager:
                     return sensor_data
                 else:
                     logger.warning("Invalid sensor data received")
-                    return None
+                    return self._get_fallback_sensor_data()
             else:
                 logger.warning("No sensor data received")
-                return None
+                return self._get_fallback_sensor_data()
                 
         except Exception as e:
             logger.error(f"Critical error in sensor data collection: {e}")
@@ -1022,7 +1020,7 @@ class ResourceManager:
                 "status": "critical_error_fallback"
             }
 
-    def _get_fallback_sensor_data(self):
+    def _get_fallback_sensor_data(self) -> Dict[str, Any]:
         """
         Get fallback sensor data when primary collection fails.
         
@@ -1062,7 +1060,7 @@ class ResourceManager:
             }
         }
 
-    def _get_fallback_gps_data(self):
+    def _get_fallback_gps_data(self) -> Dict[str, Any]:
         """
         Get fallback GPS data structure.
         
@@ -1082,7 +1080,7 @@ class ResourceManager:
             "status": "no_fix"
         }
 
-    def _get_complete_fallback_data(self):
+    def _get_complete_fallback_data(self) -> Dict[str, Any]:
         """
         Get complete fallback data structure for critical errors.
         
@@ -1094,7 +1092,7 @@ class ResourceManager:
         fallback_data["error"] = "Sensor data collection failed - using fallback data"
         return fallback_data
 
-    def set_home_location(self, location):
+    def set_home_location(self, location: Union[Dict[str, float], List[float], Tuple[float, float]]) -> bool:
         """
         Set the home location in the user polygon configuration file.
 
@@ -1149,15 +1147,16 @@ class ResourceManager:
             logger.error(f"Error setting home location: {e}", exc_info=True)
             return False
 
-    def initialize_resources(self):
+    def initialize_resources(self) -> bool:
         """Initialize all resources (legacy method, use initialize() instead)."""
         logger.warning("initialize_resources() is deprecated, use initialize() instead")
-        return self.initialize()
+        self.initialize()
+        return self._initialized
 
     def get_obstacle_detector(self) -> Optional[ObstacleDetector]:
         return self.get_resource("obstacle_detector")
 
-    def _start_watchdog(self):
+    def _start_watchdog(self) -> None:
         """Start the watchdog timer thread."""
         if self._watchdog_thread and self._watchdog_thread.is_alive():
             logger.warning("Watchdog thread already running")
@@ -1171,26 +1170,27 @@ class ResourceManager:
         self._watchdog_thread.start()
         logger.info(f"Watchdog timer started with interval {WATCHDOG_INTERVAL_S}s")
     
-    def _stop_watchdog(self):
+    def _stop_watchdog(self) -> None:
         """Stop the watchdog timer thread."""
         if not self._watchdog_thread or not self._watchdog_thread.is_alive():
             logger.debug("No watchdog thread to stop")
             return
             
         logger.info("Stopping watchdog thread...")
-        self._watchdog_stop_event.set()
+        if self._watchdog_stop_event:
+            self._watchdog_stop_event.set()
         self._watchdog_thread.join(timeout=5)
         if self._watchdog_thread.is_alive():
             logger.warning("Watchdog thread did not stop in time")
         else:
             logger.info("Watchdog thread stopped successfully")
     
-    def _watchdog_task(self):
+    def _watchdog_task(self) -> None:
         """Watchdog task that runs in a separate thread."""
         logger.info("Watchdog task started")
-        while not self._watchdog_stop_event.is_set():
+        while self._watchdog_stop_event and not self._watchdog_stop_event.is_set():
             time.sleep(WATCHDOG_INTERVAL_S)
-            if not self._watchdog_stop_event.is_set():  # Check again after sleeping
+            if self._watchdog_stop_event and not self._watchdog_stop_event.is_set():  # Check again after sleeping
                 logger.debug("Watchdog check...")
                 try:
                     # Perform any periodic checks here
@@ -1199,16 +1199,16 @@ class ResourceManager:
                     logger.error(f"Error in watchdog task: {e}")
         logger.info("Watchdog task exiting")
     
-    def start_web_only_mode(self):
+    def start_web_only_mode(self) -> None:
         """Starts only the web interface for safe mode."""
         self.logger.info("Entering SAFE-MODE; starting web interface only.")
         self.start_web_interface()
         # Keep the main thread alive
-        while not self._watchdog_stop_event.is_set():
+        while self._watchdog_stop_event and not self._watchdog_stop_event.is_set():
             time.sleep(1)
 
 
-def main():
+def main() -> None:
     """
     Main function to initialize and run the autonomous mower application.
     """
@@ -1237,7 +1237,7 @@ def main():
     stop_event = threading.Event()
     resource_manager = None  # Ensure resource_manager is defined in this scope
 
-    def signal_handler(signum, frame):
+    def signal_handler(signum: int, frame: Any) -> None:
         logger.info(f"Signal {signum} received. Initiating shutdown...")
         start_time = time.time()
         stop_event.set()

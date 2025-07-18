@@ -11,7 +11,6 @@ import pytest
 
 from mower.config_management import get_config, set_config
 from mower.main_controller import MainController
-from mower.robot_di import Robot as RobotDI
 from mower.simulation import enable_simulation, is_simulation_enabled
 from mower.simulation.world_model import Vector2D, get_world_instance, reset_world
 
