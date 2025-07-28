@@ -72,3 +72,19 @@ repos:
         args: ['-c', 'pyproject.toml']
         additional_dependencies: ['bandit[toml]']
         exclude: tests|venv|\\.venv|\\.git|\\.tox|build|dist
+
+  - repo: local
+    hooks:
+      - id: import-check
+        name: Import dependency check
+        entry: python scripts/test_import_dependencies.py
+        language: system
+        pass_filenames: false
+        files: \\.py$
+        
+      - id: type-coverage
+        name: Type hint coverage check
+        entry: python scripts/check_type_coverage.py
+        language: system
+        pass_filenames: false
+        files: \\.py$

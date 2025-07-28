@@ -1,0 +1,200 @@
+{
+  "components": [
+    {
+      "name": "hardware_sensor_interface",
+      "interface": "mower.interfaces.hardware.SensorInterface",
+      "implementation": "mower.hardware.sensor_interface.EnhancedSensorInterface",
+      "lifetime": "singleton",
+      "initialization_method": "start",
+      "cleanup_method": "cleanup",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "constructor_args": {
+        "simulate": false
+      },
+      "tags": ["hardware", "sensors"],
+      "condition": {
+        "type": "environment",
+        "variable": "USE_SIMULATION",
+        "value": "false"
+      }
+    },
+    {
+      "name": "simulated_sensor_interface",
+      "interface": "mower.interfaces.hardware.SensorInterface",
+      "implementation": "mower.simulation.hardware_sim.MockSensorInterface",
+      "lifetime": "singleton",
+      "initialization_method": "start",
+      "cleanup_method": "cleanup",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "constructor_args": {
+        "simulate": true
+      },
+      "tags": ["simulation", "sensors"],
+      "condition": {
+        "type": "environment",
+        "variable": "USE_SIMULATION",
+        "value": "true"
+      }
+    },
+    {
+      "name": "hardware_gpio_manager",
+      "interface": "mower.interfaces.hardware.GPIOInterface",
+      "implementation": "mower.hardware.gpio_manager.GPIOManager",
+      "lifetime": "singleton",
+      "initialization_method": "setup",
+      "cleanup_method": "cleanup",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "tags": ["hardware", "gpio"],
+      "condition": {
+        "type": "platform",
+        "platform": "linux"
+      }
+    },
+    {
+      "name": "hardware_camera",
+      "interface": "mower.interfaces.hardware.CameraInterface",
+      "implementation": "mower.hardware.camera_instance.CameraInstance",
+      "lifetime": "singleton",
+      "initialization_method": "initialize",
+      "cleanup_method": "cleanup",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "tags": ["hardware", "camera"]
+    },
+    {
+      "name": "hardware_blade_controller",
+      "interface": "mower.interfaces.hardware.BladeControllerInterface",
+      "implementation": "mower.hardware.blade_controller.BladeController",
+      "lifetime": "singleton",
+      "initialization_method": null,
+      "cleanup_method": "cleanup",
+      "dependencies": [
+        "mower.interfaces.hardware.GPIOInterface"
+      ],
+      "optional_dependencies": [],
+      "tags": ["hardware", "blade"]
+    },
+    {
+      "name": "hardware_motor_driver",
+      "interface": "mower.interfaces.hardware.MotorDriverInterface",
+      "implementation": "mower.hardware.robohat.RoboHATDriver",
+      "lifetime": "singleton",
+      "initialization_method": null,
+      "cleanup_method": "shutdown",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "tags": ["hardware", "motors"],
+      "constructor_args": {
+        "serial_port": "/dev/ttyACM1"
+      }
+    },
+    {
+      "name": "navigation_gps_service",
+      "interface": "mower.interfaces.navigation.GpsInterface",
+      "implementation": "mower.services.gps_service.GpsService",
+      "lifetime": "singleton",
+      "initialization_method": "start",
+      "cleanup_method": "shutdown",
+      "dependencies": [],
+      "optional_dependencies": [],
+      "tags": ["navigation", "gps"],
+      "constructor_args": {
+        "serial_port": "/dev/ttyACM0"
+      }
+    },
+    {
+      "name": "navigation_localization",
+      "interface": "mower.interfaces.navigation.LocalizationInterface",
+      "implementation": "mower.navigation.localization.Localization",
+      "lifetime": "singleton",
+      "initialization_method": "start",
+      "cleanup_method": "cleanup",
+      "dependencies": [
+        "mower.interfaces.hardware.SensorInterface",
+        "mower.interfaces.navigation.GpsInterface"
+      ],
+      "optional_dependencies": [],
+      "tags": ["navigation", "localization"]
+    },
+    {
+      "name": "navigation_path_planner",
+      "interface": "mower.interfaces.navigation.PathPlannerInterface",
+      "implementation": "mower.navigation.path_planner.PathPlanner",
+      "lifetime": "singleton",
+      "cleanup_method": "cleanup",
+      "dependencies": [
+        "mower.interfaces.navigation.LocalizationInterface"
+      ],
+      "optional_dependencies": [],
+      "constructor_args": {
+        "pattern_config": {
+          "pattern_type": "PARALLEL",
+          "spacing": 0.5,
+          "angle": 0.0,
+          "overlap": 0.1
+        },
+        "learning_config": {
+          "learning_rate": 0.1,
+          "discount_factor": 0.9,
+          "exploration_rate": 0.2
+        }
+      },
+      "tags": ["navigation", "planning"]
+    },
+    {
+      "name": "obstacle_detector",
+      "interface": "mower.interfaces.obstacle_detection.ObstacleDetectorInterface",
+      "implementation": "mower.obstacle_detection.obstacle_detector.ObstacleDetector",
+      "lifetime": "singleton",
+      "initialization_method": null,
+      "cleanup_method": "cleanup",
+      "dependencies": [
+        "mower.interfaces.hardware.CameraInterface",
+        "mower.interfaces.hardware.SensorInterface"
+      ],
+      "optional_dependencies": [],
+      "tags": ["detection", "safety"],
+      "constructor_args": {
+        "debug_mode": false
+      }
+    },
+    {
+      "name": "web_interface",
+      "interface": "mower.interfaces.ui.WebInterfaceInterface",
+      "implementation": "mower.ui.web_ui.web_interface.WebInterface",
+      "lifetime": "singleton",
+      "initialization_method": null,
+      "cleanup_method": "cleanup",
+      "dependencies": [],
+      "optional_dependencies": [
+        "mower.interfaces.hardware.SensorInterface",
+        "mower.interfaces.navigation.LocalizationInterface"
+      ],
+      "tags": ["ui", "web"],
+      "constructor_args": {
+        "host": "0.0.0.0",
+        "port": 5000,
+        "debug": false
+      }
+    },
+    {
+      "name": "avoidance_algorithm",
+      "interface": "mower.interfaces.obstacle_detection.AvoidanceAlgorithmInterface",
+      "implementation": "mower.obstacle_detection.avoidance_algorithm.AvoidanceAlgorithm",
+      "lifetime": "singleton",
+      "initialization_method": "start",
+      "cleanup_method": "stop",
+      "dependencies": [
+        "mower.interfaces.hardware.SensorInterface",
+        "mower.interfaces.hardware.MotorDriverInterface"
+      ],
+      "optional_dependencies": [
+        "mower.interfaces.obstacle_detection.ObstacleDetectorInterface"
+      ],
+      "tags": ["navigation", "safety", "avoidance"]
+    }
+  ]
+}

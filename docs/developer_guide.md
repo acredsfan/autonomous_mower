@@ -38,6 +38,10 @@ This guide provides information for developers who want to contribute to the Aut
    ```bash
    # Install in editable mode with development dependencies
    pip install -e .[dev]
+   
+   # Note: Some hardware dependencies may require sudo for system-level access
+   # If you encounter permission errors, try:
+   sudo pip install -e .[dev]
    ```
 
 
@@ -58,6 +62,47 @@ This guide provides information for developers who want to contribute to the Aut
    LOG_LEVEL=DEBUG
    CONFIG_DIR=./config
    ```
+
+### Permission Requirements
+
+Many operations in this project require elevated permissions due to hardware access requirements:
+
+#### When to Use `sudo`
+
+- **Hardware Testing**: GPIO, I2C, SPI, and UART access require root privileges
+- **System Service Operations**: Starting/stopping systemd services
+- **Hardware Diagnostics**: Running sensor tests and calibration
+- **Installation Scripts**: System-level package installation and configuration
+
+#### Common Commands Requiring `sudo`
+
+```bash
+# Hardware diagnostics and testing
+sudo python3 -m mower.diagnostics.hardware_test
+sudo python3 test_sensor_reliability.py
+
+# Service management
+sudo systemctl start autonomous-mower
+sudo systemctl stop autonomous-mower
+sudo systemctl status autonomous-mower
+
+# Installation and setup
+sudo ./install_requirements.sh
+sudo ./setup_dual_wifi.sh
+
+# Hardware integration tests
+sudo pytest tests/hardware_integration
+
+# Running the main application with hardware
+sudo python3 -m mower.main_controller
+```
+
+#### Security Considerations
+
+- Only use `sudo` when necessary for hardware access
+- Avoid running the entire development environment as root
+- Use virtual environments to isolate dependencies
+- Test in simulation mode first before requiring hardware access
 
 ## Project Structure
 
@@ -215,6 +260,9 @@ pytest --cov=mower
 
 # Run tests with verbose output
 pytest -v
+
+# Note: Hardware integration tests may require sudo for GPIO/I2C access
+sudo pytest tests/hardware_integration
 ```
 
 ### Hardware Reliability Testing
@@ -223,7 +271,11 @@ For testing sensor reliability and hardware performance:
 
 ```bash
 # Run comprehensive sensor reliability test
-python3 test_sensor_reliability.py
+# Note: Requires sudo for hardware access (GPIO, I2C, SPI)
+sudo python3 test_sensor_reliability.py
+
+# Alternative: Run diagnostics module
+sudo python3 -m mower.diagnostics.hardware_test
 ```
 
 This test provides:
@@ -326,6 +378,61 @@ All pull requests will be reviewed by at least one maintainer. The review proces
 - Proper test coverage
 - Documentation updates
 - No regressions or new bugs
+
+## Troubleshooting Common Permission Issues
+
+### GPIO/I2C Access Denied
+
+If you encounter permission errors when accessing hardware:
+
+```bash
+# Error: Permission denied accessing /dev/i2c-1
+# Solution: Run with sudo or add user to i2c group
+sudo usermod -a -G i2c $USER
+sudo usermod -a -G gpio $USER
+# Log out and back in for group changes to take effect
+```
+
+### Python Module Import Errors with sudo
+
+When using `sudo`, Python may not find modules installed in user space:
+
+```bash
+# Problem: ModuleNotFoundError when using sudo
+# Solution: Use sudo with -E flag to preserve environment
+sudo -E python3 -m mower.diagnostics.hardware_test
+
+# Or install system-wide
+sudo pip install -e .[dev]
+```
+
+### Service Permission Issues
+
+For systemd service management:
+
+```bash
+# Enable service to start at boot
+sudo systemctl enable autonomous-mower
+
+# View service logs
+sudo journalctl -u autonomous-mower -f
+
+# Check service status
+sudo systemctl status autonomous-mower
+```
+
+### File Permission Issues
+
+If you encounter file permission errors:
+
+```bash
+# Fix ownership of project files
+sudo chown -R $USER:$USER /path/to/autonomous_mower
+
+# Fix permissions for log directories
+sudo mkdir -p /var/log/autonomous-mower
+sudo chown $USER:$USER /var/log/autonomous-mower
+```
 
 ## Resources
 

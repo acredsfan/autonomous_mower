@@ -1,0 +1,22 @@
+[Unit]
+Description=Mower V2 Hardware Service
+After=network.target redis.service
+Requires=redis.service
+PartOf=mower-v2.target
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/home/pi/autonomous_mower
+Environment=PYTHONPATH=/home/pi/autonomous_mower
+Environment=MM1_SERIAL_PORT=/dev/ttyACM1
+Environment=MOWER_LOG_LEVEL=INFO
+ExecStart=/usr/bin/python3 /home/pi/autonomous_mower/mower_v2/launcher.py hardware
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=mower-v2.target

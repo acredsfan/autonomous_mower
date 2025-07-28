@@ -1,0 +1,30 @@
+hardware:
+  gps_port: /dev/ttyACM0
+  gps_baud_rate: 115200
+  max_speed: 50
+  robohat_port: /dev/ttyACM1
+  simulation_mode: false
+  i2c_bus: 1  # I2C bus for sensors
+  # Sensor addresses
+  bme280_address: 0x76
+  ina3221_address: 0x40
+  # Dual ToF sensors
+  left_tof_address: 0x29
+  right_tof_address: 0x30
+  # ToF GPIO pins
+  left_tof_xshut: 22
+  right_tof_xshut: 23
+  left_tof_interrupt: 6
+  right_tof_interrupt: 12
+logging:
+  file: logs/mower.log
+  level: INFO
+safety:
+  command_timeout: 2.0
+  emergency_stop_enabled: true
+  max_consecutive_failures: 3
+services:
+  redis_host: localhost
+  redis_port: 6379
+  web_port: 8080
+  google_maps_api_key: "YOUR_GOOGLE_MAPS_API_KEY_HERE"  # Add your Google Maps API key here for mapping features

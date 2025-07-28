@@ -50,10 +50,22 @@ logs/
 .pytest_cache/
 .tox/
 
-# Project specific configuration
+# Project specific configuration - CONTAINS SENSITIVE DATA
 config/user_polygon.json
 config/home_location.json
 config/mowing_schedule.json
+config/boundary.json
+config/main_config_backup.json
+config/*.json
+config/*.yaml
+
+# Configuration files with API keys and credentials
+mower/config/config.yaml
+*.env
+.env.*
+
+# User-specific locations and settings
+data/
 
 # Project management files
 issues.json
@@ -180,3 +192,5 @@ Camera Detection Fixes.md
 sync_repo.sh
 ipc_command_queue.json
 CODE_IMPROVEMENTS_SUMMARY.md
+archive/
+main_config_backup.json

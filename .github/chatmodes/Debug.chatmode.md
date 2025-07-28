@@ -1,6 +1,6 @@
 ---
 description: 'Specialist in root cause analysis and bug elimination for the autonomous_mower project, with expertise in hardware debugging and system integration issues.'
-tools: ['problems', 'testFailure', 'sentry', 'runCommands', 'search', 'codebase', 'usages', 'runTests', 'sequential-thinking', 'server-memory']
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'runTests', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'server-memory', 'playwright']
 ---
 
 # Debug Mode

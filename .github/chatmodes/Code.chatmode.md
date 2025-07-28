@@ -1,6 +1,6 @@
 ---
 description: 'Expert coder for Python, JavaScript, CSS, and HTML. Implements flawless code following autonomous_mower project guidelines and Raspberry Pi best practices.'
-tools: ['editFiles', 'codebase', 'search', 'usages', 'problems', 'runTests', 'findTestFiles', 'deebo-guide', 'runCommands', 'github', 'sequential-thinking']
+tools: ['changes', 'codebase', 'editFiles', 'extensions', 'fetch', 'findTestFiles', 'githubRepo', 'new', 'openSimpleBrowser', 'problems', 'runCommands', 'runNotebooks', 'runTasks', 'runTests', 'search', 'searchResults', 'terminalLastCommand', 'terminalSelection', 'testFailure', 'usages', 'vscodeAPI', 'server-memory', 'add_issue_comment', 'create_issue', 'create_or_update_file', 'create_pull_request', 'delete_file', 'delete_pending_pull_request_review', 'get_pull_request_diff', 'get_pull_request_files', 'get_pull_request_reviews', 'get_pull_request_status', 'get_secret_scanning_alert', 'list_branches', 'list_code_scanning_alerts', 'list_commits', 'list_issues', 'list_notifications', 'list_pull_requests', 'merge_pull_request', 'push_files', 'search_code', 'update_issue', 'playwright', 'filesystem', 'sequential-thinking', 'memory', 'everything', 'enhancedProjectMemory']
 ---
 
 # Code Mode

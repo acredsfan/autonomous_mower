@@ -1,135 +1,255 @@
-# Autonomous Mower Deployment Checklist
+# Deployment Checklist
 
-This document tracks the progress of preparing the autonomous mower codebase for deployment to a Raspberry Pi for testing.
+This comprehensive checklist provides a step-by-step guide for deploying the autonomous mower system to a Raspberry Pi. Use this checklist to ensure a successful deployment with all recent improvements and fixes.
 
-## Duplicate Code Consolidation
+## Pre-Deployment Checklist
 
-- [x] Identify and resolve duplicate files
-- [x] Identify and resolve duplicate functions
-- [x] Consolidate similar functionality across files
+### System Requirements Validation
+- [ ] Verify hardware compatibility
+  - [ ] Raspberry Pi 4B+ (4GB RAM recommended) with Raspberry Pi OS Bookworm
+  - [ ] Python 3.9+ installed (tested with Python 3.11)
+  - [ ] At least 1GB free disk space
+  - [ ] Stable power supply (hardware failures can occur with insufficient power)
+  - [ ] Internet connection available
 
-### Consolidation Plan for robot.py and robot_di.py
+### Hardware Validation
+- [ ] All required hardware components connected
+  - [ ] Camera module connected and enabled: `libcamera-hello -t 5000`
+  - [ ] I2C sensors connected: `i2cdetect -y 1`
+  - [ ] GPS module connected: `ls -la /dev/ttyACM0`
+  - [ ] IMU UART connection: `ls -la /dev/ttyAMA4`
+  - [ ] Motor controllers connected
+  - [ ] Emergency stop button wired (optional)
+  - [ ] GPIO access available: `python3 -c "import RPi.GPIO as GPIO; print('GPIO OK')"`
 
-1. **Current Status**:
+### Software Prerequisites
+- [ ] Repository cloned: `git clone <repository-url>`
+- [ ] Environment variables configured (copy `.env.example` to `.env`)
+- [ ] Configuration validation: `python scripts/validate_config.py`
+- [ ] Log directory permissions: `sudo chown -R pi:pi /var/log/autonomous-mower`
 
-   - robot.py: Simple implementation with global functions, currently used in the project
-   - robot_di.py: Better implementation with dependency injection, not actively used
+### Pre-Deployment System Validation
+- [ ] Run comprehensive system validation:
+  ```bash
+  python scripts/run_comprehensive_system_tests.py --verbose --output-file pre_deployment_validation.txt
+  ```
+- [ ] Verify validation results:
+  - [ ] Overall Success: PASS (100% success rate)
+  - [ ] System initialization: <30 seconds
+  - [ ] Memory usage: <600MB typical
+  - [ ] Sensor collection: <2 seconds per cycle
+- [ ] Hardware-specific testing:
+  ```bash
+  python tools/test_sensors.py --all
+  ```
 
-2. **Consolidation Steps**:
-   - Rename robot_di.py to robot_new.py to avoid confusion
-   - Update the Robot class in robot_new.py to ensure it matches the interface expected by the rest of the codebase
-   - Fix the import in test_simulation_mode.py to use the correct class name
-   - Update mower.py to import from robot_new.py instead of robot.py
-   - Test the changes to ensure everything works correctly
-   - Once verified, remove robot.py and rename robot_new.py to robot.py
+## Deployment Checklist
 
-## Raspberry Pi Compatibility
+- [ ] Clone repository
+  ```bash
+  git clone https://github.com/yourusername/autonomous_mower.git
+  cd autonomous_mower
+  ```
 
-- [x] Verify GPIO pin configurations
-- [x] Check hardware dependencies
-- [x] Ensure proper permissions for hardware access
-- [x] Verify path configurations are appropriate for Raspberry Pi
+- [ ] Choose deployment method
+  - [ ] Standard deployment
+    ```bash
+    ./scripts/enhanced_deploy.sh
+    ```
+  - [ ] Blue-green deployment
+    ```bash
+    ./scripts/enhanced_deploy.sh --blue-green
+    ```
+  - [ ] Remote deployment
+    ```bash
+    ./scripts/enhanced_deploy.sh -r raspberrypi.local -u pi
+    ```
 
-### Raspberry Pi Compatibility Notes
+- [ ] Monitor deployment progress
+  - [ ] Check for errors during installation
+  - [ ] Verify dependencies are installed correctly
+  - [ ] Verify service files are created
 
-1. **GPIO Configuration**:
+## Post-Deployment Checklist
 
-   - GPIO management is handled by the GPIOManager class
-   - Pin mappings are documented in "Raspberry Pi GPIO.xlsx"
-   - Installation scripts set up proper udev rules for GPIO access
+### System Validation
+- [ ] Run comprehensive post-deployment validation:
+  ```bash
+  python scripts/run_comprehensive_system_tests.py --verbose --output-file post_deployment_validation.txt
+  ```
+- [ ] Verify validation results:
+  - [ ] Overall Success: PASS (100% success rate)
+  - [ ] All test suites passed: Simulation Mode Startup, Hardware Mode Startup, Major Functionality, Error Handling & Recovery, Performance Metrics
+  - [ ] System initialization: <30 seconds
+  - [ ] Memory usage: <600MB typical
+  - [ ] Sensor collection: <2 seconds per cycle
 
-2. **Hardware Dependencies**:
+### Service Verification
+- [ ] Verify services are running:
+  ```bash
+  sudo systemctl status mower.service
+  sudo systemctl status ntrip-client.service
+  ```
+- [ ] Check for single instance conflicts:
+  ```bash
+  ps aux | grep -i mower
+  # Should show only one main process
+  ```
 
-   - Required Python packages are listed in requirements.txt, including RPi.GPIO
-   - Hardware interfaces are properly abstracted with adapter classes
-   - Simulation mode is available for testing without hardware
+### Hardware Component Testing
+- [ ] Test individual sensors:
+  ```bash
+  python tools/test_sensors.py --sensor imu
+  python tools/test_sensors.py --sensor tof
+  python tools/test_sensors.py --sensor bme280
+  python tools/test_sensors.py --sensor ina3221
+  ```
+- [ ] Verify sensor data collection:
+  ```bash
+  # Should complete within 2 seconds without timeout
+  python -c "from mower.main_controller import ResourceManager; rm = ResourceManager(); rm.initialize(); print(rm.get_sensor_data())"
+  ```
 
-3. **Path Configurations**:
-   - Serial device paths are configured with environment variables:
-     - GPS: /dev/ttyACM0 (configurable via GPS_SERIAL_PORT)
-     - RoboHAT MM1: /dev/ttyACM1 (configurable via MM1_SERIAL_PORT)
-     - IMU: /dev/ttyAMA2 (configurable via IMU_SERIAL_PORT)
-   - Default paths should be verified on the specific Raspberry Pi model being used
+### Error Handling Verification
+- [ ] Test graceful degradation:
+  - [ ] System continues operation when sensors fail
+  - [ ] Fallback data provided when hardware unavailable
+  - [ ] Emergency stop always functional
+- [ ] Verify error recovery mechanisms:
+  - [ ] Circuit breakers prevent cascading failures
+  - [ ] Timeout protection prevents system hanging
+  - [ ] Automatic retry with exponential backoff
 
-## Deployment Preparation
+### Performance Validation
+- [ ] Check system resource usage:
+  ```bash
+  htop  # Monitor CPU and memory usage
+  free -h  # Check memory usage (<600MB typical)
+  df -h  # Check disk space
+  ```
+- [ ] Verify sensor collection performance:
+  - [ ] Average collection time: <0.01 seconds
+  - [ ] Maximum collection time: <2 seconds
+  - [ ] No timeout errors in logs
 
-- [x] Verify all dependencies are listed in requirements.txt
-- [x] Check for any hardcoded paths that might cause issues
-- [x] Ensure logging is properly configured
-- [x] Verify error handling for hardware failures
-- [x] Test startup and shutdown procedures
+### Web Interface Testing
+- [ ] Verify web interface is accessible:
+  - [ ] Local access: http://localhost:5000
+  - [ ] Remote access: http://<raspberry_pi_ip>:5000
+- [ ] Test web interface functionality:
+  - [ ] Sensor data displays correctly
+  - [ ] Manual control commands work
+  - [ ] Emergency stop button functional
+  - [ ] System status updates in real-time
 
-### Deployment Preparation Notes
+### Log File Analysis
+- [ ] Check log files for errors:
+  ```bash
+  tail -f /var/log/autonomous-mower/mower.log
+  ```
+- [ ] Verify no critical errors:
+  - [ ] No sensor timeout errors
+  - [ ] No JSON serialization errors
+  - [ ] No hardware initialization failures
+  - [ ] No memory leak warnings
 
-1. **Dependencies**:
+### Configuration Verification
+- [ ] Verify configuration files exist and are valid:
+  ```bash
+  ls -la config/
+  python scripts/validate_config.py --verbose
+  ```
+- [ ] Check default configurations were created:
+  - [ ] `config/main_config.json` exists
+  - [ ] `config/user_polygon.json` exists
+  - [ ] `config/components.json` exists (if using DI)
 
-   - All required dependencies are listed in requirements.txt
-   - RPi.GPIO is included for Raspberry Pi GPIO access
-   - Installation script (install_requirements.sh) is provided to set up the environment
-   - Support for both interactive and non-interactive installation modes (`-y` flag for automated deployments)
+### Safe Mode Testing
+- [ ] Test safe mode operation:
+  ```bash
+  export SAFE_MODE_ALLOWED=true
+  python -m mower.main_controller
+  # Should start web interface even if hardware fails
+  ```
 
-2. **Logging Configuration**:
+## Rollback Checklist (If Needed)
 
-   - Logging is configured via `core/logger.py` which wraps `utilities/logger_config.py`
-   - Log rotation is set up with 5 backup files
-   - Logs are stored in the project root directory
+- [ ] Stop services
+  ```bash
+  sudo systemctl stop mower.service
+  sudo systemctl stop ntrip-client.service
+  ```
 
-3. **Error Handling**:
-   - Error handling for hardware failures is implemented in error_handling module
-   - ResourceManager in mower.py includes proper initialization and cleanup procedures
-   - Graceful degradation is implemented for component failures
+- [ ] Restore from backup
+  ```bash
+  # List available backups
+  ls -la /home/pi/autonomous_mower_backup/
+  
+  # Restore from a specific backup
+  rsync -a /home/pi/autonomous_mower_backup/YYYYMMDD_HHMMSS/ /home/pi/autonomous_mower/
+  ```
 
-## Testing
+- [ ] Restart services
+  ```bash
+  sudo systemctl start ntrip-client.service
+  sudo systemctl start mower.service
+  ```
 
-- [x] Create a test plan for Raspberry Pi deployment
-- [x] Prepare test cases for hardware integration
-- [x] Document expected behavior for each test case
+- [ ] Verify services are running correctly
+  ```bash
+  sudo systemctl status mower.service
+  sudo systemctl status ntrip-client.service
+  ```
 
-### Testing Notes
+## Troubleshooting Checklist
 
-1. **Existing Test Infrastructure**:
+- [ ] Check service status
+  ```bash
+  sudo systemctl status mower.service
+  ```
 
-   - Comprehensive test suite is available in the tests directory
-   - Unit tests, integration tests, and simulation tests are implemented
-   - Simulation mode allows testing without physical hardware
+- [ ] Check log files
+  ```bash
+  tail -f /var/log/autonomous-mower/mower.log
+  ```
 
-2. **Recommended Test Plan for Deployment**:
-   - Start with simulation tests to verify core functionality
-   - Test hardware components individually using the hardware test module
-   - Test the complete system with all components integrated
-   - Verify error handling by simulating component failures
+- [ ] Check deployment logs
+  ```bash
+  cat /var/log/autonomous-mower/deployment.log
+  ```
 
-## Documentation
+- [ ] Check hardware connections
+  ```bash
+  i2cdetect -y 1
+  ```
 
-- [x] Update README.md with Raspberry Pi deployment instructions
-- [x] Document any Raspberry Pi-specific configurations
-- [x] Create troubleshooting guide for common deployment issues
+- [ ] Run hardware diagnostics
+  ```bash
+  python3 tools/test_sensors.py
+  ```
 
-### Documentation Notes
+- [ ] Check system resources
+  ```bash
+  free -h
+  df -h
+  vcgencmd measure_temp
+  ```
 
-1. **Existing Documentation**:
+## Final Verification Checklist
 
-   - README.md includes detailed setup instructions for Raspberry Pi
-   - Hardware setup is documented with pin mappings
-   - Environment configuration is well-documented
+- [ ] Verify all components are functioning correctly
+  ```bash
+  ./scripts/final_validation.sh --verbose
+  ```
 
-2. **Recommended Documentation Updates**:
-   - Create a deployment-specific troubleshooting guide
-   - Document the consolidation of robot.py and robot_di.py
-   - Update any references to the consolidated files
+- [ ] Verify the system can be controlled through the web interface
+  - [ ] Navigate to http://<raspberry_pi_ip>:5000
+  - [ ] Test basic controls
+  - [ ] Verify sensor readings are displayed
 
-## Progress Tracking
-
-| Task                            | Status    | Notes                                                                                                                                                                                                                                                 |
-| ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Identify duplicate files        | Completed | Found duplicate functionality between robot.py and robot_di.py. robot_di.py has a better implementation with dependency injection, but robot.py is the one currently used in the project.                                                             |
-| Check test_simulation_mode.py   | Completed | This file imports RobotDI from robot_di.py, but the class is actually named Robot. The import isn't used in the code.                                                                                                                                 |
-| Check hardcoded paths           | Completed | Found several hardcoded paths for serial devices: GPS (/dev/ttyAMA0), RoboHAT MM1 (/dev/ttyACM1), IMU (/dev/ttyAMA2). Most are loaded from environment variables with fallbacks.                                                                      |
-| Check GPIO configurations       | Completed | GPIO management is well-structured with a dedicated GPIOManager class. The project includes an Excel file with GPIO pin mappings and installation scripts that set up proper udev rules for GPIO access.                                              |
-| Create consolidation plan       | Completed | Created a detailed plan to consolidate robot.py and robot_di.py, including steps to rename files, update imports, and test changes.                                                                                                                   |
-| Check dependencies              | Completed | Verified that all required dependencies are listed in requirements.txt, including RPi.GPIO for Raspberry Pi GPIO access.                                                                                                                              |
-| Check logging configuration     | Completed | Confirmed that logging is properly configured in core/logger.py with log rotation and appropriate log levels.                                                                                                                             |
-| Check error handling            | Completed | Verified that error handling for hardware failures is implemented in the error_handling module with graceful degradation for component failures.                                                                                                      |
-| Review documentation            | Completed | Confirmed that README.md includes detailed setup instructions for Raspberry Pi and hardware setup is well-documented.                                                                                                                                 |
-| Create deployment checklist     | Completed | Created this deployment checklist to track progress and document findings.                                                                                                                                                                            |
-| Create interactive setup wizard | Completed | Created setup_wizard.py, a comprehensive interactive setup script that guides users through the entire setup process, collects necessary tokens and credentials, adapts to user inputs, provides clear instructions, and updates configuration files. |
+- [ ] Verify the system can operate autonomously
+  - [ ] Set up a test boundary
+  - [ ] Start autonomous operation
+  - [ ] Verify the system navigates correctly
+  - [ ] Verify obstacle detection works
+  - [ ] Verify emergency stop works

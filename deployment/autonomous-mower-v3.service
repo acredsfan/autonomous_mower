@@ -1,0 +1,40 @@
+[Unit]
+Description=Autonomous Mower System v3.0
+Documentation=https://github.com/acredsfan/autonomous_mower
+After=network.target redis.service
+Wants=redis.service
+
+[Service]
+Type=exec
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/autonomous_mower
+ExecStart=/usr/bin/python3 -m mower.tools.launcher start
+ExecStop=/usr/bin/python3 -m mower.tools.launcher stop
+Restart=always
+RestartSec=10
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Environment variables
+Environment=PYTHONPATH=/home/pi/autonomous_mower
+Environment=MOWER_ENV=production
+
+# Resource limits
+MemoryLimit=2G
+CPUQuota=90%
+
+# Security settings
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/pi/autonomous_mower/data /home/pi/autonomous_mower/logs /tmp
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=autonomous-mower
+
+[Install]
+WantedBy=multi-user.target

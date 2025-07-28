@@ -1,0 +1,21 @@
+[Unit]
+Description=Mower V2 Manual Control Service
+After=network.target redis.service mower-v2-hardware.service
+Requires=redis.service
+PartOf=mower-v2.target
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/home/pi/autonomous_mower
+Environment=PYTHONPATH=/home/pi/autonomous_mower
+Environment=MOWER_LOG_LEVEL=INFO
+ExecStart=/usr/bin/python3 /home/pi/autonomous_mower/mower_v2/launcher.py manual
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+[Install]
+WantedBy=mower-v2.target
