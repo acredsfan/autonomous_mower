@@ -55,3 +55,8 @@ This is an autonomous lawn mower built on a microservices architecture using Red
 - Services inherit from `BaseService`
 - Use Redis for all inter-service communication
 - Hardware access only through HAL layer
+
+## Documentation and Workspace Hygiene
+- Keep User and Developer documentation up to date at all times
+- Clean up temporary or unused code to ensure the Workspace is tidy and easy to navigate
+- Use consistent naming conventions and formatting throughout the codebase

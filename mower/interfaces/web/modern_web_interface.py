@@ -42,6 +42,7 @@ class ModernWebService(BaseService):
         
         # Register message handlers
         self.register_message_handler("zone_update", self.handle_zone_update)
+        self.register_message_handler("stream_frame_response", self.handle_camera_frame_response)
     
     def _setup_routes(self):
         """Setup FastAPI routes."""
@@ -438,6 +439,9 @@ class ModernWebService(BaseService):
                             <button class="btn btn-warning btn-sm btn-modern" onclick="clearCurrentZone()">
                                 <i class="bi bi-trash"></i> Clear Current
                             </button>
+                            <button class="btn btn-info btn-sm btn-modern" onclick="toggleSatelliteView()" id="satelliteToggle">
+                                <i class="bi bi-view-stacked"></i> Overhead View
+                            </button>
                             <span class="badge bg-info ms-2" id="mapModeIndicator">Select Mode</span>
                         </div>
                         <div id="map" class="map-container"></div>
@@ -527,7 +531,8 @@ class ModernWebService(BaseService):
         let drawingManager = null;
         let currentMapMode = null;
         let mowerMarker = null;
-        let mowerPosition = { lat: 40.7128, lng: -74.0060 };
+        let mowerPosition = { lat: 39.0384, lng: -84.2146 };
+        let isOverheadView = false;
         let zones = {
             boundary: [],
             noGo: [],
@@ -644,7 +649,8 @@ class ModernWebService(BaseService):
                 zoomControl: true,
                 mapTypeControl: true,
                 streetViewControl: false,
-                fullscreenControl: true
+                fullscreenControl: true,
+                tilt: 45  // Start with angled view
             });
             
             // Create mower position marker
@@ -735,8 +741,29 @@ class ModernWebService(BaseService):
         function updateMowerPosition() {
             if (mowerMarker && map) {
                 mowerMarker.setPosition(mowerPosition);
-                // Optionally recenter map on mower position
-                // map.setCenter(mowerPosition);
+                // Center map on mower position
+                map.setCenter(mowerPosition);
+            }
+        }
+        
+        function toggleSatelliteView() {
+            if (!map) return;
+            
+            const button = document.getElementById('satelliteToggle');
+            const icon = button.querySelector('i');
+            
+            if (isOverheadView) {
+                // Switch to angled view
+                map.setTilt(45);
+                button.innerHTML = '<i class="bi bi-view-stacked"></i> Overhead View';
+                isOverheadView = false;
+                log('Switched to angled satellite view');
+            } else {
+                // Switch to overhead view
+                map.setTilt(0);
+                button.innerHTML = '<i class="bi bi-globe"></i> Angled View';
+                isOverheadView = true;
+                log('Switched to overhead satellite view');
             }
         }
         
@@ -969,21 +996,34 @@ class ModernWebService(BaseService):
                 else:
                     status = {"state": "unknown", "battery_level": 0}
                 
-                # Get GPS location from sensor data
-                sensor_data = await self.redis_client.get("service:sensor:data")
-                if sensor_data:
-                    sensor_info = json.loads(sensor_data)
-                    gps_data = sensor_info.get("gps", {})
-                    status["latitude"] = gps_data.get("latitude", 40.7128)
-                    status["longitude"] = gps_data.get("longitude", -74.0060)
-                    status["gps_fix"] = gps_data.get("fix_quality", 0) > 0
-                else:
-                    # Default location (NYC) if no sensor data
-                    status["latitude"] = 40.7128
-                    status["longitude"] = -74.0060
+                # Get GPS location from sensor data stream
+                try:
+                    # Get latest sensor data from Redis stream
+                    latest_data = await self.redis_client.execute_command(
+                        "XREVRANGE", "sensor:data", "+", "-", "COUNT", "1"
+                    )
+                    if latest_data and len(latest_data) > 0:
+                        data_entry = latest_data[0]
+                        if len(data_entry) > 1:
+                            data_fields = data_entry[1]
+                            # Extract data field (should be JSON)
+                            for i in range(0, len(data_fields), 2):
+                                if data_fields[i] == b'data':
+                                    sensor_info = json.loads(data_fields[i+1].decode('utf-8'))
+                                    gps_data = sensor_info.get("gps", {})
+                                    status["latitude"] = gps_data.get("latitude", 39.0384)
+                                    status["longitude"] = gps_data.get("longitude", -84.2146)
+                                    status["gps_fix"] = gps_data.get("fix_quality", 0) > 0
+                                    status["satellites"] = gps_data.get("satellites", 0)
+                                    break
+                except Exception as e:
+                    logger.debug(f"Could not get GPS data from Redis stream: {e}")
+                    # Use default location if GPS data unavailable  
+                    status["latitude"] = 39.0384
+                    status["longitude"] = -84.2146
                     status["gps_fix"] = False
             else:
-                status = {"state": "disconnected", "battery_level": 0, "latitude": 40.7128, "longitude": -74.0060, "gps_fix": False}
+                status = {"state": "disconnected", "battery_level": 0, "latitude": 39.0384, "longitude": -84.2146, "gps_fix": False}
             
             await websocket.send_text(json.dumps({
                 "type": "status",
@@ -1043,7 +1083,9 @@ class ModernWebService(BaseService):
                         }))
                     else:
                         # For real hardware, request frame from vision service
-                        await self.send_message("vision", "get_stream_frame", {})
+                        import uuid
+                        correlation_id = str(uuid.uuid4())
+                        await self.send_message("vision", "get_stream_frame", {}, correlation_id)
                         
         except Exception as e:
             logger.error(f"Error sending camera frame: {e}")
@@ -1112,9 +1154,10 @@ class ModernWebService(BaseService):
     async def _get_camera_frame(self):
         """Get camera frame via API."""
         try:
-            await self.send_message("vision", "get_stream_frame", {})
-            # In a real implementation, wait for response
-            return {"success": True, "message": "Frame requested"}
+            # Send message with correlation ID to get proper response handling
+            correlation_id = f"camera_frame_{int(time.time() * 1000)}"
+            await self.send_message("vision", "get_stream_frame", {}, correlation_id)
+            return {"success": True, "message": "Frame requested", "correlation_id": correlation_id}
         except Exception as e:
             logger.error(f"Error getting camera frame: {e}")
             return {"error": str(e)}
@@ -1163,6 +1206,24 @@ class ModernWebService(BaseService):
                         
         except Exception as e:
             logger.error(f"Error handling zone update: {e}")
+    
+    async def handle_camera_frame_response(self, message: ServiceMessage):
+        """Handle camera frame response from vision service."""
+        try:
+            frame_data = message.data
+            
+            # Broadcast camera frame to all connected WebSocket clients
+            for websocket in self.active_connections:
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "camera_frame",
+                        "data": frame_data
+                    }))
+                except:
+                    pass  # Connection might be closed
+                    
+        except Exception as e:
+            logger.error(f"Error handling camera frame response: {e}")
 
 
 async def main():

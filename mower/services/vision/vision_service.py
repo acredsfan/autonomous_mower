@@ -59,6 +59,7 @@ class VisionService(BaseService):
         
         # Camera and vision processing
         self.camera = None
+        self.camera_type = "simulation"  # Will be updated during initialization
         self.frame_width = 640
         self.frame_height = 480
         self.fps = 10  # Target FPS
@@ -164,46 +165,104 @@ class VisionService(BaseService):
     async def _initialize_camera(self) -> bool:
         """Initialize camera for image capture."""
         try:
-            if self.config.simulation_mode:
+            # Check simulation mode
+            sim_mode = getattr(self.config, 'simulation_mode', False)
+            if hasattr(self.config, 'hardware'):
+                sim_mode = getattr(self.config.hardware, 'simulation_mode', False)
+            
+            if sim_mode:
                 logger.info("Vision service running in simulation mode")
                 return True
             
-            # Try to initialize camera
-            # First try Pi camera, then USB camera
+            # Try to initialize camera with timeout protection
             try:
-                # Try picamera2 for Raspberry Pi camera
+                # Try Raspberry Pi camera first (connected via ribbon cable)
+                logger.info("Trying Raspberry Pi camera...")
                 try:
-                    from picamera2 import Picamera2
-                    self.camera = Picamera2()
-                    config = self.camera.create_still_configuration(
-                        main={"size": (self.frame_width, self.frame_height)}
-                    )
-                    self.camera.configure(config)
-                    self.camera.start()
-                    logger.info("Initialized Raspberry Pi camera")
-                    return True
-                except ImportError:
-                    pass
-                
-                # Fall back to OpenCV camera
-                self.camera = cv2.VideoCapture(0)
-                if self.camera.isOpened():
-                    self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
-                    self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
-                    self.camera.set(cv2.CAP_PROP_FPS, self.fps)
-                    logger.info("Initialized USB camera")
-                    return True
-                else:
-                    self.camera = None
-                    return False
+                    # Try libcamera/picamera2 first (modern interface)
+                    try:
+                        from picamera2 import Picamera2
+                        camera = Picamera2()
+                        config = camera.create_preview_configuration(
+                            main={"size": (self.frame_width, self.frame_height)}
+                        )
+                        camera.configure(config)
+                        camera.start()
+                        
+                        # Test frame capture
+                        frame = camera.capture_array()
+                        if frame is not None:
+                            self.camera = camera
+                            self.camera_type = "picamera2"
+                            logger.info("Pi camera (picamera2) initialized successfully")
+                            return True
+                        else:
+                            camera.stop()
+                            camera.close()
+                    except ImportError:
+                        logger.info("picamera2 not available, trying legacy picamera")
+                    except Exception as e:
+                        logger.debug(f"picamera2 failed: {e}")
                     
+                    # Try legacy picamera interface
+                    try:
+                        import picamera
+                        camera = picamera.PiCamera()
+                        camera.resolution = (self.frame_width, self.frame_height)
+                        camera.framerate = self.fps
+                        
+                        # Test capture
+                        import io
+                        stream = io.BytesIO()
+                        camera.capture(stream, format='jpeg')
+                        if len(stream.getvalue()) > 0:
+                            self.camera = camera
+                            self.camera_type = "picamera"
+                            logger.info("Pi camera (legacy picamera) initialized successfully")
+                            return True
+                        else:
+                            camera.close()
+                    except ImportError:
+                        logger.info("legacy picamera not available")
+                    except Exception as e:
+                        logger.debug(f"legacy picamera failed: {e}")
+                    
+                    # Try OpenCV with Pi camera (via /dev/video0)
+                    logger.info("Trying Pi camera via OpenCV...")
+                    camera = cv2.VideoCapture(0)
+                    if camera and camera.isOpened():
+                        camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
+                        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
+                        camera.set(cv2.CAP_PROP_FPS, self.fps)
+                        
+                        # Test frame capture
+                        ret, frame = camera.read()
+                        if ret and frame is not None:
+                            self.camera = camera
+                            self.camera_type = "opencv"
+                            logger.info("Pi camera via OpenCV initialized successfully")
+                            return True
+                        else:
+                            camera.release()
+                    
+                except Exception as e:
+                    logger.warning(f"Pi camera initialization failed: {e}")
+                    self.camera = None
+                
+                # Continue without camera
+                logger.warning("No camera available - running in camera-less mode with synthetic frames")
+                self.camera = None
+                self.camera_type = "simulation"
+                return True  # Continue service operation without camera
+                
             except Exception as e:
                 logger.error(f"Camera initialization error: {e}")
-                return False
+                self.camera = None
+                return True  # Continue without camera
                 
         except Exception as e:
             logger.error(f"Camera setup error: {e}")
-            return False
+            return True  # Continue service operation
     
     async def _load_ml_model(self) -> bool:
         """Load machine learning model for object detection."""
@@ -283,8 +342,13 @@ class VisionService(BaseService):
     async def _capture_frame(self) -> Optional[np.ndarray]:
         """Capture a frame from the camera."""
         try:
-            if self.config.simulation_mode:
-                # Generate a synthetic frame for simulation
+            # Check simulation mode
+            sim_mode = getattr(self.config, 'simulation_mode', False)
+            if hasattr(self.config, 'hardware'):
+                sim_mode = getattr(self.config.hardware, 'simulation_mode', False)
+            
+            if sim_mode or self.camera is None:
+                # Generate a synthetic frame for simulation or when no camera
                 frame = np.zeros((self.frame_height, self.frame_width, 3), dtype=np.uint8)
                 
                 # Add some synthetic content
@@ -295,19 +359,30 @@ class VisionService(BaseService):
                 if time.time() % 10 < 1:  # 10% of the time
                     cv2.rectangle(frame, (200, 150), (300, 250), (0, 0, 255), -1)
                 
-                # Add timestamp
-                cv2.putText(frame, f"SIM {int(time.time())}", (10, 30), 
+                # Add timestamp and status
+                status_text = "SIM" if sim_mode else "NO CAM"
+                cv2.putText(frame, f"{status_text} {int(time.time())}", (10, 30), 
                           cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 
                 return frame
             
             elif self.camera:
-                # Capture from real camera
-                if hasattr(self.camera, 'capture_array'):
-                    # Picamera2
+                # Capture from real camera based on type
+                if self.camera_type == "picamera2":
+                    # Picamera2 interface
                     frame = self.camera.capture_array()
                     return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                else:
+                elif self.camera_type == "picamera":
+                    # Legacy picamera interface
+                    import io
+                    import numpy as np
+                    stream = io.BytesIO()
+                    self.camera.capture(stream, format='rgb')
+                    stream.seek(0)
+                    frame = np.frombuffer(stream.getvalue(), dtype=np.uint8)
+                    frame = frame.reshape((self.frame_height, self.frame_width, 3))
+                    return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                elif self.camera_type == "opencv":
                     # OpenCV camera
                     ret, frame = self.camera.read()
                     if ret:

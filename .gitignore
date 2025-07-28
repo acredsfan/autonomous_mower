@@ -29,7 +29,6 @@ wheels/
 venv/
 ENV/
 env/
-.env
 /.venv
 
 # IDE and editor files
@@ -37,7 +36,7 @@ env/
 .vscode/
 *.swp
 *.swo
-.cursor/
+.kiro/
 
 # Logs and databases
 *.log
@@ -67,27 +66,16 @@ mower/config/config.yaml
 # User-specific locations and settings
 data/
 
-# Project management files
-issues.json
-issues.md
-tasks.json
-tasks.md
-old_main.log
-
 # Temporary files
 *.tmp
 .DS_Store
 Thumbs.db
 ~/*
 *.bak
-fix_fstrings.py
-fix_fstrings_README.md
 
 # Documentation
 docs/_build/
 docs/api/
-original_plan.md
-jctl_output.md
 
 # Test coverage
 .coverage
@@ -105,22 +93,6 @@ get_bool.py
 inspect_file.py
 scripts/delete_dependabot_branches.cmd
 
-# Linting and formatting temporary scripts
-fix_*.py
-*fix*.py
-*_fix_*.py
-rewrite_*.py
-*docstrings*.py
-*whitespace*.py
-*syntax*.py
-setup_environment.sh
-setup_raspberry_pi.sh
-quick_fix_imports.sh
-fix_imports.py
-run_mower.sh
-activate_env.sh
-activate_mower_env.sh
-
 # Backup files
 *.backup
 src/mower/simulation/world_model.py.backup
@@ -131,25 +103,12 @@ src/mower/ui/web_ui/static/data
 # ------------------------------------
 # These entries may not be needed but are kept in case of future integration
 *.mdc
-.junie/
-.roo/
-.roomodes
-.blackboxrules
-.windsurfrules
-roo_models.json
 mcp_server/
 # mcp.json
 MCP_SERVER.md
 server.py
 run_mcp_server.sh
 rules.json
-linter_fixes.md
-fix_fstrings_README.md
-fix_fstrings.py
-linter_fixes.py
-library_update_report.md
-.kiro/
-.kiro-server/
 
 # Installer checkpoints
 .install_checkpoints
@@ -163,9 +122,6 @@ yolov8n_saved_model/saved_model.pb
 yolov8n_saved_model/yolov8n_float16.tflite
 yolov8n_saved_model/variables/variables.data-00000-of-00001
 yolov8n_saved_model/variables/variables.index
-INSTALL_REQUIREMENTS_FIX_SUMMARY.md
-CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
-CORAL_TPU_INSTALLATION_FIX_SUMMARY.md
 setup_state.json
 *.deb
 *.key
@@ -194,3 +150,6 @@ ipc_command_queue.json
 CODE_IMPROVEMENTS_SUMMARY.md
 archive/
 main_config_backup.json
+cloudflare_config*
+*.pdf
+

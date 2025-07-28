@@ -240,30 +240,70 @@ class SensorService(BaseService):
                 try:
                     # Try to read from hardware GPS
                     if hasattr(self, '_gps_serial') and self._gps_serial:
-                        if self._gps_serial.in_waiting > 0:
+                        while self._gps_serial.in_waiting > 0:
                             line = self._gps_serial.readline().decode('ascii', errors='ignore').strip()
+                            # Only log interesting GPS messages to avoid spam
+                            if any(x in line for x in ['$GNGGA', '$GNRMC']) and ('V' not in line or self.gps_data.fix_quality == 0):
+                                logger.info(f"GPS NMEA: {line}")
+                            
+                            # Parse GGA sentence (fix data)
                             if line.startswith('$GPGGA') or line.startswith('$GNGGA'):
-                                # Parse NMEA sentence
                                 parts = line.split(',')
-                                if len(parts) > 6 and parts[2] and parts[4]:
-                                    lat = float(parts[2][:2]) + float(parts[2][2:]) / 60.0
-                                    if parts[3] == 'S':
-                                        lat = -lat
-                                    lon = float(parts[4][:3]) + float(parts[4][3:]) / 60.0
-                                    if parts[5] == 'W':
-                                        lon = -lon
-                                    
-                                    self.gps_data.latitude = lat
-                                    self.gps_data.longitude = lon
-                                    self.gps_data.fix_quality = int(parts[6]) if parts[6] else 0
-                                    self.gps_data.satellites = int(parts[7]) if parts[7] else 0
-                                    self.gps_data.hdop = float(parts[8]) if parts[8] else 99.9
-                                    self.gps_data.timestamp = time.time()
+                                if len(parts) > 8:
+                                    try:
+                                        if parts[2] and parts[4] and parts[6]:  # Check if coordinates and fix exist
+                                            lat = float(parts[2][:2]) + float(parts[2][2:]) / 60.0
+                                            if parts[3] == 'S':
+                                                lat = -lat
+                                            lon = float(parts[4][:3]) + float(parts[4][3:]) / 60.0
+                                            if parts[5] == 'W':
+                                                lon = -lon
+                                            
+                                            self.gps_data.latitude = lat
+                                            self.gps_data.longitude = lon
+                                            self.gps_data.fix_quality = int(parts[6]) if parts[6] else 0
+                                            self.gps_data.satellites = int(parts[7]) if parts[7] else 0
+                                            self.gps_data.hdop = float(parts[8]) if parts[8] else 99.9
+                                            self.gps_data.altitude = float(parts[9]) if parts[9] else 0.0
+                                            self.gps_data.timestamp = time.time()
+                                            
+                                            if self.gps_data.fix_quality > 0:
+                                                logger.info(f"GPS Fix: {lat:.6f}, {lon:.6f}, Quality: {self.gps_data.fix_quality}, Sats: {self.gps_data.satellites}")
+                                    except (ValueError, IndexError) as e:
+                                        logger.debug(f"GPS GGA parse error: {e}")
+                            
+                            # Parse RMC sentence (recommended minimum)
+                            elif line.startswith('$GPRMC') or line.startswith('$GNRMC'):
+                                parts = line.split(',')
+                                if len(parts) > 6:
+                                    try:
+                                        # Check fix status (V=void, A=active)
+                                        if parts[2] == 'A':  # Active fix
+                                            if parts[3] and parts[5]:  # Check if coordinates exist
+                                                lat = float(parts[3][:2]) + float(parts[3][2:]) / 60.0
+                                                if parts[4] == 'S':
+                                                    lat = -lat
+                                                lon = float(parts[5][:3]) + float(parts[5][3:]) / 60.0
+                                                if parts[6] == 'W':
+                                                    lon = -lon
+                                                
+                                                # Update coordinates only if we don't have a better fix from GGA
+                                                if self.gps_data.fix_quality == 0:
+                                                    self.gps_data.latitude = lat
+                                                    self.gps_data.longitude = lon
+                                                    self.gps_data.fix_quality = 1  # Assume basic fix from RMC
+                                                    self.gps_data.timestamp = time.time()
+                                                    logger.info(f"GPS RMC: {lat:.6f}, {lon:.6f}")
+                                    except (ValueError, IndexError) as e:
+                                        logger.debug(f"GPS RMC parse error: {e}")
                     else:
                         # Initialize GPS serial connection
                         try:
                             import serial
-                            self._gps_serial = serial.Serial('/dev/ttyAMA0', 9600, timeout=0.1)
+                            gps_port = getattr(self.config.hardware, 'gps_port', '/dev/ttyACM0')
+                            gps_baud = getattr(self.config.hardware, 'gps_baudrate', 9600)
+                            self._gps_serial = serial.Serial(gps_port, gps_baud, timeout=0.1)
+                            logger.info(f"GPS initialized on {gps_port} at {gps_baud} baud")
                         except Exception as e:
                             logger.error(f"GPS serial init error: {e}")
                             self._gps_serial = None
