@@ -1,3 +1,8 @@
+## THIS PROJECT HAS BEEN REPLACED BY MY UPDATED VERSION NAMED LAWNBERRY PI.
+
+The updated project can be found here: https://github.com/acredsfan/lawnberry_pi
+
+
 # Autonomous Lawn Mower
 
 An autonomous lawn mower system built for Raspberry Pi, featuring advanced navigation, obstacle detection, and safety features.
